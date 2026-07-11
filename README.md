@@ -7,14 +7,14 @@ This repository contains the **standalone edition**: a single self-contained `in
 ## What's inside
 
 **Four specialist modes (plus your own custom domains)**
-- 💼 **Work** — emails, memos, prioritisation, academic support, and deep SAP S/4HANA expertise (MM deepest; SD, FI, CO, PP, PM, QM, EWM, PS, HCM, RE-FX)
-- 🥗 **Health** — nutrition, sleep, recovery and supplementation from reputable evidence, with macro arithmetic shown step by step
-- 🏋️ **Fitness** — evidence-based training and body-composition interpretation from your own InBody log
-- 🌍 **Life** — purchases, travel, tech, finance/legal facts, and Kuwait/GCC local matters
+- **Work** — emails, memos, prioritisation, academic support, and deep SAP S/4HANA expertise (MM deepest; SD, FI, CO, PP, PM, QM, EWM, PS, HCM, RE-FX)
+- **Health** — nutrition, sleep, recovery and supplementation from reputable evidence, with macro arithmetic shown step by step
+- **Fitness** — evidence-based training and body-composition interpretation from your own InBody log
+- **Life** — purchases, travel, tech, finance/legal facts, and Kuwait/GCC local matters
 
 **Core intelligence**
 - Source-verification protocol in every answer: reputable sources only (peer-reviewed journals, WHO/NIH/EFSA, official vendor docs), conflicts shown, nothing invented
-- 🧠 **Deep Solve** — a two-stage engine for hard problems: problem map first, then systematic resolution with assumptions and trade-offs stated
+- **Deep Solve** — a two-stage engine for hard problems: problem map first, then systematic resolution with assumptions and trade-offs stated
 - Multilingual — replies in whatever language you write in (Arabic ↔ English mid-conversation)
 - Live data awareness — your food log, targets, hydration and InBody history are fed into every conversation automatically ("what should I eat tonight?" gets exact remaining amounts)
 
@@ -23,7 +23,7 @@ This repository contains the **standalone edition**: a single self-contained `in
 - Targets with goal-completion bars — green tick when reached, amber when exceeded
 - Hydration tracker: tap 250 ml glasses, totals shown in glasses and litres
 - Portion scaler, saved-foods one-tap re-entry (individually forgettable)
-- 📷 Photo & PDF intake — nutrition labels read exactly (official, always override databases); meal photos estimated and labelled; everything reviewed before saving
+- Photo & PDF intake — nutrition labels read exactly (official, always override databases); meal photos estimated and labelled; everything reviewed before saving
 - "Find macros" for unknown items with honest confidence labels: **official / estimate / not available**
 - Sanity checking — energy must be consistent with macros (4P + 4C + 9F); impossible numbers are rejected with the reason shown
 - Pan-Arab food and Kuwait restaurant awareness, cooking-method aware (مشوي / مقلي / مسلوق …)
@@ -34,7 +34,7 @@ This repository contains the **standalone edition**: a single self-contained `in
 - One-tap trend analysis in Fitness mode
 
 **Privacy & data ownership**
-- 🔒 PIN lock (stored only as a hash), auto-unlocks on the last digit, animated indicators
+- PIN lock (stored only as a hash), auto-unlocks on the last digit, animated indicators
 - All data — logs, targets, saved foods, chats, API key — lives only in your browser
 - Backup & restore to a JSON file so nothing is lost across devices or reinstalls
 - Own-key model: your Anthropic key never leaves your device except to reach `api.anthropic.com` directly

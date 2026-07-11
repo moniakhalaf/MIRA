@@ -44,6 +44,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--acc)}
 select{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8'><path d='M1 1l5 5 5-5' stroke='%239AA3B5' stroke-width='2' fill='none' stroke-linecap='round'/></svg>");background-repeat:no-repeat;background-position:right 12px center;padding-right:34px}
 h1,h2,h3,h4{margin:0;font-weight:600}
 .hidden{display:none!important}
+.svgi{stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vertical-align:-3px;flex:0 0 auto}
 
 /* ---------- layout shell ---------- */
 #app{height:100%;display:flex;flex-direction:column}
@@ -72,7 +73,7 @@ h1,h2,h3,h4{margin:0;font-weight:600}
   flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;
   padding:6px 0;color:var(--txt3);font-size:11px;font-weight:500;border-radius:10px;min-height:48px;
 }
-.tabbar button .ic{font-size:21px;line-height:1}
+.tabbar button svg{margin-bottom:1px}
 .tabbar button.on{color:var(--acc)}
 
 /* ---------- lock screen ---------- */
@@ -224,7 +225,7 @@ h1,h2,h3,h4{margin:0;font-weight:600}
 .glasses{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 8px}
 .glass{
   width:40px;height:48px;border-radius:7px 7px 11px 11px;border:1.5px solid var(--line2);
-  background:var(--bg2);font-size:19px;display:flex;align-items:center;justify-content:center;
+  background:var(--bg2);display:flex;align-items:center;justify-content:center;
   transition:all .15s;color:transparent;
 }
 .glass.f{border-color:#4BA3E3;background:linear-gradient(180deg,rgba(75,163,227,.15) 0%,rgba(75,163,227,.45) 100%);color:#BEE3FF}
@@ -347,6 +348,33 @@ function fmtDate(d){
   if (d === y) return "Yesterday";
   return dt.toLocaleDateString("en-GB", {weekday: "short", day: "numeric", month: "short"});
 }
+/* inline SVG icon set (stroke style) */
+const I = {
+  chat: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+  food: '<path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>',
+  activity: '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>',
+  sliders: '<line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>',
+  target: '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
+  droplet: '<path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>',
+  plus: '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>',
+  search: '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',
+  camera: '<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>',
+  layers: '<polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>',
+  paperclip: '<path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>',
+  arrowUp: '<line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/>',
+  key: '<path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>',
+  lock: '<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+  user: '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+  grid: '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>',
+  download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>',
+  upload: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>',
+  bookmark: '<path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>',
+  chart: '<line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/>',
+  database: '<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>',
+  trend: '<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>',
+};
+const ic = (n, s = 18) => `<svg class="svgi" width="${s}" height="${s}" viewBox="0 0 24 24">${I[n]}</svg>`;
+
 function fileToB64(file){
   return new Promise((res, rej) => {
     const r = new FileReader();
@@ -358,13 +386,13 @@ function fileToB64(file){
 
 /* ---------------- state ---------------- */
 const DEFAULT_DOMAINS = [
-  {id: "work",    name: "Work",    emoji: "💼", color: "#5B8DEF",
+  {id: "work",    name: "Work",    color: "#5B8DEF",
    desc: "Professional and knowledge work: emails, memos, proposals, prioritisation, meeting prep, academic support (argumentation, methodology, referencing). Deep SAP S/4HANA expertise across all modules — MM deepest, plus SD, FI, CO, PP, PM, QM, EWM, PS, HCM and RE-FX — with technical details verified against official SAP documentation and answers marked by S/4HANA release."},
-  {id: "health",  name: "Health",  emoji: "🥗", color: "#34C48E",
+  {id: "health",  name: "Health",  color: "#34C48E",
    desc: "Nutrition, sleep, recovery and supplementation, answered only from reputable evidence (peer-reviewed journals, WHO/NIH/EFSA) and cited. Exact macro and calorie arithmetic shown step by step. The user's own product-label values always override any database."},
-  {id: "fitness", name: "Fitness", emoji: "🏋️", color: "#F2704E",
+  {id: "fitness", name: "Fitness", color: "#F2704E",
    desc: "Training programmes grounded in peer-reviewed sports science, and body-composition interpretation (InBody score, body-fat mass, skeletal-muscle mass, visceral-fat area, phase angle) with trends computed from the user's own logged data."},
-  {id: "life",    name: "Life",    emoji: "🌍", color: "#B07CF7",
+  {id: "life",    name: "Life",    color: "#B07CF7",
    desc: "Everything else: purchases and comparisons, travel, technology, finance and legal information (presented as facts to decide from, not advice), and local practical matters — especially Kuwait / GCC. Same evidence standard as the professional modes."},
 ];
 const DOMAIN_COLORS = ["#5B8DEF","#34C48E","#F2704E","#B07CF7","#4BC0C8","#E8A33D","#EF6BA0","#8AC44B"];
@@ -402,7 +430,7 @@ function save(){
   clearTimeout(saveT);
   saveT = setTimeout(() => {
     try { localStorage.setItem("mira.data", JSON.stringify(S)); }
-    catch (e) { toast("⚠️ Storage full — export a backup and clear old chats."); }
+    catch (e) { toast("Storage full — export a backup and clear old chats."); }
   }, 150);
 }
 
@@ -439,7 +467,7 @@ function render(){
     }</div>
     ${R.tab === "chat" ? chatbarHTML() : ""}
     <div class="tabbar">
-      ${tabBtn("chat", "💬", "Chat")}${tabBtn("food", "🍽️", "Food")}${tabBtn("body", "📊", "Body")}${tabBtn("set", "⚙️", "Settings")}
+      ${tabBtn("chat", "chat", "Chat")}${tabBtn("food", "food", "Food")}${tabBtn("body", "activity", "Body")}${tabBtn("set", "sliders", "Settings")}
     </div>`;
   if (R.tab === "chat"){
     const ta = $("#chatIn");
@@ -447,7 +475,7 @@ function render(){
     afterChatRender();
   }
 }
-const tabBtn = (id, ic, lb) => `<button class="${R.tab === id ? "on" : ""}" onclick="M.tab('${id}')"><span class="ic">${ic}</span>${lb}</button>`;
+const tabBtn = (id, icon, lb) => `<button class="${R.tab === id ? "on" : ""}" onclick="M.tab('${id}')">${ic(icon, 21)}${lb}</button>`;
 const tabTitle = () => ({food: "Nutrition", body: "Body composition", set: "Settings"}[R.tab] || "");
 const curDomain = () => S.domains.find(d => d.id === R.mode) || S.domains[0];
 function hexSoft(hex){
@@ -511,14 +539,14 @@ function onbHTML(){
       <h3>Your domains</h3>
       <div class="muted" style="margin-bottom:10px">Pick the specialist modes you want. You can add any custom domain now or later in Settings.</div>
       <div class="seg" style="flex-wrap:wrap">
-        ${DEFAULT_DOMAINS.map(d => `<button style="flex:0 0 auto" class="${onb.domSel.has(d.id) ? "on" : ""}" onclick="M.onbDom('${d.id}')">${d.emoji} ${d.name}</button>`).join("")}
+        ${DEFAULT_DOMAINS.map(d => `<button style="flex:0 0 auto" class="${onb.domSel.has(d.id) ? "on" : ""}" onclick="M.onbDom('${d.id}')"><span class="dom-color" style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${d.color};margin-inline-end:7px;vertical-align:1px"></span>${d.name}</button>`).join("")}
       </div>
       ${onb.custom.map((c,i) => `<div class="row" style="margin-top:10px"><input value="${esc(c)}" oninput="onb.custom[${i}]=this.value" placeholder="Custom domain (e.g. Photography)"><button class="btn sm danger" style="flex:0 0 auto" onclick="M.onbCustomDel(${i})">✕</button></div>`).join("")}
-      <button class="btn sm sec" style="margin-top:10px" onclick="M.onbCustomAdd()">＋ Add a custom domain</button>
+      <button class="btn sm sec" style="margin-top:10px" onclick="M.onbCustomAdd()">${ic("plus", 15)} Add a custom domain</button>
     </div>
 
     <div class="card">
-      <h3>Anthropic API key</h3>
+      <h3>${ic("key", 16)} Anthropic API key</h3>
       <div class="muted" style="margin-bottom:10px">MIRA runs on your own key, billed to your own account. It is stored only in this browser and sent only to api.anthropic.com. Get one at <a href="https://console.anthropic.com" target="_blank" rel="noopener">console.anthropic.com</a>. You can also add it later in Settings.</div>
       <input id="onbKey" type="password" value="${esc(onb.key)}" placeholder="sk-ant-…" oninput="onb.key=this.value" autocomplete="off">
     </div>
@@ -533,14 +561,14 @@ function onbDone(){
   if (onb.key.trim()) S.settings.apiKey = onb.key.trim();
   S.domains = DEFAULT_DOMAINS.filter(d => onb.domSel.has(d.id)).map(d => JSON.parse(JSON.stringify(d)));
   onb.custom.map(c => c.trim()).filter(Boolean).forEach((c, i) => {
-    S.domains.push({id: uid(), name: c, emoji: "✨", color: DOMAIN_COLORS[(S.domains.length) % DOMAIN_COLORS.length],
+    S.domains.push({id: uid(), name: c, color: DOMAIN_COLORS[(S.domains.length) % DOMAIN_COLORS.length],
       desc: `A specialist mode for "${c}". Apply MIRA's full source-verification standard: verified facts with citations, honest estimates labelled as such, and expertise built around this subject.`});
   });
   if (!S.domains.length) S.domains = JSON.parse(JSON.stringify(DEFAULT_DOMAINS));
   S.onboarded = true;
   R.mode = S.domains[0].id;
   save(); render();
-  toast(`Welcome${S.settings.name ? ", " + S.settings.name : ""} 👋`);
+  toast(`Welcome${S.settings.name ? ", " + S.settings.name : ""}.`);
 }
 </script>
 <script>
@@ -670,14 +698,14 @@ function chatHTML(){
   ];
   return `
     <div class="mode-row">${S.domains.map(d =>
-      `<button class="mode-chip ${d.id === R.mode ? "on" : ""}" style="--mc:${d.color}" onclick="M.mode('${d.id}')"><span class="d"></span>${d.emoji} ${esc(d.name)}</button>`).join("")}
+      `<button class="mode-chip ${d.id === R.mode ? "on" : ""}" style="--mc:${d.color}" onclick="M.mode('${d.id}')"><span class="d"></span>${esc(d.name)}</button>`).join("")}
     </div>
-    ${!S.settings.apiKey ? `<div class="card" style="border-color:rgba(232,163,61,.4)"><h3>🔑 Add your API key</h3>
+    ${!S.settings.apiKey ? `<div class="card" style="border-color:rgba(232,163,61,.4)"><h3>${ic("key", 16)} Add your API key</h3>
       <div class="muted">MIRA needs your Anthropic API key to chat. It stays on this device.</div>
       <button class="btn sm sec" style="margin-top:10px" onclick="M.tab('set')">Open Settings</button></div>` : ""}
     <div class="msgs" id="msgs">
       ${msgs.length ? msgs.map(msgHTML).join("") : `
-        <div class="card"><h3>${dom.emoji} ${esc(dom.name)} mode</h3>
+        <div class="card"><h3><span class="mode-dot"></span>${esc(dom.name)} mode</h3>
           <div class="muted">${esc(dom.desc.split(".")[0])}. Every fact verified or honestly labelled an estimate.</div></div>
         <div class="suggest">${sug.map(s => `<button onclick="M.suggest(this)">${esc(s)}</button>`).join("")}</div>`}
     </div>
@@ -685,21 +713,21 @@ function chatHTML(){
 }
 function msgHTML(m){
   if (m.role === "user")
-    return `<div class="msg user" dir="auto">${esc(m.content)}${m.att ? `<div class="att">📎 ${esc(m.att)}</div>` : ""}</div>`;
+    return `<div class="msg user" dir="auto">${esc(m.content)}${m.att ? `<div class="att">${ic("paperclip", 12)} ${esc(m.att)}</div>` : ""}</div>`;
   return `<div class="msg mira" dir="auto"><div class="who">MIRA${m.ds ? " · DEEP SOLVE" : ""}</div>${md(m.content)}</div>`;
 }
 function chatbarHTML(){
   return `<div class="chatbar">
-    ${R.attach ? `<div class="attach-pill">📎 <b>${esc(R.attach.name)}</b><button onclick="M.attachClear()" style="color:var(--txt2)">✕</button></div>` : ""}
+    ${R.attach ? `<div class="attach-pill">${ic("paperclip", 13)} <b>${esc(R.attach.name)}</b><button onclick="M.attachClear()" style="color:var(--txt2)">✕</button></div>` : ""}
     <div class="inner">
-      <button class="icon-btn" onclick="M.attach()" title="Attach photo or PDF">📎</button>
-      <button class="icon-btn ds ${R.deepSolve ? "on" : ""}" onclick="M.toggleDS()" title="Deep Solve">🧠</button>
+      <button class="icon-btn" onclick="M.attach()" title="Attach photo or PDF">${ic("paperclip", 19)}</button>
+      <button class="icon-btn ds ${R.deepSolve ? "on" : ""}" onclick="M.toggleDS()" title="Deep Solve">${ic("layers", 19)}</button>
       <textarea id="chatIn" rows="1" placeholder="Ask MIRA anything…" dir="auto"
         oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"
         onkeydown="if(event.key==='Enter'&&!event.shiftKey&&!('ontouchstart' in window)){event.preventDefault();M.send()}"></textarea>
-      <button class="icon-btn send" onclick="M.send()" ${R.busy ? "disabled" : ""}>${R.busy ? "…" : "➤"}</button>
+      <button class="icon-btn send" onclick="M.send()" ${R.busy ? "disabled" : ""}>${R.busy ? "…" : ic("arrowUp", 19)}</button>
     </div>
-    ${R.deepSolve ? `<div class="ds-note">🧠 Deep Solve on — two-stage reasoning for hard problems</div>` : ""}
+    ${R.deepSolve ? `<div class="ds-note">Deep Solve on — two-stage reasoning for hard problems</div>` : ""}
   </div>`;
 }
 function afterChatRender(){
@@ -816,7 +844,7 @@ async function sendChat(){
     });
     holder.content = full || "(no response)";
   } catch (e) {
-    holder.content = `⚠️ **Could not reach the API.** ${e.message}\n\nCheck your key, model and connection in Settings, then try again.`;
+    holder.content = `**Could not reach the API.** ${e.message}\n\nCheck your key, model and connection in Settings, then try again.`;
   }
   R.busy = false;
   save(); render();
@@ -867,7 +895,7 @@ function macroBar(label, val, target, unit){
   const pct = Math.min(100, target ? (val / target) * 100 : 0);
   const done = val >= target, over = val > target * 1.1;
   const cls = over ? "over" : done ? "done" : "";
-  const st = over ? "⚠ over" : done ? "✓" : "";
+  const st = over ? "over" : done ? "✓" : "";
   return `<div class="bar-line ${cls}">
     <div class="bar-top"><span class="lab">${label}</span>
       <span class="val">${unit === "kcal" ? n0(val) : n1(val)} / ${n0(target)} ${unit} <span class="st">${st}</span></span></div>
@@ -889,7 +917,7 @@ function foodHTML(){
 
   return `
   <div class="card">
-    <h3>🎯 Today <span class="tiny" style="margin-inline-start:auto;font-weight:400">${new Date().toLocaleDateString("en-GB",{day:"numeric",month:"long"})}</span></h3>
+    <h3>${ic("target", 16)} Today <span class="tiny" style="margin-inline-start:auto;font-weight:400">${new Date().toLocaleDateString("en-GB",{day:"numeric",month:"long"})}</span></h3>
     <div class="bars">
       ${macroBar("Calories", tot.kcal, tg.kcal, "kcal")}
       ${macroBar("Protein", tot.p, tg.protein, "g")}
@@ -900,14 +928,14 @@ function foodHTML(){
   </div>
 
   <div class="card">
-    <h3>💧 Hydration <span class="tiny" style="margin-inline-start:auto;font-weight:400">${glasses} glasses · ${litres.toFixed(2)} L / ${(S.settings.waterGoal/1000).toFixed(2)} L</span></h3>
+    <h3>${ic("droplet", 16)} Hydration <span class="tiny" style="margin-inline-start:auto;font-weight:400">${glasses} glasses · ${litres.toFixed(2)} L / ${(S.settings.waterGoal/1000).toFixed(2)} L</span></h3>
     <div class="glasses">${Array.from({length: goalGl}, (_, i) =>
-      `<button class="glass ${i < glasses ? "f" : ""}" onclick="M.water(${i})">💧</button>`).join("")}</div>
+      `<button class="glass ${i < glasses ? "f" : ""}" onclick="M.water(${i})">${ic("droplet", 15)}</button>`).join("")}</div>
     <div class="bar"><i style="width:${wPct}%;background:#4BA3E3"></i></div>
   </div>
 
   <div class="card fold open" id="addFoodCard">
-    <h3>＋ Log food</h3>
+    <h3>${ic("plus", 16)} Log food</h3>
     <div class="fold-body" style="display:block">
       <div class="field ac-wrap"><label>Food name</label>
         <input id="ffName" value="${esc(foodForm.name)}" placeholder="Start typing — saved foods appear" dir="auto" autocomplete="off"
@@ -925,9 +953,9 @@ function foodHTML(){
         <div class="field"><label>&nbsp;</label><button class="btn sm" style="width:100%;min-height:44px" onclick="M.foodSave()">Save</button></div>
       </div>
       <div class="row" style="gap:8px">
-        <button class="btn sm sec" onclick="M.scToggle()">⚖️ Portion scaler</button>
-        <button class="btn sm sec" onclick="M.findMacros()" ${findBusy ? "disabled" : ""}>${findBusy ? "Searching…" : "🔎 Find macros"}</button>
-        <button class="btn sm sec" onclick="M.extractPhoto()" ${extractBusy ? "disabled" : ""}>${extractBusy ? "Reading…" : "📷 Photo / PDF"}</button>
+        <button class="btn sm sec" onclick="M.scToggle()">${ic("sliders", 15)} Portion scaler</button>
+        <button class="btn sm sec" onclick="M.findMacros()" ${findBusy ? "disabled" : ""}>${findBusy ? "Searching…" : ic("search", 15) + " Find macros"}</button>
+        <button class="btn sm sec" onclick="M.extractPhoto()" ${extractBusy ? "disabled" : ""}>${extractBusy ? "Reading…" : ic("camera", 15) + " Photo / PDF"}</button>
       </div>
       ${foodForm.scOpen ? `
       <div class="review-item" style="margin-top:12px">
@@ -1006,8 +1034,8 @@ function reviewHTML(){
           <button class="btn sm" style="flex:0 0 auto" onclick="M.reviewAccept(${i})">Log it</button>
           <button class="btn sm sec" style="flex:0 0 auto" onclick="M.reviewDrop(${i})">✕</button>
         </div>
-        ${s.errors.map(e => `<div class="err">✕ ${esc(e)}</div>`).join("")}
-        ${s.warnings.map(w => `<div class="warn">⚠ ${esc(w)}</div>`).join("")}
+        ${s.errors.map(e => `<div class="err">${esc(e)}</div>`).join("")}
+        ${s.warnings.map(w => `<div class="warn">${esc(w)}</div>`).join("")}
       </div>`;
     }).join("")}
   </div>`;
@@ -1019,8 +1047,8 @@ function foodSaveDirect(){
     kcal: foodForm.kcal, p: foodForm.p, c: foodForm.c, f: foodForm.f, conf: foodForm.conf || "user"};
   if (!it.name){ toast("Give the food a name."); return; }
   const s = sanity(it);
-  if (s.errors.length){ toast("✕ " + s.errors[0], 4200); return; }
-  if (s.warnings.length) toast("⚠ " + s.warnings[0], 3600);
+  if (s.errors.length){ toast(s.errors[0], 4200); return; }
+  if (s.warnings.length) toast(s.warnings[0], 3600);
   logFood(it);
   Object.assign(foodForm, {name: "", amount: "", kcal: "", p: "", c: "", f: "", conf: "user", scOpen: false});
   render();
@@ -1110,16 +1138,16 @@ function bodyHTML(){
   const sorted = [...S.inbody].sort((a, b) => a.date < b.date ? -1 : 1);
   return `
   <div class="card">
-    <h3>📊 InBody log</h3>
+    <h3>${ic("chart", 16)} InBody log</h3>
     <div class="muted">Each scan is stored with the change from the previous entry per metric. MIRA reads this log live — ask for a trend analysis in Fitness mode any time.</div>
     <div class="row" style="margin-top:10px">
-      <button class="btn sm sec" onclick="M.ibPhoto()" ${ibBusy ? "disabled" : ""}>${ibBusy ? "Reading…" : "📷 Upload result sheet"}</button>
-      <button class="btn sm sec" onclick="M.ibAnalyse()">🧠 Analyse my trend</button>
+      <button class="btn sm sec" onclick="M.ibPhoto()" ${ibBusy ? "disabled" : ""}>${ibBusy ? "Reading…" : ic("camera", 15) + " Upload result sheet"}</button>
+      <button class="btn sm sec" onclick="M.ibAnalyse()">${ic("trend", 15)} Analyse my trend</button>
     </div>
   </div>
 
   <div class="card">
-    <h3>＋ Add scan</h3>
+    <h3>${ic("plus", 16)} Add scan</h3>
     <div class="grid2" style="margin-bottom:10px">
       <div class="field"><label>Date</label><input type="date" value="${esc(ibForm.date || todayStr())}" oninput="ibForm.date=this.value"></div>
       <div class="field"><label>Weight kg</label><input type="number" inputmode="decimal" value="${esc(ibForm.weight)}" oninput="ibForm.weight=this.value"></div>
@@ -1184,8 +1212,8 @@ function ibSaveEntry(src){
     vals[m.k] = v === "" || v === null || v === undefined ? null : num(v);
   }
   if (Object.values(vals).every(v => v === null)){ toast("Enter at least one value."); return false; }
-  if (vals.weight !== null && (vals.weight < 20 || vals.weight > 400)){ toast("✕ Weight looks impossible — check it."); return false; }
-  if (vals.pa !== null && (vals.pa < 1 || vals.pa > 20)){ toast("✕ Phase angle out of plausible range (1–20°)."); return false; }
+  if (vals.weight !== null && (vals.weight < 20 || vals.weight > 400)){ toast("Weight looks impossible — check it."); return false; }
+  if (vals.pa !== null && (vals.pa < 1 || vals.pa > 20)){ toast("Phase angle out of plausible range (1–20°)."); return false; }
   S.inbody.push({id: uid(), date: src.date || todayStr(), ...vals});
   save();
   toast("Scan saved ✓");
@@ -1218,7 +1246,7 @@ function settingsHTML(){
   const st = S.settings;
   return `
   <div class="card">
-    <h3>👤 Profile</h3>
+    <h3>${ic("user", 16)} Profile</h3>
     <div class="field"><label>Name</label><input value="${esc(st.name)}" oninput="S.settings.name=this.value;save()"></div>
     <div class="field"><label>Coaching style</label>
       <div class="seg">${["direct","balanced","encouraging"].map(v => `<button class="${st.style === v ? "on" : ""}" onclick="M.set('style','${v}')">${v[0].toUpperCase() + v.slice(1)}</button>`).join("")}</div></div>
@@ -1229,10 +1257,10 @@ function settingsHTML(){
   </div>
 
   <div class="card">
-    <h3>🗂️ Domains</h3>
+    <h3>${ic("grid", 16)} Domains</h3>
     ${S.domains.map((d, i) => `<div class="set-row">
       <span class="dom-color" style="background:${d.color}"></span>
-      <span class="k">${d.emoji} ${esc(d.name)}</span>
+      <span class="k">${esc(d.name)}</span>
       <span class="end">${S.domains.length > 1 ? `<button class="btn sm danger" onclick="M.domDel(${i})">Remove</button>` : ""}</span>
     </div>`).join("")}
     <div class="row" style="margin-top:10px">
@@ -1243,7 +1271,7 @@ function settingsHTML(){
   </div>
 
   <div class="card">
-    <h3>🎯 Daily targets</h3>
+    <h3>${ic("target", 16)} Daily targets</h3>
     <div class="grid2" style="margin-bottom:10px">
       <div class="field"><label>Calories kcal</label><input type="number" inputmode="numeric" value="${st.targets.kcal || ""}" oninput="S.settings.targets.kcal=num(this.value);save()"></div>
       <div class="field"><label>Protein g</label><input type="number" inputmode="numeric" value="${st.targets.protein || ""}" oninput="S.settings.targets.protein=num(this.value);save()"></div>
@@ -1256,7 +1284,7 @@ function settingsHTML(){
   </div>
 
   <div class="card">
-    <h3>🔑 API & model</h3>
+    <h3>${ic("key", 16)} API & model</h3>
     <div class="field"><label>Anthropic API key</label>
       <input type="password" value="${esc(st.apiKey)}" placeholder="sk-ant-…" autocomplete="off" oninput="S.settings.apiKey=this.value.trim();save()">
       <div class="tiny" style="margin-top:6px">Stored only in this browser; sent only to api.anthropic.com. Billed to your own account.</div></div>
@@ -1265,7 +1293,7 @@ function settingsHTML(){
   </div>
 
   <div class="card">
-    <h3>🔒 Security</h3>
+    <h3>${ic("lock", 16)} Security</h3>
     <div class="muted" style="margin-bottom:10px">${st.pinHash ? "PIN lock is on. The PIN is stored only as a hash, never as readable digits." : "No PIN set. Add a 4-digit PIN to gate entry to MIRA."}</div>
     <div class="row">
       <button class="btn sm sec" onclick="M.pinSet()">${st.pinHash ? "Change PIN" : "Set PIN"}</button>
@@ -1275,7 +1303,7 @@ function settingsHTML(){
   </div>
 
   <div class="card fold" id="savedFoodsCard">
-    <h3 onclick="this.parentElement.classList.toggle('open')">🍱 Saved foods (${S.savedFoods.length}) <span class="chev">▶</span></h3>
+    <h3 onclick="this.parentElement.classList.toggle('open')">${ic("bookmark", 16)} Saved foods (${S.savedFoods.length}) <span class="chev">▶</span></h3>
     <div class="fold-body">
       ${S.savedFoods.length ? S.savedFoods.map((f, i) => `<div class="set-row">
         <div><div class="k" dir="auto">${esc(f.name)}</div><div class="desc">${f.amount ? esc(f.amount) + " · " : ""}${n0(f.kcal)} kcal · ${n1(f.p)}P · ${n1(f.c)}C · ${n1(f.f)}F</div></div>
@@ -1285,11 +1313,11 @@ function settingsHTML(){
   </div>
 
   <div class="card">
-    <h3>💾 Backup & data</h3>
+    <h3>${ic("database", 16)} Backup & data</h3>
     <div class="muted" style="margin-bottom:10px">Logs, targets, saved foods, chats and settings live only in this browser. Export a backup so nothing is lost across reinstalls or devices.</div>
     <div class="row" style="margin-bottom:10px">
-      <button class="btn sm sec" onclick="M.backup()">⬇️ Export backup</button>
-      <button class="btn sm sec" onclick="M.restore()">⬆️ Restore backup</button>
+      <button class="btn sm sec" onclick="M.backup()">${ic("download", 15)} Export backup</button>
+      <button class="btn sm sec" onclick="M.restore()">${ic("upload", 15)} Restore backup</button>
     </div>
     <button class="btn sm danger" onclick="M.wipe()">Erase everything on this device</button>
   </div>
@@ -1326,7 +1354,7 @@ function restore(){
         R.mode = S.domains[0]?.id || "work";
         save(); render();
         toast("Backup restored ✓");
-      } catch (e) { toast("✕ That file is not a valid MIRA backup."); }
+      } catch (e) { toast("That file is not a valid MIRA backup."); }
     };
     r.readAsText(f);
   };
@@ -1396,7 +1424,7 @@ window.M = {
   reviewAccept(i){
     const it = reviewItems[i];
     const s = sanity(it);
-    if (s.errors.length){ toast("✕ " + s.errors[0], 4200); render(); return; }
+    if (s.errors.length){ toast(s.errors[0], 4200); render(); return; }
     logFood(it);
     reviewItems.splice(i, 1);
     if (!reviewItems.length) reviewItems = null;
@@ -1427,7 +1455,7 @@ window.M = {
     const inp = $("#newDom");
     const name = (inp ? inp.value : "").trim();
     if (!name){ toast("Type a domain name."); return; }
-    S.domains.push({id: uid(), name, emoji: "✨", color: DOMAIN_COLORS[S.domains.length % DOMAIN_COLORS.length],
+    S.domains.push({id: uid(), name, color: DOMAIN_COLORS[S.domains.length % DOMAIN_COLORS.length],
       desc: `A specialist mode for "${name}". Apply MIRA's full source-verification standard: verified facts with citations, honest estimates labelled as such, and expertise built around this subject.`});
     save(); render();
     toast(`Domain added: ${name} ✓`);
