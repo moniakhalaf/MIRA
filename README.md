@@ -14,7 +14,11 @@ This repository contains the **standalone edition**: a single self-contained `in
 
 **Core intelligence**
 - Source-verification protocol in every answer: reputable sources only (peer-reviewed journals, WHO/NIH/EFSA, official vendor docs), conflicts shown, nothing invented
+- **Live web research** — with the globe toggle on, MIRA searches the real internet through your API key like a professional researcher: primary sources first, cross-checked, cited with working links (Anthropic bills ~$10 per 1,000 searches)
+- **Acting on your behalf** — approved email drafts and calendar events become one-tap cards ("Open in Mail", "Add to calendar") fired from your own accounts; draft first, send second, always
+- **Specialist embodiment** — each domain answers as a senior professional of that field (the marketer, the engineer, the photographer, the student's tutor); new custom domains get an AI-generated specialist brief
 - **Deep Solve** — a two-stage engine for hard problems: problem map first, then systematic resolution with assumptions and trade-offs stated
+- Multiple saved conversations per mode, kept until you delete them
 - Multilingual — replies in whatever language you write in (Arabic ↔ English mid-conversation)
 - Live data awareness — your food log, targets, hydration and InBody history are fed into every conversation automatically ("what should I eat tonight?" gets exact remaining amounts)
 
@@ -48,6 +52,6 @@ This repository contains the **standalone edition**: a single self-contained `in
 
 ## Honest limitations
 
-- No live web search in this runtime — MIRA answers from verified knowledge and labels results accordingly; it never invents sources or links.
+- With live web search off, MIRA answers from verified knowledge and labels results accordingly; it never invents sources or links.
 - Small local venues rarely publish macros, so many restaurant items are estimates by design; your own numbers always take precedence.
 - A PIN in a downloadable file is a casual lock, not hardened security — keep the file and backups private.

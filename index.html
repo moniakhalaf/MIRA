@@ -144,6 +144,7 @@ h1,h2,h3,h4{margin:0;font-weight:600}
   background:var(--card2);border:1px solid var(--line2);color:var(--txt);
   padding:10px 18px;border-radius:12px;font-size:14px;z-index:90;opacity:0;
   transition:all .3s;max-width:88vw;text-align:center;box-shadow:0 8px 30px rgba(0,0,0,.5);
+  pointer-events:none;
 }
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
@@ -173,6 +174,10 @@ h1,h2,h3,h4{margin:0;font-weight:600}
 .msg.mira table{border-collapse:collapse;margin:.5em 0;font-size:.92em;display:block;overflow-x:auto;max-width:100%}
 .msg.mira th,.msg.mira td{border:1px solid var(--line2);padding:5px 9px;text-align:start}
 .msg .att{font-size:12px;color:var(--txt3);margin-top:5px}
+.action-card{background:var(--bg2);border:1px solid color-mix(in srgb,var(--acc) 40%,transparent);border-radius:12px;padding:12px;margin:.5em 0}
+.action-card .ach{font-size:11.5px;font-weight:700;letter-spacing:.07em;color:var(--acc);text-transform:uppercase;display:flex;align-items:center;gap:6px;margin-bottom:8px}
+.action-card .acf{font-size:13.5px;margin:2px 0}
+.action-card .acb{background:var(--card);border:1px solid var(--line);border-radius:9px;padding:9px 11px;margin-top:8px;font-size:14px;white-space:normal}
 .typing{display:inline-flex;gap:4px;padding:4px 0}
 .typing i{width:7px;height:7px;border-radius:50%;background:var(--txt3);animation:blink 1.2s infinite}
 .typing i:nth-child(2){animation-delay:.2s}.typing i:nth-child(3){animation-delay:.4s}
@@ -371,6 +376,10 @@ const I = {
   bookmark: '<path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>',
   chart: '<line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/>',
   clock: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+  globe: '<circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>',
+  mail: '<path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>',
+  calendar: '<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
+  copy: '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
   trash: '<polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
   database: '<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>',
   trend: '<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>',
@@ -409,7 +418,7 @@ const BLANK = () => ({
   onboarded: false,
   settings: {
     name: "", style: "balanced", depth: "balanced", lang: "match",
-    apiKey: "", model: "claude-sonnet-5", pinHash: null,
+    apiKey: "", model: "claude-sonnet-5", pinHash: null, webSearch: true,
     targets: {kcal: 2000, protein: 120, carbs: 0, fat: 0},
     waterGoal: 2500,
   },
@@ -440,6 +449,7 @@ function migrateChats(){
     delete S.chats;
   }
   if (!Array.isArray(S.convs)) S.convs = [];
+  if (S.settings.webSearch === undefined) S.settings.webSearch = true;
 }
 migrateChats();
 
@@ -582,8 +592,10 @@ function onbDone(){
   if (onb.key.trim()) S.settings.apiKey = onb.key.trim();
   S.domains = DEFAULT_DOMAINS.filter(d => onb.domSel.has(d.id)).map(d => JSON.parse(JSON.stringify(d)));
   onb.custom.map(c => c.trim()).filter(Boolean).forEach((c, i) => {
-    S.domains.push({id: uid(), name: c, color: DOMAIN_COLORS[(S.domains.length) % DOMAIN_COLORS.length],
-      desc: `A specialist mode for "${c}". Apply MIRA's full source-verification standard: verified facts with citations, honest estimates labelled as such, and expertise built around this subject.`});
+    const d = {id: uid(), name: c, color: DOMAIN_COLORS[(S.domains.length) % DOMAIN_COLORS.length],
+      desc: `Senior specialist work in "${c}": embody the field's professional fully — its frameworks, terminology, trusted sources and deliverables. Apply MIRA's full source-verification standard: verified facts with citations, honest estimates labelled as such.`};
+    S.domains.push(d);
+    if (typeof genPersona === "function") genPersona(d);
   });
   if (!S.domains.length) S.domains = JSON.parse(JSON.stringify(DEFAULT_DOMAINS));
   S.onboarded = true;
@@ -643,15 +655,49 @@ Present yourself the way a world-class professional product would: composed, pre
 - You are MIRA, an integrated reasoning assistant. The modes on screen (${S.domains.map(d => d.name).join(", ")}) are organisational lenses, NOT limits — your scope is universal. You can take on any subject: engineering, law, medicine, finance, science, technology, business strategy, academia, languages, local Kuwait/GCC matters, or anything else the user brings.
 - You solve genuinely complicated, multi-layered problems. For hard problems you offer Deep Solve: you map the problem first (core question, sub-problems, what must be verified), then resolve it systematically and end with a definitive recommendation, its trade-offs, and remaining uncertainties.
 - Your defining standard: every factual claim is checked against trusted, reputable sources — peer-reviewed literature, official bodies (WHO, NIH, EFSA), regulators, official vendor documentation — and cited. When something can only be estimated, you say so and label it. When something cannot be known, you say that plainly. You never invent a source, link, or number.
+- You work as a professional researcher${st.webSearch ? " with live internet search" : ""}: finding the most suitable data for any need, filtered to trusted sources and delivered with citations.
+- You act on the user's behalf when asked: drafting emails and calendar events that the user fires from their own accounts with one tap — always draft first, send second.
+- You fully embody each domain's specialist — the marketer, the engineer, the photographer, the student's tutor — with that field's frameworks, sources, and deliverables.
 - You are fully bilingual Arabic/English (and handle other languages), switching mid-conversation with the user.
 - You carry the user's own live data — nutrition, hydration, targets, body composition — and their own measured values always override any database.
-- State your limits with the same professionalism: no live web browsing in this app (you cite from verified knowledge and label accordingly), and you provide legal/medical/financial information as verified facts to decide from, not as licensed advice.
+- State your limits with the same professionalism: ${st.webSearch ? "web results are only as current as what is published" : "live web browsing is currently off (you cite from verified knowledge and label accordingly)"}, and you provide legal/medical/financial information as verified facts to decide from, not as licensed advice.
 Keep the self-introduction tight and structured — a short paragraph plus a few crisp bullets beats a wall of text. Then invite the user to put you to work on something concrete.
 
+SPECIALIST EMBODIMENT
+Fully embody the senior ${dom.name} specialist — the way a seasoned marketer, engineer, photographer, physician, lawyer, or a student's best tutor owns their field. Use the field's standard frameworks, terminology, tools of the trade, benchmark sources, and deliverable formats. Give the answer a professional in that field would sign their name to, adapted to this user's stated preferences.
+
 THREE NON-NEGOTIABLE PRINCIPLES
-1. Trusted sources first. Every factual claim must trace to reputable sources: peer-reviewed journals, WHO / NIH / EFSA, official government and regulator sites, official vendor documentation (e.g. SAP Help Portal for SAP questions). Blogs and forums do not count. When sources conflict, present both. Cite what you rely on. You have no live web access in this app, so cite from verified knowledge: name the source precisely (organisation, document, year) and give a URL ONLY when you are certain of the canonical address (e.g. who.int, nih.gov, efsa.europa.eu, help.sap.com). NEVER invent a source, link, statistic, or study.
+1. Trusted sources first. Every factual claim must trace to reputable sources: peer-reviewed journals, WHO / NIH / EFSA, official government and regulator sites, official vendor documentation (e.g. SAP Help Portal for SAP questions). Blogs and forums do not count. When sources conflict, present both. Cite what you rely on. ${st.webSearch
+  ? "You HAVE live web search (the web_search tool). Use it whenever a claim is time-sensitive, checkable, or the user asks for current information — prices, releases, news, regulations, published nutrition figures — and cite the actual pages you used with working links and dates."
+  : "Live web search is OFF in this app right now, so cite from verified knowledge: name the source precisely (organisation, document, year) and give a URL ONLY when you are certain of the canonical address (e.g. who.int, nih.gov, efsa.europa.eu, help.sap.com)."} NEVER invent a source, link, statistic, or study.
 2. The user's own data always wins. A personal product label or measured value overrides any database or estimate. The live data block below is ground truth.
 3. Honest limits. When something cannot be verified, say so plainly. Label estimates as estimates with your confidence and how you derived them. Never pretend precision you don't have.
+
+PROFESSIONAL RESEARCHER
+When the user wants anything found on the internet — a product, a price, a paper, a regulation, a comparison, the best option for a need — act as a professional researcher${st.webSearch
+  ? ": run targeted searches (multiple angles when it matters), prefer primary and authoritative sources over aggregators, cross-check anything surprising, discard low-quality pages, and deliver the most suitable data as a clear recommendation with working links, dates, and what you filtered out. Say plainly when results are inconclusive."
+  : ". Live search is currently off, so answer from verified knowledge, label what may be outdated, and tell the user they can enable Live web search in Settings for current data."}
+
+ACTING ON THE USER'S BEHALF
+You can prepare real actions that the app turns into one-tap buttons executed from the user's own accounts. Two rules govern this: draft first, send second (nothing outbound goes without the user's explicit approval), and confirm exactly what was prepared. Flow: when asked to write an email or schedule something, present the draft as normal text first; once the user approves it (or clearly asked for the final version), output an action block in EXACTLY this format:
+
+\`\`\`action:email
+to: recipient@example.com
+subject: The subject line
+---
+The email body.
+\`\`\`
+
+\`\`\`action:event
+title: Event title
+start: 2026-07-15 17:00
+end: 2026-07-15 18:00
+location: Optional place
+---
+Optional notes.
+\`\`\`
+
+The app renders these as cards with "Open in Mail" / "Add to calendar" buttons. Use them only for a finalised draft, never for examples.
 
 DEEP SOLVE
 When a message begins with [DEEP SOLVE], run the two-stage engine:
@@ -680,10 +726,53 @@ ${liveContext()}
 Format with light Markdown (headings, short lists, bold key figures). Keep tables narrow.`;
 }
 
+/* ---------------- action cards (agent capability) ---------------- */
+const unesc = s => String(s).replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'");
+function parseAction(raw){
+  const parts = raw.split(/^---$/m);
+  const fields = {};
+  parts[0].trim().split("\n").forEach(l => {
+    const m = l.match(/^(\w+):\s*(.*)$/);
+    if (m) fields[m[1].toLowerCase()] = unesc(m[2].trim());
+  });
+  fields.body = unesc(parts.slice(1).join("---").trim());
+  return fields;
+}
+const actPayload = f => encodeURIComponent(JSON.stringify(f)).replace(/'/g, "%27");
+function actionCardHTML(kind, raw){
+  const f = parseAction(raw);
+  const p = actPayload(f);
+  if (kind === "email"){
+    return `<div class="action-card">
+      <div class="ach">${ic("mail", 15)} Email draft — ready to send</div>
+      <div class="acf"><b>To:</b> <span dir="auto">${esc(f.to || "—")}</span></div>
+      <div class="acf"><b>Subject:</b> <span dir="auto">${esc(f.subject || "—")}</span></div>
+      <div class="acb" dir="auto">${esc(f.body).replace(/\n/g, "<br>")}</div>
+      <div class="row" style="margin-top:10px">
+        <button class="btn sm" onclick="M.actEmail('${p}')">${ic("mail", 14)} Open in Mail</button>
+        <button class="btn sm sec" onclick="M.actCopy('${p}')">${ic("copy", 14)} Copy</button>
+      </div>
+      <div class="tiny" style="margin-top:7px">Sends from your own mail account — nothing goes out until you press send there.</div>
+    </div>`;
+  }
+  return `<div class="action-card">
+    <div class="ach">${ic("calendar", 15)} Calendar event — ready to add</div>
+    <div class="acf"><b>Title:</b> <span dir="auto">${esc(f.title || "—")}</span></div>
+    <div class="acf"><b>When:</b> ${esc(f.start || "—")}${f.end ? " → " + esc(f.end) : ""}</div>
+    ${f.location ? `<div class="acf"><b>Where:</b> <span dir="auto">${esc(f.location)}</span></div>` : ""}
+    ${f.body ? `<div class="acb" dir="auto">${esc(f.body).replace(/\n/g, "<br>")}</div>` : ""}
+    <div class="row" style="margin-top:10px">
+      <button class="btn sm" onclick="M.actIcs('${p}')">${ic("calendar", 14)} Add to calendar</button>
+      <button class="btn sm sec" onclick="M.actCopy('${p}')">${ic("copy", 14)} Copy</button>
+    </div>
+  </div>`;
+}
+
 /* ---------------- markdown (minimal, safe) ---------------- */
 function md(src){
   let s = esc(src);
-  // code blocks first
+  // agent action blocks first, then normal code blocks
+  s = s.replace(/```action:(email|event)\n([\s\S]*?)```/g, (_, kind, raw) => actionCardHTML(kind, raw));
   s = s.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, l, c) => `<pre><code>${c}</code></pre>`);
   // tables
   s = s.replace(/((?:^\|.*\|\s*$\n?)+)/gm, block => {
@@ -708,7 +797,7 @@ function md(src){
   s = s.replace(/(^|[\s(])(https?:\/\/[^\s<)]+)/g, `$1<a href="$2" target="_blank" rel="noopener">$2</a>`);
   // paragraphs
   return s.split(/\n{2,}/).map(p =>
-    /^<(h3|ul|ol|pre|table|blockquote)/.test(p.trim()) ? p : `<p>${p.trim().replace(/\n/g, "<br>")}</p>`
+    /^<(h3|ul|ol|pre|table|blockquote|div)/.test(p.trim()) ? p : `<p>${p.trim().replace(/\n/g, "<br>")}</p>`
   ).join("");
 }
 
@@ -781,6 +870,7 @@ function chatbarHTML(){
     <div class="inner">
       <button class="icon-btn" onclick="M.attach()" title="Attach photo or PDF">${ic("paperclip", 19)}</button>
       <button class="icon-btn ds ${R.deepSolve ? "on" : ""}" onclick="M.toggleDS()" title="Deep Solve">${ic("layers", 19)}</button>
+      <button class="icon-btn ds ${S.settings.webSearch ? "on" : ""}" onclick="M.toggleWeb()" title="Live web search">${ic("globe", 19)}</button>
       <textarea id="chatIn" rows="1" placeholder="Ask MIRA anything…" dir="auto"
         oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"
         onkeydown="if(event.key==='Enter'&&!event.shiftKey&&!('ontouchstart' in window)){event.preventDefault();M.send()}"></textarea>
@@ -897,6 +987,7 @@ async function sendChat(){
     const full = await apiCall({
       model: S.settings.model, max_tokens: ds ? 8000 : 4000, stream: true,
       system: systemPrompt(dom),
+      ...(S.settings.webSearch ? {tools: [{type: "web_search_20250305", name: "web_search", max_uses: 5}]} : {}),
       messages: [...hist, {role: "user", content: lastContent}],
     }, partial => {
       holder.content = partial;
@@ -1132,13 +1223,22 @@ function logFood(it){
   toast(`Logged: ${it.name.trim()} ✓`);
 }
 
-const stripJson = t => {
-  const m = t.match(/```(?:json)?\s*([\s\S]*?)```/);
-  const raw = m ? m[1] : t;
-  const a = raw.indexOf("["), o = raw.indexOf("{");
-  const start = a >= 0 && (o < 0 || a < o) ? a : o;
-  return start >= 0 ? raw.slice(start, raw.lastIndexOf(raw[start] === "[" ? "]" : "}") + 1) : raw;
-};
+/* find and parse the JSON payload in a model reply that may also contain prose */
+function tryParseJson(t){
+  const fenced = t.match(/```(?:json)?\s*([\s\S]*?)```/g) || [];
+  for (const block of fenced.reverse()){
+    try { return JSON.parse(block.replace(/^```(?:json)?\s*/, "").replace(/```$/, "")); } catch (e) {}
+  }
+  for (const [open, close] of [["{", "}"], ["[", "]"]]){
+    const end = t.lastIndexOf(close);
+    let i = t.length;
+    for (let n = 0; n < 12 && (i = t.lastIndexOf(open, i - 1)) >= 0; n++){
+      if (end > i){ try { return JSON.parse(t.slice(i, end + 1)); } catch (e) {} }
+      if (i === 0) break;
+    }
+  }
+  throw new Error("could not read structured data from the reply");
+}
 
 async function findMacros(){
   const name = foodForm.name.trim();
@@ -1147,11 +1247,12 @@ async function findMacros(){
   findBusy = true; render();
   try {
     const txt = await apiCall({
-      model: S.settings.model, max_tokens: 900,
-      system: `You are MIRA's nutrition lookup. Return realistic macro values for the food the user names — including restaurant/café items (Kuwait and GCC venues especially) and pan-Arab dishes in Arabic script or transliteration. Account for cooking method (مشوي grilled / مقلي fried / مسلوق boiled / roasted). Confidence rules: "official" ONLY if the venue or manufacturer actually publishes these values and you know them; "estimate" when reconstructed from standard composition data; "unavailable" when even an estimate would be irresponsible. Never invent official figures. Reply with ONLY a JSON object: {"name":str,"amount":str,"kcal":num,"p":num,"c":num,"f":num,"conf":"official"|"estimate"|"unavailable","note":str(short, includes basis/source)}. Energy must be consistent: kcal ≈ 4p+4c+9f.`,
+      model: S.settings.model, max_tokens: 1600,
+      ...(S.settings.webSearch ? {tools: [{type: "web_search_20250305", name: "web_search", max_uses: 3}]} : {}),
+      system: `You are MIRA's nutrition lookup. Return realistic macro values for the food the user names — including restaurant/café items (Kuwait and GCC venues especially) and pan-Arab dishes in Arabic script or transliteration. Account for cooking method (مشوي grilled / مقلي fried / مسلوق boiled / roasted).${S.settings.webSearch ? ` You have web search: check the venue's or manufacturer's OFFICIALLY published nutrition first; only fall back to an estimate if nothing official exists.` : ""} Confidence rules: "official" ONLY if the venue or manufacturer actually publishes these values${S.settings.webSearch ? " (verified via search or known)" : " and you know them"}; "estimate" when reconstructed from standard composition data; "unavailable" when even an estimate would be irresponsible. Never invent official figures. After any research, end your reply with ONLY a JSON object: {"name":str,"amount":str,"kcal":num,"p":num,"c":num,"f":num,"conf":"official"|"estimate"|"unavailable","note":str(short, includes basis/source)}. Energy must be consistent: kcal ≈ 4p+4c+9f.`,
       messages: [{role: "user", content: `Food: ${name}${foodForm.amount.trim() ? ` — amount: ${foodForm.amount.trim()}` : ""}`}],
     });
-    const j = JSON.parse(stripJson(txt));
+    const j = tryParseJson(txt);
     if (j.conf === "unavailable"){
       reviewItems = null;
       toast(`Not available: ${j.note || "no responsible estimate exists for this item."}`, 5000);
@@ -1176,7 +1277,7 @@ async function extractPhoto(){
         system: `You are MIRA's nutrition-label and meal reader. Extract food items with macros from the attached photo or document. If it is a printed nutrition label, use its values EXACTLY (official). If it is a meal photo, estimate portions and macros (estimate) and say the assumed portion in the note. Reply with ONLY a JSON array: [{"name":str,"amount":str,"kcal":num,"p":num,"c":num,"f":num,"conf":"official"|"estimate","note":str}]. Per-serving values unless stated otherwise; note which. Never guess a printed value you cannot read — omit that item and mention it in another item's note if needed.`,
         messages: [{role: "user", content: [block, {type: "text", text: "Extract the food items and macros."}]}],
       });
-      const arr = JSON.parse(stripJson(txt));
+      const arr = tryParseJson(txt);
       reviewItems = (Array.isArray(arr) ? arr : [arr]).map(j => ({
         name: j.name || "Item", amount: j.amount || "", kcal: j.kcal, p: j.p, c: j.c, f: j.f,
         conf: j.conf === "official" ? "official" : "estimate", note: j.note || ""}));
@@ -1299,11 +1400,27 @@ async function ibPhoto(){
         system: `You read InBody body-composition result sheets. Extract ONLY values you can actually read — never guess. Reply with ONLY JSON: {"date":"YYYY-MM-DD"|null,"weight":num|null,"score":num|null,"bfm":num|null(body fat mass kg),"smm":num|null(skeletal muscle mass kg),"vfa":num|null(visceral fat area cm²),"pa":num|null(phase angle degrees)}. Use null for anything unreadable or absent.`,
         messages: [{role: "user", content: [block, {type: "text", text: "Extract the InBody values."}]}],
       });
-      const j = JSON.parse(stripJson(txt));
+      const j = tryParseJson(txt);
       ibReview = {date: j.date || todayStr(), weight: j.weight ?? "", score: j.score ?? "", bfm: j.bfm ?? "", smm: j.smm ?? "", vfa: j.vfa ?? "", pa: j.pa ?? ""};
     } catch (e) { toast("Could not read the sheet: " + e.message, 4000); }
     ibBusy = false; render();
   });
+}
+
+/* build a real specialist persona for a custom domain */
+async function genPersona(d){
+  if (!S.settings.apiKey) return;
+  try {
+    const txt = await apiCall({
+      model: S.settings.model, max_tokens: 320,
+      system: `You write specialist-mode briefs for MIRA, a personal AI assistant with a strict source-verification standard. Reply with ONLY the brief: 60–90 words, no preamble, written like "Senior [profession] work: ...". It must name the specialist persona to embody (e.g. senior marketer / photographer / engineer / student's tutor), the core expertise areas of the domain, the field's most trusted sources, and the typical deliverables, ending with: facts verified against those sources, estimates labelled honestly.`,
+      messages: [{role: "user", content: `Domain: ${d.name}`}],
+    });
+    if (txt && txt.trim().length > 40){
+      const live = S.domains.find(x => x.id === d.id);
+      if (live){ live.desc = txt.trim(); save(); }
+    }
+  } catch (e) { /* keep the template brief */ }
 }
 
 /* ---------------- settings ---------------- */
@@ -1356,6 +1473,12 @@ function settingsHTML(){
       <div class="tiny" style="margin-top:6px">Stored only in this browser; sent only to api.anthropic.com. Billed to your own account.</div></div>
     <div class="field"><label>Model</label>
       <select onchange="S.settings.model=this.value;save()">${MODELS.map(m => `<option value="${m.id}" ${st.model === m.id ? "selected" : ""}>${m.name}</option>`).join("")}</select></div>
+    <div class="field"><label>Live web search</label>
+      <div class="seg">
+        <button class="${st.webSearch ? "on" : ""}" onclick="M.set('webSearch',true)">On</button>
+        <button class="${!st.webSearch ? "on" : ""}" onclick="M.set('webSearch',false)">Off</button>
+      </div>
+      <div class="tiny" style="margin-top:6px">Lets MIRA research the live internet through your API key and cite real pages. Anthropic bills searches (~$10 per 1,000) on top of tokens. Also toggled with the globe button in chat.</div></div>
   </div>
 
   <div class="card">
@@ -1466,6 +1589,44 @@ window.M = {
   onbDone,
 
   toggleDS(){ R.deepSolve = !R.deepSolve; render(); const ta = $("#chatIn"); if (ta) ta.focus(); },
+  toggleWeb(){
+    S.settings.webSearch = !S.settings.webSearch;
+    save(); render();
+    toast(S.settings.webSearch ? "Live web search on — MIRA verifies against the internet." : "Live web search off — MIRA answers from verified knowledge.");
+  },
+  actEmail(p){
+    const f = JSON.parse(decodeURIComponent(p));
+    location.href = "mailto:" + encodeURIComponent(f.to || "").replace(/%40/g, "@").replace(/%2C/g, ",") +
+      "?subject=" + encodeURIComponent(f.subject || "") + "&body=" + encodeURIComponent(f.body || "");
+  },
+  async actCopy(p){
+    const f = JSON.parse(decodeURIComponent(p));
+    const text = f.to !== undefined
+      ? `To: ${f.to}\nSubject: ${f.subject}\n\n${f.body}`
+      : `${f.title}\n${f.start}${f.end ? " → " + f.end : ""}${f.location ? "\n" + f.location : ""}\n\n${f.body}`.trim();
+    try { await navigator.clipboard.writeText(text); toast("Copied."); }
+    catch (e) { toast("Could not copy on this browser."); }
+  },
+  actIcs(p){
+    const f = JSON.parse(decodeURIComponent(p));
+    const parse = s => { const d = new Date(String(s || "").replace(" ", "T")); return isNaN(d) ? null : d; };
+    const start = parse(f.start) || new Date();
+    const end = parse(f.end) || new Date(start.getTime() + 3600000);
+    const fm = d => d.getFullYear() + String(d.getMonth() + 1).padStart(2, "0") + String(d.getDate()).padStart(2, "0") +
+      "T" + String(d.getHours()).padStart(2, "0") + String(d.getMinutes()).padStart(2, "0") + "00";
+    const ei = s => String(s || "").replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");
+    const ics = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//MIRA//EN", "BEGIN:VEVENT",
+      "UID:" + uid() + "@mira", "DTSTAMP:" + fm(new Date()), "DTSTART:" + fm(start), "DTEND:" + fm(end),
+      "SUMMARY:" + ei(f.title), f.location ? "LOCATION:" + ei(f.location) : "", f.body ? "DESCRIPTION:" + ei(f.body) : "",
+      "END:VEVENT", "END:VCALENDAR"].filter(Boolean).join("\r\n");
+    const blob = new Blob([ics], {type: "text/calendar"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = (f.title || "event").replace(/[^\w؀-ۿ -]/g, "").slice(0, 40) + ".ics";
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    toast("Calendar file ready — open it to add the event.");
+  },
   send: sendChat,
   suggest(btn){ render(); const ta = $("#chatIn"); if (ta){ ta.value = btn.textContent; ta.focus(); } },
   attach(){ pickFile(f => { R.attach = f; render(); toast(`Attached: ${f.name}`); }); },
@@ -1539,10 +1700,12 @@ window.M = {
     const inp = $("#newDom");
     const name = (inp ? inp.value : "").trim();
     if (!name){ toast("Type a domain name."); return; }
-    S.domains.push({id: uid(), name, color: DOMAIN_COLORS[S.domains.length % DOMAIN_COLORS.length],
-      desc: `A specialist mode for "${name}". Apply MIRA's full source-verification standard: verified facts with citations, honest estimates labelled as such, and expertise built around this subject.`});
+    const d = {id: uid(), name, color: DOMAIN_COLORS[S.domains.length % DOMAIN_COLORS.length],
+      desc: `Senior specialist work in "${name}": embody the field's professional fully — its frameworks, terminology, trusted sources and deliverables. Apply MIRA's full source-verification standard: verified facts with citations, honest estimates labelled as such.`};
+    S.domains.push(d);
     save(); render();
     toast(`Domain added: ${name} ✓`);
+    genPersona(d);
   },
   domDel(i){
     const d = S.domains[i];
