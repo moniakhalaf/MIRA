@@ -130,6 +130,9 @@ h1,h2,h3,h4{margin:0;font-weight:600}
    standalone bug where 100vh/100dvh exclude the bottom safe area */
 body{overflow:hidden}
 #app{position:fixed;inset:0;display:flex;flex-direction:column;overflow:hidden}
+/* while the keyboard is up: tab bar hides so the input sits on the keyboard */
+body.kb .tabbar{display:none}
+body.kb .chatbar{padding-bottom:6px}
 .topbar{
   flex:0 0 auto;
   padding:calc(var(--safe-top) + 10px) 16px 10px;
@@ -441,7 +444,7 @@ body{overflow:hidden}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-12.10";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-12.11";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -601,6 +604,37 @@ function applyTheme(){
 matchMedia("(prefers-color-scheme: light)").addEventListener("change", () => {
   if (S.settings.theme === "auto") applyTheme();
 });
+
+/* ---------------- keyboard-aware viewport ----------------
+   iOS pans fixed layouts when the keyboard opens, cutting off the top
+   and leaving a dead zone under the tab bar. Pinning the shell to the
+   VisualViewport keeps it exactly over the visible area; while typing
+   the tab bar hides so the input sits directly on the keyboard. */
+function bindViewport(){
+  const vv = window.visualViewport;
+  if (!vv) return;
+  let t = null;
+  const apply = () => {
+    const app = $("#app");
+    if (!app) return;
+    const kbOpen = (window.innerHeight - vv.height) > 100;
+    app.style.top = vv.offsetTop + "px";
+    app.style.height = vv.height + "px";
+    app.style.bottom = "auto";
+    document.body.classList.toggle("kb", kbOpen);
+    window.scrollTo(0, 0);
+    if (kbOpen && R.tab === "chat"){
+      const c = $("#content");
+      if (c) c.scrollTop = c.scrollHeight;
+    }
+  };
+  const queue = () => { clearTimeout(t); t = setTimeout(apply, 30); };
+  vv.addEventListener("resize", queue);
+  vv.addEventListener("scroll", queue);
+  window.addEventListener("focusin", queue);
+  window.addEventListener("focusout", queue);
+  apply();
+}
 
 let saveT = null;
 function save(){
@@ -1967,6 +2001,7 @@ window.M = {
 
 /* ---------------- boot ---------------- */
 applyTheme();
+bindViewport();
 {
   const latest = S.convs.filter(c => c.dom === R.mode).sort((a, b) => b.ts - a.ts)[0];
   if (latest) R.convId = latest.id;
