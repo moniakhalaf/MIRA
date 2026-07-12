@@ -37,6 +37,11 @@ This repository contains the **standalone edition**: a single self-contained `in
 - Fill by uploading a result sheet photo/PDF — values reviewed before saving, never guessed
 - One-tap trend analysis in Fitness mode
 
+**Design**
+- Dark and light themes with an Auto option that follows the device setting
+- Monochrome line-icon system, mobile-first sizing, installs full-screen to the home screen
+- Email sign-up screen built in but feature-flagged off (`FEATURES.emailSignup` in `index.html`) until the hosted backend is published
+
 **Privacy & data ownership**
 - PIN lock (stored only as a hash), auto-unlocks on the last digit, animated indicators
 - All data — logs, targets, saved foods, chats, API key — lives only in your browser
