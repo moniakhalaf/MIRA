@@ -125,9 +125,11 @@ h1,h2,h3,h4{margin:0;font-weight:600}
 :focus-visible{outline:2px solid var(--acc);outline-offset:2px}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 
-/* ---------- layout shell (flex column at true viewport height; no fixed bars, no gaps) ---------- */
+/* ---------- layout shell ----------
+   pinned to the real screen edges with inset:0 — immune to the iOS
+   standalone bug where 100vh/100dvh exclude the bottom safe area */
 body{overflow:hidden}
-#app{height:100%;height:100dvh;display:flex;flex-direction:column;overflow:hidden}
+#app{position:fixed;inset:0;display:flex;flex-direction:column;overflow:hidden}
 .topbar{
   flex:0 0 auto;
   padding:calc(var(--safe-top) + 10px) 16px 10px;
@@ -276,6 +278,12 @@ body{overflow:hidden}
 .msg.mira table{border-collapse:collapse;margin:.5em 0;font-size:.92em;display:block;overflow-x:auto;max-width:100%}
 .msg.mira th,.msg.mira td{border:1px solid var(--line2);padding:5px 9px;text-align:start}
 .msg .att{font-size:12px;color:var(--txt3);margin-top:5px}
+.msg-act{
+  display:inline-flex;align-items:center;gap:5px;margin-top:7px;
+  color:var(--txt3);font-size:12px;font-weight:500;
+  min-height:30px;padding:2px 9px;border-radius:8px;border:1px solid var(--line);
+}
+.msg-act:active{background:var(--acc-soft);color:var(--acc)}
 .action-card{background:var(--bg2);border:1px solid color-mix(in srgb,var(--acc) 40%,transparent);border-radius:12px;padding:12px;margin:.5em 0}
 .action-card .ach{font-size:11.5px;font-weight:700;letter-spacing:.07em;color:var(--acc);text-transform:uppercase;display:flex;align-items:center;gap:6px;margin-bottom:8px}
 .action-card .acf{font-size:13.5px;margin:2px 0}
@@ -447,6 +455,7 @@ async function sha256(str){
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
   return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, "0")).join("");
 }
+const buzz = (ms = 10) => { if (navigator.vibrate) navigator.vibrate(ms); };
 function toast(msg, ms = 2600){
   const t = $("#toast");
   t.textContent = msg;
@@ -999,16 +1008,17 @@ function chatHTML(){
       <div class="muted">MIRA needs your Anthropic API key to chat. It stays on this device.</div>
       <button class="btn sm sec" style="margin-top:10px" onclick="M.tab('set')">Open Settings</button></div>` : ""}
     <div class="msgs" id="msgs">
-      ${msgs.length ? msgs.map(msgHTML).join("") : `
+      ${msgs.length ? msgs.map((m, i) => msgHTML(m, conv ? conv.id : "", i)).join("") : `
         <div class="card"><h3><span class="mode-dot"></span>${esc(dom.name)} mode</h3>
           <div class="muted">${esc(dom.desc.split(".")[0])}. Every fact verified or honestly labelled an estimate.</div></div>
         <div class="suggest">${sug.map(s => `<button onclick="M.suggest(this)">${esc(s)}</button>`).join("")}</div>`}
     </div>`;
 }
-function msgHTML(m){
+function msgHTML(m, convId, idx){
   if (m.role === "user")
     return `<div class="msg user" dir="auto">${esc(m.content)}${m.att ? `<div class="att">${ic("paperclip", 12)} ${esc(m.att)}</div>` : ""}</div>`;
-  return `<div class="msg mira" dir="auto"><div class="who">MIRA${m.ds ? " · DEEP SOLVE" : ""}</div>${md(m.content)}</div>`;
+  return `<div class="msg mira" dir="auto"><div class="who">MIRA${m.ds ? " · DEEP SOLVE" : ""}</div>${md(m.content)}
+    ${convId !== undefined && m.content ? `<button class="msg-act" aria-label="Copy reply" onclick="M.copyMsg('${convId}',${idx})">${ic("copy", 13)} Copy</button>` : ""}</div>`;
 }
 function chatSheetHTML(){
   const dom = curDomain();
@@ -1384,6 +1394,7 @@ function logFood(it){
   if (ex >= 0) S.savedFoods[ex] = saved; else S.savedFoods.unshift(saved);
   if (S.savedFoods.length > 400) S.savedFoods.pop();
   R.openDays.add(todayStr());
+  buzz();
   save();
   toast(`Logged: ${it.name.trim()} ✓`);
 }
@@ -1815,7 +1826,15 @@ window.M = {
     const t = todayStr();
     const cur = S.water[t] || 0;
     S.water[t] = (i + 1 === cur) ? i : i + 1;
+    buzz();
     save(); render();
+  },
+  async copyMsg(cid, i){
+    const conv = S.convs.find(c => c.id === cid);
+    const m = conv && conv.msgs[i];
+    if (!m) return;
+    try { await navigator.clipboard.writeText(m.content); buzz(); toast("Reply copied."); }
+    catch (e) { toast("Could not copy on this browser."); }
   },
   dayToggle(d){ R.openDays.has(d) ? R.openDays.delete(d) : R.openDays.add(d); render(); },
   ffName(v){ foodForm.name = v; acRender(v); },
