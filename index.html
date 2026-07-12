@@ -55,6 +55,52 @@
   --shadow:0 12px 36px rgba(28,36,51,.15);
   --cardshadow:0 1px 2px rgba(28,36,51,.05),0 4px 16px rgba(28,36,51,.05);
 }
+:root[data-theme="glass"]{
+  color-scheme:dark;
+  /* aurora glassmorphism — dark translucent surfaces keep text at AA contrast */
+  --bg:#0A0C16;
+  --bg2:rgba(16,20,38,.52);
+  --card:rgba(19,24,44,.55); --card2:rgba(28,34,60,.62);
+  --line:rgba(255,255,255,.13); --line2:rgba(255,255,255,.22);
+  --txt:#F2F4FA; --txt2:#B3BBCF; --txt3:#7E879E;
+  --gold:#E2BE78; --gold-soft:rgba(226,190,120,.16);
+  --acc-soft:rgba(226,190,120,.16);
+  --btn-ink:#12100B;
+  --green:#4CC79B; --amber:#E5B054; --red:#E87878;
+  --water:#6FB6E8; --water-ink:#D6ECFF;
+  --glass:rgba(12,15,28,.5);
+  --key:rgba(255,255,255,.08);
+  --code:rgba(255,255,255,.1);
+  --track:rgba(255,255,255,.09);
+  --lockbg:#181D36;
+  --shadow:0 14px 44px rgba(0,0,0,.55);
+  --cardshadow:0 8px 30px rgba(0,0,0,.28);
+}
+:root[data-theme="glass"] body{
+  background:
+    radial-gradient(58% 42% at 12% 6%,rgba(124,92,246,.30),transparent 62%),
+    radial-gradient(46% 38% at 88% 10%,rgba(226,190,120,.17),transparent 60%),
+    radial-gradient(64% 50% at 72% 94%,rgba(63,140,205,.24),transparent 62%),
+    #0A0C16;
+  background-attachment:fixed;
+}
+:root[data-theme="glass"] .topbar,
+:root[data-theme="glass"] .tabbar,
+:root[data-theme="glass"] .chat-head{backdrop-filter:blur(24px) saturate(1.4);-webkit-backdrop-filter:blur(24px) saturate(1.4)}
+:root[data-theme="glass"] .card,
+:root[data-theme="glass"] .msg.mira,
+:root[data-theme="glass"] .msg.user,
+:root[data-theme="glass"] .chatbar .inner,
+:root[data-theme="glass"] .sheet,
+:root[data-theme="glass"] .day-head,
+:root[data-theme="glass"] .day-items,
+:root[data-theme="glass"] .ib-entry,
+:root[data-theme="glass"] .ac-list,
+:root[data-theme="glass"] .suggest button,
+:root[data-theme="glass"] .mode-chip{backdrop-filter:blur(18px) saturate(1.35);-webkit-backdrop-filter:blur(18px) saturate(1.35)}
+:root[data-theme="glass"] .card{border-color:rgba(255,255,255,.16)}
+:root[data-theme="glass"] .chatbar{background:transparent}
+
 body,.topbar,.tabbar,.card,.chatbar .inner,input,select,textarea{transition:background-color .25s,border-color .25s,color .25s}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;padding:0;height:100%;background:var(--bg)}
@@ -540,7 +586,7 @@ function applyTheme(){
     : pref;
   document.documentElement.dataset.theme = actual;
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.content = actual === "light" ? "#F4F3EF" : "#0A0D13";
+  if (meta) meta.content = actual === "light" ? "#F4F3EF" : actual === "glass" ? "#0A0C16" : "#0A0D13";
 }
 matchMedia("(prefers-color-scheme: light)").addEventListener("change", () => {
   if (S.settings.theme === "auto") applyTheme();
@@ -1566,9 +1612,9 @@ function settingsHTML(){
 
   <div class="card">
     <h3>${ic("sun", 16)} Appearance</h3>
-    <div class="seg">${[["dark","Dark"],["light","Light"],["auto","Auto"]].map(([v,l]) =>
+    <div class="seg">${[["dark","Dark"],["light","Light"],["glass","Glass"],["auto","Auto"]].map(([v,l]) =>
       `<button class="${(st.theme || "dark") === v ? "on" : ""}" onclick="M.theme('${v}')">${l}</button>`).join("")}</div>
-    <div class="tiny" style="margin-top:8px">Auto follows your device's light/dark setting.</div>
+    <div class="tiny" style="margin-top:8px">Glass is a frosted, aurora-lit look. Auto follows your device's light/dark setting.</div>
   </div>
 
   <div class="card">
