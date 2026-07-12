@@ -441,6 +441,7 @@ body{overflow:hidden}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
+const BUILD = "2026-07-12.10";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1702,7 +1703,8 @@ function settingsHTML(){
 
   <div class="tiny" style="text-align:center;padding:6px 0 14px">
     MIRA — My Integrated Reasoning Assistant · standalone edition<br>
-    Every fact checked against trusted sources, or honestly labelled an estimate.
+    Every fact checked against trusted sources, or honestly labelled an estimate.<br>
+    <b>Build ${BUILD}</b>
   </div>`;
 }
 
