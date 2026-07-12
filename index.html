@@ -75,7 +75,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--acc)}
 select{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8'><path d='M1 1l5 5 5-5' stroke='%239AA3B5' stroke-width='2' fill='none' stroke-linecap='round'/></svg>");background-repeat:no-repeat;background-position:right 12px center;padding-right:34px}
 h1,h2,h3,h4{margin:0;font-weight:600}
 .hidden{display:none!important}
-.svgi{stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vertical-align:-3px;flex:0 0 auto}
+.svgi{stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;vertical-align:-3px;flex:0 0 auto}
 
 /* ---------- layout shell ---------- */
 #app{height:100%;display:flex;flex-direction:column}
@@ -184,6 +184,14 @@ h1,h2,h3,h4{margin:0;font-weight:600}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
 /* ---------- chat ---------- */
+.chat-head{
+  position:fixed;left:0;right:0;z-index:38;top:calc(var(--safe-top) + 48px);
+  padding:8px 14px 9px;background:var(--glass);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--line);
+}
+.chat-head .mode-row{padding:0 0 8px}
+@media(min-width:700px){.chat-head-in{max-width:720px;margin:0 auto}}
 .mode-row{display:flex;gap:8px;overflow-x:auto;padding:2px 0 10px;scrollbar-width:none}
 .mode-row::-webkit-scrollbar{display:none}
 .mode-chip{
@@ -262,13 +270,14 @@ h1,h2,h3,h4{margin:0;font-weight:600}
 .bar-top .st{font-weight:700}
 .bar-line.done .st{color:var(--green)}
 .bar-line.over .st{color:var(--amber)}
-.glasses{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 8px}
+.glasses{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 10px}
 .glass{
-  width:40px;height:48px;border-radius:7px 7px 11px 11px;border:1.5px solid var(--line2);
-  background:var(--bg2);display:flex;align-items:center;justify-content:center;
-  transition:all .15s;color:transparent;
+  width:40px;height:50px;padding:2px 3px;display:flex;align-items:center;justify-content:center;
+  transition:transform .12s,color .2s;color:var(--txt3);background:none;border:none;border-radius:10px;
 }
-.glass.f{border-color:var(--water);background:linear-gradient(180deg,color-mix(in srgb,var(--water) 15%,transparent) 0%,color-mix(in srgb,var(--water) 45%,transparent) 100%);color:var(--water-ink)}
+.glass:active{transform:scale(.9)}
+.glass.f{color:var(--water)}
+.glass-svg{width:100%;height:100%}
 .day-group{margin-bottom:12px}
 .day-head{
   display:flex;align-items:center;gap:8px;width:100%;padding:12px 14px;min-height:48px;
@@ -396,7 +405,9 @@ function fmtDate(d){
 }
 /* inline SVG icon set (stroke style) */
 const I = {
-  chat: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+  chat: '<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>',
+  weight: '<circle cx="12" cy="5" r="3"/><path d="M6.5 8a2 2 0 0 0-1.905 1.46L2.1 18.5A2 2 0 0 0 4 21h16a2 2 0 0 0 1.925-2.54L19.4 9.5A2 2 0 0 0 17.5 8Z"/>',
+  gear: '<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>',
   food: '<path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>',
   activity: '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>',
   sliders: '<line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>',
@@ -427,6 +438,15 @@ const I = {
   trend: '<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>',
 };
 const ic = (n, s = 18) => `<svg class="svgi" width="${s}" height="${s}" viewBox="0 0 24 24">${I[n]}</svg>`;
+
+/* a real tumbler glass whose water level shows — used by the hydration tracker */
+function glassSvg(filled){
+  return `<svg viewBox="0 0 24 28" class="glass-svg" aria-hidden="true">
+    ${filled ? '<path d="M7.15 11.2 h9.7 L16.1 23.4 a1.9 1.9 0 0 1 -1.9 1.75 h-4.4 a1.9 1.9 0 0 1 -1.9 -1.75 Z" fill="var(--water)" opacity=".5" stroke="none"/>' : ""}
+    <path d="M5.6 2.6 h12.8 L17.15 23.6 a2.1 2.1 0 0 1 -2.1 1.9 h-6.1 a2.1 2.1 0 0 1 -2.1 -1.9 Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+    ${filled ? '<line x1="7" y1="11.2" x2="17" y2="11.2" stroke="var(--water)" stroke-width="1.4" stroke-linecap="round"/>' : ""}
+  </svg>`;
+}
 
 function fileToB64(file){
   return new Promise((res, rej) => {
@@ -548,10 +568,11 @@ function render(){
   document.documentElement.style.setProperty("--acc", R.tab === "chat" ? dom.color : "var(--gold)");
   document.documentElement.style.setProperty("--acc-soft", R.tab === "chat" ? hexSoft(dom.color) : "var(--gold-soft)");
   app.innerHTML = `
-    <div class="topbar">
+    <div class="topbar" id="topbar">
       <div class="brand">MIRA</div>
       <div class="sub">${R.tab === "chat" ? `<span class="mode-dot"></span>${esc(dom.name)}` : esc(tabTitle())}</div>
     </div>
+    ${R.tab === "chat" ? `<div class="chat-head" id="chatHead">${chatHeadHTML()}</div>` : ""}
     <div class="content" id="content">${
       R.tab === "chat" ? chatHTML() :
       R.tab === "food" ? foodHTML() :
@@ -560,7 +581,7 @@ function render(){
     ${R.tab === "chat" ? chatbarHTML() : ""}
     ${R.sheet === "chats" ? chatSheetHTML() : ""}
     <div class="tabbar">
-      ${tabBtn("chat", "chat", "Chat")}${tabBtn("food", "food", "Food")}${tabBtn("body", "activity", "Body")}${tabBtn("set", "sliders", "Settings")}
+      ${tabBtn("chat", "chat", "Chat")}${tabBtn("food", "food", "Food")}${tabBtn("body", "weight", "Body")}${tabBtn("set", "gear", "Settings")}
     </div>`;
   if (R.tab === "chat"){
     const ta = $("#chatIn");
@@ -892,24 +913,31 @@ const SUGGESTIONS = {
 const activeConv = () => S.convs.find(c => c.id === R.convId && c.dom === R.mode) || null;
 const domConvs = domId => S.convs.filter(c => c.dom === domId).sort((a, b) => b.ts - a.ts);
 
+function chatHeadHTML(){
+  const dom = curDomain();
+  const conv = activeConv();
+  const nConvs = domConvs(dom.id).length;
+  return `<div class="chat-head-in">
+    <div class="mode-row">${S.domains.map(d =>
+      `<button class="mode-chip ${d.id === R.mode ? "on" : ""}" style="--mc:${d.color}" onclick="M.mode('${d.id}')"><span class="d"></span>${esc(d.name)}</button>`).join("")}
+    </div>
+    <div class="row">
+      <button class="btn sm sec" style="flex:1" onclick="M.chatSheet()">${ic("clock", 15)} Chats${nConvs ? ` (${nConvs})` : ""}</button>
+      <button class="btn sm sec" style="flex:1" onclick="M.newChat()" ${!conv ? "disabled" : ""}>${ic("plus", 15)} New chat</button>
+    </div>
+  </div>`;
+}
+
 function chatHTML(){
   const dom = curDomain();
   const conv = activeConv();
   const msgs = conv ? conv.msgs : [];
-  const nConvs = domConvs(dom.id).length;
   const sug = SUGGESTIONS[dom.id] || [
     `Give me a starting map of the ${dom.name} domain — what should I master first?`,
     `What are the most reliable sources in ${dom.name}?`,
     `[Deep Solve] a hard ${dom.name} problem — I'll describe it`,
   ];
   return `
-    <div class="mode-row">${S.domains.map(d =>
-      `<button class="mode-chip ${d.id === R.mode ? "on" : ""}" style="--mc:${d.color}" onclick="M.mode('${d.id}')"><span class="d"></span>${esc(d.name)}</button>`).join("")}
-    </div>
-    <div class="row" style="margin-bottom:10px">
-      <button class="btn sm sec" style="flex:1" onclick="M.chatSheet()">${ic("clock", 15)} Chats${nConvs ? ` (${nConvs})` : ""}</button>
-      <button class="btn sm sec" style="flex:1" onclick="M.newChat()" ${!conv ? "disabled" : ""}>${ic("plus", 15)} New chat</button>
-    </div>
     ${!S.settings.apiKey ? `<div class="card" style="border-color:rgba(232,163,61,.4)"><h3>${ic("key", 16)} Add your API key</h3>
       <div class="muted">MIRA needs your Anthropic API key to chat. It stays on this device.</div>
       <button class="btn sm sec" style="margin-top:10px" onclick="M.tab('set')">Open Settings</button></div>` : ""}
@@ -962,6 +990,10 @@ function chatbarHTML(){
 }
 function afterChatRender(){
   const c = $("#content");
+  const head = $("#chatHead");
+  const top = $("#topbar");
+  if (head && top) head.style.top = top.getBoundingClientRect().bottom + "px";
+  if (head && c) c.style.paddingTop = (head.getBoundingClientRect().bottom + 10) + "px";
   if (c) c.scrollTop = c.scrollHeight;
 }
 
@@ -1168,7 +1200,7 @@ function foodHTML(){
   <div class="card">
     <h3>${ic("droplet", 16)} Hydration <span class="tiny" style="margin-inline-start:auto;font-weight:400">${glasses} glasses · ${litres.toFixed(2)} L / ${(S.settings.waterGoal/1000).toFixed(2)} L</span></h3>
     <div class="glasses">${Array.from({length: goalGl}, (_, i) =>
-      `<button class="glass ${i < glasses ? "f" : ""}" onclick="M.water(${i})">${ic("droplet", 15)}</button>`).join("")}</div>
+      `<button class="glass ${i < glasses ? "f" : ""}" onclick="M.water(${i})">${glassSvg(i < glasses)}</button>`).join("")}</div>
     <div class="bar"><i style="width:${wPct}%;background:var(--water)"></i></div>
   </div>
 
