@@ -8,26 +8,29 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="MIRA">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#0B0D12">
-<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230B0D12'/><text x='50' y='67' font-size='52' text-anchor='middle' fill='%23D4A94E' font-family='sans-serif' font-weight='bold'>M</text></svg>">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230B0D12'/><text x='50' y='67' font-size='52' text-anchor='middle' fill='%23D4A94E' font-family='sans-serif' font-weight='bold'>M</text></svg>">
-<link rel="manifest" href='data:application/manifest+json,{"name":"MIRA","short_name":"MIRA","display":"standalone","start_url":".","background_color":"%230B0D12","theme_color":"%230B0D12","icons":[{"src":"data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27><rect width=%27100%27 height=%27100%27 rx=%2722%27 fill=%27%230B0D12%27/><text x=%2750%27 y=%2767%27 font-size=%2752%27 text-anchor=%27middle%27 fill=%27%23D4A94E%27 font-family=%27sans-serif%27 font-weight=%27bold%27>M</text></svg>","sizes":"any","type":"image/svg+xml"}]}'>
+<meta name="theme-color" content="#0A0D13">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230A0D13'/><text x='50' y='67' font-size='52' text-anchor='middle' fill='%23D2AC64' font-family='sans-serif' font-weight='bold'>M</text></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230A0D13'/><text x='50' y='67' font-size='52' text-anchor='middle' fill='%23D2AC64' font-family='sans-serif' font-weight='bold'>M</text></svg>">
+<link rel="manifest" href='data:application/manifest+json,{"name":"MIRA","short_name":"MIRA","display":"standalone","start_url":".","background_color":"%230A0D13","theme_color":"%230A0D13","icons":[{"src":"data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27><rect width=%27100%27 height=%27100%27 rx=%2722%27 fill=%27%230A0D13%27/><text x=%2750%27 y=%2767%27 font-size=%2752%27 text-anchor=%27middle%27 fill=%27%23D2AC64%27 font-family=%27sans-serif%27 font-weight=%27bold%27>M</text></svg>","sizes":"any","type":"image/svg+xml"}]}'>
 <style>
 :root{
   color-scheme:dark;
-  --bg:#0B0D12; --bg2:#10131B; --card:#161A24; --card2:#1C212E;
-  --line:rgba(255,255,255,.08); --line2:rgba(255,255,255,.14);
-  --txt:#E8EAF0; --txt2:#9AA3B5; --txt3:#5F6879;
-  --gold:#D4A94E;
-  --acc:#D4A94E; --acc-soft:rgba(212,169,78,.14);
-  --green:#34C48E; --amber:#E8A33D; --red:#E85757;
-  --glass:rgba(11,13,18,.85);
-  --key:rgba(255,255,255,.05);
-  --code:rgba(255,255,255,.08);
-  --track:#10131B;
-  --lockbg:#141927;
-  --shadow:0 10px 32px rgba(0,0,0,.5);
-  --cardshadow:0 1px 2px rgba(0,0,0,.2);
+  /* deep ink + champagne gold */
+  --bg:#0A0D13; --bg2:#10141C; --card:#141925; --card2:#1A2030;
+  --line:rgba(226,232,250,.07); --line2:rgba(226,232,250,.13);
+  --txt:#ECEEF3; --txt2:#9DA6BA; --txt3:#626C82;
+  --gold:#D2AC64; --gold-soft:rgba(210,172,100,.13);
+  --acc:#D2AC64; --acc-soft:rgba(210,172,100,.13);
+  --btn-ink:#12100B;
+  --green:#3DB48A; --amber:#DDA43F; --red:#DE6060;
+  --water:#5EA9DF; --water-ink:#BEE3FF;
+  --glass:rgba(10,13,19,.86);
+  --key:rgba(236,238,243,.05);
+  --code:rgba(236,238,243,.08);
+  --track:#10141C;
+  --lockbg:#131826;
+  --shadow:0 12px 36px rgba(0,0,0,.52);
+  --cardshadow:0 1px 2px rgba(0,0,0,.22);
   --radius:14px;
   --safe-top:env(safe-area-inset-top,0px);
   --safe-bot:env(safe-area-inset-bottom,0px);
@@ -35,18 +38,22 @@
 }
 :root[data-theme="light"]{
   color-scheme:light;
-  --bg:#F1F2F6; --bg2:#FFFFFF; --card:#FFFFFF; --card2:#FFFFFF;
-  --line:rgba(15,23,42,.10); --line2:rgba(15,23,42,.17);
-  --txt:#1A2233; --txt2:#5A6478; --txt3:#8B94A8;
-  --gold:#A6791F;
-  --acc-soft:rgba(166,121,31,.12);
-  --glass:rgba(248,249,252,.88);
-  --key:rgba(15,23,42,.05);
-  --code:rgba(15,23,42,.07);
-  --track:#E7EAF1;
-  --lockbg:#E4E8F2;
-  --shadow:0 10px 32px rgba(16,24,40,.16);
-  --cardshadow:0 1px 2px rgba(16,24,40,.05),0 4px 14px rgba(16,24,40,.05);
+  /* warm alabaster + bronze ink */
+  --bg:#F4F3EF; --bg2:#FDFCFA; --card:#FFFFFF; --card2:#FFFFFF;
+  --line:rgba(28,36,51,.09); --line2:rgba(28,36,51,.15);
+  --txt:#1F2735; --txt2:#5C6575; --txt3:#98A0AE;
+  --gold:#8E6E22; --gold-soft:rgba(142,110,34,.10);
+  --acc-soft:rgba(142,110,34,.10);
+  --btn-ink:#FFFFFF;
+  --green:#188C63; --amber:#A9761C; --red:#C24A4A;
+  --water:#2F7FBE; --water-ink:#21689B;
+  --glass:rgba(250,249,246,.9);
+  --key:rgba(28,36,51,.05);
+  --code:rgba(28,36,51,.07);
+  --track:#E9E7E1;
+  --lockbg:#EAE7DF;
+  --shadow:0 12px 36px rgba(28,36,51,.15);
+  --cardshadow:0 1px 2px rgba(28,36,51,.05),0 4px 16px rgba(28,36,51,.05);
 }
 body,.topbar,.tabbar,.card,.chatbar .inner,input,select,textarea{transition:background-color .25s,border-color .25s,color .25s}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -79,7 +86,8 @@ h1,h2,h3,h4{margin:0;font-weight:600}
   border-bottom:1px solid var(--line);
   display:flex;align-items:center;gap:10px;
 }
-.topbar .brand{font-size:19px;font-weight:700;letter-spacing:.14em;color:var(--gold)}
+.brand,.lock .logo,.onb .logo{font-family:Georgia,"Times New Roman",serif;font-weight:600}
+.topbar .brand{font-size:19px;letter-spacing:.2em;color:var(--gold)}
 .topbar .sub{font-size:12px;color:var(--txt2);margin-inline-start:auto;display:flex;align-items:center;gap:6px}
 .mode-dot{width:8px;height:8px;border-radius:50%;background:var(--acc)}
 .content{
@@ -108,14 +116,14 @@ h1,h2,h3,h4{margin:0;font-weight:600}
   transition:opacity .45s ease,transform .45s ease;
 }
 .lock.open{opacity:0;transform:scale(1.06);pointer-events:none}
-.lock .logo{font-size:34px;font-weight:700;letter-spacing:.3em;color:var(--gold);text-indent:.3em}
+.lock .logo{font-size:36px;letter-spacing:.3em;color:var(--gold);text-indent:.3em}
 .lock .hint{color:var(--txt2);font-size:14px}
 .pin-dots{display:flex;gap:16px;height:18px}
 .pin-dots i{
   width:14px;height:14px;border-radius:50%;border:1.5px solid var(--txt3);
   transition:all .18s cubic-bezier(.34,1.56,.64,1);
 }
-.pin-dots i.f{background:var(--gold);border-color:var(--gold);transform:scale(1.25);box-shadow:0 0 12px rgba(212,169,78,.5)}
+.pin-dots i.f{background:var(--gold);border-color:var(--gold);transform:scale(1.25);box-shadow:0 0 12px color-mix(in srgb,var(--gold) 50%,transparent)}
 .pin-dots.err{animation:shake .4s}
 @keyframes shake{20%{transform:translateX(-9px)}40%{transform:translateX(8px)}60%{transform:translateX(-6px)}80%{transform:translateX(4px)}}
 .keypad{display:grid;grid-template-columns:repeat(3,76px);gap:14px}
@@ -123,12 +131,12 @@ h1,h2,h3,h4{margin:0;font-weight:600}
   height:76px;border-radius:50%;background:var(--key);border:1px solid var(--line);
   font-size:26px;font-weight:500;color:var(--txt);transition:background .12s,transform .12s;
 }
-.keypad button:active{background:rgba(212,169,78,.25);transform:scale(.94)}
+.keypad button:active{background:color-mix(in srgb,var(--gold) 25%,transparent);transform:scale(.94)}
 .keypad button.ghost{background:none;border:none;font-size:15px;color:var(--txt2)}
 
 /* ---------- onboarding ---------- */
 .onb{max-width:560px;margin:0 auto;padding:28px 6px 40px}
-.onb .logo{font-size:30px;font-weight:700;letter-spacing:.26em;color:var(--gold);text-align:center;margin:18px 0 4px;text-indent:.26em}
+.onb .logo{font-size:32px;letter-spacing:.26em;color:var(--gold);text-align:center;margin:18px 0 4px;text-indent:.26em}
 .onb .tag{text-align:center;color:var(--txt2);font-size:14px;margin-bottom:26px}
 .field{margin-bottom:16px}
 .field label{display:block;font-size:13px;font-weight:600;color:var(--txt2);margin-bottom:6px;letter-spacing:.02em}
@@ -146,7 +154,7 @@ h1,h2,h3,h4{margin:0;font-weight:600}
   display:inline-flex;align-items:center;justify-content:center;gap:8px;
   min-height:46px;padding:11px 18px;border-radius:12px;font-weight:600;font-size:15px;
   background:linear-gradient(180deg,color-mix(in srgb,var(--acc) 90%,#fff),color-mix(in srgb,var(--acc) 90%,#000));
-  color:#0B0D12;transition:filter .12s,transform .12s;width:100%;
+  color:var(--btn-ink);transition:filter .12s,transform .12s;width:100%;
   box-shadow:0 2px 12px color-mix(in srgb,var(--acc) 30%,transparent);
 }
 .btn:active{transform:scale(.98);filter:brightness(1.1)}
@@ -232,7 +240,7 @@ h1,h2,h3,h4{margin:0;font-weight:600}
   font-size:19px;color:var(--txt2);background:transparent;transition:background .12s;
 }
 .icon-btn:active{background:rgba(255,255,255,.08)}
-.icon-btn.send{background:var(--acc);color:#0B0D12}
+.icon-btn.send{background:var(--acc);color:var(--btn-ink)}
 .icon-btn.ds.on{color:var(--acc);background:var(--acc-soft)}
 .ds-note{font-size:11.5px;color:var(--acc);text-align:center;padding:3px 0 0}
 .attach-pill{
@@ -260,8 +268,7 @@ h1,h2,h3,h4{margin:0;font-weight:600}
   background:var(--bg2);display:flex;align-items:center;justify-content:center;
   transition:all .15s;color:transparent;
 }
-.glass.f{border-color:#4BA3E3;background:linear-gradient(180deg,rgba(75,163,227,.15) 0%,rgba(75,163,227,.45) 100%);color:#BEE3FF}
-:root[data-theme="light"] .glass.f{color:#1D7DC4}
+.glass.f{border-color:var(--water);background:linear-gradient(180deg,color-mix(in srgb,var(--water) 15%,transparent) 0%,color-mix(in srgb,var(--water) 45%,transparent) 100%);color:var(--water-ink)}
 .day-group{margin-bottom:12px}
 .day-head{
   display:flex;align-items:center;gap:8px;width:100%;padding:12px 14px;min-height:48px;
@@ -432,16 +439,18 @@ function fileToB64(file){
 
 /* ---------------- state ---------------- */
 const DEFAULT_DOMAINS = [
-  {id: "work",    name: "Work",    color: "#5B8DEF",
+  {id: "work",    name: "Work",    color: "#7396E2",
    desc: "Professional and knowledge work: emails, memos, proposals, prioritisation, meeting prep, academic support (argumentation, methodology, referencing). Deep SAP S/4HANA expertise across all modules — MM deepest, plus SD, FI, CO, PP, PM, QM, EWM, PS, HCM and RE-FX — with technical details verified against official SAP documentation and answers marked by S/4HANA release."},
-  {id: "health",  name: "Health",  color: "#34C48E",
+  {id: "health",  name: "Health",  color: "#46B892",
    desc: "Nutrition, sleep, recovery and supplementation, answered only from reputable evidence (peer-reviewed journals, WHO/NIH/EFSA) and cited. Exact macro and calorie arithmetic shown step by step. The user's own product-label values always override any database."},
-  {id: "fitness", name: "Fitness", color: "#F2704E",
+  {id: "fitness", name: "Fitness", color: "#DC8663",
    desc: "Training programmes grounded in peer-reviewed sports science, and body-composition interpretation (InBody score, body-fat mass, skeletal-muscle mass, visceral-fat area, phase angle) with trends computed from the user's own logged data."},
-  {id: "life",    name: "Life",    color: "#B07CF7",
+  {id: "life",    name: "Life",    color: "#A78FDB",
    desc: "Everything else: purchases and comparisons, travel, technology, finance and legal information (presented as facts to decide from, not advice), and local practical matters — especially Kuwait / GCC. Same evidence standard as the professional modes."},
 ];
-const DOMAIN_COLORS = ["#5B8DEF","#34C48E","#F2704E","#B07CF7","#4BC0C8","#E8A33D","#EF6BA0","#8AC44B"];
+const DOMAIN_COLORS = ["#7396E2","#46B892","#DC8663","#A78FDB","#56AEB8","#C9A34F","#CF84A7","#8FB56A"];
+/* old default accents → refined palette (existing installs pick up the new colours) */
+const COLOR_MIGRATE = {"#5B8DEF":"#7396E2","#34C48E":"#46B892","#F2704E":"#DC8663","#B07CF7":"#A78FDB","#4BC0C8":"#56AEB8","#E8A33D":"#C9A34F","#EF6BA0":"#CF84A7","#8AC44B":"#8FB56A"};
 const MODELS = [
   {id: "claude-sonnet-5",            name: "Claude Sonnet 5 (recommended)"},
   {id: "claude-opus-4-8",            name: "Claude Opus 4.8 (most capable)"},
@@ -487,6 +496,7 @@ function migrateChats(){
   if (!Array.isArray(S.convs)) S.convs = [];
   if (S.settings.webSearch === undefined) S.settings.webSearch = true;
   if (!S.settings.theme) S.settings.theme = "dark";
+  (S.domains || []).forEach(d => { if (COLOR_MIGRATE[d.color]) d.color = COLOR_MIGRATE[d.color]; });
 }
 migrateChats();
 
@@ -498,7 +508,7 @@ function applyTheme(){
     : pref;
   document.documentElement.dataset.theme = actual;
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.content = actual === "light" ? "#F1F2F6" : "#0B0D12";
+  if (meta) meta.content = actual === "light" ? "#F4F3EF" : "#0A0D13";
 }
 matchMedia("(prefers-color-scheme: light)").addEventListener("change", () => {
   if (S.settings.theme === "auto") applyTheme();
@@ -535,8 +545,8 @@ function render(){
   if (FEATURES.emailSignup && !S.settings.account && !S.onboarded){ app.innerHTML = signupHTML(); return; }
   if (!S.onboarded){ app.innerHTML = onbHTML(); return; }
   const dom = curDomain();
-  document.documentElement.style.setProperty("--acc", R.tab === "chat" ? dom.color : "#D4A94E");
-  document.documentElement.style.setProperty("--acc-soft", R.tab === "chat" ? hexSoft(dom.color) : "rgba(212,169,78,.14)");
+  document.documentElement.style.setProperty("--acc", R.tab === "chat" ? dom.color : "var(--gold)");
+  document.documentElement.style.setProperty("--acc-soft", R.tab === "chat" ? hexSoft(dom.color) : "var(--gold-soft)");
   app.innerHTML = `
     <div class="topbar">
       <div class="brand">MIRA</div>
@@ -1159,7 +1169,7 @@ function foodHTML(){
     <h3>${ic("droplet", 16)} Hydration <span class="tiny" style="margin-inline-start:auto;font-weight:400">${glasses} glasses · ${litres.toFixed(2)} L / ${(S.settings.waterGoal/1000).toFixed(2)} L</span></h3>
     <div class="glasses">${Array.from({length: goalGl}, (_, i) =>
       `<button class="glass ${i < glasses ? "f" : ""}" onclick="M.water(${i})">${ic("droplet", 15)}</button>`).join("")}</div>
-    <div class="bar"><i style="width:${wPct}%;background:#4BA3E3"></i></div>
+    <div class="bar"><i style="width:${wPct}%;background:var(--water)"></i></div>
   </div>
 
   <div class="card fold open" id="addFoodCard">
