@@ -370,6 +370,8 @@ const I = {
   upload: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>',
   bookmark: '<path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>',
   chart: '<line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/>',
+  clock: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+  trash: '<polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
   database: '<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>',
   trend: '<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>',
 };
@@ -412,7 +414,7 @@ const BLANK = () => ({
     waterGoal: 2500,
   },
   domains: JSON.parse(JSON.stringify(DEFAULT_DOMAINS)),
-  chats: {},          // domainId -> [{role, content, ts, att}]
+  convs: [],          // [{id, dom, title, ts, msgs: [{role, content, ts, att}]}]
   foods: [],          // {id, date, name, amount, kcal, p, c, f, conf, ts}
   savedFoods: [],     // {name, amount, kcal, p, c, f}
   water: {},          // date -> glasses
@@ -424,6 +426,22 @@ try {
   const raw = localStorage.getItem("mira.data");
   if (raw) S = Object.assign(BLANK(), JSON.parse(raw));
 } catch (e) { console.warn("MIRA: could not load saved data", e); }
+
+/* migrate the old one-chat-per-domain format into conversations */
+function migrateChats(){
+  if (S.chats && typeof S.chats === "object"){
+    for (const [dom, msgs] of Object.entries(S.chats)){
+      if (Array.isArray(msgs) && msgs.length){
+        const first = msgs.find(m => m.role === "user");
+        S.convs.push({id: uid(), dom, title: String(first ? first.content : "Chat").slice(0, 48),
+          ts: msgs[msgs.length - 1].ts || Date.now(), msgs});
+      }
+    }
+    delete S.chats;
+  }
+  if (!Array.isArray(S.convs)) S.convs = [];
+}
+migrateChats();
 
 let saveT = null;
 function save(){
@@ -438,6 +456,8 @@ function save(){
 const R = {
   tab: "chat",
   mode: S.domains[0]?.id || "work",
+  convId: null,       // active conversation id (null = fresh chat)
+  sheet: null,        // open bottom sheet ("chats" | null)
   deepSolve: false,
   pending: "",        // pin entry buffer
   attach: null,       // {name, media_type, data, kind:'image'|'pdf'}
@@ -466,6 +486,7 @@ function render(){
       R.tab === "body" ? bodyHTML() : settingsHTML()
     }</div>
     ${R.tab === "chat" ? chatbarHTML() : ""}
+    ${R.sheet === "chats" ? chatSheetHTML() : ""}
     <div class="tabbar">
       ${tabBtn("chat", "chat", "Chat")}${tabBtn("food", "food", "Food")}${tabBtn("body", "activity", "Body")}${tabBtn("set", "sliders", "Settings")}
     </div>`;
@@ -698,9 +719,14 @@ const SUGGESTIONS = {
   fitness: ["Analyse my body-composition trend from my InBody log", "Build me a 4-day training split with evidence behind it", "How should this week's training change if work is heavy?"],
   life:    ["Compare two options for me — I'll give the details", "Plan a weekend trip from Kuwait", "Explain a contract clause in plain language (facts, not advice)"],
 };
+const activeConv = () => S.convs.find(c => c.id === R.convId && c.dom === R.mode) || null;
+const domConvs = domId => S.convs.filter(c => c.dom === domId).sort((a, b) => b.ts - a.ts);
+
 function chatHTML(){
   const dom = curDomain();
-  const msgs = S.chats[dom.id] || [];
+  const conv = activeConv();
+  const msgs = conv ? conv.msgs : [];
+  const nConvs = domConvs(dom.id).length;
   const sug = SUGGESTIONS[dom.id] || [
     `Give me a starting map of the ${dom.name} domain — what should I master first?`,
     `What are the most reliable sources in ${dom.name}?`,
@@ -709,6 +735,10 @@ function chatHTML(){
   return `
     <div class="mode-row">${S.domains.map(d =>
       `<button class="mode-chip ${d.id === R.mode ? "on" : ""}" style="--mc:${d.color}" onclick="M.mode('${d.id}')"><span class="d"></span>${esc(d.name)}</button>`).join("")}
+    </div>
+    <div class="row" style="margin-bottom:10px">
+      <button class="btn sm sec" style="flex:1" onclick="M.chatSheet()">${ic("clock", 15)} Chats${nConvs ? ` (${nConvs})` : ""}</button>
+      <button class="btn sm sec" style="flex:1" onclick="M.newChat()" ${!conv ? "disabled" : ""}>${ic("plus", 15)} New chat</button>
     </div>
     ${!S.settings.apiKey ? `<div class="card" style="border-color:rgba(232,163,61,.4)"><h3>${ic("key", 16)} Add your API key</h3>
       <div class="muted">MIRA needs your Anthropic API key to chat. It stays on this device.</div>
@@ -726,6 +756,25 @@ function msgHTML(m){
     return `<div class="msg user" dir="auto">${esc(m.content)}${m.att ? `<div class="att">${ic("paperclip", 12)} ${esc(m.att)}</div>` : ""}</div>`;
   return `<div class="msg mira" dir="auto"><div class="who">MIRA${m.ds ? " · DEEP SOLVE" : ""}</div>${md(m.content)}</div>`;
 }
+function chatSheetHTML(){
+  const dom = curDomain();
+  const list = domConvs(dom.id);
+  return `<div class="sheet-mask show" onclick="M.sheetClose()"></div>
+  <div class="sheet show">
+    <div class="grab"></div>
+    <h3 style="margin-bottom:4px"><span class="mode-dot"></span>${esc(dom.name)} — conversations</h3>
+    <div class="tiny" style="margin-bottom:12px">Saved on this device until you delete them.</div>
+    <button class="btn sm sec" style="margin-bottom:6px" onclick="M.newChat()">${ic("plus", 15)} Start a new chat</button>
+    ${list.length ? list.map(c => `<div class="set-row">
+      <button style="flex:1;text-align:start;color:var(--txt);min-height:44px" onclick="M.openConv('${c.id}')">
+        <div class="k" dir="auto">${esc(c.title || "Chat")}${c.id === R.convId ? ` <span class="badge">current</span>` : ""}</div>
+        <div class="desc">${new Date(c.ts).toLocaleDateString("en-GB", {day: "numeric", month: "short"})} · ${c.msgs.length} messages</div>
+      </button>
+      <span class="end"><button class="btn sm danger" onclick="M.delConv('${c.id}')" title="Delete chat">${ic("trash", 14)}</button></span>
+    </div>`).join("") : `<div class="muted" style="padding:10px 0">No conversations yet in this mode.</div>`}
+  </div>`;
+}
+
 function chatbarHTML(){
   return `<div class="chatbar">
     ${R.attach ? `<div class="attach-pill">${ic("paperclip", 13)} <b>${esc(R.attach.name)}</b><button onclick="M.attachClear()" style="color:var(--txt2)">✕</button></div>` : ""}
@@ -811,7 +860,14 @@ async function sendChat(){
   const ds = R.deepSolve;
   const att = R.attach;
   R.attach = null; R.deepSolve = false;
-  const msgs = S.chats[dom.id] = S.chats[dom.id] || [];
+  let conv = activeConv();
+  if (!conv){
+    conv = {id: uid(), dom: dom.id, title: String(text || (att ? att.name : "") || "New chat").slice(0, 48), ts: Date.now(), msgs: []};
+    S.convs.unshift(conv);
+    R.convId = conv.id;
+  }
+  conv.ts = Date.now();
+  const msgs = conv.msgs;
   msgs.push({role: "user", content: text || "(see attachment)", ts: Date.now(), att: att ? att.name : null});
   save();
   R.busy = true;
@@ -1361,7 +1417,10 @@ function restore(){
         if (!j || typeof j !== "object" || !("foods" in j) || !("settings" in j)) throw new Error("not a MIRA backup");
         if (!confirm("Replace everything on this device with this backup?")) return;
         S = Object.assign(BLANK(), j);
+        window.S = S;
+        migrateChats();
         R.mode = S.domains[0]?.id || "work";
+        R.convId = null; R.sheet = null;
         save(); render();
         toast("Backup restored ✓");
       } catch (e) { toast("That file is not a valid MIRA backup."); }
@@ -1380,8 +1439,23 @@ window.render = render;
 window.save = save;
 window.num = num;
 window.M = {
-  tab(t){ R.tab = t; render(); },
-  mode(id){ R.mode = id; render(); },
+  tab(t){ R.tab = t; R.sheet = null; render(); },
+  mode(id){
+    R.mode = id;
+    const latest = S.convs.filter(c => c.dom === id).sort((a, b) => b.ts - a.ts)[0];
+    R.convId = latest ? latest.id : null;
+    render();
+  },
+  newChat(){ R.convId = null; R.sheet = null; render(); },
+  chatSheet(){ R.sheet = "chats"; render(); },
+  sheetClose(){ R.sheet = null; render(); },
+  openConv(id){ R.convId = id; R.sheet = null; render(); },
+  delConv(id){
+    if (!confirm("Delete this chat? This cannot be undone.")) return;
+    S.convs = S.convs.filter(c => c.id !== id);
+    if (R.convId === id) R.convId = null;
+    save(); render();
+  },
   pin: pinPress,
   pinDel(){ R.pending = R.pending.slice(0, -1); render(); },
 
@@ -1473,9 +1547,9 @@ window.M = {
   domDel(i){
     const d = S.domains[i];
     if (!confirm(`Remove the ${d.name} domain? Its chat history is deleted too.`)) return;
-    delete S.chats[d.id];
+    S.convs = S.convs.filter(c => c.dom !== d.id);
     S.domains.splice(i, 1);
-    if (R.mode === d.id) R.mode = S.domains[0].id;
+    if (R.mode === d.id){ R.mode = S.domains[0].id; R.convId = null; }
     save(); render();
   },
   savedDel(i){ S.savedFoods.splice(i, 1); save(); render(); },
@@ -1500,13 +1574,17 @@ window.M = {
     localStorage.removeItem("mira.data");
     S = BLANK();
     window.S = S;
-    R.unlocked = true; R.tab = "chat"; R.mode = "work";
+    R.unlocked = true; R.tab = "chat"; R.mode = "work"; R.convId = null; R.sheet = null;
     render();
     toast("Everything erased.");
   },
 };
 
 /* ---------------- boot ---------------- */
+{
+  const latest = S.convs.filter(c => c.dom === R.mode).sort((a, b) => b.ts - a.ts)[0];
+  if (latest) R.convId = latest.id;
+}
 render();
 </script>
 </body>
