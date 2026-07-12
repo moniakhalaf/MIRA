@@ -76,6 +76,8 @@ select{appearance:none;-webkit-appearance:none;background-image:url("data:image/
 h1,h2,h3,h4{margin:0;font-weight:600}
 .hidden{display:none!important}
 .svgi{stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;vertical-align:-3px;flex:0 0 auto}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 
 /* ---------- layout shell (flex column at true viewport height; no fixed bars, no gaps) ---------- */
 body{overflow:hidden}
@@ -107,7 +109,7 @@ body{overflow:hidden}
   padding:6px 0;color:var(--txt3);font-size:11px;font-weight:500;border-radius:10px;min-height:48px;
 }
 .tabbar button svg{margin-bottom:1px}
-.tabbar button.on{color:var(--acc)}
+.tabbar button.on{color:var(--acc);background:var(--acc-soft)}
 
 /* ---------- lock screen ---------- */
 .lock{
@@ -134,6 +136,7 @@ body{overflow:hidden}
 }
 .keypad button:active{background:color-mix(in srgb,var(--gold) 25%,transparent);transform:scale(.94)}
 .keypad button.ghost{background:none;border:none;font-size:15px;color:var(--txt2)}
+.lock .forgot{color:var(--txt3);font-size:13.5px;min-height:44px;padding:0 16px}
 
 /* ---------- onboarding ---------- */
 .onb{max-width:560px;margin:0 auto;padding:28px 6px 40px}
@@ -187,10 +190,20 @@ body{overflow:hidden}
 /* ---------- chat ---------- */
 .chat-head{
   flex:0 0 auto;
-  padding:8px 14px 9px;background:var(--glass);
+  padding:8px 10px 8px 14px;background:var(--glass);
   border-bottom:1px solid var(--line);
 }
-.chat-head .mode-row{padding:0 0 8px}
+.chat-head-in{display:flex;align-items:center;gap:4px}
+.chat-head .mode-row{flex:1;min-width:0;padding:0;
+  mask-image:linear-gradient(90deg,#000 0,#000 88%,transparent);
+  -webkit-mask-image:linear-gradient(90deg,#000 0,#000 88%,transparent)}
+.icon-btn{position:relative}
+.icon-btn[disabled]{opacity:.4;pointer-events:none}
+.icon-btn .cnt{
+  position:absolute;top:1px;right:0;min-width:15px;height:15px;padding:0 4px;
+  background:var(--acc);color:var(--btn-ink);font-size:10px;font-weight:700;line-height:15px;
+  border-radius:8px;text-align:center;
+}
 @media(min-width:700px){.chat-head-in{max-width:720px;margin:0 auto}}
 .mode-row{display:flex;gap:8px;overflow-x:auto;padding:2px 0 10px;scrollbar-width:none}
 .mode-row::-webkit-scrollbar{display:none}
@@ -606,8 +619,9 @@ function lockHTML(){
       ${[1,2,3,4,5,6,7,8,9].map(d => `<button onclick="M.pin('${d}')">${d}</button>`).join("")}
       <button class="ghost"></button>
       <button onclick="M.pin('0')">0</button>
-      <button class="ghost" onclick="M.pinDel()">⌫</button>
+      <button class="ghost" onclick="M.pinDel()" aria-label="Delete digit">⌫</button>
     </div>
+    <button class="forgot" onclick="M.pinForgot()">Forgot PIN?</button>
   </div>`;
 }
 async function pinPress(d){
@@ -920,10 +934,8 @@ function chatHeadHTML(){
     <div class="mode-row">${S.domains.map(d =>
       `<button class="mode-chip ${d.id === R.mode ? "on" : ""}" style="--mc:${d.color}" onclick="M.mode('${d.id}')"><span class="d"></span>${esc(d.name)}</button>`).join("")}
     </div>
-    <div class="row">
-      <button class="btn sm sec" style="flex:1" onclick="M.chatSheet()">${ic("clock", 15)} Chats${nConvs ? ` (${nConvs})` : ""}</button>
-      <button class="btn sm sec" style="flex:1" onclick="M.newChat()" ${!conv ? "disabled" : ""}>${ic("plus", 15)} New chat</button>
-    </div>
+    <button class="icon-btn" aria-label="Conversations" title="Conversations" onclick="M.chatSheet()">${ic("clock", 19)}${nConvs ? `<span class="cnt">${nConvs}</span>` : ""}</button>
+    <button class="icon-btn" aria-label="New chat" title="New chat" onclick="M.newChat()" ${!conv ? "disabled" : ""}>${ic("plus", 19)}</button>
   </div>`;
 }
 
@@ -975,13 +987,13 @@ function chatbarHTML(){
   return `<div class="chatbar">
     ${R.attach ? `<div class="attach-pill">${ic("paperclip", 13)} <b>${esc(R.attach.name)}</b><button onclick="M.attachClear()" style="color:var(--txt2)">✕</button></div>` : ""}
     <div class="inner">
-      <button class="icon-btn" onclick="M.attach()" title="Attach photo or PDF">${ic("paperclip", 19)}</button>
-      <button class="icon-btn ds ${R.deepSolve ? "on" : ""}" onclick="M.toggleDS()" title="Deep Solve">${ic("layers", 19)}</button>
-      <button class="icon-btn ds ${S.settings.webSearch ? "on" : ""}" onclick="M.toggleWeb()" title="Live web search">${ic("globe", 19)}</button>
-      <textarea id="chatIn" rows="1" placeholder="Ask MIRA anything…" dir="auto"
+      <button class="icon-btn" aria-label="Attach photo or PDF" onclick="M.attach()" title="Attach photo or PDF">${ic("paperclip", 19)}</button>
+      <button class="icon-btn ds ${R.deepSolve ? "on" : ""}" aria-label="Deep Solve" aria-pressed="${R.deepSolve}" onclick="M.toggleDS()" title="Deep Solve">${ic("layers", 19)}</button>
+      <button class="icon-btn ds ${S.settings.webSearch ? "on" : ""}" aria-label="Live web search" aria-pressed="${!!S.settings.webSearch}" onclick="M.toggleWeb()" title="Live web search">${ic("globe", 19)}</button>
+      <textarea id="chatIn" rows="1" placeholder="Message MIRA…" dir="auto" aria-label="Message MIRA"
         oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"
         onkeydown="if(event.key==='Enter'&&!event.shiftKey&&!('ontouchstart' in window)){event.preventDefault();M.send()}"></textarea>
-      <button class="icon-btn send" onclick="M.send()" ${R.busy ? "disabled" : ""}>${R.busy ? "…" : ic("arrowUp", 19)}</button>
+      <button class="icon-btn send" aria-label="Send" onclick="M.send()" ${R.busy ? "disabled" : ""}>${R.busy ? "…" : ic("arrowUp", 19)}</button>
     </div>
     ${R.deepSolve ? `<div class="ds-note">Deep Solve on — two-stage reasoning for hard problems</div>` : ""}
   </div>`;
@@ -1194,7 +1206,7 @@ function foodHTML(){
   <div class="card">
     <h3>${ic("droplet", 16)} Hydration <span class="tiny" style="margin-inline-start:auto;font-weight:400">${glasses} glasses · ${litres.toFixed(2)} L / ${(S.settings.waterGoal/1000).toFixed(2)} L</span></h3>
     <div class="glasses">${Array.from({length: goalGl}, (_, i) =>
-      `<button class="glass ${i < glasses ? "f" : ""}" onclick="M.water(${i})">${glassSvg(i < glasses)}</button>`).join("")}</div>
+      `<button class="glass ${i < glasses ? "f" : ""}" aria-label="Glass ${i + 1} of ${goalGl}" aria-pressed="${i < glasses}" onclick="M.water(${i})">${glassSvg(i < glasses)}</button>`).join("")}</div>
     <div class="bar"><i style="width:${wPct}%;background:var(--water)"></i></div>
   </div>
 
@@ -1254,7 +1266,7 @@ function foodHTML(){
         <div class="food-it">
           <div><div class="nm" dir="auto">${esc(f.name)} ${f.conf && f.conf !== "user" ? `<span class="badge ${f.conf}">${f.conf}</span>` : ""}</div>
           <div class="meta">${f.amount ? esc(f.amount) + " · " : ""}${n0(f.kcal)} kcal · ${n1(f.p)}P · ${n1(f.c)}C · ${n1(f.f)}F</div></div>
-          <button class="del" onclick="M.foodDel('${f.id}')">✕</button>
+          <button class="del" aria-label="Delete ${esc(f.name)}" onclick="M.foodDel('${f.id}')">✕</button>
         </div>`).join("") : `<div class="food-it"><span class="muted">Nothing logged.</span></div>`}</div>` : ""}
     </div>`;
   }).join("")}`;
@@ -1459,7 +1471,7 @@ function bodyHTML(){
     const prev = idx > 0 ? sorted[idx - 1] : null;
     return `<div class="ib-entry">
       <div class="hd"><span class="d">${fmtDate(e.date)} <span class="tiny">${e.date}</span></span>
-        <button class="del" onclick="M.ibDel('${e.id}')">✕</button></div>
+        <button class="del" aria-label="Delete scan" onclick="M.ibDel('${e.id}')">✕</button></div>
       <div class="ib-grid">
         ${IB_METRICS.map(m => {
           const v = e[m.k];
@@ -1476,7 +1488,10 @@ function bodyHTML(){
         }).join("")}
       </div>
     </div>`;
-  }).join("") : `<div class="card"><div class="muted">No scans yet. Add one above or upload an InBody result sheet.</div></div>`}`;
+  }).join("") : `<div class="card" style="text-align:center;padding:28px 18px">
+    <div style="color:var(--txt3);margin-bottom:10px">${ic("weight", 30)}</div>
+    <div class="muted">No scans yet. Add your first InBody scan above — or photograph the result sheet and MIRA will read the values for you.</div>
+  </div>`}`;
 }
 
 function ibSaveEntry(src){
@@ -1859,6 +1874,15 @@ window.M = {
     toast("PIN set ✓");
   },
   pinOff(){ if (confirm("Remove the PIN lock?")){ S.settings.pinHash = null; save(); render(); } },
+  pinForgot(){
+    if (!confirm("The PIN cannot be recovered. The only way back in is to erase ALL MIRA data on this device and start fresh. Erase everything?")) return;
+    if (!confirm("Really erase all data? This cannot be undone.")) return;
+    localStorage.removeItem("mira.data");
+    S = BLANK(); window.S = S;
+    R.unlocked = true; R.tab = "chat"; R.mode = "work"; R.convId = null; R.sheet = null; R.pending = "";
+    applyTheme(); render();
+    toast("MIRA was reset.");
+  },
 
   backup, restore,
   wipe(){
