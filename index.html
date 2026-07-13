@@ -444,7 +444,7 @@ body.kb .chatbar{padding-bottom:6px}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-12.11";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-12.12";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -505,6 +505,10 @@ const I = {
   calendar: '<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
   copy: '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
   sun: '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>',
+  edit: '<path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>',
+  refresh: '<polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>',
+  share: '<path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/>',
+  barcode: '<path d="M4 6v12"/><path d="M8 6v12"/><path d="M11 6v12"/><path d="M15 6v12"/><path d="M18 6v12"/><path d="M21 6v12"/>',
   trash: '<polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
   database: '<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>',
   trend: '<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>',
@@ -562,6 +566,7 @@ const BLANK = () => ({
   convs: [],          // [{id, dom, title, ts, msgs: [{role, content, ts, att}]}]
   foods: [],          // {id, date, name, amount, kcal, p, c, f, conf, ts}
   savedFoods: [],     // {name, amount, kcal, p, c, f}
+  meals: [],          // {id, name, items: [{name, amount, kcal, p, c, f}]}
   water: {},          // date -> glasses
   inbody: [],         // {id, date, weight, score, bfm, smm, vfa, pa}
 });
@@ -585,6 +590,7 @@ function migrateChats(){
     delete S.chats;
   }
   if (!Array.isArray(S.convs)) S.convs = [];
+  if (!Array.isArray(S.meals)) S.meals = [];
   if (S.settings.webSearch === undefined) S.settings.webSearch = true;
   if (!S.settings.theme) S.settings.theme = "dark";
   (S.domains || []).forEach(d => { if (COLOR_MIGRATE[d.color]) d.color = COLOR_MIGRATE[d.color]; });
@@ -656,6 +662,7 @@ const R = {
   attach: null,       // {name, media_type, data, kind:'image'|'pdf'}
   busy: false,
   openDays: new Set([todayStr()]),
+  mealsOpen: false,
   acFocus: false,
 };
 
@@ -904,6 +911,9 @@ Optional notes.
 
 The app renders these as cards with "Open in Mail" / "Add to calendar" buttons. Use them only for a finalised draft, never for examples.
 
+DAILY BRIEF
+When asked for a daily brief, deliver a tight briefing under ~130 words with short headed sections: 1) Nutrition — exact remaining calories/protein and one concrete eating suggestion for the rest of the day; 2) Hydration — status vs goal; 3) Training/recovery — one pointer from the body log and recent context; 4) Focus — the single most important thing today, inferred from recent conversation (ask only if nothing is known).
+
 DEEP SOLVE
 When a message begins with [DEEP SOLVE], run the two-stage engine:
 Stage 1 — Problem map: state the core question, decompose it into sub-problems, list what must be verified, and set the reasoning approach.
@@ -1024,6 +1034,7 @@ function chatHeadHTML(){
     <div class="mode-row">${S.domains.map(d =>
       `<button class="mode-chip ${d.id === R.mode ? "on" : ""}" style="--mc:${d.color}" onclick="M.mode('${d.id}')"><span class="d"></span>${esc(d.name)}</button>`).join("")}
     </div>
+    <button class="icon-btn" aria-label="Daily brief" title="Daily brief" onclick="M.dailyBrief()">${ic("sun", 19)}</button>
     <button class="icon-btn" aria-label="Conversations" title="Conversations" onclick="M.chatSheet()">${ic("clock", 19)}${nConvs ? `<span class="cnt">${nConvs}</span>` : ""}</button>
     <button class="icon-btn" aria-label="New chat" title="New chat" onclick="M.newChat()" ${!conv ? "disabled" : ""}>${ic("plus", 19)}</button>
   </div>`;
@@ -1043,17 +1054,23 @@ function chatHTML(){
       <div class="muted">MIRA needs your Anthropic API key to chat. It stays on this device.</div>
       <button class="btn sm sec" style="margin-top:10px" onclick="M.tab('set')">Open Settings</button></div>` : ""}
     <div class="msgs" id="msgs">
-      ${msgs.length ? msgs.map((m, i) => msgHTML(m, conv ? conv.id : "", i)).join("") : `
+      ${msgs.length ? (() => {
+        let lastUserIdx = -1;
+        msgs.forEach((m, i) => { if (m.role === "user") lastUserIdx = i; });
+        return msgs.map((m, i) => msgHTML(m, conv ? conv.id : "", i, i === msgs.length - 1, i === lastUserIdx)).join("");
+      })() : `
         <div class="card"><h3><span class="mode-dot"></span>${esc(dom.name)} mode</h3>
           <div class="muted">${esc(dom.desc.split(".")[0])}. Every fact verified or honestly labelled an estimate.</div></div>
         <div class="suggest">${sug.map(s => `<button onclick="M.suggest(this)">${esc(s)}</button>`).join("")}</div>`}
     </div>`;
 }
-function msgHTML(m, convId, idx){
+function msgHTML(m, convId, idx, isLast, isLastUser){
   if (m.role === "user")
-    return `<div class="msg user" dir="auto">${esc(m.content)}${m.att ? `<div class="att">${ic("paperclip", 12)} ${esc(m.att)}</div>` : ""}</div>`;
+    return `<div class="msg user" dir="auto">${esc(m.content)}${m.att ? `<div class="att">${ic("paperclip", 12)} ${esc(m.att)}</div>` : ""}
+      ${isLastUser && !R.busy ? `<div><button class="msg-act" aria-label="Edit and resend" onclick="M.editLast('${convId}')">${ic("edit", 12)} Edit</button></div>` : ""}</div>`;
   return `<div class="msg mira" dir="auto"><div class="who">MIRA${m.ds ? " · DEEP SOLVE" : ""}</div>${md(m.content)}
-    ${convId !== undefined && m.content ? `<button class="msg-act" aria-label="Copy reply" onclick="M.copyMsg('${convId}',${idx})">${ic("copy", 13)} Copy</button>` : ""}</div>`;
+    ${m.content ? `<div><button class="msg-act" aria-label="Copy reply" onclick="M.copyMsg('${convId}',${idx})">${ic("copy", 13)} Copy</button>${
+      isLast && !R.busy ? ` <button class="msg-act" aria-label="Regenerate reply" onclick="M.regen('${convId}')">${ic("refresh", 13)} Regenerate</button>` : ""}</div>` : ""}</div>`;
 }
 function chatSheetHTML(){
   const dom = curDomain();
@@ -1069,7 +1086,10 @@ function chatSheetHTML(){
         <div class="k" dir="auto">${esc(c.title || "Chat")}${c.id === R.convId ? ` <span class="badge">current</span>` : ""}</div>
         <div class="desc">${new Date(c.ts).toLocaleDateString("en-GB", {day: "numeric", month: "short"})} · ${c.msgs.length} messages</div>
       </button>
-      <span class="end"><button class="btn sm danger" onclick="M.delConv('${c.id}')" title="Delete chat">${ic("trash", 14)}</button></span>
+      <span class="end">
+        <button class="btn sm sec" aria-label="Share chat" title="Share chat" onclick="M.shareConv('${c.id}')">${ic("share", 14)}</button>
+        <button class="btn sm danger" aria-label="Delete chat" onclick="M.delConv('${c.id}')" title="Delete chat">${ic("trash", 14)}</button>
+      </span>
     </div>`).join("") : `<div class="muted" style="padding:10px 0">No conversations yet in this mode.</div>`}
   </div>`;
 }
@@ -1217,6 +1237,46 @@ async function sendChat(){
   save(); render();
 }
 
+async function regenLast(cid){
+  if (R.busy) return;
+  const conv = S.convs.find(c => c.id === cid);
+  if (!conv) return;
+  const msgs = conv.msgs;
+  if (msgs[msgs.length - 1]?.role === "assistant") msgs.pop();
+  const lastUser = msgs[msgs.length - 1];
+  if (!lastUser || lastUser.role !== "user"){ render(); return; }
+  R.busy = true; R.convId = cid; R.mode = conv.dom; R.tab = "chat";
+  const dom = S.domains.find(d => d.id === conv.dom) || curDomain();
+  const ds = !!lastUser.ds;
+  const hist = historyBlocks(msgs.slice(0, -1));
+  const holder = {role: "assistant", content: "", ts: Date.now(), ds};
+  msgs.push(holder);
+  save(); render();
+  const msgsEl = $("#msgs");
+  if (msgsEl) msgsEl.lastElementChild.innerHTML = `<div class="who">MIRA</div><div class="typing"><i></i><i></i><i></i></div>`;
+  try {
+    const full = await apiCall({
+      model: S.settings.model, max_tokens: 4000, stream: true,
+      system: systemPrompt(dom),
+      ...(S.settings.webSearch ? {tools: [{type: "web_search_20250305", name: "web_search", max_uses: 5}]} : {}),
+      messages: [...hist, {role: "user", content: lastUser.att ? `${lastUser.content}\n[Attached earlier: ${lastUser.att}]` : lastUser.content}],
+    }, partial => {
+      holder.content = partial;
+      const el = $("#msgs") && $("#msgs").lastElementChild;
+      if (el){
+        el.innerHTML = `<div class="who">MIRA</div>${md(partial)}`;
+        const c = $("#content");
+        if (c && c.scrollHeight - c.scrollTop - c.clientHeight < 300) c.scrollTop = c.scrollHeight;
+      }
+    });
+    holder.content = full || "(no response)";
+  } catch (e) {
+    holder.content = `**Could not reach the API.** ${e.message}`;
+  }
+  R.busy = false;
+  save(); render();
+}
+
 function pickFile(cb){
   const inp = $("#fileImg");
   inp.value = "";
@@ -1255,7 +1315,46 @@ function sanity(m){
 const foodForm = {name: "", amount: "", kcal: "", p: "", c: "", f: "", conf: "user",
   scOpen: false, scBase: "100", scBaseUnit: "g", scK: "", scP: "", scC: "", scF: "", scEat: ""};
 let reviewItems = null;   // [{name, amount, kcal, p, c, f, conf, note}] pending user review
-let findBusy = false, extractBusy = false;
+let findBusy = false, extractBusy = false, barcodeBusy = false;
+
+/* ---------------- 7-day insights ---------------- */
+function insightsHTML(){
+  const tg = S.settings.targets;
+  const days = [...Array(7)].map((_, k) => {
+    const d = new Date(Date.now() - (6 - k) * 864e5).toLocaleDateString("en-CA");
+    return {d, tot: dayTotals(d), waterMl: (S.water[d] || 0) * 250};
+  });
+  const logged = days.filter(x => x.tot.kcal > 0);
+  if (!logged.length && !S.foods.length) return "";
+  const avg = arr => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
+  const avgK = avg(logged.map(x => x.tot.kcal));
+  const avgP = avg(logged.map(x => x.tot.p));
+  const onTarget = tg.kcal ? logged.filter(x => x.tot.kcal >= tg.kcal * 0.9 && x.tot.kcal <= tg.kcal * 1.1).length : 0;
+  const waterHit = days.filter(x => x.waterMl >= S.settings.waterGoal).length;
+  let streak = 0;
+  for (let k = 0; ; k++){
+    const d = new Date(Date.now() - k * 864e5).toLocaleDateString("en-CA");
+    if (dayTotals(d).kcal > 0) streak++;
+    else if (k === 0) continue;   // today may not be logged yet
+    else break;
+  }
+  const max = Math.max(tg.kcal || 0, ...days.map(x => x.tot.kcal), 1) * 1.05;
+  const bars = days.map((x, k) => {
+    const h = Math.max(1.5, (x.tot.kcal / max) * 38);
+    const over = tg.kcal && x.tot.kcal > tg.kcal * 1.1;
+    const good = tg.kcal && x.tot.kcal >= tg.kcal * 0.9 && x.tot.kcal <= tg.kcal * 1.1;
+    return `<rect x="${k * 22 + 2}" y="${44 - h}" width="16" height="${h}" rx="2.5"
+      fill="${over ? "var(--amber)" : good ? "var(--green)" : "var(--acc)"}" opacity="${x.d === todayStr() ? 1 : .55}"/>`;
+  }).join("");
+  const tLine = tg.kcal ? `<line x1="0" y1="${44 - (tg.kcal / max) * 38}" x2="154" y2="${44 - (tg.kcal / max) * 38}" stroke="var(--txt3)" stroke-width="1" stroke-dasharray="3 3"/>` : "";
+  return `<div class="card">
+    <h3>${ic("chart", 16)} Last 7 days ${streak > 1 ? `<span class="badge" style="margin-inline-start:auto">${streak}-day streak</span>` : ""}</h3>
+    <svg viewBox="0 0 154 46" style="width:100%;height:56px;display:block;margin:4px 0 8px">${tLine}${bars}</svg>
+    <div class="muted" style="font-size:12.5px">
+      Avg <b>${n0(avgK)} kcal</b> · <b>${n1(avgP)} g protein</b> on logged days${tg.kcal ? ` · on target <b>${onTarget}/${logged.length}</b>` : ""} · water goal hit <b>${waterHit}/7</b>
+    </div>
+  </div>`;
+}
 
 function macroBar(label, val, target, unit){
   if (!target) return "";
@@ -1319,10 +1418,11 @@ function foodHTML(){
         <div class="field"><label>Fat g</label><input id="ffF" type="number" inputmode="decimal" value="${esc(foodForm.f)}" oninput="foodForm.f=this.value"></div>
         <div class="field"><label>&nbsp;</label><button class="btn sm" style="width:100%;min-height:44px" onclick="M.foodSave()">Save</button></div>
       </div>
-      <div class="row" style="gap:8px">
-        <button class="btn sm sec" onclick="M.scToggle()">${ic("sliders", 15)} Portion scaler</button>
-        <button class="btn sm sec" onclick="M.findMacros()" ${findBusy ? "disabled" : ""}>${findBusy ? "Searching…" : ic("search", 15) + " Find macros"}</button>
-        <button class="btn sm sec" onclick="M.extractPhoto()" ${extractBusy ? "disabled" : ""}>${extractBusy ? "Reading…" : ic("camera", 15) + " Photo / PDF"}</button>
+      <div class="grid2" style="gap:8px">
+        <button class="btn sm sec" style="width:100%" onclick="M.scToggle()">${ic("sliders", 15)} Portion scaler</button>
+        <button class="btn sm sec" style="width:100%" onclick="M.findMacros()" ${findBusy ? "disabled" : ""}>${findBusy ? "Searching…" : ic("search", 15) + " Find macros"}</button>
+        <button class="btn sm sec" style="width:100%" onclick="M.extractPhoto()" ${extractBusy ? "disabled" : ""}>${extractBusy ? "Reading…" : ic("camera", 15) + " Photo / PDF"}</button>
+        <button class="btn sm sec" style="width:100%" onclick="M.barcode()" ${barcodeBusy ? "disabled" : ""}>${barcodeBusy ? "Looking up…" : ic("barcode", 15) + " Barcode"}</button>
       </div>
       ${foodForm.scOpen ? `
       <div class="review-item" style="margin-top:12px">
@@ -1343,6 +1443,28 @@ function foodHTML(){
       <div id="reviewZone">${reviewItems ? reviewHTML() : ""}</div>
     </div>
   </div>
+
+  <div class="card fold ${R.mealsOpen ? "open" : ""}" id="mealsCard">
+    <h3 onclick="M.mealsToggle()">${ic("bookmark", 16)} Meals & shortcuts${S.meals.length ? ` (${S.meals.length})` : ""} <span class="chev">▶</span></h3>
+    <div class="fold-body">
+      <div class="row" style="margin-bottom:10px">
+        <button class="btn sm sec" onclick="M.copyYesterday()">${ic("copy", 14)} Copy yesterday</button>
+        <button class="btn sm sec" onclick="M.mealSaveToday()">${ic("plus", 14)} Save today as meal</button>
+      </div>
+      ${S.meals.length ? S.meals.map((ml, i) => {
+        const t = ml.items.reduce((a, x) => ({k: a.k + num(x.kcal), p: a.p + num(x.p)}), {k: 0, p: 0});
+        return `<div class="set-row">
+          <div><div class="k" dir="auto">${esc(ml.name)}</div><div class="desc">${ml.items.length} items · ${n0(t.k)} kcal · ${n1(t.p)}P</div></div>
+          <span class="end">
+            <button class="btn sm" onclick="M.mealLog(${i})">Log</button>
+            <button class="btn sm danger" aria-label="Delete meal" onclick="M.mealDel(${i})">${ic("trash", 13)}</button>
+          </span>
+        </div>`;
+      }).join("") : `<div class="muted">Save a day's log as a reusable meal (e.g. "my usual breakfast"), then log it in one tap.</div>`}
+    </div>
+  </div>
+
+  ${insightsHTML()}
 
   ${dates.map(d => {
     const items = dayFoods(d);
@@ -1475,6 +1597,43 @@ async function findMacros(){
   findBusy = false; render();
 }
 
+async function scanBarcode(){
+  if (!S.settings.apiKey){ toast("Add your API key in Settings first."); return; }
+  pickFile(async file => {
+    if (file.kind === "pdf"){ toast("Photograph the barcode itself."); return; }
+    barcodeBusy = true; render();
+    try {
+      const txt = await apiCall({
+        model: S.settings.model, max_tokens: 200,
+        system: `Read the retail barcode (EAN-13 / EAN-8 / UPC) in the photo. Reply with ONLY JSON: {"code":"digits"} — or {"code":null} if no barcode is clearly readable. Never guess digits.`,
+        messages: [{role: "user", content: [
+          {type: "image", source: {type: "base64", media_type: file.media_type, data: file.data}},
+          {type: "text", text: "What are the barcode digits?"}]}],
+      });
+      const code = String(tryParseJson(txt).code || "").replace(/\D/g, "");
+      if (!code){ toast("Could not read a barcode in that photo — try a closer, sharper shot."); }
+      else {
+        const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${code}.json?fields=product_name,brands,nutriments,serving_size`);
+        const j = await res.json();
+        if (j.status !== 1 || !j.product){
+          toast(`Barcode ${code} isn't in the OpenFoodFacts database — try "Find macros" instead.`, 4800);
+        } else {
+          const p = j.product, nu = p.nutriments || {};
+          const kcal = nu["energy-kcal_100g"] ?? (nu["energy_100g"] ? nu["energy_100g"] / 4.184 : 0);
+          reviewItems = [{
+            name: [p.brands, p.product_name].filter(Boolean).join(" — ") || `Product ${code}`,
+            amount: "100 g", kcal: Math.round(kcal || 0),
+            p: nu.proteins_100g ?? 0, c: nu.carbohydrates_100g ?? 0, f: nu.fat_100g ?? 0,
+            conf: "official",
+            note: `OpenFoodFacts ${code} — per 100 g${p.serving_size ? `; serving ${p.serving_size}` : ""}. Use the portion scaler for your amount.`,
+          }];
+        }
+      }
+    } catch (e) { toast("Barcode lookup failed: " + e.message, 4200); }
+    barcodeBusy = false; render();
+  });
+}
+
 async function extractPhoto(){
   if (!S.settings.apiKey){ toast("Add your API key in Settings first."); return; }
   pickFile(async file => {
@@ -1512,9 +1671,36 @@ const IB_METRICS = [
 const ibForm = {date: "", weight: "", score: "", bfm: "", smm: "", vfa: "", pa: ""};
 let ibReview = null, ibBusy = false;
 
+function weightCardHTML(sorted){
+  const pts = sorted.filter(e => e.weight !== null && isFinite(+e.weight)).slice(-14);
+  let chart = "";
+  if (pts.length >= 2){
+    const ws = pts.map(e => +e.weight);
+    const min = Math.min(...ws), max = Math.max(...ws);
+    const span = Math.max(max - min, 0.5);
+    const W = 154, H = 40;
+    const xy = ws.map((w, i) => `${(i / (ws.length - 1)) * (W - 8) + 4},${H - 6 - ((w - min) / span) * (H - 12)}`);
+    const delta = ws[ws.length - 1] - ws[0];
+    chart = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:52px;display:block;margin:4px 0 2px">
+      <polyline points="${xy.join(" ")}" fill="none" stroke="var(--acc)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="${xy[xy.length - 1].split(",")[0]}" cy="${xy[xy.length - 1].split(",")[1]}" r="3" fill="var(--acc)"/>
+    </svg>
+    <div class="tiny">${n1(ws[0])} → <b>${n1(ws[ws.length - 1])} kg</b> over ${pts.length} entries (${delta > 0 ? "+" : ""}${n1(delta)} kg)</div>`;
+  }
+  return `<div class="card">
+    <h3>${ic("trend", 16)} Weight</h3>
+    ${chart}
+    <div class="row" style="margin-top:10px">
+      <input id="qw" type="number" inputmode="decimal" placeholder="Today's weight, kg">
+      <button class="btn sm" style="flex:0 0 auto" onclick="M.quickWeight()">Log weight</button>
+    </div>
+  </div>`;
+}
+
 function bodyHTML(){
   const sorted = [...S.inbody].sort((a, b) => a.date < b.date ? -1 : 1);
   return `
+  ${weightCardHTML(sorted)}
   <div class="card">
     <h3>${ic("chart", 16)} InBody log</h3>
     <div class="muted">Each scan is stored with the change from the previous entry per metric. MIRA reads this log live — ask for a trend analysis in Fitness mode any time.</div>
@@ -1864,6 +2050,92 @@ window.M = {
     S.water[t] = (i + 1 === cur) ? i : i + 1;
     buzz();
     save(); render();
+  },
+  regen: regenLast,
+  editLast(cid){
+    if (R.busy) return;
+    const conv = S.convs.find(c => c.id === cid);
+    if (!conv) return;
+    const m = conv.msgs;
+    if (m[m.length - 1]?.role === "assistant") m.pop();
+    const u = m[m.length - 1];
+    if (!u || u.role !== "user"){ render(); return; }
+    m.pop();
+    save(); render();
+    const ta = $("#chatIn");
+    if (ta){
+      ta.value = u.content;
+      ta.style.height = "auto"; ta.style.height = Math.min(ta.scrollHeight, 120) + "px";
+      ta.focus();
+    }
+  },
+  dailyBrief(){
+    if (R.busy) return;
+    if (!S.settings.apiKey){ toast("Add your API key in Settings first."); R.tab = "set"; render(); return; }
+    R.tab = "chat"; render();
+    const ta = $("#chatIn");
+    if (ta) ta.value = "Give me my daily brief.";
+    sendChat();
+  },
+  async shareConv(id){
+    const c = S.convs.find(x => x.id === id);
+    if (!c) return;
+    const dom = S.domains.find(d => d.id === c.dom);
+    const text = `MIRA — ${dom ? dom.name : ""} — ${new Date(c.ts).toLocaleDateString("en-GB")}\n\n` +
+      c.msgs.map(m => (m.role === "user" ? "You: " : "MIRA: ") + m.content).join("\n\n");
+    if (navigator.share){
+      try { await navigator.share({title: c.title || "MIRA chat", text}); } catch (e) {}
+    } else {
+      const blob = new Blob([text], {type: "text/plain"});
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = (c.title || "mira-chat").replace(/[^\w؀-ۿ -]/g, "").slice(0, 40) + ".txt";
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+      toast("Chat exported as a text file.");
+    }
+  },
+  copyYesterday(){
+    const t = todayStr();
+    const prevDays = [...new Set(S.foods.map(f => f.date))].filter(d => d < t).sort();
+    const src = prevDays[prevDays.length - 1];
+    if (!src){ toast("No previous day to copy."); return; }
+    const items = S.foods.filter(f => f.date === src);
+    items.forEach(f => S.foods.push({...f, id: uid(), date: t, ts: Date.now()}));
+    R.openDays.add(t);
+    buzz(); save(); render();
+    toast(`Copied ${items.length} items from ${fmtDate(src)} ✓`);
+  },
+  mealSaveToday(){
+    const items = dayFoods(todayStr());
+    if (!items.length){ toast("Nothing logged today yet."); return; }
+    const name = prompt('Name this meal (e.g. "My usual breakfast"):');
+    if (!name || !name.trim()) return;
+    S.meals.unshift({id: uid(), name: name.trim(),
+      items: items.map(f => ({name: f.name, amount: f.amount, kcal: f.kcal, p: f.p, c: f.c, f: f.f}))});
+    save(); render();
+    toast(`Meal saved: ${name.trim()} ✓`);
+  },
+  mealLog(i){
+    const ml = S.meals[i];
+    if (!ml) return;
+    ml.items.forEach(it => S.foods.push({id: uid(), date: todayStr(), name: it.name, amount: it.amount,
+      kcal: num(it.kcal), p: num(it.p), c: num(it.c), f: num(it.f), conf: "user", ts: Date.now()}));
+    R.openDays.add(todayStr());
+    buzz(); save(); render();
+    toast(`Logged: ${ml.name} (${ml.items.length} items) ✓`);
+  },
+  mealDel(i){
+    if (confirm(`Delete the meal "${S.meals[i].name}"?`)){ S.meals.splice(i, 1); save(); render(); }
+  },
+  mealsToggle(){ R.mealsOpen = !R.mealsOpen; render(); },
+  barcode: scanBarcode,
+  quickWeight(){
+    const v = num(($("#qw") || {}).value);
+    if (v < 20 || v > 400){ toast("Enter a weight in kg."); return; }
+    S.inbody.push({id: uid(), date: todayStr(), weight: v, score: null, bfm: null, smm: null, vfa: null, pa: null});
+    buzz(); save(); render();
+    toast(`Weight logged: ${n1(v)} kg ✓`);
   },
   async copyMsg(cid, i){
     const conv = S.convs.find(c => c.id === cid);
