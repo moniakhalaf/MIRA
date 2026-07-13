@@ -258,14 +258,16 @@ body.kb .chatbar{padding-bottom:6px}
 .cat-card .cc-nm{font-size:17px;font-weight:600;margin-bottom:3px}
 .cat-card .cc-ds{font-size:12px;color:var(--txt2);line-height:1.35}
 
-.cat-head{display:flex;align-items:center;gap:12px;padding:4px 2px 16px}
 .cat-back{
-  width:42px;height:42px;flex:0 0 auto;border-radius:50%;display:flex;align-items:center;justify-content:center;
-  background:var(--card);border:1px solid var(--line);color:var(--txt);box-shadow:var(--cardshadow);
+  display:inline-flex;align-items:center;gap:6px;min-height:40px;
+  padding:8px 15px 8px 11px;border-radius:22px;margin:2px 0 14px;
+  background:var(--card);border:1px solid var(--line);color:var(--txt);
+  font-size:14px;font-weight:600;box-shadow:var(--cardshadow);
 }
-.cat-back:active{transform:scale(.94)}
-.cat-head .ch-nm{font-family:Georgia,"Times New Roman",serif;font-size:23px;font-weight:600;line-height:1.1}
-.cat-head .ch-ds{font-size:12.5px;color:var(--txt2);margin-top:2px}
+.cat-back:active{transform:scale(.96)}
+.cat-title{margin-bottom:16px}
+.cat-title .ch-nm{font-family:Georgia,"Times New Roman",serif;font-size:26px;font-weight:600;line-height:1.1}
+.cat-title .ch-ds{font-size:13px;color:var(--txt2);margin-top:3px}
 .cat-ask{margin-bottom:16px}
 .feat-list{display:flex;flex-direction:column;gap:10px}
 .feat-card{
@@ -489,7 +491,7 @@ body.kb .chatbar{padding-bottom:6px}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.13";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.14";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -846,9 +848,10 @@ function catPageHTML(){
   const d = S.domains.find(x => x.id === R.homeCat) || S.domains[0];
   const feats = domFeatures(d);
   return `
-    <div class="cat-head">
-      <button class="cat-back" aria-label="Back to Home" onclick="M.homeBack()">${ic("back", 20)}</button>
-      <div><div class="ch-nm">${esc(d.name)}</div><div class="ch-ds">${esc(catTagline(d))}</div></div>
+    <button class="cat-back" aria-label="Back to Home" onclick="M.homeBack()">${ic("back", 18)} Home</button>
+    <div class="cat-title">
+      <div class="ch-nm">${esc(d.name)}</div>
+      <div class="ch-ds">${esc(catTagline(d))}</div>
     </div>
     <button class="btn cat-ask" onclick="M.enterMode('${d.id}')">${ic("chat", 17)} Ask ${esc(d.name)}</button>
     <div class="feat-list">
@@ -2128,27 +2131,22 @@ window.render = render;
 window.save = save;
 window.num = num;
 window.M = {
-  tab(t){ R.tab = t; R.homeCat = null; R.sheet = null; render(); },
-  goTab(t){ R.tab = t; R.homeCat = null; R.sheet = null; render(); },
+  // Opening the chat surface always starts a FRESH conversation; previous
+  // chats stay saved and are reachable via the Chats (clock) button.
+  tab(t){ R.tab = t; R.homeCat = null; R.sheet = null; if (t === "chat") R.convId = null; render(); },
+  goTab(t){ R.tab = t; R.homeCat = null; R.sheet = null; if (t === "chat") R.convId = null; render(); },
   home(catId){ R.homeCat = catId; render(); },
   homeBack(){ R.homeCat = null; render(); },
   enterMode(domId, key){
-    R.mode = domId; R.tab = "chat"; R.homeCat = null; R.sheet = null;
+    R.mode = domId; R.tab = "chat"; R.homeCat = null; R.sheet = null; R.convId = null;
     const prompt = key ? FEAT_PROMPTS[key] : "";
-    if (prompt) R.convId = null;
-    else { const l = S.convs.filter(c => c.dom === domId).sort((a, b) => b.ts - a.ts)[0]; R.convId = l ? l.id : null; }
     render();
     if (prompt){
       const ta = $("#chatIn");
       if (ta){ ta.value = prompt; ta.style.height = "auto"; ta.style.height = Math.min(ta.scrollHeight, 120) + "px"; ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
     }
   },
-  mode(id){
-    R.mode = id;
-    const latest = S.convs.filter(c => c.dom === id).sort((a, b) => b.ts - a.ts)[0];
-    R.convId = latest ? latest.id : null;
-    render();
-  },
+  mode(id){ R.mode = id; R.convId = null; render(); },
   newChat(){ R.convId = null; R.sheet = null; render(); },
   chatSheet(){ R.sheet = "chats"; render(); },
   sheetClose(){ R.sheet = null; render(); },
@@ -2443,10 +2441,8 @@ window.M = {
 /* ---------------- boot ---------------- */
 applyTheme();
 bindViewport();
-{
-  const latest = S.convs.filter(c => c.dom === R.mode).sort((a, b) => b.ts - a.ts)[0];
-  if (latest) R.convId = latest.id;
-}
+/* start on a fresh chat each launch — previous conversations stay in the log */
+R.convId = null;
 render();
 </script>
 </body>
