@@ -302,6 +302,12 @@ body.kb .chatbar{padding-bottom:6px}
 .lib-list{display:flex;flex-direction:column;gap:8px}
 .wo-hd{display:flex;align-items:center;gap:8px}
 .pr-badge{background:rgba(52,196,142,.16);color:var(--green);border-radius:20px;padding:2px 9px;font-size:11px;font-weight:700}
+.ex-note{margin-top:8px;font-size:13px;min-height:38px;padding:8px 10px}
+.rest-bar .rest-top{display:flex;justify-content:space-between;align-items:center;font-size:14px;font-weight:600}
+.rest-bar .rest-top span:last-child{font-variant-numeric:tabular-nums;font-size:17px;color:var(--acc)}
+.rest-track{height:8px;border-radius:5px;background:var(--track);overflow:hidden;margin-top:8px}
+.rest-track i{display:block;height:100%;background:var(--acc);width:0;border-radius:5px;transition:width .25s linear}
+.rest-bar .icon-btn{width:34px;height:34px;min-width:34px;font-size:20px;font-weight:600;background:var(--bg2);border:1px solid var(--line)}
 
 /* ---------- chat ---------- */
 .chat-head{
@@ -509,7 +515,7 @@ body.kb .chatbar{padding-bottom:6px}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.15";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.16";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -637,6 +643,7 @@ const BLANK = () => ({
     targets: {kcal: 2000, protein: 120, carbs: 0, fat: 0},
     waterGoal: 2500,
     coach: {name: "", email: ""},
+    restLen: 90,
   },
   domains: JSON.parse(JSON.stringify(DEFAULT_DOMAINS)),
   convs: [],          // [{id, dom, title, ts, msgs: [{role, content, ts, att}]}]
@@ -645,6 +652,7 @@ const BLANK = () => ({
   meals: [],          // {id, name, items: [{name, amount, kcal, p, c, f}]}
   exercises: [],      // user-added exercises {id, n, m, e, c, source}
   workouts: [],       // {id, date, name, items:[{name, muscle, sets:[{reps, weight}], note}], ts}
+  routines: [],       // {id, name, items:[{name, muscle}]}
   water: {},          // date -> glasses
   inbody: [],         // {id, date, weight, score, bfm, smm, vfa, pa}
 });
@@ -671,6 +679,8 @@ function migrateChats(){
   if (!Array.isArray(S.meals)) S.meals = [];
   if (!Array.isArray(S.exercises)) S.exercises = [];
   if (!Array.isArray(S.workouts)) S.workouts = [];
+  if (!Array.isArray(S.routines)) S.routines = [];
+  if (S.settings.restLen === undefined) S.settings.restLen = 90;
   if (!S.settings.coach) S.settings.coach = {name: "", email: ""};
   if (S.settings.webSearch === undefined) S.settings.webSearch = true;
   if (!S.settings.theme) S.settings.theme = "dark";
@@ -754,6 +764,7 @@ const R = {
   aiExBusy: false,
   progEx: "",
   coachPeriod: 30,
+  plateOpen: false,
 };
 
 /* ---------------- root render ---------------- */
@@ -1950,6 +1961,76 @@ function bestE1RM(name, filter){
   }
   return best;
 }
+/* most recent prior session's sets for an exercise — progressive-overload hint */
+function lastPerf(name){
+  const prev = S.workouts.filter(w => w.items.some(it => it.name === name)).sort((a, b) => b.ts - a.ts)[0];
+  if (!prev) return "";
+  return prev.items.find(it => it.name === name).sets.map(s => `${n1(s.weight)}×${s.reps}`).join(", ");
+}
+
+/* ---- rest timer (updates its own DOM node without a full re-render) ---- */
+let restIv = null, restEnd = 0, restTotal = 0;
+const restRemaining = () => Math.max(0, Math.ceil((restEnd - Date.now()) / 1000));
+const restRunning = () => restEnd > Date.now();
+const fmtClock = s => Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+function startRest(sec){
+  if (!sec || sec <= 0) return;
+  restTotal = sec; restEnd = Date.now() + sec * 1000;
+  clearInterval(restIv);
+  render();
+  restIv = setInterval(() => {
+    const rem = restRemaining();
+    const t = document.getElementById("restTime"), f = document.getElementById("restFill");
+    if (t) t.textContent = fmtClock(rem);
+    if (f) f.style.width = (100 * (1 - rem / restTotal)) + "%";
+    if (rem <= 0){ clearInterval(restIv); restIv = null; restEnd = 0; buzz(220); toast("Rest done — next set."); render(); }
+  }, 250);
+}
+function stopRest(){ clearInterval(restIv); restIv = null; restEnd = 0; render(); }
+function restControlHTML(){
+  const len = S.settings.restLen;
+  if (restRunning()) return `<div class="card rest-bar">
+    <div class="rest-top"><span>${ic("clock", 14)} Rest</span><span id="restTime">${fmtClock(restRemaining())}</span></div>
+    <div class="rest-track"><i id="restFill" style="width:${100 * (1 - restRemaining() / restTotal)}%"></i></div>
+    <div class="row" style="margin-top:8px">
+      <button class="btn sm sec" onclick="M.restAdd(15)">+15s</button>
+      <button class="btn sm sec" onclick="M.restSkip()">Skip</button>
+    </div>
+  </div>`;
+  return `<div class="card rest-bar">
+    <div class="row" style="align-items:center">
+      <span class="tiny" style="flex:1">${ic("clock", 14)} Rest timer — auto-starts after each set</span>
+      <button class="icon-btn" aria-label="Less rest" onclick="M.restLen(-15)">−</button>
+      <b style="min-width:52px;text-align:center">${len ? fmtClock(len) : "off"}</b>
+      <button class="icon-btn" aria-label="More rest" onclick="M.restLen(15)">+</button>
+      ${len ? `<button class="btn sm" style="flex:0 0 auto" onclick="M.restStart()">Start</button>` : ""}
+    </div>
+  </div>`;
+}
+
+/* ---- plate calculator (per side, 20 kg Olympic bar) ---- */
+function plateBreak(total){
+  let per = (total - 20) / 2;
+  if (per < 0) return null;
+  const out = [];
+  [25, 20, 15, 10, 5, 2.5, 1.25].forEach(p => { while (per >= p - 1e-9){ out.push(p); per = Math.round((per - p) * 100) / 100; } });
+  return {out, leftover: per};
+}
+function plateHTML(){
+  const w = num((document.getElementById("plateW") || {}).value);
+  let body = `<div class="tiny">Enter your target total weight; plates shown per side of a 20 kg bar.</div>`;
+  if (w >= 20){
+    const b = plateBreak(w);
+    body = b.out.length
+      ? `<div style="margin-top:6px">Per side: <b>${b.out.map(p => p + "kg").join(" + ")}</b>${b.leftover > 0.01 ? ` <span class="tiny">(+${n1(b.leftover)} kg unmatched)</span>` : ""}</div>`
+      : `<div class="tiny" style="margin-top:6px">Just the bar (20 kg).</div>`;
+  } else if (w > 0) body = `<div class="tiny" style="margin-top:6px">Less than the bar (20 kg).</div>`;
+  return `<div class="card">
+    <div class="row"><input id="plateW" type="number" inputmode="decimal" placeholder="Total kg (e.g. 100)" oninput="render()">
+      <button class="btn sm sec" style="flex:0 0 auto" onclick="R.plateOpen=false;render()">Close</button></div>
+    ${body}
+  </div>`;
+}
 
 /* ---------- Training view ---------- */
 function trainHTML(){
@@ -1972,28 +2053,40 @@ function trainTodayHTML(){
     <div class="card">
       <h3>${ic("barbell", 16)} Start a workout</h3>
       <div class="muted" style="margin-bottom:12px">Log your session set by set. Add exercises from the library, or anything custom.</div>
-      <button class="btn" onclick="M.woStart()">${ic("play", 15)} Start workout</button>
+      <button class="btn" onclick="M.woStart()">${ic("play", 15)} Start blank workout</button>
     </div>
+    ${S.routines.length ? `<div class="card">
+      <h3>${ic("list", 16)} Your routines</h3>
+      ${S.routines.map((r, i) => `<div class="set-row">
+        <div><div class="k" dir="auto">${esc(r.name)}</div><div class="desc">${r.items.length} exercise${r.items.length > 1 ? "s" : ""} · ${esc(r.items.slice(0, 3).map(x => x.name).join(", "))}${r.items.length > 3 ? "…" : ""}</div></div>
+        <span class="end"><button class="btn sm" onclick="M.routineStart(${i})">Start</button>
+          <button class="btn sm danger" aria-label="Delete routine" onclick="M.routineDel(${i})">${ic("trash", 13)}</button></span>
+      </div>`).join("")}
+    </div>` : ""}
     ${S.workouts.length ? `<div class="muted" style="text-align:center;padding:4px">Past sessions and progress are in <b>History</b>.</div>` : ""}`;
   return `
     <div class="card">
       <div class="wo-hd">
         <input id="woName" value="${esc(wo.name)}" oninput="R.trainWO.name=this.value" style="font-weight:600">
-        <span class="tiny" style="flex:0 0 auto">${fmtDate(wo.date)}</span>
+        <button class="icon-btn" aria-label="Plate calculator" title="Plate calculator" onclick="M.plateToggle()">${ic("barbell", 19)}</button>
       </div>
     </div>
+    ${R.plateOpen ? plateHTML() : ""}
+    ${restControlHTML()}
     ${wo.items.map((it, i) => exItemHTML(it, i)).join("")}
     <button class="btn sec" style="margin-bottom:12px" onclick="M.trainGo('library')">${ic("plus", 15)} Add exercise</button>
-    <div class="row">
+    <div class="row" style="margin-bottom:10px">
       <button class="btn" onclick="M.woFinish()">${ic("check", 16)} Finish & save</button>
       <button class="btn sec danger" style="flex:0 0 auto" onclick="M.woDiscard()">Discard</button>
-    </div>`;
+    </div>
+    ${wo.items.length ? `<button class="btn sec" onclick="M.routineSave()">${ic("bookmark", 15)} Save as routine</button>` : ""}`;
 }
 function exItemHTML(it, i){
-  const best = it.sets.reduce((a, s) => Math.max(a, num(s.weight) * num(s.reps)), 0);
+  const last = lastPerf(it.name);
   return `<div class="card">
     <div class="wo-hd" style="margin-bottom:8px">
-      <div><div style="font-weight:600" dir="auto">${esc(it.name)}</div><div class="tiny">${esc(it.muscle || "")}</div></div>
+      <div><div style="font-weight:600" dir="auto">${esc(it.name)}</div>
+        <div class="tiny">${esc(it.muscle || "")}${last ? ` · last: ${last}` : ""}</div></div>
       <button class="del" style="flex:0 0 auto;color:var(--txt3)" aria-label="Remove exercise" onclick="M.woDelEx(${i})">✕</button>
     </div>
     ${it.sets.length ? `<div class="set-list">${it.sets.map((s, j) =>
@@ -2004,6 +2097,7 @@ function exItemHTML(it, i){
       <input id="ww${i}" type="number" inputmode="decimal" placeholder="kg">
       <button class="btn sm" onclick="M.woAddSet(${i})">Add set</button>
     </div>
+    <input class="ex-note" value="${esc(it.note || "")}" oninput="R.trainWO.items[${i}].note=this.value" placeholder="Note (optional)" dir="auto">
   </div>`;
 }
 
@@ -2508,13 +2602,37 @@ window.M = {
     const r = num(($("#wr" + i) || {}).value), w = num(($("#ww" + i) || {}).value);
     if (r <= 0){ toast("Enter the reps."); return; }
     R.trainWO.items[i].sets.push({reps: r, weight: w});
-    buzz(); render();
+    buzz();
+    if (S.settings.restLen > 0) startRest(S.settings.restLen); else render();
   },
+  restLen(delta){ S.settings.restLen = Math.max(0, Math.min(600, S.settings.restLen + delta)); save(); render(); },
+  restStart(){ startRest(S.settings.restLen); },
+  restAdd(sec){ restEnd += sec * 1000; restTotal += sec; render(); },
+  restSkip(){ stopRest(); },
+  plateToggle(){ R.plateOpen = !R.plateOpen; render(); },
+  routineSave(){
+    const wo = R.trainWO;
+    if (!wo || !wo.items.length){ toast("Add exercises first."); return; }
+    const name = prompt("Name this routine (e.g. Push Day):", wo.name || "");
+    if (!name || !name.trim()) return;
+    S.routines.unshift({id: uid(), name: name.trim(), items: wo.items.map(it => ({name: it.name, muscle: it.muscle}))});
+    save(); render();
+    toast(`Routine saved: ${name.trim()} ✓`);
+  },
+  routineStart(i){
+    const r = S.routines[i];
+    if (!r) return;
+    R.trainWO = {id: uid(), date: todayStr(), name: r.name, items: r.items.map(x => ({name: x.name, muscle: x.muscle, sets: [], note: ""}))};
+    R.trainTab = "today"; render();
+    toast(`Started ${r.name}`);
+  },
+  routineDel(i){ if (confirm(`Delete the routine "${S.routines[i].name}"?`)){ S.routines.splice(i, 1); save(); render(); } },
   woDelSet(i, j){ R.trainWO.items[i].sets.splice(j, 1); render(); },
   woDelEx(i){ R.trainWO.items.splice(i, 1); render(); },
   woFinish(){
     const wo = R.trainWO;
     if (!wo || !wo.items.some(it => it.sets.length)){ toast("Add at least one set first."); return; }
+    clearInterval(restIv); restIv = null; restEnd = 0;
     wo.items = wo.items.filter(it => it.sets.length);
     wo.ts = Date.now();
     // PR check for the toast
@@ -2529,7 +2647,7 @@ window.M = {
     buzz(); save(); render();
     toast(`Workout saved${prs ? ` · ${prs} new best${prs > 1 ? "s" : ""} 🎯` : ""} ✓`);
   },
-  woDiscard(){ if (confirm("Discard this workout?")){ R.trainWO = null; render(); } },
+  woDiscard(){ if (confirm("Discard this workout?")){ clearInterval(restIv); restIv = null; restEnd = 0; R.trainWO = null; render(); } },
   woHistDel(id){ if (confirm("Delete this workout from history?")){ S.workouts = S.workouts.filter(w => w.id !== id); save(); render(); } },
   progPick(n){ R.progEx = n; render(); },
   exAddOpen(){ R.exForm = {open: true, n: R.libQuery.trim(), m: R.libMuscle === "All" ? "Chest" : R.libMuscle, e: "", c: ""}; render(); },
