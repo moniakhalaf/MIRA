@@ -548,7 +548,7 @@ body.kb .chatbar{padding-bottom:6px}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.18";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.19";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -681,6 +681,7 @@ const BLANK = () => ({
     waterGoal: 2500,
     coach: {name: "", email: ""},
     restLen: 90,
+    profession: "",
   },
   domains: JSON.parse(JSON.stringify(DEFAULT_DOMAINS)),
   convs: [],          // [{id, dom, title, ts, msgs: [{role, content, ts, att}]}]
@@ -693,8 +694,9 @@ const BLANK = () => ({
   supplements: [],    // {id, name, dose, timing}
   suppLog: {},        // date -> [suppId, ...] taken
   sleep: [],          // {id, date, hours, quality(1-5), note}
-  tasks: [],          // {id, title, priority:'high'|'med'|'low', due, done, ts}
+  tasks: [],          // {id, title, priority:'high'|'med'|'low', due, dueTime, done, ts}
   notes: [],          // {id, title, body, ts, updated}
+  workTopics: [],     // AI-built profession toolkit topics (strings)
   water: {},          // date -> glasses
   inbody: [],         // {id, date, weight, score, bfm, smm, vfa, pa}
 });
@@ -727,6 +729,8 @@ function migrateChats(){
   if (!Array.isArray(S.sleep)) S.sleep = [];
   if (!Array.isArray(S.tasks)) S.tasks = [];
   if (!Array.isArray(S.notes)) S.notes = [];
+  if (!Array.isArray(S.workTopics)) S.workTopics = [];
+  if (S.settings.profession === undefined) S.settings.profession = "";
   if (S.settings.restLen === undefined) S.settings.restLen = 90;
   if (!S.settings.coach) S.settings.coach = {name: "", email: ""};
   if (S.settings.webSearch === undefined) S.settings.webSearch = true;
@@ -816,10 +820,12 @@ const R = {
   suppForm: {open: false, name: "", dose: "", timing: "Morning"},
   sleepQ: 0,
   sleepForm: {date: "", hours: "", note: ""},
-  workTab: "tasks",    // tasks | notes | sap
-  taskForm: {title: "", priority: "med", due: ""},
+  workTab: "tasks",    // tasks | notes | kit
+  taskForm: {title: "", priority: "med", due: "", dueTime: ""},
   noteId: null,        // note being edited
   taskDone: false,     // show completed tasks
+  profDraft: "",       // profession input buffer
+  kitBusy: false,
 };
 
 /* ---------------- root render ---------------- */
@@ -916,7 +922,7 @@ function domFeatures(d){
     {icon: "sun", label: "Daily brief", desc: "Your day in one tap", on: `M.dailyBrief('${id}')`},
     ask("mail", "Draft an email", "Draft first — you send", "email"),
     ask("globe", "Deep research", "Trusted sources, cited", "research"),
-    {icon: "layers", label: "SAP S/4HANA", desc: "Reference by module", on: `M.goWork('sap')`},
+    {icon: "layers", label: "My field toolkit", desc: "Tools for your profession", on: `M.goWork('kit')`},
     ask("edit", "Academic support", "Argument · method · refs", "academic"),
     ask("target", "Deep Solve a problem", "Two-stage reasoning", "deep"),
   ];
@@ -1167,6 +1173,7 @@ function systemPrompt(dom){
     ar: "Always reply in Arabic (Modern Standard, with Gulf phrasing where natural) regardless of the language the user writes in."}[st.lang];
 
   return `You are MIRA (My Integrated Reasoning Assistant), ${st.name ? `the personal assistant of ${st.name}` : "a personal assistant"} — one trustworthy assistant spanning the user's whole life. You are currently in ${dom.name} mode.
+${st.profession ? `\nTHE USER'S PROFESSION / FIELD: ${st.profession}. In Work and anywhere relevant, bring the standards, terminology, frameworks, tools and deliverable formats of a ${st.profession}. Never assume a different field.\n` : ""}
 
 MODE FOCUS — ${dom.name}: ${dom.desc}
 
@@ -2506,6 +2513,17 @@ function healthReviewHTML(){
 const PRIOS = {high: {label: "High", color: "var(--red)"}, med: {label: "Medium", color: "var(--amber)"}, low: {label: "Low", color: "var(--txt3)"}};
 const PRIO_ORDER = {high: 0, med: 1, low: 2};
 
+const PROF_SUGGEST = ["Lawyer","Engineer","Chef","Photographer","Coach","Doctor","Teacher","Accountant","Marketer","Designer","Developer","Architect","Consultant","Nurse","SAP Consultant","Project Manager","Salesperson","Writer"];
+/* universal, profession-aware quick actions */
+const KIT_ACTIONS = [
+  {icon: "mail",     label: "Draft a document",       hint: "Email, memo, report, proposal", verb: "help me draft a professional document (email, memo, report or proposal). Here's what I need:"},
+  {icon: "globe",    label: "Research with sources",  hint: "Best option, cited",            verb: "research this for me using trusted sources and give me the most suitable answer with citations:"},
+  {icon: "list",     label: "Plan a project/meeting", hint: "Structure & steps",             verb: "help me plan and structure this project or meeting, with clear steps and priorities:"},
+  {icon: "fileText", label: "Explain in my field",    hint: "Concept, term, method",         verb: "explain this concept/term/method clearly in the context of my field:"},
+  {icon: "check",    label: "Review my work",         hint: "Feedback & improvements",       verb: "review this work and give me specific, professional feedback and improvements:"},
+  {icon: "layers",   label: "Standards & best practice", hint: "How it's done properly",     verb: "tell me the professional standards and best practices for this in my field, and cite where it matters:"},
+];
+
 const SAP_MODULES = [
   {k: "MM", n: "Materials Management", d: "Procurement, inventory, valuation, invoice verification. MIRA's deepest module."},
   {k: "SD", n: "Sales & Distribution", d: "Order-to-cash, pricing, deliveries, billing."},
@@ -2528,15 +2546,15 @@ function openTasks(){
 
 function workHTML(){
   if (R.workTab === "notes" && R.noteId) return workNoteEditorHTML();
-  const tabs = [["tasks","Tasks"],["notes","Notes"],["sap","SAP"]];
+  const tabs = [["tasks","Tasks"],["notes","Notes"],["kit","Toolkit"]];
   return `
     <button class="cat-back" onclick="M.workBack()">${ic("back", 18)} Work</button>
-    <div class="cat-title"><div class="ch-nm">Work</div><div class="ch-ds">Tasks · notes · SAP reference</div></div>
+    <div class="cat-title"><div class="ch-nm">Work</div><div class="ch-ds">Tasks · notes · your field toolkit</div></div>
     <div class="chip-row seg-tabs">${tabs.map(([k, l]) =>
       `<button class="chip ${R.workTab === k ? "on" : ""}" onclick="M.workGo('${k}')">${l}</button>`).join("")}</div>
     <div style="margin-top:12px">${
       R.workTab === "tasks" ? workTasksHTML() :
-      R.workTab === "notes" ? workNotesHTML() : workSapHTML()
+      R.workTab === "notes" ? workNotesHTML() : workKitHTML()
     }</div>`;
 }
 
@@ -2553,8 +2571,9 @@ function workTasksHTML(){
           `<button class="${f.priority === k ? "on" : ""}" onclick="R.taskForm.priority='${k}';render()"><span class="prio-dot" style="background:${p.color}"></span>${p.label}</button>`).join("")}</div>
       </div>
       <div class="row" style="margin-top:10px">
-        <input id="taskDue" type="date" value="${esc(f.due)}" oninput="R.taskForm.due=this.value">
-        <button class="btn sm" style="flex:0 0 auto" onclick="M.taskAdd()">Add task</button>
+        <input id="taskDue" type="date" value="${esc(f.due)}" oninput="R.taskForm.due=this.value" aria-label="Due date">
+        <input id="taskDueTime" type="time" value="${esc(f.dueTime)}" oninput="R.taskForm.dueTime=this.value" aria-label="Due time" style="flex:0 0 108px">
+        <button class="btn sm" style="flex:0 0 auto" onclick="M.taskAdd()">Add</button>
       </div>
     </div>
     ${open.length ? `<div class="card">
@@ -2577,8 +2596,9 @@ function taskRowHTML(t){
     <span class="prio-dot" style="background:${p.color}"></span>
     <div class="task-tx">
       <div class="task-nm" dir="auto">${esc(t.title)}</div>
-      ${t.due ? `<div class="task-ds ${overdue ? "over" : ""}">${overdue ? "Overdue · " : "Due "}${fmtDate(t.due)}</div>` : ""}
+      ${t.due ? `<div class="task-ds ${overdue ? "over" : ""}">${overdue ? "Overdue · " : "Due "}${fmtDate(t.due)}${t.dueTime ? " · " + esc(t.dueTime) : ""}</div>` : ""}
     </div>
+    ${t.due && !t.done ? `<button class="del" aria-label="Add to calendar" title="Add reminder to calendar" onclick="M.taskCal('${t.id}')">${ic("calendar", 14)}</button>` : ""}
     <button class="del" aria-label="Delete task" onclick="M.taskDel('${t.id}')">${ic("trash", 13)}</button>
   </div>`;
 }
@@ -2612,20 +2632,50 @@ function workNotesHTML(){
     </button>`).join("") : `<div class="card"><div class="muted">No notes yet. Create documents, memos, or meeting notes — all stored on your device.</div></div>`}`;
 }
 
-function workSapHTML(){
+function workKitHTML(){
+  const prof = (S.settings.profession || "").trim();
+  if (!prof){
+    return `<div class="card">
+      <h3>${ic("briefcase", 16)} Set your profession</h3>
+      <div class="muted" style="margin-bottom:10px">MIRA tailors the Work tools, terminology and standards to your field — a lawyer, chef, engineer, photographer, coach, or anything else.</div>
+      <div class="field"><input id="profIn" value="${esc(R.profDraft)}" oninput="R.profDraft=this.value" placeholder="e.g. Photographer" dir="auto" onkeydown="if(event.key==='Enter')M.profSave()"></div>
+      <div class="chip-row" style="margin-bottom:10px">${PROF_SUGGEST.map(p => `<button class="chip" onclick="M.profPick('${p}')">${p}</button>`).join("")}</div>
+      <button class="btn sm" onclick="M.profSave()">Save profession</button>
+    </div>`;
+  }
+  const isSap = /\bsap\b/i.test(prof);
   return `
     <div class="card">
-      <h3>${ic("layers", 16)} SAP S/4HANA reference</h3>
-      <div class="muted">Deep expertise across the modules below, verified against official SAP documentation (help.sap.com) and marked by S/4HANA release. Tap a module to ask, or ask any SAP question directly.</div>
-      <button class="btn sm sec" style="margin-top:10px" onclick="M.enterMode('work','sap')">${ic("chat", 14)} Ask any SAP question</button>
+      <div class="wo-hd"><div><div style="font-weight:600">${esc(prof)}</div><div class="tiny">Your field — tools adapt to it</div></div>
+        <button class="btn sm sec" style="flex:0 0 auto" onclick="M.profEdit()">Change</button></div>
     </div>
-    <div class="lib-list">
-      ${SAP_MODULES.map(m => `<button class="feat-card" onclick="M.sapAsk('${m.k}')">
-        <span class="fc-ic" style="font-weight:700;font-size:12px;letter-spacing:.02em">${m.k}</span>
-        <span class="fc-tx"><span class="fc-nm">${esc(m.n)}</span><span class="fc-ds">${esc(m.d)}</span></span>
-        <span class="fc-ar">${ic("chevR", 16)}</span>
-      </button>`).join("")}
-    </div>`;
+    <div class="card">
+      <h3>${ic("briefcase", 16)} Quick actions</h3>
+      <div class="lib-list">
+        ${KIT_ACTIONS.map((a, i) => `<button class="feat-card" onclick="M.kitAct(${i})">
+          <span class="fc-ic">${ic(a.icon, 18)}</span>
+          <span class="fc-tx"><span class="fc-nm">${esc(a.label)}</span><span class="fc-ds">${esc(a.hint)}</span></span>
+          <span class="fc-ar">${ic("chevR", 16)}</span>
+        </button>`).join("")}
+      </div>
+    </div>
+    <div class="card">
+      <h3>${ic("list", 16)} ${esc(prof)} toolkit</h3>
+      ${S.workTopics.length ? `<div class="lib-list">${S.workTopics.map((t, i) => `<button class="feat-card" onclick="M.kitTopic(${i})">
+        <span class="fc-tx"><span class="fc-nm" dir="auto">${esc(t)}</span></span><span class="fc-ar">${ic("chevR", 16)}</span></button>`).join("")}</div>
+      <button class="btn sm sec" style="margin-top:10px" onclick="M.buildToolkit()" ${R.kitBusy ? "disabled" : ""}>${R.kitBusy ? "Building…" : ic("refresh", 14) + " Rebuild toolkit"}</button>`
+      : `<div class="muted" style="margin-bottom:10px">Let MIRA build a set of the key reference topics and tools for a ${esc(prof)} — verified and cited when you open each one.</div>
+        <button class="btn sm" onclick="M.buildToolkit()" ${R.kitBusy ? "disabled" : ""}>${R.kitBusy ? "Building…" : ic("play", 14) + ` Build my ${esc(prof)} toolkit`}</button>`}
+    </div>
+    ${isSap ? `<div class="card fold">
+      <h3 onclick="this.parentElement.classList.toggle('open')">${ic("layers", 16)} SAP S/4HANA modules <span class="chev">▶</span></h3>
+      <div class="fold-body"><div class="lib-list">
+        ${SAP_MODULES.map(m => `<button class="feat-card" onclick="M.sapAsk('${m.k}')">
+          <span class="fc-ic" style="font-weight:700;font-size:12px">${m.k}</span>
+          <span class="fc-tx"><span class="fc-nm">${esc(m.n)}</span><span class="fc-ds">${esc(m.d)}</span></span>
+          <span class="fc-ar">${ic("chevR", 16)}</span></button>`).join("")}
+      </div></div>
+    </div>` : ""}`;
 }
 </script>
 <script>
@@ -2805,6 +2855,7 @@ function settingsHTML(){
       <div><div class="k">${esc(st.account.email)}</div><div class="desc">Account on this device — sync arrives with the hosted backend</div></div>
     </div>` : ""}
     <div class="field"><label>Name</label><input value="${esc(st.name)}" oninput="S.settings.name=this.value;save()"></div>
+    <div class="field"><label>Profession / field</label><input value="${esc(st.profession || "")}" oninput="S.settings.profession=this.value;save()" placeholder="e.g. Lawyer, Chef, Engineer" dir="auto"></div>
     <div class="field"><label>Coaching style</label>
       <div class="seg">${["direct","balanced","encouraging"].map(v => `<button class="${st.style === v ? "on" : ""}" onclick="M.set('style','${v}')">${v[0].toUpperCase() + v.slice(1)}</button>`).join("")}</div></div>
     <div class="field"><label>Answer depth</label>
@@ -3105,9 +3156,30 @@ window.M = {
   taskAdd(){
     const title = R.taskForm.title.trim();
     if (!title){ toast("Type the task first."); return; }
-    S.tasks.unshift({id: uid(), title, priority: R.taskForm.priority, due: R.taskForm.due, done: false, ts: Date.now()});
-    R.taskForm = {title: "", priority: R.taskForm.priority, due: ""};
+    S.tasks.unshift({id: uid(), title, priority: R.taskForm.priority, due: R.taskForm.due, dueTime: R.taskForm.dueTime, done: false, ts: Date.now()});
+    R.taskForm = {title: "", priority: R.taskForm.priority, due: "", dueTime: ""};
     buzz(); save(); render();
+  },
+  taskCal(id){
+    const t = S.tasks.find(x => x.id === id);
+    if (!t || !t.due) return;
+    const start = new Date(t.due + "T" + (t.dueTime || "09:00"));
+    const end = new Date(start.getTime() + 30 * 60000);
+    const fm = d => d.getFullYear() + String(d.getMonth() + 1).padStart(2, "0") + String(d.getDate()).padStart(2, "0") +
+      "T" + String(d.getHours()).padStart(2, "0") + String(d.getMinutes()).padStart(2, "0") + "00";
+    const ei = s => String(s || "").replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");
+    const ics = ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//MIRA//EN","BEGIN:VEVENT",
+      "UID:" + t.id + "@mira","DTSTAMP:" + fm(new Date()),"DTSTART:" + fm(start),"DTEND:" + fm(end),
+      "SUMMARY:" + ei(t.title),"DESCRIPTION:" + ei(`MIRA task · ${(PRIOS[t.priority] || {}).label || ""} priority`),
+      "BEGIN:VALARM","TRIGGER:-PT30M","ACTION:DISPLAY","DESCRIPTION:" + ei(t.title),"END:VALARM",
+      "END:VEVENT","END:VCALENDAR"].join("\r\n");
+    const blob = new Blob([ics], {type: "text/calendar"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = t.title.replace(/[^\w؀-ۿ -]/g, "").slice(0, 40) + ".ics";
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    toast("Reminder ready — open it to add to your calendar.");
   },
   taskToggle(id){ const t = S.tasks.find(x => x.id === id); if (t){ t.done = !t.done; if (t.done) buzz(); save(); render(); } },
   taskDel(id){ S.tasks = S.tasks.filter(t => t.id !== id); save(); render(); },
@@ -3131,10 +3203,52 @@ window.M = {
   },
   sapAsk(k){
     const m = SAP_MODULES.find(x => x.k === k);
-    R.mode = "work"; R.tab = "work"; R.homeCat = null;
     M.enterMode("work");
     const ta = $("#chatIn");
     if (ta){ ta.value = `SAP S/4HANA — ${k} (${m ? m.n : ""}). My question: `; ta.style.height = "auto"; ta.style.height = Math.min(ta.scrollHeight, 120) + "px"; ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
+  },
+  profPick(p){ R.profDraft = p; M.profSave(); },
+  profSave(){
+    const p = (R.profDraft || "").trim();
+    if (!p){ toast("Type your profession."); return; }
+    S.settings.profession = p;
+    S.workTopics = [];   // clear so the toolkit rebuilds for the new field
+    R.profDraft = "";
+    save(); render();
+    toast(`Field set: ${p} ✓`);
+  },
+  profEdit(){ R.profDraft = S.settings.profession; S.settings.profession = ""; save(); render(); },
+  workEnter(text){
+    R.mode = "work"; R.tab = "chat"; R.homeCat = null; R.convId = null; render();
+    const ta = $("#chatIn");
+    if (ta){ ta.value = text; ta.style.height = "auto"; ta.style.height = Math.min(ta.scrollHeight, 120) + "px"; ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
+  },
+  kitAct(i){
+    const a = KIT_ACTIONS[i]; if (!a) return;
+    const p = (S.settings.profession || "").trim();
+    M.workEnter(`As my ${p || "professional"} assistant, ${a.verb}\n\n`);
+  },
+  kitTopic(i){
+    const t = S.workTopics[i]; if (!t) return;
+    const p = (S.settings.profession || "").trim();
+    M.workEnter(`As my ${p || "professional"} assistant, help me with: ${t}\n\n`);
+  },
+  async buildToolkit(){
+    const p = (S.settings.profession || "").trim();
+    if (!p){ toast("Set your profession first."); return; }
+    if (!S.settings.apiKey){ toast("Add your API key in Settings first."); return; }
+    R.kitBusy = true; render();
+    try {
+      const txt = await apiCall({
+        model: S.settings.model, max_tokens: 400,
+        system: `List the 6 most useful reference topics or tools a ${p} relies on day to day — the things they'd want an expert assistant ready to help with. Reply with ONLY a JSON array of 6 short strings (3-6 words each), no numbering, no extra text.`,
+        messages: [{role: "user", content: `Profession: ${p}`}],
+      });
+      const arr = tryParseJson(txt);
+      if (Array.isArray(arr) && arr.length){ S.workTopics = arr.map(x => String(x)).filter(Boolean).slice(0, 8); save(); toast("Toolkit ready ✓"); }
+      else toast("Couldn't build the toolkit — try again.");
+    } catch (e) { toast("Toolkit build failed: " + e.message, 4000); }
+    R.kitBusy = false; render();
   },
   coachPeriod(d){ R.coachPeriod = d; render(); },
   async coachShare(){
