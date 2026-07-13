@@ -351,6 +351,8 @@ body.kb .chatbar{padding-bottom:6px}
 .rev-stat{background:var(--bg2);border-radius:12px;padding:12px 8px;text-align:center}
 .rev-stat .rv{font-size:19px;font-weight:700;color:var(--acc)}
 .rev-stat .rl{font-size:11px;color:var(--txt2);margin-top:2px}
+.badge-wrap{display:flex;flex-wrap:wrap;gap:8px}
+.ach-badge{display:inline-flex;align-items:center;gap:5px;padding:6px 11px;border-radius:20px;font-size:12.5px;font-weight:600;background:var(--acc-soft);color:var(--acc);border:1px solid color-mix(in srgb,var(--acc) 25%,transparent)}
 .prio-dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto;display:inline-block;margin-inline-end:6px}
 .seg .prio-dot{margin-inline-end:5px;vertical-align:0}
 .task-row{display:flex;align-items:center;gap:9px;padding:10px 2px;border-top:1px solid var(--line)}
@@ -573,7 +575,7 @@ body.kb .chatbar{padding-bottom:6px}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.21";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.22";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -657,6 +659,8 @@ const I = {
   plane: '<path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/>',
   mic: '<path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/>',
   x: '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',
+  flame: '<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>',
+  award: '<circle cx="12" cy="8" r="6"/><path d="M15.5 13.5 17 22l-5-3-5 3 1.5-8.5"/>',
   trash: '<polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
   database: '<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>',
   trend: '<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>',
@@ -752,6 +756,9 @@ const BLANK = () => ({
   trips: [],          // {id, dest, start, end, budget, checklist:[{id,text,done}], notes}
   compares: [],       // {id, title, options:[{id,name,price,pros,cons,source}]}
   decisions: [],      // {id, title, options, decision, why, date}
+  habits: [],         // {id, name}
+  habitLog: {},       // date -> [habitId]
+  fasting: {activeStart: null, goalH: 16, log: []},   // log: [{start, end, hours}]
   water: {},          // date -> glasses
   inbody: [],         // {id, date, weight, score, bfm, smm, vfa, pa}
 });
@@ -789,6 +796,10 @@ function migrateChats(){
   if (!Array.isArray(S.trips)) S.trips = [];
   if (!Array.isArray(S.compares)) S.compares = [];
   if (!Array.isArray(S.decisions)) S.decisions = [];
+  if (!Array.isArray(S.habits)) S.habits = [];
+  if (!S.habitLog || typeof S.habitLog !== "object") S.habitLog = {};
+  if (!S.fasting || typeof S.fasting !== "object") S.fasting = {activeStart: null, goalH: 16, log: []};
+  if (!Array.isArray(S.fasting.log)) S.fasting.log = [];
   if (S.settings.profession === undefined) S.settings.profession = "";
   if (S.settings.restLen === undefined) S.settings.restLen = 90;
   if (!S.settings.coach) S.settings.coach = {name: "", email: ""};
@@ -875,8 +886,9 @@ const R = {
   progEx: "",
   coachPeriod: 30,
   plateOpen: false,
-  healthTab: "supps",  // supps | sleep | review
+  healthTab: "supps",  // supps | sleep | habits | fasting | review
   suppForm: {open: false, name: "", dose: "", timing: "Morning"},
+  habitDraft: "",
   sleepQ: 0,
   sleepForm: {date: "", hours: "", note: ""},
   workTab: "tasks",    // tasks | notes | kit
@@ -939,6 +951,7 @@ function render(){
       ${tabBtn("home", "home", "Home")}${tabBtn("chat", "chat", "Chat")}${tabBtn("food", "food", "Food")}${tabBtn("body", "weight", "Body")}${tabBtn("set", "gear", "Settings")}
     </div>`;
   if (R.tab === "home"){ const c = $("#content"); if (c) c.scrollTop = 0; }
+  if (typeof ensureFastTimer === "function") ensureFastTimer();
   // restore focus/caret for a state-bound input that survives re-render (e.g. library search)
   if (focusId && focusId !== "chatIn"){
     const el = document.getElementById(focusId);
@@ -1059,6 +1072,7 @@ function homeHTML(){
     </div>
     <button class="home-search" onclick="M.searchOpen()">${ic("search", 16)} <span>Search everything…</span></button>
     ${homeDashHTML()}
+    ${(typeof achievementsHTML === "function") ? achievementsHTML() : ""}
     <div class="cat-grid">
       ${S.domains.map(d => `
         <button class="cat-card" style="--mc:${d.color}" onclick="M.home('${d.id}')">
@@ -1298,6 +1312,15 @@ function liveContext(){
     for (let k = 0; k < 7; k++){ const d = new Date(Date.now() - k * 864e5).toLocaleDateString("en-CA"); const set = new Set(S.suppLog[d] || []); total += S.supplements.length; S.supplements.forEach(s => { if (set.has(s.id)) taken++; }); }
     const t = todayStr(); const todaySet = new Set(S.suppLog[t] || []);
     lines.push(`Supplements: ${S.supplements.map(s => `${s.name}${s.timing ? ` (${s.timing})` : ""}`).join(", ")}. Taken today: ${S.supplements.filter(s => todaySet.has(s.id)).map(s => s.name).join(", ") || "none yet"}. 7-day adherence ${total ? Math.round(taken / total * 100) : 0}%.`);
+  }
+  // habits + fasting
+  if (Array.isArray(S.habits) && S.habits.length){
+    const t = todayStr(); const done = new Set(S.habitLog[t] || []);
+    lines.push(`Habits: ${S.habits.map(h => `${h.name} (${done.has(h.id) ? "done today" : "not yet"})`).join(", ")}.`);
+  }
+  if (S.fasting){
+    if (S.fasting.activeStart) lines.push(`Currently fasting: ${(Math.round((Date.now() - S.fasting.activeStart) / 36000) / 100)} h so far, goal ${S.fasting.goalH} h.`);
+    else if ((S.fasting.log || []).length){ const last = S.fasting.log[S.fasting.log.length - 1]; lines.push(`Last fast: ${last.hours} h (goal ${S.fasting.goalH} h).`); }
   }
   // open tasks (by priority)
   if (Array.isArray(S.tasks)){
@@ -2541,9 +2564,66 @@ function sleepAvg(days){
   return {h: avg(es.map(e => num(e.hours))), q: avg(es.map(e => num(e.quality || 0))), n: es.length};
 }
 
+/* ---- habits ---- */
+function habitStreak(id){
+  let n = 0;
+  for (let k = 0; ; k++){
+    const d = new Date(Date.now() - k * 864e5).toLocaleDateString("en-CA");
+    if ((S.habitLog[d] || []).includes(id)) n++;
+    else if (k === 0) continue;   // today not ticked yet doesn't break the streak
+    else break;
+  }
+  return n;
+}
+function habitDoneToday(id){ return (S.habitLog[todayStr()] || []).includes(id); }
+
+/* ---- fasting timer (self-updating DOM node) ---- */
+let fastIv = null;
+const fastElapsed = () => S.fasting.activeStart ? (Date.now() - S.fasting.activeStart) / 1000 : 0;
+function fmtDur(s){ const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = Math.floor(s % 60); return `${h}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`; }
+function ensureFastTimer(){
+  if (S.fasting.activeStart && !fastIv){
+    fastIv = setInterval(() => {
+      const el = document.getElementById("fastTime"), f = document.getElementById("fastFill");
+      if (!el){ return; }
+      const e = fastElapsed();
+      el.textContent = fmtDur(e);
+      if (f) f.style.width = Math.min(100, (e / (S.fasting.goalH * 3600)) * 100) + "%";
+    }, 1000);
+  }
+  if (!S.fasting.activeStart && fastIv){ clearInterval(fastIv); fastIv = null; }
+}
+
+/* ---- achievements ---- */
+function achievements(){
+  const b = [];
+  const add = (cond, icon, label) => { if (cond) b.push({icon, label}); };
+  const foodDays = [...new Set(S.foods.map(f => f.date))].length;
+  add(S.foods.length > 0, "food", "First food logged");
+  add(foodDays >= 7, "flame", "7 days of food logs");
+  add(Object.values(S.water).some(g => g * 250 >= S.settings.waterGoal), "droplet", "Hit a water goal");
+  add((S.workouts || []).length > 0, "barbell", "First workout");
+  add((S.workouts || []).length >= 10, "barbell", "10 workouts");
+  add((S.sleep || []).length > 0, "moon", "Sleep logged");
+  add((S.habits || []).some(h => habitStreak(h.id) >= 7), "flame", "7-day habit streak");
+  add((S.fasting.log || []).some(f => f.hours >= 16), "clock", "16-hour fast");
+  add((S.trips || []).length > 0, "plane", "Trip planned");
+  add((S.tasks || []).filter(t => t.done).length >= 10, "checkSquare", "10 tasks done");
+  add((S.decisions || []).length > 0, "target", "Logged a decision");
+  return b;
+}
+function achievementsHTML(){
+  const b = achievements();
+  if (!b.length) return "";
+  return `<div class="card">
+    <h3>${ic("award", 16)} Achievements <span class="tiny" style="margin-inline-start:auto;font-weight:400">${b.length} earned</span></h3>
+    <div class="badge-wrap">${b.map(x => `<span class="ach-badge">${ic(x.icon, 14)} ${esc(x.label)}</span>`).join("")}</div>
+  </div>`;
+}
+
 /* ---- view ---- */
 function healthHTML(){
-  const tabs = [["supps","Supplements"],["sleep","Sleep"],["review","Review"]];
+  const tabs = [["supps","Supplements"],["sleep","Sleep"],["habits","Habits"],["fasting","Fasting"],["review","Review"]];
   return `
     <button class="cat-back" onclick="M.healthBack()">${ic("back", 18)} Health</button>
     <div class="cat-title"><div class="ch-nm">Health</div><div class="ch-ds">Supplements · sleep · review</div></div>
@@ -2551,8 +2631,56 @@ function healthHTML(){
       `<button class="chip ${R.healthTab === k ? "on" : ""}" onclick="M.healthGo('${k}')">${l}</button>`).join("")}</div>
     <div style="margin-top:12px">${
       R.healthTab === "supps" ? healthSuppHTML() :
-      R.healthTab === "sleep" ? healthSleepHTML() : healthReviewHTML()
+      R.healthTab === "sleep" ? healthSleepHTML() :
+      R.healthTab === "habits" ? healthHabitsHTML() :
+      R.healthTab === "fasting" ? healthFastHTML() : healthReviewHTML()
     }</div>`;
+}
+function healthHabitsHTML(){
+  const t = todayStr();
+  return `
+    <div class="card">
+      <h3>${ic("flame", 16)} Today's habits</h3>
+      ${S.habits.length ? S.habits.map(h => {
+        const on = habitDoneToday(h.id); const st = habitStreak(h.id);
+        return `<button class="supp-row ${on ? "on" : ""}" onclick="M.habitToggle('${h.id}')">
+          <span class="supp-check">${on ? ic("check", 15) : ""}</span>
+          <span class="supp-tx"><span class="supp-nm" dir="auto">${esc(h.name)}</span>
+            <span class="supp-ds">${st > 0 ? `${ic("flame", 11)} ${st}-day streak` : "not started"}</span></span>
+          <span class="del" aria-label="Delete habit" onclick="event.stopPropagation();M.habitDel('${h.id}')">${ic("trash", 13)}</span>
+        </button>`;
+      }).join("") : `<div class="muted">Build daily habits — meditate, read, walk, stretch. Tick them off and watch the streak grow.</div>`}
+    </div>
+    <div class="card">
+      <div class="row"><input id="habitIn" value="${esc(R.habitDraft)}" oninput="R.habitDraft=this.value" placeholder="Add a habit…" dir="auto" onkeydown="if(event.key==='Enter')M.habitAdd()">
+        <button class="btn sm" style="flex:0 0 auto" onclick="M.habitAdd()">Add</button></div>
+    </div>`;
+}
+function healthFastHTML(){
+  const f = S.fasting;
+  const active = !!f.activeStart;
+  const e = fastElapsed();
+  const pct = Math.min(100, (e / (f.goalH * 3600)) * 100);
+  const log = [...f.log].sort((a, b) => b.start - a.start).slice(0, 8);
+  const longest = f.log.reduce((m, x) => Math.max(m, x.hours), 0);
+  const weekCount = f.log.filter(x => x.start >= Date.now() - 7 * 864e5).length;
+  return `
+    <div class="card" style="text-align:center">
+      ${active ? `<div class="tiny">Fasting — goal ${f.goalH}h</div>
+        <div id="fastTime" style="font-size:34px;font-weight:700;color:var(--acc);font-variant-numeric:tabular-nums;margin:4px 0">${fmtDur(e)}</div>
+        <div class="rest-track" style="margin:6px 0 14px"><i id="fastFill" style="width:${pct}%"></i></div>
+        <button class="btn" onclick="M.fastStop()">${ic("check", 16)} End fast</button>`
+      : `<div class="tiny">Intermittent fasting</div>
+        <div style="font-size:20px;font-weight:600;margin:6px 0 12px">Goal: ${f.goalH} hours</div>
+        <div class="seg" style="margin-bottom:14px">${[12,14,16,18,20].map(h => `<button class="${f.goalH === h ? "on" : ""}" onclick="M.fastGoal(${h})">${h}h</button>`).join("")}</div>
+        <button class="btn" onclick="M.fastStart()">${ic("play", 15)} Start fasting</button>`}
+    </div>
+    ${f.log.length ? `<div class="card">
+      <h3>${ic("clock", 16)} History <span class="tiny" style="margin-inline-start:auto;font-weight:400">longest ${n1(longest)}h · ${weekCount} this week</span></h3>
+      ${log.map(x => `<div class="set-row">
+        <div><div class="k">${n1(x.hours)} hours</div><div class="desc">${new Date(x.start).toLocaleDateString("en-GB", {day: "numeric", month: "short"})} · ${x.hours >= f.goalH ? "goal met ✓" : "under goal"}</div></div>
+      </div>`).join("")}
+    </div>` : ""}`;
 }
 
 function healthSuppHTML(){
@@ -2649,6 +2777,8 @@ function healthReviewHTML(){
         ${slp ? stat("Avg sleep", `${n1(slp.h)} h`) : stat("Avg sleep", "—")}
         ${adh !== null ? stat("Supplements", `${adh}%`) : ""}
         ${stat("Workouts", `${workouts}`)}
+        ${S.habits.length ? stat("Best streak", `${Math.max(0, ...S.habits.map(h => habitStreak(h.id)))}d`) : ""}
+        ${S.fasting.log.filter(x => x.start >= Date.now() - 7 * 864e5).length ? stat("Fasts", `${S.fasting.log.filter(x => x.start >= Date.now() - 7 * 864e5).length}`) : ""}
       </div>
       ${dl.length ? `<div class="muted" style="margin-top:10px">Avg ${n0(avg(dl.map(x => x.tt.kcal)))} kcal · ${n1(avg(dl.map(x => x.tt.p)))} g protein/day${wl.length >= 2 ? ` · weight ${n1(+wl[0].weight)}→${n1(+wl[wl.length - 1].weight)} kg` : ""}.</div>` : ""}
     </div>
@@ -3503,6 +3633,36 @@ window.M = {
     toast(`Sleep logged: ${n1(hours)} h ✓`);
   },
   sleepDel(id){ S.sleep = S.sleep.filter(e => e.id !== id); save(); render(); },
+  habitAdd(){
+    const v = (R.habitDraft || "").trim();
+    if (!v){ toast("Name the habit."); return; }
+    S.habits.push({id: uid(), name: v}); R.habitDraft = "";
+    save(); render();
+  },
+  habitToggle(id){
+    const t = todayStr(); const arr = S.habitLog[t] = S.habitLog[t] || [];
+    const i = arr.indexOf(id);
+    if (i >= 0) arr.splice(i, 1); else { arr.push(id); buzz(); }
+    save(); render();
+  },
+  habitDel(id){
+    if (!confirm("Delete this habit?")) return;
+    S.habits = S.habits.filter(h => h.id !== id);
+    Object.keys(S.habitLog).forEach(d => { S.habitLog[d] = S.habitLog[d].filter(x => x !== id); });
+    save(); render();
+  },
+  fastGoal(h){ S.fasting.goalH = h; save(); render(); },
+  fastStart(){ S.fasting.activeStart = Date.now(); save(); render(); ensureFastTimer(); },
+  fastStop(){
+    const f = S.fasting;
+    if (!f.activeStart) return;
+    const hours = Math.round((Date.now() - f.activeStart) / 36000) / 100;
+    if (hours >= 0.05) f.log.push({start: f.activeStart, end: Date.now(), hours});
+    f.activeStart = null;
+    clearInterval(fastIv); fastIv = null;
+    buzz(); save(); render();
+    toast(hours >= 0.05 ? `Fast logged: ${n1(hours)} h${hours >= f.goalH ? " — goal met 🎯" : ""}` : "Fast ended.");
+  },
   healthReviewAsk(){
     if (!S.settings.apiKey){ toast("Add your API key in Settings first."); R.tab = "set"; render(); return; }
     R.mode = "health"; R.tab = "chat"; R.homeCat = null; R.convId = null; render();
