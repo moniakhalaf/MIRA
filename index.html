@@ -207,7 +207,7 @@ body.kb .chatbar{padding-bottom:6px}
 .card h3{font-size:15px;margin-bottom:10px;display:flex;align-items:center;gap:8px}
 .btn{
   display:inline-flex;align-items:center;justify-content:center;gap:8px;
-  min-height:46px;padding:11px 18px;border-radius:12px;font-weight:600;font-size:15px;
+  min-height:46px;padding:11px 18px;border-radius:12px;font-weight:600;font-size:15px;white-space:nowrap;
   background:linear-gradient(180deg,color-mix(in srgb,var(--acc) 90%,#fff),color-mix(in srgb,var(--acc) 90%,#000));
   color:var(--btn-ink);transition:filter .12s,transform .12s;width:100%;
   box-shadow:0 2px 12px color-mix(in srgb,var(--acc) 30%,transparent);
@@ -284,6 +284,24 @@ body.kb .chatbar{padding-bottom:6px}
 .feat-card .fc-nm{font-size:15px;font-weight:600}
 .feat-card .fc-ds{font-size:12.5px;color:var(--txt2)}
 .feat-card .fc-ar{color:var(--txt3);flex:0 0 auto}
+
+/* ---------- training ---------- */
+.chip-row{display:flex;gap:8px;overflow-x:auto;padding:2px 0 2px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.chip-row::-webkit-scrollbar{display:none}
+.chip{
+  padding:8px 14px;border-radius:20px;background:var(--bg2);border:1px solid var(--line);
+  color:var(--txt2);font-size:13.5px;white-space:nowrap;min-height:38px;font-weight:500;
+}
+.chip.on{border-color:var(--acc);color:var(--txt);background:var(--acc-soft)}
+.seg-tabs{margin-bottom:2px}
+.grid3{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:center}
+.grid3 .btn{width:auto}
+.set-list{display:flex;flex-direction:column;gap:6px}
+.set-row2{display:flex;align-items:center;gap:10px;padding:8px 11px;background:var(--bg2);border-radius:10px;font-size:14px}
+.set-row2 .del{margin-inline-start:auto;color:var(--txt3);min-width:34px;min-height:34px;display:flex;align-items:center;justify-content:center;border-radius:8px}
+.lib-list{display:flex;flex-direction:column;gap:8px}
+.wo-hd{display:flex;align-items:center;gap:8px}
+.pr-badge{background:rgba(52,196,142,.16);color:var(--green);border-radius:20px;padding:2px 9px;font-size:11px;font-weight:700}
 
 /* ---------- chat ---------- */
 .chat-head{
@@ -491,7 +509,7 @@ body.kb .chatbar{padding-bottom:6px}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.14";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.15";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -562,6 +580,10 @@ const I = {
   briefcase: '<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>',
   heart: '<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 1 0-7.7 7.8l1 1L12 21l7.8-7.5 1-1a5.5 5.5 0 0 0 0-7.9z"/>',
   compass: '<circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/>',
+  barbell: '<line x1="4" y1="12" x2="20" y2="12"/><rect x="1.5" y="8" width="3" height="8" rx="1"/><rect x="19.5" y="8" width="3" height="8" rx="1"/><rect x="5.5" y="9.5" width="2" height="5" rx="1"/><rect x="16.5" y="9.5" width="2" height="5" rx="1"/>',
+  play: '<polygon points="6 4 20 12 6 20 6 4"/>',
+  check: '<polyline points="20 6 9 17 4 12"/>',
+  list: '<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>',
   trash: '<polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
   database: '<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>',
   trend: '<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>',
@@ -614,12 +636,15 @@ const BLANK = () => ({
     theme: "dark", account: null,
     targets: {kcal: 2000, protein: 120, carbs: 0, fat: 0},
     waterGoal: 2500,
+    coach: {name: "", email: ""},
   },
   domains: JSON.parse(JSON.stringify(DEFAULT_DOMAINS)),
   convs: [],          // [{id, dom, title, ts, msgs: [{role, content, ts, att}]}]
   foods: [],          // {id, date, name, amount, kcal, p, c, f, conf, ts}
   savedFoods: [],     // {name, amount, kcal, p, c, f}
   meals: [],          // {id, name, items: [{name, amount, kcal, p, c, f}]}
+  exercises: [],      // user-added exercises {id, n, m, e, c, source}
+  workouts: [],       // {id, date, name, items:[{name, muscle, sets:[{reps, weight}], note}], ts}
   water: {},          // date -> glasses
   inbody: [],         // {id, date, weight, score, bfm, smm, vfa, pa}
 });
@@ -644,6 +669,9 @@ function migrateChats(){
   }
   if (!Array.isArray(S.convs)) S.convs = [];
   if (!Array.isArray(S.meals)) S.meals = [];
+  if (!Array.isArray(S.exercises)) S.exercises = [];
+  if (!Array.isArray(S.workouts)) S.workouts = [];
+  if (!S.settings.coach) S.settings.coach = {name: "", email: ""};
   if (S.settings.webSearch === undefined) S.settings.webSearch = true;
   if (!S.settings.theme) S.settings.theme = "dark";
   (S.domains || []).forEach(d => { if (COLOR_MIGRATE[d.color]) d.color = COLOR_MIGRATE[d.color]; });
@@ -718,22 +746,35 @@ const R = {
   openDays: new Set([todayStr()]),
   mealsOpen: false,
   acFocus: false,
+  trainTab: "today",  // today | library | history | coach
+  trainWO: null,      // in-progress workout being logged
+  libQuery: "",
+  libMuscle: "All",
+  exForm: {open: false, n: "", m: "Chest", e: "", c: ""},
+  aiExBusy: false,
+  progEx: "",
+  coachPeriod: 30,
 };
 
 /* ---------------- root render ---------------- */
 function render(){
   const app = $("#app");
   const keepInput = $("#chatIn") ? $("#chatIn").value : "";
+  const ae = document.activeElement;
+  const focusId = ae && ae.id ? ae.id : null;
+  const selStart = ae ? ae.selectionStart : null, selEnd = ae ? ae.selectionEnd : null;
   if (S.settings.pinHash && !R.unlocked){ app.innerHTML = lockHTML(); return; }
   if (FEATURES.emailSignup && !S.settings.account && !S.onboarded){ app.innerHTML = signupHTML(); return; }
   if (!S.onboarded){ app.innerHTML = onbHTML(); return; }
   const dom = curDomain();
   const catDom = (R.tab === "home" && R.homeCat) ? S.domains.find(d => d.id === R.homeCat) : null;
-  const accClr = R.tab === "chat" ? dom.color : catDom ? catDom.color : null;
+  const trainDom = R.tab === "train" ? S.domains.find(d => d.id === "fitness") : null;
+  const accClr = R.tab === "chat" ? dom.color : catDom ? catDom.color : trainDom ? trainDom.color : null;
   document.documentElement.style.setProperty("--acc", accClr || "var(--gold)");
   document.documentElement.style.setProperty("--acc-soft", accClr ? hexSoft(accClr) : "var(--gold-soft)");
   const sub = R.tab === "chat" ? `<span class="mode-dot"></span>${esc(dom.name)}`
-    : R.tab === "home" ? esc(catDom ? catDom.name : "Home") : esc(tabTitle());
+    : R.tab === "home" ? esc(catDom ? catDom.name : "Home")
+    : R.tab === "train" ? "Training" : esc(tabTitle());
   app.innerHTML = `
     <div class="topbar" id="topbar">
       <div class="brand">MIRA</div>
@@ -742,6 +783,7 @@ function render(){
     ${R.tab === "chat" ? `<div class="chat-head" id="chatHead">${chatHeadHTML()}</div>` : ""}
     <div class="content" id="content">${
       R.tab === "home" ? homeHTML() :
+      R.tab === "train" ? trainHTML() :
       R.tab === "chat" ? chatHTML() :
       R.tab === "food" ? foodHTML() :
       R.tab === "body" ? bodyHTML() : settingsHTML()
@@ -752,6 +794,11 @@ function render(){
       ${tabBtn("home", "home", "Home")}${tabBtn("chat", "chat", "Chat")}${tabBtn("food", "food", "Food")}${tabBtn("body", "weight", "Body")}${tabBtn("set", "gear", "Settings")}
     </div>`;
   if (R.tab === "home"){ const c = $("#content"); if (c) c.scrollTop = 0; }
+  // restore focus/caret for a state-bound input that survives re-render (e.g. library search)
+  if (focusId && focusId !== "chatIn"){
+    const el = document.getElementById(focusId);
+    if (el){ el.focus(); try { el.setSelectionRange(selStart, selEnd); } catch (e) {} }
+  }
   if (R.tab === "chat"){
     const ta = $("#chatIn");
     if (ta && keepInput){ ta.value = keepInput; ta.style.height = "auto"; ta.style.height = Math.min(ta.scrollHeight, 120) + "px"; }
@@ -806,14 +853,17 @@ function domFeatures(d){
     go("droplet", "Hydration", "Track your water", "food"),
     go("search", "Find macros", "Any food, labelled honestly", "food"),
     {icon: "sun", label: "Daily brief", desc: "What to eat, drink & do", on: `M.dailyBrief('${id}')`},
+    {icon: "share", label: "Coach report", desc: "Share food & training", on: `M.goTrain('coach')`},
     ask("chat", "Ask about nutrition", "Evidence-based answers", ""),
   ];
   if (id === "fitness") return [
+    {icon: "barbell", label: "Workout log", desc: "Track sets, reps & PRs", on: `M.goTrain('today')`},
+    {icon: "list", label: "Exercise library", desc: "Cited how-to · add your own", on: `M.goTrain('library')`},
     go("weight", "Body composition", "InBody log & metrics", "body"),
     go("trend", "Log weight", "Quick entry + chart", "body"),
     {icon: "chart", label: "Analyse my trend", desc: "From your InBody log", on: `M.ibAnalyse()`},
     ask("activity", "Training programme", "Evidence-based plan", "training"),
-    ask("chat", "Ask about training", "Sports-science grounded", ""),
+    {icon: "share", label: "Coach report", desc: "Share progress with a coach", on: `M.goTrain('coach')`},
   ];
   if (id === "life") return [
     ask("globe", "Research & compare", "Best option, with sources", "research"),
@@ -1816,6 +1866,305 @@ async function extractPhoto(){
 </script>
 <script>
 "use strict";
+/* ============================================================
+   Training system — exercise library, workout logging with PRs,
+   and a coach progress report (workouts + nutrition).
+   ============================================================ */
+
+const MUSCLES = ["Chest","Back","Shoulders","Legs","Glutes","Arms","Core","Cardio","Olympic"];
+
+/* Curated starter library. Technique cues follow standard strength-and-
+   conditioning guidance (NSCA / ACE). n=name, m=muscle, e=equipment, c=cue. */
+const EXERCISE_LIBRARY = [
+  {n:"Barbell Bench Press",m:"Chest",e:"Barbell",c:"Retract scapula, lower bar to mid-chest, press up and slightly back."},
+  {n:"Incline Dumbbell Press",m:"Chest",e:"Dumbbell",c:"30–45° bench, press dumbbells up over upper chest, control the descent."},
+  {n:"Push-up",m:"Chest",e:"Bodyweight",c:"Rigid plank, elbows ~45°, lower chest to floor, press to full lockout."},
+  {n:"Cable Fly",m:"Chest",e:"Cable",c:"Slight elbow bend fixed, hug the arms together in front, squeeze."},
+  {n:"Machine Chest Press",m:"Chest",e:"Machine",c:"Handles at mid-chest, press without flaring elbows, don't lock harshly."},
+  {n:"Dip",m:"Chest",e:"Bodyweight",c:"Lean forward for chest, lower to ~90° elbow, press up under control."},
+  {n:"Conventional Deadlift",m:"Back",e:"Barbell",c:"Neutral spine, bar over mid-foot, drive floor away, hips and bar rise together."},
+  {n:"Pull-up",m:"Back",e:"Bodyweight",c:"Full hang, pull elbows to ribs, chin over bar, control down."},
+  {n:"Bent-over Barbell Row",m:"Back",e:"Barbell",c:"Hinge ~45°, flat back, row to lower chest, squeeze lats."},
+  {n:"Lat Pulldown",m:"Back",e:"Cable",c:"Slight lean, pull bar to collarbone, drive elbows down, no swinging."},
+  {n:"Seated Cable Row",m:"Back",e:"Cable",c:"Tall chest, pull to navel, retract shoulder blades, control return."},
+  {n:"Single-arm Dumbbell Row",m:"Back",e:"Dumbbell",c:"Braced on bench, row to hip, no torso rotation."},
+  {n:"Face Pull",m:"Back",e:"Cable",c:"Rope to eye level, pull to face, externally rotate, squeeze rear delts."},
+  {n:"Overhead Press",m:"Shoulders",e:"Barbell",c:"Brace core, press bar overhead, move head through, lock out."},
+  {n:"Dumbbell Shoulder Press",m:"Shoulders",e:"Dumbbell",c:"Press dumbbells overhead, ribs down, no excessive arch."},
+  {n:"Lateral Raise",m:"Shoulders",e:"Dumbbell",c:"Slight bend, raise to shoulder height, lead with elbows, control down."},
+  {n:"Rear Delt Fly",m:"Shoulders",e:"Dumbbell",c:"Hinge forward, raise arms wide, squeeze rear delts, no momentum."},
+  {n:"Upright Row",m:"Shoulders",e:"Barbell",c:"Pull bar to chest height, elbows lead, keep close to body."},
+  {n:"Back Squat",m:"Legs",e:"Barbell",c:"Bar on traps, brace, sit down and back, knees track toes, drive up."},
+  {n:"Front Squat",m:"Legs",e:"Barbell",c:"Elbows high, upright torso, sit between hips, drive through mid-foot."},
+  {n:"Leg Press",m:"Legs",e:"Machine",c:"Feet shoulder-width, lower to ~90°, press without locking knees."},
+  {n:"Romanian Deadlift",m:"Legs",e:"Barbell",c:"Soft knees, hinge hips back, bar close, feel hamstrings, stand tall."},
+  {n:"Walking Lunge",m:"Legs",e:"Dumbbell",c:"Long step, drop back knee, drive through front heel, alternate."},
+  {n:"Leg Extension",m:"Legs",e:"Machine",c:"Extend knees fully, brief squeeze, control the negative."},
+  {n:"Lying Leg Curl",m:"Legs",e:"Machine",c:"Curl heels to glutes, hips down, control the return."},
+  {n:"Standing Calf Raise",m:"Legs",e:"Machine",c:"Full stretch at bottom, rise to toes, pause, lower slowly."},
+  {n:"Bulgarian Split Squat",m:"Legs",e:"Dumbbell",c:"Rear foot elevated, drop straight down, drive through front foot."},
+  {n:"Barbell Hip Thrust",m:"Glutes",e:"Barbell",c:"Shoulders on bench, drive hips up, squeeze glutes, ribs down."},
+  {n:"Glute Bridge",m:"Glutes",e:"Bodyweight",c:"Drive heels, lift hips to a line, squeeze at top."},
+  {n:"Cable Kickback",m:"Glutes",e:"Cable",c:"Hinge slightly, drive heel back, squeeze glute, no lower-back arch."},
+  {n:"Barbell Curl",m:"Arms",e:"Barbell",c:"Elbows pinned, curl up, control down, no swinging."},
+  {n:"Dumbbell Curl",m:"Arms",e:"Dumbbell",c:"Supinate as you curl, elbows still, full range."},
+  {n:"Hammer Curl",m:"Arms",e:"Dumbbell",c:"Neutral grip, curl up, control down, targets brachialis."},
+  {n:"Triceps Pushdown",m:"Arms",e:"Cable",c:"Elbows pinned, extend fully, squeeze triceps, control up."},
+  {n:"Overhead Triceps Extension",m:"Arms",e:"Dumbbell",c:"Elbows high, lower behind head, extend to lockout."},
+  {n:"Close-grip Bench Press",m:"Arms",e:"Barbell",c:"Shoulder-width grip, elbows tucked, press, triceps-focused."},
+  {n:"Preacher Curl",m:"Arms",e:"Machine",c:"Arms on pad, curl up, full stretch at bottom, no bouncing."},
+  {n:"Plank",m:"Core",e:"Bodyweight",c:"Forearms down, straight line, brace abs and glutes, breathe."},
+  {n:"Hanging Leg Raise",m:"Core",e:"Bodyweight",c:"Hang, raise legs to hips, control down, minimize swing."},
+  {n:"Cable Crunch",m:"Core",e:"Cable",c:"Kneel, rope by head, crunch ribs to pelvis, control up."},
+  {n:"Russian Twist",m:"Core",e:"Bodyweight",c:"Lean back, feet up, rotate side to side under control."},
+  {n:"Ab Wheel Rollout",m:"Core",e:"Wheel",c:"Brace hard, roll out as far as control allows, pull back with abs."},
+  {n:"Treadmill Run",m:"Cardio",e:"Machine",c:"Log time/distance; steady or intervals per your plan."},
+  {n:"Rowing Machine",m:"Cardio",e:"Machine",c:"Drive legs, then lean, then arms; reverse the order back."},
+  {n:"Cycling",m:"Cardio",e:"Machine",c:"Log time/distance; keep cadence smooth."},
+  {n:"Stair Climber",m:"Cardio",e:"Machine",c:"Tall posture, don't lean on rails, steady pace."},
+  {n:"Jump Rope",m:"Cardio",e:"Bodyweight",c:"Light bounces, wrists turn the rope, log time or rounds."},
+  {n:"Incline Walk",m:"Cardio",e:"Machine",c:"Raise incline, brisk pace, low-impact conditioning."},
+  {n:"Clean and Jerk",m:"Olympic",e:"Barbell",c:"Explosive pull to shoulders, dip and drive overhead. Coach-guided."},
+  {n:"Snatch",m:"Olympic",e:"Barbell",c:"One explosive pull from floor to overhead. Technical — coach-guided."},
+  {n:"Power Clean",m:"Olympic",e:"Barbell",c:"Triple extension, pull under, catch on shoulders."},
+  {n:"Kettlebell Swing",m:"Olympic",e:"Kettlebell",c:"Hip hinge, snap hips, float bell to chest height, brace."},
+  {n:"Thruster",m:"Olympic",e:"Barbell",c:"Front squat into overhead press in one fluid drive."},
+];
+
+/* combined library: built-in + user-added (user entries flagged) */
+function libAll(){
+  return EXERCISE_LIBRARY.concat(S.exercises.map(x => ({...x, user: true})));
+}
+
+/* ---- progress math ---- */
+const e1rm = s => num(s.weight) * (1 + num(s.reps) / 30);          // Epley estimate
+const woVolume = w => w.items.reduce((a, it) => a + it.sets.reduce((b, s) => b + num(s.reps) * num(s.weight), 0), 0);
+function bestE1RM(name, filter){
+  let best = 0;
+  for (const w of S.workouts){
+    if (filter && !filter(w)) continue;
+    for (const it of w.items){
+      if (it.name !== name) continue;
+      for (const s of it.sets) best = Math.max(best, e1rm(s));
+    }
+  }
+  return best;
+}
+
+/* ---------- Training view ---------- */
+function trainHTML(){
+  const tabs = [["today","Workout"],["library","Library"],["history","History"],["coach","Coach"]];
+  return `
+    <button class="cat-back" onclick="M.trainBack()">${ic("back", 18)} Fitness</button>
+    <div class="cat-title"><div class="ch-nm">Training</div><div class="ch-ds">Library · tracking · coach</div></div>
+    <div class="chip-row seg-tabs">${tabs.map(([k, l]) =>
+      `<button class="chip ${R.trainTab === k ? "on" : ""}" onclick="M.trainGo('${k}')">${l}</button>`).join("")}</div>
+    <div style="margin-top:12px">${
+      R.trainTab === "today" ? trainTodayHTML() :
+      R.trainTab === "library" ? trainLibHTML() :
+      R.trainTab === "history" ? trainHistHTML() : trainCoachHTML()
+    }</div>`;
+}
+
+function trainTodayHTML(){
+  const wo = R.trainWO;
+  if (!wo) return `
+    <div class="card">
+      <h3>${ic("barbell", 16)} Start a workout</h3>
+      <div class="muted" style="margin-bottom:12px">Log your session set by set. Add exercises from the library, or anything custom.</div>
+      <button class="btn" onclick="M.woStart()">${ic("play", 15)} Start workout</button>
+    </div>
+    ${S.workouts.length ? `<div class="muted" style="text-align:center;padding:4px">Past sessions and progress are in <b>History</b>.</div>` : ""}`;
+  return `
+    <div class="card">
+      <div class="wo-hd">
+        <input id="woName" value="${esc(wo.name)}" oninput="R.trainWO.name=this.value" style="font-weight:600">
+        <span class="tiny" style="flex:0 0 auto">${fmtDate(wo.date)}</span>
+      </div>
+    </div>
+    ${wo.items.map((it, i) => exItemHTML(it, i)).join("")}
+    <button class="btn sec" style="margin-bottom:12px" onclick="M.trainGo('library')">${ic("plus", 15)} Add exercise</button>
+    <div class="row">
+      <button class="btn" onclick="M.woFinish()">${ic("check", 16)} Finish & save</button>
+      <button class="btn sec danger" style="flex:0 0 auto" onclick="M.woDiscard()">Discard</button>
+    </div>`;
+}
+function exItemHTML(it, i){
+  const best = it.sets.reduce((a, s) => Math.max(a, num(s.weight) * num(s.reps)), 0);
+  return `<div class="card">
+    <div class="wo-hd" style="margin-bottom:8px">
+      <div><div style="font-weight:600" dir="auto">${esc(it.name)}</div><div class="tiny">${esc(it.muscle || "")}</div></div>
+      <button class="del" style="flex:0 0 auto;color:var(--txt3)" aria-label="Remove exercise" onclick="M.woDelEx(${i})">✕</button>
+    </div>
+    ${it.sets.length ? `<div class="set-list">${it.sets.map((s, j) =>
+      `<div class="set-row2"><span class="tiny">Set ${j + 1}</span><b>${n1(s.weight)} kg × ${s.reps}</b>
+        <button class="del" aria-label="Remove set" onclick="M.woDelSet(${i},${j})">✕</button></div>`).join("")}</div>` : ""}
+    <div class="grid3" style="margin-top:8px">
+      <input id="wr${i}" type="number" inputmode="numeric" placeholder="reps">
+      <input id="ww${i}" type="number" inputmode="decimal" placeholder="kg">
+      <button class="btn sm" onclick="M.woAddSet(${i})">Add set</button>
+    </div>
+  </div>`;
+}
+
+function trainLibHTML(){
+  const q = R.libQuery.trim().toLowerCase();
+  const list = libAll().filter(x => (R.libMuscle === "All" || x.m === R.libMuscle) && (!q || x.n.toLowerCase().includes(q)));
+  R._libList = list;
+  const muscles = ["All", ...MUSCLES];
+  return `
+    <div class="card">
+      <input id="libSearch" placeholder="Search exercises…" value="${esc(R.libQuery)}" oninput="R.libQuery=this.value;render()" autocomplete="off">
+      <div class="chip-row" style="margin-top:10px">${muscles.map(m =>
+        `<button class="chip ${R.libMuscle === m ? "on" : ""}" onclick="M.libMuscle('${m}')">${m}</button>`).join("")}</div>
+      <div class="row" style="margin-top:10px">
+        <button class="btn sm sec" onclick="M.exAddOpen()">${ic("plus", 14)} Add exercise</button>
+        <button class="btn sm sec" onclick="M.exFind()" ${R.aiExBusy ? "disabled" : ""}>${R.aiExBusy ? "Looking up…" : ic("search", 14) + " Find (AI)"}</button>
+      </div>
+      ${R.exForm.open ? exAddFormHTML() : ""}
+    </div>
+    <div class="lib-list">
+      ${list.length ? list.map((x, i) => `<button class="feat-card" onclick="M.libPick(${i})">
+        <span class="fc-tx"><span class="fc-nm" dir="auto">${esc(x.n)}${x.user ? ` <span class="tiny">· yours</span>` : ""}</span>
+          <span class="fc-ds">${esc(x.m)}${x.e ? " · " + esc(x.e) : ""}</span></span>
+        <span class="fc-ar">${R.trainWO ? ic("plus", 17) : ic("chevR", 16)}</span>
+      </button>`).join("") : `<div class="muted" style="padding:6px 2px">No match. Add it with <b>Add exercise</b> or <b>Find (AI)</b>.</div>`}
+    </div>`;
+}
+function exAddFormHTML(){
+  const f = R.exForm;
+  return `<div class="review-item" style="margin-top:12px">
+    <b style="font-size:14px">Add an exercise</b>
+    <div class="field" style="margin-top:8px"><label>Name</label><input value="${esc(f.n)}" oninput="R.exForm.n=this.value" dir="auto"></div>
+    <div class="grid2" style="margin-bottom:8px">
+      <div class="field"><label>Muscle</label>
+        <select onchange="R.exForm.m=this.value">${MUSCLES.map(m => `<option ${f.m === m ? "selected" : ""}>${m}</option>`).join("")}</select></div>
+      <div class="field"><label>Equipment</label><input value="${esc(f.e)}" oninput="R.exForm.e=this.value" placeholder="e.g. Dumbbell"></div>
+    </div>
+    <div class="field"><label>How-to / cue (optional)</label><textarea rows="2" oninput="R.exForm.c=this.value">${esc(f.c)}</textarea></div>
+    <div class="row"><button class="btn sm" onclick="M.exSave()">Save exercise</button>
+      <button class="btn sm sec" onclick="R.exForm.open=false;render()">Cancel</button></div>
+  </div>`;
+}
+
+function trainHistHTML(){
+  const ws = [...S.workouts].sort((a, b) => b.ts - a.ts);
+  const exNames = [...new Set(S.workouts.flatMap(w => w.items.map(it => it.name)))].sort();
+  if (R.progEx && !exNames.includes(R.progEx)) R.progEx = "";
+  const prog = R.progEx || exNames[0] || "";
+  return `
+    ${exNames.length ? `<div class="card">
+      <h3>${ic("trend", 16)} Progress</h3>
+      <select onchange="M.progPick(this.value)">${exNames.map(n => `<option ${n === prog ? "selected" : ""}>${esc(n)}</option>`).join("")}</select>
+      ${progChartHTML(prog)}
+    </div>` : ""}
+    ${ws.length ? ws.map(w => {
+      const vol = woVolume(w);
+      return `<div class="card">
+        <div class="wo-hd" style="margin-bottom:6px">
+          <div><div style="font-weight:600" dir="auto">${esc(w.name)}</div><div class="tiny">${fmtDate(w.date)} · ${w.items.length} exercise${w.items.length > 1 ? "s" : ""} · ${n0(vol)} kg volume</div></div>
+          <button class="del" style="flex:0 0 auto;color:var(--txt3)" aria-label="Delete workout" onclick="M.woHistDel('${w.id}')">✕</button>
+        </div>
+        ${w.items.map(it => `<div class="tiny" style="margin:3px 0" dir="auto"><b>${esc(it.name)}</b> — ${it.sets.map(s => `${n1(s.weight)}×${s.reps}`).join(", ") || "no sets"}</div>`).join("")}
+      </div>`;
+    }).join("") : `<div class="card" style="text-align:center;padding:26px 16px">
+      <div style="color:var(--txt3);margin-bottom:8px">${ic("barbell", 28)}</div>
+      <div class="muted">No workouts logged yet. Start one in the <b>Workout</b> tab.</div></div>`}`;
+}
+function progChartHTML(name){
+  const pts = S.workouts.filter(w => w.items.some(it => it.name === name))
+    .sort((a, b) => a.ts - b.ts)
+    .map(w => ({d: w.date, v: Math.max(...w.items.filter(it => it.name === name).flatMap(it => it.sets.map(e1rm)), 0)}))
+    .filter(p => p.v > 0);
+  if (pts.length < 2) return `<div class="tiny" style="margin-top:8px">Log this exercise on two or more days to see the trend. Best est. 1RM so far: <b>${pts.length ? n1(pts[0].v) : 0} kg</b>.</div>`;
+  const vs = pts.map(p => p.v), min = Math.min(...vs), max = Math.max(...vs), span = Math.max(max - min, 0.5);
+  const W = 150, H = 40;
+  const xy = vs.map((v, i) => `${(i / (vs.length - 1)) * (W - 8) + 4},${H - 6 - ((v - min) / span) * (H - 12)}`);
+  const pr = Math.max(...vs);
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:54px;display:block;margin:8px 0 2px">
+      <polyline points="${xy.join(" ")}" fill="none" stroke="var(--acc)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="${xy[xy.length - 1].split(",")[0]}" cy="${xy[xy.length - 1].split(",")[1]}" r="3" fill="var(--acc)"/>
+    </svg>
+    <div class="tiny">Est. 1RM ${n1(vs[0])} → <b>${n1(vs[vs.length - 1])} kg</b> · best <b>${n1(pr)} kg</b></div>`;
+}
+
+function trainCoachHTML(){
+  const c = S.settings.coach || {};
+  return `
+    <div class="card">
+      <h3>${ic("user", 16)} Your coach</h3>
+      <div class="field"><label>Coach name</label><input value="${esc(c.name || "")}" oninput="S.settings.coach.name=this.value;save()" placeholder="Who's coaching you?"></div>
+      <div class="field" style="margin-bottom:0"><label>Coach email (optional)</label><input type="email" value="${esc(c.email || "")}" oninput="S.settings.coach.email=this.value;save()" placeholder="coach@example.com"></div>
+    </div>
+    <div class="card">
+      <h3>${ic("share", 16)} Progress report</h3>
+      <div class="muted" style="margin-bottom:10px">Workouts, PRs, nutrition adherence, hydration and weight over the period — as a message you send your coach.</div>
+      <div class="seg" style="margin-bottom:12px">${[7, 30, 90].map(d =>
+        `<button class="${R.coachPeriod === d ? "on" : ""}" onclick="M.coachPeriod(${d})">${d} days</button>`).join("")}</div>
+      <button class="btn" onclick="M.coachShare()">${ic("share", 16)} Generate & share</button>
+      <button class="btn sec" style="margin-top:8px" onclick="M.coachExport()">${ic("download", 15)} Export data for coach (JSON)</button>
+    </div>
+    <div class="card">
+      <h3>${ic("globe", 16)} Live coach sync</h3>
+      <div class="muted">A coach login that sees your workouts and food log in real time arrives with the hosted backend. Your data already exports in a structured format ready for it.</div>
+    </div>`;
+}
+
+/* ---- coach report text ---- */
+function coachReport(days){
+  const since = new Date(Date.now() - (days - 1) * 864e5).toLocaleDateString("en-CA");
+  const ws = S.workouts.filter(w => w.date >= since).sort((a, b) => a.ts - b.ts);
+  const tg = S.settings.targets;
+  const who = S.settings.name || "Client";
+  const coach = (S.settings.coach && S.settings.coach.name) ? S.settings.coach.name : "Coach";
+  const L = [];
+  L.push(`MIRA — progress report`);
+  L.push(`For: ${coach}`);
+  L.push(`Client: ${who}`);
+  L.push(`Period: last ${days} days (${since} → ${todayStr()})`);
+  L.push("");
+  L.push(`TRAINING`);
+  L.push(`Workouts completed: ${ws.length}`);
+  if (ws.length){
+    L.push(`Total volume: ${n0(ws.reduce((a, w) => a + woVolume(w), 0))} kg`);
+    const names = [...new Set(ws.flatMap(w => w.items.map(it => it.name)))];
+    const prs = [];
+    names.forEach(nm => {
+      const inP = bestE1RM(nm, w => w.date >= since);
+      const before = bestE1RM(nm, w => w.date < since);
+      if (inP > 0 && inP > before) prs.push(`  • ${nm}: est. 1RM ${n1(inP)} kg${before > 0 ? ` (was ${n1(before)})` : " (first record)"}`);
+    });
+    if (prs.length){ L.push(""); L.push(`New bests:`); prs.slice(0, 10).forEach(p => L.push(p)); }
+    L.push("");
+    L.push(`Sessions:`);
+    ws.forEach(w => L.push(`  • ${w.date} — ${w.name}: ${w.items.map(it => `${it.name} ${it.sets.length}×`).join(", ") || "—"}`));
+  }
+  L.push("");
+  L.push(`NUTRITION`);
+  const dl = [];
+  for (let k = 0; k < days; k++){ const d = new Date(Date.now() - k * 864e5).toLocaleDateString("en-CA"); const t = dayTotals(d); if (t.kcal > 0) dl.push(t); }
+  if (dl.length){
+    const avg = a => a.reduce((x, y) => x + y, 0) / a.length;
+    L.push(`Days logged: ${dl.length}/${days}`);
+    L.push(`Average: ${n0(avg(dl.map(t => t.kcal)))} kcal, ${n1(avg(dl.map(t => t.p)))} g protein/day`);
+    if (tg.kcal){
+      const onT = dl.filter(t => t.kcal >= tg.kcal * 0.9 && t.kcal <= tg.kcal * 1.1).length;
+      L.push(`Target ${tg.kcal} kcal / ${tg.protein} g protein — on target ${onT}/${dl.length} logged days`);
+    }
+  } else L.push(`No food logged in this period.`);
+  const wl = S.inbody.filter(e => e.weight && e.date >= since).sort((a, b) => a.date < b.date ? -1 : 1);
+  if (wl.length >= 2){
+    L.push("");
+    L.push(`BODY`);
+    L.push(`Weight: ${n1(+wl[0].weight)} → ${n1(+wl[wl.length - 1].weight)} kg (${(+wl[wl.length - 1].weight - +wl[0].weight > 0 ? "+" : "")}${n1(+wl[wl.length - 1].weight - +wl[0].weight)} kg)`);
+  }
+  L.push("");
+  L.push(`— Generated by MIRA on ${new Date().toLocaleDateString("en-GB")}`);
+  return L.join("\n");
+}
+</script>
+<script>
+"use strict";
 /* ---------------- body composition ---------------- */
 const IB_METRICS = [
   {k: "weight", label: "Weight",   unit: "kg",  goodDir: 0},
@@ -2124,6 +2473,7 @@ function restore(){
 
 /* ---------------- global handlers ---------------- */
 window.onb = onb;
+window.R = R;
 window.foodForm = foodForm;
 window.ibForm = ibForm;
 window.S = S;
@@ -2137,6 +2487,116 @@ window.M = {
   goTab(t){ R.tab = t; R.homeCat = null; R.sheet = null; if (t === "chat") R.convId = null; render(); },
   home(catId){ R.homeCat = catId; render(); },
   homeBack(){ R.homeCat = null; render(); },
+
+  /* ---- training ---- */
+  goTrain(sub){ R.tab = "train"; R.trainTab = sub || "today"; R.homeCat = null; R.sheet = null; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
+  trainBack(){ R.tab = "home"; R.homeCat = "fitness"; render(); },
+  trainGo(t){ R.trainTab = t; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
+  woStart(){ R.trainWO = {id: uid(), date: todayStr(), name: "Workout", items: []}; R.trainTab = "today"; render(); },
+  woAddExercise(x){
+    if (!R.trainWO) R.trainWO = {id: uid(), date: todayStr(), name: "Workout", items: []};
+    R.trainWO.items.push({name: x.n, muscle: x.m, sets: [], note: ""});
+    R.trainTab = "today"; render();
+    toast(`Added ${x.n}`);
+  },
+  libPick(i){
+    const x = R._libList && R._libList[i];
+    if (x) M.woAddExercise(x);
+  },
+  libMuscle(m){ R.libMuscle = m; render(); },
+  woAddSet(i){
+    const r = num(($("#wr" + i) || {}).value), w = num(($("#ww" + i) || {}).value);
+    if (r <= 0){ toast("Enter the reps."); return; }
+    R.trainWO.items[i].sets.push({reps: r, weight: w});
+    buzz(); render();
+  },
+  woDelSet(i, j){ R.trainWO.items[i].sets.splice(j, 1); render(); },
+  woDelEx(i){ R.trainWO.items.splice(i, 1); render(); },
+  woFinish(){
+    const wo = R.trainWO;
+    if (!wo || !wo.items.some(it => it.sets.length)){ toast("Add at least one set first."); return; }
+    wo.items = wo.items.filter(it => it.sets.length);
+    wo.ts = Date.now();
+    // PR check for the toast
+    let prs = 0;
+    wo.items.forEach(it => {
+      const inNow = Math.max(...it.sets.map(e1rm), 0);
+      const before = bestE1RM(it.name, w => w.ts && w.ts < wo.ts);
+      if (inNow > before) prs++;
+    });
+    S.workouts.push(wo);
+    R.trainWO = null; R.trainTab = "history";
+    buzz(); save(); render();
+    toast(`Workout saved${prs ? ` · ${prs} new best${prs > 1 ? "s" : ""} 🎯` : ""} ✓`);
+  },
+  woDiscard(){ if (confirm("Discard this workout?")){ R.trainWO = null; render(); } },
+  woHistDel(id){ if (confirm("Delete this workout from history?")){ S.workouts = S.workouts.filter(w => w.id !== id); save(); render(); } },
+  progPick(n){ R.progEx = n; render(); },
+  exAddOpen(){ R.exForm = {open: true, n: R.libQuery.trim(), m: R.libMuscle === "All" ? "Chest" : R.libMuscle, e: "", c: ""}; render(); },
+  exSave(){
+    const f = R.exForm;
+    if (!f.n.trim()){ toast("Give the exercise a name."); return; }
+    S.exercises.unshift({id: uid(), n: f.n.trim(), m: f.m, e: f.e.trim(), c: f.c.trim(), source: "Custom"});
+    R.exForm = {open: false, n: "", m: "Chest", e: "", c: ""};
+    R.libQuery = "";
+    save(); render();
+    toast(`Added ${f.n.trim()} to your library ✓`);
+  },
+  async exFind(){
+    const name = R.libQuery.trim();
+    if (!name){ toast("Type the exercise name in the search box first."); return; }
+    if (!S.settings.apiKey){ toast("Add your API key in Settings first."); return; }
+    R.aiExBusy = true; render();
+    try {
+      const txt = await apiCall({
+        model: S.settings.model, max_tokens: 500,
+        ...(S.settings.webSearch ? {tools: [{type: "web_search_20250305", name: "web_search", max_uses: 2}]} : {}),
+        system: `You are MIRA's exercise reference. Give accurate, safe technique for the named resistance/cardio exercise, following standard strength-and-conditioning guidance (NSCA/ACE). Reply with ONLY JSON: {"n":str(clean name),"m":one of ${JSON.stringify(MUSCLES)},"e":str(primary equipment),"c":str(2-3 sentence how-to cue),"source":str(short, e.g. "NSCA technique guidance")}. If it is not a real exercise, set "n":"".`,
+        messages: [{role: "user", content: `Exercise: ${name}`}],
+      });
+      const j = tryParseJson(txt);
+      if (!j.n){ toast(`Couldn't find a real exercise called "${name}". Add it manually instead.`, 4200); }
+      else {
+        S.exercises.unshift({id: uid(), n: j.n, m: MUSCLES.includes(j.m) ? j.m : "Other", e: j.e || "", c: j.c || "", source: j.source || "MIRA"});
+        R.libQuery = "";
+        toast(`Added ${j.n} — verify the cue before relying on it.`, 4200);
+      }
+    } catch (e) { toast("Lookup failed: " + e.message, 4000); }
+    R.aiExBusy = false; render();
+  },
+  coachPeriod(d){ R.coachPeriod = d; render(); },
+  async coachShare(){
+    const text = coachReport(R.coachPeriod);
+    if (navigator.share){
+      try { await navigator.share({title: "MIRA progress report", text}); return; } catch (e) { if (e.name === "AbortError") return; }
+    }
+    try { await navigator.clipboard.writeText(text); toast("Report copied to clipboard."); }
+    catch (e) {
+      const blob = new Blob([text], {type: "text/plain"});
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob); a.download = `mira-report-${todayStr()}.txt`; a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+      toast("Report exported as a file.");
+    }
+  },
+  coachExport(){
+    const since = new Date(Date.now() - (R.coachPeriod - 1) * 864e5).toLocaleDateString("en-CA");
+    const data = {
+      app: "MIRA", type: "coach-export", version: 1, exported: new Date().toISOString(),
+      client: {name: S.settings.name || "", targets: S.settings.targets, waterGoal: S.settings.waterGoal},
+      coach: S.settings.coach,
+      periodDays: R.coachPeriod,
+      workouts: S.workouts.filter(w => w.date >= since),
+      foods: S.foods.filter(f => f.date >= since),
+      water: Object.fromEntries(Object.entries(S.water).filter(([d]) => d >= since)),
+      inbody: S.inbody.filter(e => e.date >= since),
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], {type: "application/json"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = `mira-coach-export-${todayStr()}.json`; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    toast("Coach data exported ✓");
+  },
   enterMode(domId, key){
     R.mode = domId; R.tab = "chat"; R.homeCat = null; R.sheet = null; R.convId = null;
     const prompt = key ? FEAT_PROMPTS[key] : "";
