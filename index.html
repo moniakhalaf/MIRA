@@ -548,7 +548,7 @@ body.kb .chatbar{padding-bottom:6px}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.19";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.20";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -627,6 +627,9 @@ const I = {
   moon: '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>',
   checkSquare: '<polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',
   fileText: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>',
+  creditCard: '<rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/>',
+  scale: '<line x1="12" y1="3" x2="12" y2="21"/><line x1="6" y1="6" x2="18" y2="6"/><path d="M6 6 3 13a3 3 0 0 0 6 0z"/><path d="M18 6l3 7a3 3 0 0 1-6 0z"/><line x1="7" y1="21" x2="17" y2="21"/>',
+  plane: '<path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/>',
   trash: '<polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
   database: '<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>',
   trend: '<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>',
@@ -639,6 +642,27 @@ function glassSvg(filled){
     <circle cx="14" cy="14" r="10" fill="${filled ? "var(--water)" : "none"}"
       stroke="${filled ? "var(--water)" : "currentColor"}" stroke-width="1.8"/>
   </svg>`;
+}
+
+/* build & download an .ics calendar event with a 30-min reminder */
+function icsDownload(dateStr, timeStr, summary, desc, id){
+  const start = new Date(dateStr + "T" + (timeStr || "09:00"));
+  if (isNaN(start)) return;
+  const end = new Date(start.getTime() + 30 * 60000);
+  const fm = d => d.getFullYear() + String(d.getMonth() + 1).padStart(2, "0") + String(d.getDate()).padStart(2, "0") +
+    "T" + String(d.getHours()).padStart(2, "0") + String(d.getMinutes()).padStart(2, "0") + "00";
+  const ei = s => String(s || "").replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");
+  const ics = ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//MIRA//EN","BEGIN:VEVENT",
+    "UID:" + (id || uid()) + "@mira","DTSTAMP:" + fm(new Date()),"DTSTART:" + fm(start),"DTEND:" + fm(end),
+    "SUMMARY:" + ei(summary), desc ? "DESCRIPTION:" + ei(desc) : "",
+    "BEGIN:VALARM","TRIGGER:-PT30M","ACTION:DISPLAY","DESCRIPTION:" + ei(summary),"END:VALARM",
+    "END:VEVENT","END:VCALENDAR"].filter(Boolean).join("\r\n");
+  const blob = new Blob([ics], {type: "text/calendar"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = String(summary || "event").replace(/[^\w؀-ۿ -]/g, "").slice(0, 40) + ".ics";
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 }
 
 function fileToB64(file){
@@ -697,6 +721,10 @@ const BLANK = () => ({
   tasks: [],          // {id, title, priority:'high'|'med'|'low', due, dueTime, done, ts}
   notes: [],          // {id, title, body, ts, updated}
   workTopics: [],     // AI-built profession toolkit topics (strings)
+  bills: [],          // {id, name, amount, cycle, next}
+  trips: [],          // {id, dest, start, end, budget, checklist:[{id,text,done}], notes}
+  compares: [],       // {id, title, options:[{id,name,price,pros,cons,source}]}
+  decisions: [],      // {id, title, options, decision, why, date}
   water: {},          // date -> glasses
   inbody: [],         // {id, date, weight, score, bfm, smm, vfa, pa}
 });
@@ -730,6 +758,10 @@ function migrateChats(){
   if (!Array.isArray(S.tasks)) S.tasks = [];
   if (!Array.isArray(S.notes)) S.notes = [];
   if (!Array.isArray(S.workTopics)) S.workTopics = [];
+  if (!Array.isArray(S.bills)) S.bills = [];
+  if (!Array.isArray(S.trips)) S.trips = [];
+  if (!Array.isArray(S.compares)) S.compares = [];
+  if (!Array.isArray(S.decisions)) S.decisions = [];
   if (S.settings.profession === undefined) S.settings.profession = "";
   if (S.settings.restLen === undefined) S.settings.restLen = 90;
   if (!S.settings.coach) S.settings.coach = {name: "", email: ""};
@@ -826,6 +858,12 @@ const R = {
   taskDone: false,     // show completed tasks
   profDraft: "",       // profession input buffer
   kitBusy: false,
+  lifeTab: "trips",    // trips | bills | compare | decide
+  tripId: null, compareId: null,
+  billForm: {open: false, name: "", amount: "", cycle: "monthly", next: ""},
+  tripForm: {open: false, dest: "", start: "", end: "", budget: ""},
+  decideForm: {open: false, title: "", options: "", decision: "", why: ""},
+  cmpNew: "", optForm: {name: "", price: "", pros: "", cons: "", source: ""},
 };
 
 /* ---------------- root render ---------------- */
@@ -843,12 +881,13 @@ function render(){
   const trainDom = R.tab === "train" ? S.domains.find(d => d.id === "fitness") : null;
   const healthDom = R.tab === "health" ? S.domains.find(d => d.id === "health") : null;
   const workDom = R.tab === "work" ? S.domains.find(d => d.id === "work") : null;
-  const accClr = R.tab === "chat" ? dom.color : catDom ? catDom.color : trainDom ? trainDom.color : healthDom ? healthDom.color : workDom ? workDom.color : null;
+  const lifeDom = R.tab === "life" ? S.domains.find(d => d.id === "life") : null;
+  const accClr = R.tab === "chat" ? dom.color : catDom ? catDom.color : trainDom ? trainDom.color : healthDom ? healthDom.color : workDom ? workDom.color : lifeDom ? lifeDom.color : null;
   document.documentElement.style.setProperty("--acc", accClr || "var(--gold)");
   document.documentElement.style.setProperty("--acc-soft", accClr ? hexSoft(accClr) : "var(--gold-soft)");
   const sub = R.tab === "chat" ? `<span class="mode-dot"></span>${esc(dom.name)}`
     : R.tab === "home" ? esc(catDom ? catDom.name : "Home")
-    : R.tab === "train" ? "Training" : R.tab === "health" ? "Health" : R.tab === "work" ? "Work" : esc(tabTitle());
+    : R.tab === "train" ? "Training" : R.tab === "health" ? "Health" : R.tab === "work" ? "Work" : R.tab === "life" ? "Life" : esc(tabTitle());
   app.innerHTML = `
     <div class="topbar" id="topbar">
       <div class="brand">MIRA</div>
@@ -860,6 +899,7 @@ function render(){
       R.tab === "train" ? trainHTML() :
       R.tab === "health" ? healthHTML() :
       R.tab === "work" ? workHTML() :
+      R.tab === "life" ? lifeHTML() :
       R.tab === "chat" ? chatHTML() :
       R.tab === "food" ? foodHTML() :
       R.tab === "body" ? bodyHTML() : settingsHTML()
@@ -945,10 +985,12 @@ function domFeatures(d){
     {icon: "share", label: "Coach report", desc: "Share progress with a coach", on: `M.goTrain('coach')`},
   ];
   if (id === "life") return [
-    ask("globe", "Research & compare", "Best option, with sources", "research"),
-    ask("target", "Make a decision", "Facts to decide from", "decide"),
-    ask("compass", "Plan travel", "From Kuwait & beyond", "travel"),
-    ask("target", "Deep Solve a problem", "Two-stage reasoning", "deep"),
+    {icon: "plane", label: "Travel planner", desc: "Trips, checklist & budget", on: `M.goLife('trips')`},
+    {icon: "creditCard", label: "Bills & subscriptions", desc: "Monthly total & renewals", on: `M.goLife('bills')`},
+    {icon: "scale", label: "Compare purchases", desc: "Options side by side", on: `M.goLife('compare')`},
+    {icon: "target", label: "Decisions log", desc: "Weigh & record big choices", on: `M.goLife('decide')`},
+    ask("globe", "Research anything", "Best option, with sources", "research"),
+    ask("layers", "Deep Solve a problem", "Two-stage reasoning", "deep"),
   ];
   return [
     ask("chat", `Ask ${d.name}`, "Specialist answers, cited", ""),
@@ -2680,6 +2722,186 @@ function workKitHTML(){
 </script>
 <script>
 "use strict";
+/* ============================================================
+   Life hub — travel planner, bills & subscriptions,
+   purchase comparisons, decisions log.
+   ============================================================ */
+
+const BILL_CYCLES = {weekly: {label: "Weekly", perMonth: 52 / 12}, monthly: {label: "Monthly", perMonth: 1}, quarterly: {label: "Quarterly", perMonth: 1 / 3}, yearly: {label: "Yearly", perMonth: 1 / 12}};
+const cur = v => (Math.round(v * 100) / 100).toLocaleString("en", {minimumFractionDigits: 0, maximumFractionDigits: 2});
+
+function lifeHTML(){
+  if (R.lifeTab === "trips" && R.tripId) return tripDetailHTML();
+  if (R.lifeTab === "compare" && R.compareId) return compareDetailHTML();
+  const tabs = [["trips","Travel"],["bills","Bills"],["compare","Compare"],["decide","Decisions"]];
+  return `
+    <button class="cat-back" onclick="M.lifeBack()">${ic("back", 18)} Life</button>
+    <div class="cat-title"><div class="ch-nm">Life</div><div class="ch-ds">Travel · bills · compare · decisions</div></div>
+    <div class="chip-row seg-tabs">${tabs.map(([k, l]) =>
+      `<button class="chip ${R.lifeTab === k ? "on" : ""}" onclick="M.lifeGo('${k}')">${l}</button>`).join("")}</div>
+    <div style="margin-top:12px">${
+      R.lifeTab === "trips" ? tripsHTML() :
+      R.lifeTab === "bills" ? billsHTML() :
+      R.lifeTab === "compare" ? compareHTML() : decideHTML()
+    }</div>`;
+}
+
+/* ---------------- Bills & subscriptions ---------------- */
+function billsHTML(){
+  const total = S.bills.reduce((a, b) => a + num(b.amount) * (BILL_CYCLES[b.cycle] || BILL_CYCLES.monthly).perMonth, 0);
+  const upcoming = [...S.bills].filter(b => b.next).sort((a, b) => a.next < b.next ? -1 : 1);
+  const f = R.billForm;
+  return `
+    ${S.bills.length ? `<div class="card">
+      <div class="wo-hd"><div><div class="tiny">Estimated monthly spend</div><div style="font-size:26px;font-weight:700;color:var(--acc)">${cur(total)}</div></div>
+      <div class="tiny" style="text-align:end;flex:0 0 auto">${S.bills.length} item${S.bills.length > 1 ? "s" : ""}<br>${cur(total * 12)}/yr</div></div>
+    </div>` : ""}
+    <div class="card fold ${f.open || !S.bills.length ? "open" : ""}">
+      <h3 onclick="M.billFormToggle()">${ic("plus", 16)} Add a bill / subscription <span class="chev">▶</span></h3>
+      <div class="fold-body">
+        <div class="field"><label>Name</label><input value="${esc(f.name)}" oninput="R.billForm.name=this.value" placeholder="e.g. Netflix, rent, gym" dir="auto"></div>
+        <div class="grid2" style="margin-bottom:10px">
+          <div class="field"><label>Amount (KWD)</label><input type="number" inputmode="decimal" value="${esc(f.amount)}" oninput="R.billForm.amount=this.value"></div>
+          <div class="field"><label>Cycle</label><select onchange="R.billForm.cycle=this.value">${Object.entries(BILL_CYCLES).map(([k, c]) => `<option value="${k}" ${f.cycle === k ? "selected" : ""}>${c.label}</option>`).join("")}</select></div>
+        </div>
+        <div class="field"><label>Next renewal (optional)</label><input type="date" value="${esc(f.next)}" oninput="R.billForm.next=this.value"></div>
+        <button class="btn sm" onclick="M.billSave()">Add</button>
+      </div>
+    </div>
+    ${S.bills.length ? `<div class="card">
+      <h3>${ic("creditCard", 16)} Your bills</h3>
+      ${[...S.bills].sort((a, b) => num(b.amount) * (BILL_CYCLES[b.cycle] || {perMonth:1}).perMonth - num(a.amount) * (BILL_CYCLES[a.cycle] || {perMonth:1}).perMonth).map(b => {
+        const overdue = b.next && b.next < todayStr();
+        return `<div class="set-row">
+          <div><div class="k" dir="auto">${esc(b.name)}</div><div class="desc">${cur(b.amount)} KWD · ${(BILL_CYCLES[b.cycle] || {label: b.cycle}).label}${b.next ? ` · <span class="${overdue ? "" : ""}">renews ${fmtDate(b.next)}</span>` : ""}</div></div>
+          <span class="end">${b.next ? `<button class="btn sm sec" aria-label="Remind" title="Add renewal reminder" onclick="M.billCal('${b.id}')">${ic("calendar", 13)}</button>` : ""}
+            <button class="btn sm danger" aria-label="Delete" onclick="M.billDel('${b.id}')">${ic("trash", 13)}</button></span>
+        </div>`;
+      }).join("")}
+    </div>` : ""}`;
+}
+
+/* ---------------- Travel planner ---------------- */
+function tripsHTML(){
+  const f = R.tripForm;
+  const trips = [...S.trips].sort((a, b) => (a.start || "9999") < (b.start || "9999") ? -1 : 1);
+  return `
+    <div class="card fold ${f.open || !S.trips.length ? "open" : ""}">
+      <h3 onclick="M.tripFormToggle()">${ic("plus", 16)} New trip <span class="chev">▶</span></h3>
+      <div class="fold-body">
+        <div class="field"><label>Destination</label><input value="${esc(f.dest)}" oninput="R.tripForm.dest=this.value" placeholder="e.g. Istanbul" dir="auto"></div>
+        <div class="grid2" style="margin-bottom:10px">
+          <div class="field"><label>From</label><input type="date" value="${esc(f.start)}" oninput="R.tripForm.start=this.value"></div>
+          <div class="field"><label>To</label><input type="date" value="${esc(f.end)}" oninput="R.tripForm.end=this.value"></div>
+        </div>
+        <div class="field"><label>Budget (optional)</label><input type="number" inputmode="decimal" value="${esc(f.budget)}" oninput="R.tripForm.budget=this.value" placeholder="KWD"></div>
+        <button class="btn sm" onclick="M.tripSave()">Create trip</button>
+      </div>
+    </div>
+    ${trips.length ? trips.map(t => `<button class="feat-card" onclick="M.tripOpen('${t.id}')">
+      <span class="fc-ic">${ic("plane", 18)}</span>
+      <span class="fc-tx"><span class="fc-nm" dir="auto">${esc(t.dest || "Trip")}</span>
+        <span class="fc-ds">${t.start ? fmtDate(t.start) : ""}${t.end ? " → " + fmtDate(t.end) : ""}${(t.checklist || []).length ? ` · ${t.checklist.filter(c => c.done).length}/${t.checklist.length} done` : ""}</span></span>
+      <span class="fc-ar">${ic("chevR", 16)}</span>
+    </button>`).join("") : `<div class="card"><div class="muted">No trips yet. Create one, then build a checklist and ask MIRA to plan it.</div></div>`}`;
+}
+function tripDetailHTML(){
+  const t = S.trips.find(x => x.id === R.tripId);
+  if (!t){ R.tripId = null; return lifeHTML(); }
+  const cl = t.checklist || [];
+  return `
+    <button class="cat-back" onclick="M.tripClose()">${ic("back", 18)} All trips</button>
+    <div class="cat-title"><div class="ch-nm" dir="auto">${esc(t.dest || "Trip")}</div>
+      <div class="ch-ds">${t.start ? fmtDate(t.start) : ""}${t.end ? " → " + fmtDate(t.end) : ""}${t.budget ? " · budget " + cur(t.budget) : ""}</div></div>
+    <button class="btn cat-ask" onclick="M.tripPlan()">${ic("chat", 17)} Ask MIRA to plan this trip</button>
+    <div class="card">
+      <h3>${ic("checkSquare", 16)} Checklist</h3>
+      ${cl.length ? cl.map(c => `<div class="task-row ${c.done ? "done" : ""}">
+        <button class="task-check" onclick="M.tripCheck('${c.id}')">${c.done ? ic("check", 15) : ""}</button>
+        <div class="task-tx"><div class="task-nm" dir="auto">${esc(c.text)}</div></div>
+        <button class="del" aria-label="Delete" onclick="M.tripItemDel('${c.id}')">${ic("trash", 13)}</button>
+      </div>`).join("") : `<div class="muted" style="margin-bottom:8px">Add packing items and to-dos.</div>`}
+      <div class="row" style="margin-top:10px"><input id="tripItem" placeholder="Add item…" dir="auto" onkeydown="if(event.key==='Enter')M.tripItemAdd()">
+        <button class="btn sm" style="flex:0 0 auto" onclick="M.tripItemAdd()">Add</button></div>
+    </div>
+    <div class="card">
+      <h3>${ic("fileText", 16)} Notes</h3>
+      <textarea rows="6" oninput="M.tripNote(this.value)" placeholder="Itinerary, bookings, ideas…" dir="auto">${esc(t.notes || "")}</textarea>
+    </div>
+    <button class="btn sec danger" onclick="M.tripDel('${t.id}')">${ic("trash", 14)} Delete trip</button>`;
+}
+
+/* ---------------- Purchase comparisons ---------------- */
+function compareHTML(){
+  return `
+    <div class="card">
+      <div class="row"><input value="${esc(R.cmpNew)}" oninput="R.cmpNew=this.value" placeholder="What are you comparing? e.g. New phone" dir="auto" onkeydown="if(event.key==='Enter')M.cmpNew()">
+        <button class="btn sm" style="flex:0 0 auto" onclick="M.cmpNew()">Create</button></div>
+    </div>
+    ${S.compares.length ? S.compares.map(c => `<button class="feat-card" onclick="M.cmpOpen('${c.id}')">
+      <span class="fc-ic">${ic("scale", 18)}</span>
+      <span class="fc-tx"><span class="fc-nm" dir="auto">${esc(c.title)}</span><span class="fc-ds">${(c.options || []).length} option${(c.options || []).length !== 1 ? "s" : ""}</span></span>
+      <span class="fc-ar">${ic("chevR", 16)}</span>
+    </button>`).join("") : `<div class="card"><div class="muted">No comparisons yet. Create one to weigh options side by side — MIRA can research and you save the verdict.</div></div>`}`;
+}
+function compareDetailHTML(){
+  const c = S.compares.find(x => x.id === R.compareId);
+  if (!c){ R.compareId = null; return lifeHTML(); }
+  const o = R.optForm;
+  return `
+    <button class="cat-back" onclick="M.cmpClose()">${ic("back", 18)} All comparisons</button>
+    <div class="cat-title"><div class="ch-nm" dir="auto">${esc(c.title)}</div></div>
+    <button class="btn cat-ask" onclick="M.cmpResearch()">${ic("globe", 17)} Research with MIRA</button>
+    ${(c.options || []).map(op => `<div class="card">
+      <div class="wo-hd" style="margin-bottom:6px"><div><div style="font-weight:600" dir="auto">${esc(op.name)}</div>${op.price ? `<div class="tiny">${esc(op.price)}</div>` : ""}</div>
+        <button class="del" style="flex:0 0 auto;color:var(--txt3)" aria-label="Delete option" onclick="M.optDel('${c.id}','${op.id}')">✕</button></div>
+      ${op.pros ? `<div class="tiny" style="color:var(--green)">＋ ${esc(op.pros)}</div>` : ""}
+      ${op.cons ? `<div class="tiny" style="color:var(--amber)">－ ${esc(op.cons)}</div>` : ""}
+      ${op.source ? `<div class="tiny" style="margin-top:4px">${esc(op.source)}</div>` : ""}
+    </div>`).join("")}
+    <div class="card fold open">
+      <h3>${ic("plus", 16)} Add an option</h3>
+      <div class="fold-body">
+        <div class="grid2" style="margin-bottom:10px">
+          <div class="field"><label>Name</label><input value="${esc(o.name)}" oninput="R.optForm.name=this.value" dir="auto"></div>
+          <div class="field"><label>Price</label><input value="${esc(o.price)}" oninput="R.optForm.price=this.value" placeholder="e.g. 220 KWD"></div>
+        </div>
+        <div class="field"><label>Pros</label><input value="${esc(o.pros)}" oninput="R.optForm.pros=this.value" dir="auto"></div>
+        <div class="field"><label>Cons</label><input value="${esc(o.cons)}" oninput="R.optForm.cons=this.value" dir="auto"></div>
+        <div class="field"><label>Source / link (optional)</label><input value="${esc(o.source)}" oninput="R.optForm.source=this.value"></div>
+        <button class="btn sm" onclick="M.optAdd('${c.id}')">Add option</button>
+      </div>
+    </div>
+    <button class="btn sec danger" onclick="M.cmpDel('${c.id}')">${ic("trash", 14)} Delete comparison</button>`;
+}
+
+/* ---------------- Decisions log ---------------- */
+function decideHTML(){
+  const f = R.decideForm;
+  const list = [...S.decisions].sort((a, b) => b.ts - a.ts);
+  return `
+    <div class="card fold ${f.open || !S.decisions.length ? "open" : ""}">
+      <h3 onclick="M.decideFormToggle()">${ic("plus", 16)} Log a decision <span class="chev">▶</span></h3>
+      <div class="fold-body">
+        <div class="field"><label>The decision</label><input value="${esc(f.title)}" oninput="R.decideForm.title=this.value" placeholder="e.g. Which job offer to take?" dir="auto"></div>
+        <div class="field"><label>Options weighed</label><textarea rows="2" oninput="R.decideForm.options=this.value" placeholder="The choices you considered" dir="auto">${esc(f.options)}</textarea></div>
+        <div class="field"><label>What you decided</label><input value="${esc(f.decision)}" oninput="R.decideForm.decision=this.value" dir="auto"></div>
+        <div class="field"><label>Why</label><textarea rows="2" oninput="R.decideForm.why=this.value" placeholder="The reasoning — so you can revisit it" dir="auto">${esc(f.why)}</textarea></div>
+        <div class="row"><button class="btn sm" onclick="M.decideSave()">Save decision</button>
+          <button class="btn sm sec" onclick="M.decideDeepSolve()">${ic("layers", 14)} Deep Solve it</button></div>
+      </div>
+    </div>
+    ${list.length ? list.map(d => `<div class="card">
+      <div class="wo-hd" style="margin-bottom:6px"><div><div style="font-weight:600" dir="auto">${esc(d.title)}</div><div class="tiny">${new Date(d.ts).toLocaleDateString("en-GB", {day: "numeric", month: "short", year: "numeric"})}</div></div>
+        <button class="del" style="flex:0 0 auto;color:var(--txt3)" aria-label="Delete" onclick="M.decideDel('${d.id}')">✕</button></div>
+      ${d.options ? `<div class="tiny"><b>Options:</b> ${esc(d.options)}</div>` : ""}
+      ${d.decision ? `<div class="tiny" style="margin-top:3px;color:var(--acc)"><b>Decided:</b> ${esc(d.decision)}</div>` : ""}
+      ${d.why ? `<div class="tiny" style="margin-top:3px"><b>Why:</b> ${esc(d.why)}</div>` : ""}
+    </div>`).join("") : `<div class="card"><div class="muted">No decisions logged. Record big choices and the reasoning, or Deep Solve one first.</div></div>`}`;
+}
+</script>
+<script>
+"use strict";
 /* ---------------- body composition ---------------- */
 const IB_METRICS = [
   {k: "weight", label: "Weight",   unit: "kg",  goodDir: 0},
@@ -3249,6 +3471,97 @@ window.M = {
       else toast("Couldn't build the toolkit — try again.");
     } catch (e) { toast("Toolkit build failed: " + e.message, 4000); }
     R.kitBusy = false; render();
+  },
+  /* ---- life hub ---- */
+  goLife(sub){ R.tab = "life"; R.lifeTab = sub || "trips"; R.tripId = null; R.compareId = null; R.homeCat = null; R.sheet = null; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
+  lifeBack(){ R.tab = "home"; R.homeCat = "life"; render(); },
+  lifeGo(t){ R.lifeTab = t; R.tripId = null; R.compareId = null; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
+  // bills
+  billFormToggle(){ R.billForm.open = !R.billForm.open; render(); },
+  billSave(){
+    if (!R.billForm.name.trim()){ toast("Name the bill."); return; }
+    S.bills.push({id: uid(), name: R.billForm.name.trim(), amount: num(R.billForm.amount), cycle: R.billForm.cycle, next: R.billForm.next});
+    R.billForm = {open: false, name: "", amount: "", cycle: "monthly", next: ""};
+    buzz(); save(); render();
+  },
+  billDel(id){ S.bills = S.bills.filter(b => b.id !== id); save(); render(); },
+  billCal(id){
+    const b = S.bills.find(x => x.id === id);
+    if (!b || !b.next) return;
+    icsDownload(b.next, "09:00", `${b.name} renews${b.amount ? ` — ${cur(b.amount)} KWD` : ""}`, `MIRA bill reminder`, b.id);
+    toast("Renewal reminder ready — open it to add to your calendar.");
+  },
+  // trips
+  tripFormToggle(){ R.tripForm.open = !R.tripForm.open; render(); },
+  tripSave(){
+    if (!R.tripForm.dest.trim()){ toast("Where to?"); return; }
+    const t = {id: uid(), dest: R.tripForm.dest.trim(), start: R.tripForm.start, end: R.tripForm.end, budget: num(R.tripForm.budget), checklist: [], notes: ""};
+    S.trips.push(t);
+    R.tripForm = {open: false, dest: "", start: "", end: "", budget: ""};
+    R.tripId = t.id;
+    buzz(); save(); render();
+  },
+  tripOpen(id){ R.tripId = id; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
+  tripClose(){ R.tripId = null; render(); },
+  tripDel(id){ if (confirm("Delete this trip?")){ S.trips = S.trips.filter(t => t.id !== id); R.tripId = null; save(); render(); } },
+  tripItemAdd(){
+    const el = $("#tripItem"); const v = el ? el.value.trim() : "";
+    if (!v) return;
+    const t = S.trips.find(x => x.id === R.tripId);
+    t.checklist = t.checklist || []; t.checklist.push({id: uid(), text: v, done: false});
+    save(); render(); const e2 = $("#tripItem"); if (e2) e2.focus();
+  },
+  tripCheck(cid){ const t = S.trips.find(x => x.id === R.tripId); const c = t.checklist.find(x => x.id === cid); if (c){ c.done = !c.done; if (c.done) buzz(); save(); render(); } },
+  tripItemDel(cid){ const t = S.trips.find(x => x.id === R.tripId); t.checklist = t.checklist.filter(x => x.id !== cid); save(); render(); },
+  tripNote(v){ const t = S.trips.find(x => x.id === R.tripId); if (t){ t.notes = v; save(); } },
+  tripPlan(){
+    const t = S.trips.find(x => x.id === R.tripId); if (!t) return;
+    R.mode = "life"; R.tab = "chat"; R.homeCat = null; R.convId = null; render();
+    const ta = $("#chatIn");
+    if (ta){ ta.value = `Help me plan a trip to ${t.dest}${t.start ? ` from ${t.start}` : ""}${t.end ? ` to ${t.end}` : ""}${t.budget ? `, budget around ${cur(t.budget)} KWD` : ""}. Give an itinerary, and cited practical info (entry requirements, weather, typical costs, getting around). I'm travelling from Kuwait.`; ta.style.height = "auto"; ta.style.height = Math.min(ta.scrollHeight, 120) + "px"; ta.focus(); }
+  },
+  // comparisons
+  cmpNew(){
+    const t = (R.cmpNew || "").trim();
+    if (!t){ toast("What are you comparing?"); return; }
+    const c = {id: uid(), title: t, options: []};
+    S.compares.unshift(c); R.cmpNew = ""; R.compareId = c.id;
+    save(); render();
+  },
+  cmpOpen(id){ R.compareId = id; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
+  cmpClose(){ R.compareId = null; render(); },
+  cmpDel(id){ if (confirm("Delete this comparison?")){ S.compares = S.compares.filter(c => c.id !== id); R.compareId = null; save(); render(); } },
+  optAdd(cid){
+    const o = R.optForm;
+    if (!o.name.trim()){ toast("Name the option."); return; }
+    const c = S.compares.find(x => x.id === cid);
+    c.options.push({id: uid(), name: o.name.trim(), price: o.price.trim(), pros: o.pros.trim(), cons: o.cons.trim(), source: o.source.trim()});
+    R.optForm = {name: "", price: "", pros: "", cons: "", source: ""};
+    save(); render();
+  },
+  optDel(cid, oid){ const c = S.compares.find(x => x.id === cid); c.options = c.options.filter(o => o.id !== oid); save(); render(); },
+  cmpResearch(){
+    const c = S.compares.find(x => x.id === R.compareId); if (!c) return;
+    R.mode = "life"; R.tab = "chat"; R.homeCat = null; R.convId = null; render();
+    const ta = $("#chatIn");
+    if (ta){ ta.value = `Research "${c.title}" for me and compare the best options with trusted sources: price, key pros and cons, and your recommendation.${c.options.length ? ` I'm currently considering: ${c.options.map(o => o.name).join(", ")}.` : ""}`; ta.style.height = "auto"; ta.style.height = Math.min(ta.scrollHeight, 120) + "px"; ta.focus(); }
+  },
+  // decisions
+  decideFormToggle(){ R.decideForm.open = !R.decideForm.open; render(); },
+  decideSave(){
+    const f = R.decideForm;
+    if (!f.title.trim()){ toast("What's the decision?"); return; }
+    S.decisions.push({id: uid(), title: f.title.trim(), options: f.options.trim(), decision: f.decision.trim(), why: f.why.trim(), ts: Date.now()});
+    R.decideForm = {open: false, title: "", options: "", decision: "", why: ""};
+    buzz(); save(); render();
+    toast("Decision logged ✓");
+  },
+  decideDel(id){ if (confirm("Delete this decision?")){ S.decisions = S.decisions.filter(d => d.id !== id); save(); render(); } },
+  decideDeepSolve(){
+    const f = R.decideForm;
+    R.mode = "life"; R.tab = "chat"; R.homeCat = null; R.convId = null; render();
+    const ta = $("#chatIn");
+    if (ta){ ta.value = `[Deep Solve] Help me decide: ${f.title || ""}. ${f.options ? `Options: ${f.options}. ` : ""}Weigh them with trusted facts and give a definitive recommendation with trade-offs.`; ta.style.height = "auto"; ta.style.height = Math.min(ta.scrollHeight, 120) + "px"; ta.focus(); }
   },
   coachPeriod(d){ R.coachPeriod = d; render(); },
   async coachShare(){
