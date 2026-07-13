@@ -240,6 +240,31 @@ body.kb .chatbar{padding-bottom:6px}
 
 /* ---------- home hub ---------- */
 .home-hero{padding:20px 4px 16px}
+.home-search{
+  display:flex;align-items:center;gap:9px;width:100%;text-align:start;color:var(--txt3);
+  padding:12px 14px;border-radius:14px;background:var(--card);border:1px solid var(--line);
+  box-shadow:var(--cardshadow);margin-bottom:14px;font-size:14.5px;
+}
+.dash-grid{display:flex;gap:10px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px;margin-bottom:16px}
+.dash-grid::-webkit-scrollbar{display:none}
+.dash-tile{
+  flex:0 0 auto;min-width:112px;text-align:start;padding:12px 13px;border-radius:14px;
+  background:var(--card);border:1px solid var(--line);color:var(--txt);box-shadow:var(--cardshadow);
+}
+.dash-tile .dt-l{font-size:11px;color:var(--txt2);font-weight:500}
+.dash-tile .dt-v{font-size:19px;font-weight:700;color:var(--acc);margin-top:3px;white-space:nowrap}
+.dash-tile .dt-s{font-size:11px;color:var(--txt3);margin-top:1px}
+.in-mic{position:absolute;top:29px;right:6px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:8px;color:var(--txt3)}
+.in-mic:active{background:var(--acc-soft);color:var(--acc)}
+.search-panel{
+  position:fixed;left:0;right:0;top:0;z-index:70;background:var(--bg);
+  padding:calc(var(--safe-top) + 10px) 12px 12px;max-height:100%;display:flex;flex-direction:column;
+  border-bottom:1px solid var(--line2);box-shadow:var(--shadow);
+}
+.search-bar{display:flex;align-items:center;gap:8px;color:var(--txt3)}
+.search-bar input{border:none;background:none;flex:1;padding:8px 2px;min-height:40px;color:var(--txt)}
+.search-results{overflow-y:auto;margin-top:10px;display:flex;flex-direction:column;gap:8px;max-height:70vh}
+@media(min-width:700px){.search-panel{max-width:560px;margin:0 auto}}
 .home-hero .hi{font-size:14.5px;color:var(--txt2);font-weight:500}
 .home-hero .q{font-family:Georgia,"Times New Roman",serif;font-size:27px;font-weight:600;margin-top:5px;line-height:1.22}
 .cat-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
@@ -548,7 +573,7 @@ body.kb .chatbar{padding-bottom:6px}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.20";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.21";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -630,6 +655,8 @@ const I = {
   creditCard: '<rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/>',
   scale: '<line x1="12" y1="3" x2="12" y2="21"/><line x1="6" y1="6" x2="18" y2="6"/><path d="M6 6 3 13a3 3 0 0 0 6 0z"/><path d="M18 6l3 7a3 3 0 0 1-6 0z"/><line x1="7" y1="21" x2="17" y2="21"/>',
   plane: '<path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/>',
+  mic: '<path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/>',
+  x: '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',
   trash: '<polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
   database: '<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>',
   trend: '<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>',
@@ -864,6 +891,7 @@ const R = {
   tripForm: {open: false, dest: "", start: "", end: "", budget: ""},
   decideForm: {open: false, title: "", options: "", decision: "", why: ""},
   cmpNew: "", optForm: {name: "", price: "", pros: "", cons: "", source: ""},
+  searchOpen: false, searchQ: "",
 };
 
 /* ---------------- root render ---------------- */
@@ -906,6 +934,7 @@ function render(){
     }</div>
     ${R.tab === "chat" ? chatbarHTML() : ""}
     ${R.sheet === "chats" ? chatSheetHTML() : ""}
+    ${R.searchOpen ? searchHTML() : ""}
     <div class="tabbar">
       ${tabBtn("home", "home", "Home")}${tabBtn("chat", "chat", "Chat")}${tabBtn("food", "food", "Food")}${tabBtn("body", "weight", "Body")}${tabBtn("set", "gear", "Settings")}
     </div>`;
@@ -998,6 +1027,29 @@ function domFeatures(d){
     ask("target", "Deep Solve a problem", "Two-stage reasoning", "deep"),
   ];
 }
+function homeDashHTML(){
+  const t = todayStr();
+  const tg = S.settings.targets;
+  const tot = (typeof dayTotals === "function") ? dayTotals(t) : {kcal: 0, p: 0};
+  const gl = S.water[t] || 0;
+  const waterPct = Math.min(100, (gl * 250 / S.settings.waterGoal) * 100);
+  const kcalLeft = Math.max(0, tg.kcal - tot.kcal);
+  const pLeft = Math.max(0, tg.protein - tot.p);
+  const open = (typeof openTasks === "function") ? openTasks() : (S.tasks || []).filter(x => !x.done);
+  const nextTask = open[0];
+  const bill = [...(S.bills || [])].filter(b => b.next && b.next >= t).sort((a, b) => a.next < b.next ? -1 : 1)[0];
+  const anyData = S.foods.length || (S.tasks || []).length || (S.bills || []).length || gl;
+  if (!anyData) return "";
+  const tile = (label, val, sub, onclick) => `<button class="dash-tile" onclick="${onclick}">
+    <div class="dt-l">${label}</div><div class="dt-v">${val}</div>${sub ? `<div class="dt-s">${sub}</div>` : ""}</button>`;
+  return `<div class="dash-grid">
+    ${tg.kcal ? tile("Calories left", n0(kcalLeft), `${n0(tot.kcal)} / ${n0(tg.kcal)}`, "M.goTab('food')") : ""}
+    ${tg.protein ? tile("Protein left", n1(pLeft) + " g", `${n1(tot.p)} / ${n0(tg.protein)} g`, "M.goTab('food')") : ""}
+    ${tile("Water", (gl * 0.25).toFixed(2) + " L", `${Math.round(waterPct)}% of goal`, "M.goTab('food')")}
+    ${nextTask ? tile("Next task", esc(nextTask.title.length > 22 ? nextTask.title.slice(0, 21) + "…" : nextTask.title), nextTask.due ? "due " + fmtDate(nextTask.due) : PRIOS[nextTask.priority].label, "M.goWork('tasks')") : ""}
+    ${bill ? tile("Next bill", esc(bill.name), fmtDate(bill.next), "M.goLife('bills')") : ""}
+  </div>`;
+}
 function homeHTML(){
   if (R.homeCat) return catPageHTML();
   return `
@@ -1005,6 +1057,8 @@ function homeHTML(){
       <div class="hi">${greeting()}</div>
       <div class="q">How can I help you today?</div>
     </div>
+    <button class="home-search" onclick="M.searchOpen()">${ic("search", 16)} <span>Search everything…</span></button>
+    ${homeDashHTML()}
     <div class="cat-grid">
       ${S.domains.map(d => `
         <button class="cat-card" style="--mc:${d.color}" onclick="M.home('${d.id}')">
@@ -1032,6 +1086,64 @@ function catPageHTML(){
         <span class="fc-ar">${ic("chevR", 16)}</span>
       </button>`).join("")}
     </div>`;
+}
+
+/* ---------------- global search ---------------- */
+function searchAll(q){
+  const query = q.trim().toLowerCase();
+  if (!query) return [];
+  const hit = s => s && String(s).toLowerCase().includes(query);
+  const out = [];
+  const push = (type, id, icon, label, sub) => out.push({type, id, icon, label, sub});
+  (S.tasks || []).filter(t => hit(t.title)).slice(0, 6).forEach(t => push("task", t.id, "checkSquare", t.title, t.done ? "Task · done" : "Task" + (t.due ? " · due " + t.due : "")));
+  (S.notes || []).filter(n => hit(n.title) || hit(n.body)).slice(0, 6).forEach(n => push("note", n.id, "fileText", n.title || "Untitled note", "Note"));
+  (S.savedFoods || []).filter(f => hit(f.name)).slice(0, 6).forEach(f => push("food", null, "food", f.name, `${n0(f.kcal)} kcal · ${n1(f.p)}P`));
+  (S.workouts || []).filter(w => hit(w.name) || w.items.some(it => hit(it.name))).slice(0, 5).forEach(w => push("workout", w.id, "barbell", w.name, `Workout · ${fmtDate(w.date)}`));
+  (S.exercises || []).filter(e => hit(e.n)).slice(0, 4).forEach(e => push("exercise", e.id, "list", e.n, "Exercise"));
+  (S.supplements || []).filter(s => hit(s.name)).slice(0, 4).forEach(s => push("supp", s.id, "pill", s.name, "Supplement"));
+  (S.bills || []).filter(b => hit(b.name)).slice(0, 5).forEach(b => push("bill", b.id, "creditCard", b.name, "Bill · " + b.cycle));
+  (S.trips || []).filter(t => hit(t.dest) || hit(t.notes)).slice(0, 4).forEach(t => push("trip", t.id, "plane", t.dest || "Trip", "Trip"));
+  (S.compares || []).filter(c => hit(c.title) || c.options.some(o => hit(o.name))).slice(0, 4).forEach(c => push("compare", c.id, "scale", c.title, "Comparison"));
+  (S.decisions || []).filter(d => hit(d.title) || hit(d.options) || hit(d.why)).slice(0, 4).forEach(d => push("decision", d.id, "target", d.title, "Decision"));
+  (S.convs || []).filter(c => hit(c.title) || c.msgs.some(m => hit(m.content))).slice(0, 6).forEach(c => {
+    const dom = S.domains.find(d => d.id === c.dom);
+    push("chat", c.id, "chat", c.title || "Chat", "Chat · " + (dom ? dom.name : ""));
+  });
+  return out.slice(0, 40);
+}
+function searchHTML(){
+  const res = searchAll(R.searchQ);
+  return `<div class="sheet-mask show" onclick="M.searchClose()"></div>
+  <div class="search-panel">
+    <div class="search-bar">
+      ${ic("search", 18)}
+      <input id="globalSearch" value="${esc(R.searchQ)}" oninput="R.searchQ=this.value;render()" placeholder="Search tasks, notes, foods, chats…" autocomplete="off">
+      <button class="icon-btn" aria-label="Close search" onclick="M.searchClose()">${ic("x", 20)}</button>
+    </div>
+    <div class="search-results">
+      ${!R.searchQ.trim() ? `<div class="muted" style="padding:14px 4px">Type to search across everything on this device.</div>`
+        : res.length ? res.map(r => `<button class="feat-card" onclick="M.searchGo('${r.type}','${r.id}')">
+          <span class="fc-ic">${ic(r.icon, 18)}</span>
+          <span class="fc-tx"><span class="fc-nm" dir="auto">${esc(r.label)}</span><span class="fc-ds">${esc(r.sub)}</span></span>
+        </button>`).join("")
+        : `<div class="muted" style="padding:14px 4px">No matches for "${esc(R.searchQ)}".</div>`}
+    </div>
+  </div>`;
+}
+
+/* ---------------- voice input (Web Speech API) ---------------- */
+function startVoice(cb){
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR){ toast("Voice input isn't supported on this browser."); return; }
+  try {
+    const r = new SR();
+    r.lang = (S.settings.lang === "ar") ? "ar-SA" : (navigator.language || "en-US");
+    r.interimResults = false; r.maxAlternatives = 1;
+    r.onresult = e => cb(e.results[0][0].transcript);
+    r.onerror = ev => { if (ev.error !== "aborted") toast("Didn't catch that — try again."); };
+    r.start();
+    toast("Listening…", 1600);
+  } catch (e) { toast("Voice input unavailable."); }
 }
 
 /* ---------------- lock screen ---------------- */
@@ -1456,6 +1568,7 @@ function chatbarHTML(){
     ${R.attach ? `<div class="attach-pill">${ic("paperclip", 13)} <b>${esc(R.attach.name)}</b><button onclick="M.attachClear()" style="color:var(--txt2)">✕</button></div>` : ""}
     <div class="inner">
       <button class="icon-btn" aria-label="Attach photo or PDF" onclick="M.attach()" title="Attach photo or PDF">${ic("paperclip", 19)}</button>
+      <button class="icon-btn" aria-label="Voice input" onclick="M.voiceChat()" title="Voice input">${ic("mic", 19)}</button>
       <button class="icon-btn ds ${R.deepSolve ? "on" : ""}" aria-label="Deep Solve" aria-pressed="${R.deepSolve}" onclick="M.toggleDS()" title="Deep Solve">${ic("layers", 19)}</button>
       <button class="icon-btn ds ${S.settings.webSearch ? "on" : ""}" aria-label="Live web search" aria-pressed="${!!S.settings.webSearch}" onclick="M.toggleWeb()" title="Live web search">${ic("globe", 19)}</button>
       <textarea id="chatIn" rows="1" placeholder="Message MIRA…" dir="auto" aria-label="Message MIRA"
@@ -1761,8 +1874,9 @@ function foodHTML(){
     <h3>${ic("plus", 16)} Log food</h3>
     <div class="fold-body" style="display:block">
       <div class="field ac-wrap"><label>Food name</label>
-        <input id="ffName" value="${esc(foodForm.name)}" placeholder="Start typing — saved foods appear" dir="auto" autocomplete="off"
+        <input id="ffName" value="${esc(foodForm.name)}" placeholder="Start typing — saved foods appear" dir="auto" autocomplete="off" style="padding-right:44px"
           oninput="M.ffName(this.value)" onfocus="M.ffName(this.value)" onblur="setTimeout(()=>M.acHide(),180)">
+        <button class="in-mic" aria-label="Voice input" onmousedown="event.preventDefault()" onclick="M.voiceFood()">${ic("mic", 17)}</button>
         <div id="acList"></div>
       </div>
       <div class="grid2" style="margin-bottom:12px">
@@ -3225,6 +3339,31 @@ window.M = {
   goTab(t){ R.tab = t; R.homeCat = null; R.sheet = null; if (t === "chat") R.convId = null; render(); },
   home(catId){ R.homeCat = catId; render(); },
   homeBack(){ R.homeCat = null; render(); },
+
+  /* ---- global search ---- */
+  searchOpen(){ R.searchOpen = true; R.searchQ = ""; render(); const el = $("#globalSearch"); if (el) el.focus(); },
+  searchClose(){ R.searchOpen = false; R.searchQ = ""; render(); },
+  searchGo(type, id){
+    R.searchOpen = false; R.searchQ = ""; R.homeCat = null; R.sheet = null;
+    switch (type){
+      case "task": R.tab = "work"; R.workTab = "tasks"; R.noteId = null; break;
+      case "note": R.tab = "work"; R.workTab = "notes"; R.noteId = id; break;
+      case "food": R.tab = "food"; break;
+      case "workout": R.tab = "train"; R.trainTab = "history"; break;
+      case "exercise": R.tab = "train"; R.trainTab = "library"; break;
+      case "supp": R.tab = "health"; R.healthTab = "supps"; break;
+      case "bill": R.tab = "life"; R.lifeTab = "bills"; R.tripId = R.compareId = null; break;
+      case "trip": R.tab = "life"; R.lifeTab = "trips"; R.tripId = id; R.compareId = null; break;
+      case "compare": R.tab = "life"; R.lifeTab = "compare"; R.compareId = id; R.tripId = null; break;
+      case "decision": R.tab = "life"; R.lifeTab = "decide"; R.tripId = R.compareId = null; break;
+      case "chat": { const c = S.convs.find(x => x.id === id); if (c){ R.mode = c.dom; R.convId = c.id; } R.tab = "chat"; break; }
+    }
+    render();
+  },
+
+  /* ---- voice input ---- */
+  voiceChat(){ startVoice(t => { const ta = $("#chatIn"); if (ta){ ta.value = (ta.value ? ta.value + " " : "") + t; ta.style.height = "auto"; ta.style.height = Math.min(ta.scrollHeight, 120) + "px"; ta.focus(); } }); },
+  voiceFood(){ startVoice(t => { foodForm.name = t; render(); acRender(t); }); },
 
   /* ---- training ---- */
   goTrain(sub){ R.tab = "train"; R.trainTab = sub || "today"; R.homeCat = null; R.sheet = null; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
