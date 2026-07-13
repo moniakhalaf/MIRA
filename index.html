@@ -308,6 +308,24 @@ body.kb .chatbar{padding-bottom:6px}
 .rest-track{height:8px;border-radius:5px;background:var(--track);overflow:hidden;margin-top:8px}
 .rest-track i{display:block;height:100%;background:var(--acc);width:0;border-radius:5px;transition:width .25s linear}
 .rest-bar .icon-btn{width:34px;height:34px;min-width:34px;font-size:20px;font-weight:600;background:var(--bg2);border:1px solid var(--line)}
+.supp-row{
+  display:flex;align-items:center;gap:12px;width:100%;text-align:start;color:var(--txt);
+  padding:11px 12px;border-radius:12px;background:var(--bg2);border:1px solid var(--line);margin-bottom:8px;min-height:56px;
+}
+.supp-row.on{border-color:var(--acc);background:var(--acc-soft)}
+.supp-check{
+  width:26px;height:26px;flex:0 0 auto;border-radius:50%;border:1.5px solid var(--line2);
+  display:flex;align-items:center;justify-content:center;color:var(--btn-ink);
+}
+.supp-row.on .supp-check{background:var(--acc);border-color:var(--acc)}
+.supp-tx{flex:1;display:flex;flex-direction:column;gap:1px;min-width:0}
+.supp-nm{font-size:14.5px;font-weight:500}
+.supp-ds{font-size:12px;color:var(--txt2)}
+.supp-row .del{flex:0 0 auto;color:var(--txt3);min-width:34px;min-height:34px;display:flex;align-items:center;justify-content:center;border-radius:8px}
+.rev-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.rev-stat{background:var(--bg2);border-radius:12px;padding:12px 8px;text-align:center}
+.rev-stat .rv{font-size:19px;font-weight:700;color:var(--acc)}
+.rev-stat .rl{font-size:11px;color:var(--txt2);margin-top:2px}
 
 /* ---------- chat ---------- */
 .chat-head{
@@ -515,7 +533,7 @@ body.kb .chatbar{padding-bottom:6px}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.16";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.17";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -590,6 +608,8 @@ const I = {
   play: '<polygon points="6 4 20 12 6 20 6 4"/>',
   check: '<polyline points="20 6 9 17 4 12"/>',
   list: '<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>',
+  pill: '<path d="M10.5 20.5 3.5 13.5a4.95 4.95 0 0 1 7-7l7 7a4.95 4.95 0 0 1-7 7z"/><line x1="8.5" y1="8.5" x2="15.5" y2="15.5"/>',
+  moon: '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>',
   trash: '<polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
   database: '<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>',
   trend: '<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>',
@@ -653,6 +673,9 @@ const BLANK = () => ({
   exercises: [],      // user-added exercises {id, n, m, e, c, source}
   workouts: [],       // {id, date, name, items:[{name, muscle, sets:[{reps, weight}], note}], ts}
   routines: [],       // {id, name, items:[{name, muscle}]}
+  supplements: [],    // {id, name, dose, timing}
+  suppLog: {},        // date -> [suppId, ...] taken
+  sleep: [],          // {id, date, hours, quality(1-5), note}
   water: {},          // date -> glasses
   inbody: [],         // {id, date, weight, score, bfm, smm, vfa, pa}
 });
@@ -680,6 +703,9 @@ function migrateChats(){
   if (!Array.isArray(S.exercises)) S.exercises = [];
   if (!Array.isArray(S.workouts)) S.workouts = [];
   if (!Array.isArray(S.routines)) S.routines = [];
+  if (!Array.isArray(S.supplements)) S.supplements = [];
+  if (!S.suppLog || typeof S.suppLog !== "object") S.suppLog = {};
+  if (!Array.isArray(S.sleep)) S.sleep = [];
   if (S.settings.restLen === undefined) S.settings.restLen = 90;
   if (!S.settings.coach) S.settings.coach = {name: "", email: ""};
   if (S.settings.webSearch === undefined) S.settings.webSearch = true;
@@ -765,6 +791,10 @@ const R = {
   progEx: "",
   coachPeriod: 30,
   plateOpen: false,
+  healthTab: "supps",  // supps | sleep | review
+  suppForm: {open: false, name: "", dose: "", timing: "Morning"},
+  sleepQ: 0,
+  sleepForm: {date: "", hours: "", note: ""},
 };
 
 /* ---------------- root render ---------------- */
@@ -780,12 +810,13 @@ function render(){
   const dom = curDomain();
   const catDom = (R.tab === "home" && R.homeCat) ? S.domains.find(d => d.id === R.homeCat) : null;
   const trainDom = R.tab === "train" ? S.domains.find(d => d.id === "fitness") : null;
-  const accClr = R.tab === "chat" ? dom.color : catDom ? catDom.color : trainDom ? trainDom.color : null;
+  const healthDom = R.tab === "health" ? S.domains.find(d => d.id === "health") : null;
+  const accClr = R.tab === "chat" ? dom.color : catDom ? catDom.color : trainDom ? trainDom.color : healthDom ? healthDom.color : null;
   document.documentElement.style.setProperty("--acc", accClr || "var(--gold)");
   document.documentElement.style.setProperty("--acc-soft", accClr ? hexSoft(accClr) : "var(--gold-soft)");
   const sub = R.tab === "chat" ? `<span class="mode-dot"></span>${esc(dom.name)}`
     : R.tab === "home" ? esc(catDom ? catDom.name : "Home")
-    : R.tab === "train" ? "Training" : esc(tabTitle());
+    : R.tab === "train" ? "Training" : R.tab === "health" ? "Health" : esc(tabTitle());
   app.innerHTML = `
     <div class="topbar" id="topbar">
       <div class="brand">MIRA</div>
@@ -795,6 +826,7 @@ function render(){
     <div class="content" id="content">${
       R.tab === "home" ? homeHTML() :
       R.tab === "train" ? trainHTML() :
+      R.tab === "health" ? healthHTML() :
       R.tab === "chat" ? chatHTML() :
       R.tab === "food" ? foodHTML() :
       R.tab === "body" ? bodyHTML() : settingsHTML()
@@ -861,11 +893,12 @@ function domFeatures(d){
   ];
   if (id === "health") return [
     go("food", "Food log", "Today's macros & targets", "food"),
+    {icon: "pill", label: "Supplements", desc: "Daily checklist & adherence", on: `M.goHealth('supps')`},
+    {icon: "moon", label: "Sleep log", desc: "Hours, quality & trend", on: `M.goHealth('sleep')`},
+    {icon: "chart", label: "Health review", desc: "Your week at a glance", on: `M.goHealth('review')`},
     go("droplet", "Hydration", "Track your water", "food"),
-    go("search", "Find macros", "Any food, labelled honestly", "food"),
     {icon: "sun", label: "Daily brief", desc: "What to eat, drink & do", on: `M.dailyBrief('${id}')`},
-    {icon: "share", label: "Coach report", desc: "Share food & training", on: `M.goTrain('coach')`},
-    ask("chat", "Ask about nutrition", "Evidence-based answers", ""),
+    ask("chat", "Ask about health", "Evidence-based answers", ""),
   ];
   if (id === "fitness") return [
     {icon: "barbell", label: "Workout log", desc: "Track sets, reps & PRs", on: `M.goTrain('today')`},
@@ -1061,6 +1094,28 @@ function liveContext(){
     lines.push(`Body-composition log (most recent last): ${recent.map(e =>
       `${e.date}: weight ${e.weight} kg, InBody score ${e.score}, body-fat mass ${e.bfm} kg, skeletal-muscle mass ${e.smm} kg, visceral-fat area ${e.vfa} cm², phase angle ${e.pa}°`).join(" | ")}.`);
   } else lines.push(`Body-composition log: no entries yet.`);
+  // sleep (last 7)
+  if (Array.isArray(S.sleep) && S.sleep.length){
+    const since = new Date(Date.now() - 6 * 864e5).toLocaleDateString("en-CA");
+    const es = S.sleep.filter(e => e.date >= since);
+    if (es.length){
+      const avgH = es.reduce((a, e) => a + (+e.hours || 0), 0) / es.length;
+      lines.push(`Sleep (last 7 days): ${es.length} nights logged, average ${(Math.round(avgH * 10) / 10)} h/night. Recent: ${es.slice(-4).map(e => `${e.date} ${e.hours}h${e.quality ? ` q${e.quality}/5` : ""}`).join(", ")}.`);
+    }
+  }
+  // supplements + adherence
+  if (Array.isArray(S.supplements) && S.supplements.length){
+    let taken = 0, total = 0;
+    for (let k = 0; k < 7; k++){ const d = new Date(Date.now() - k * 864e5).toLocaleDateString("en-CA"); const set = new Set(S.suppLog[d] || []); total += S.supplements.length; S.supplements.forEach(s => { if (set.has(s.id)) taken++; }); }
+    const t = todayStr(); const todaySet = new Set(S.suppLog[t] || []);
+    lines.push(`Supplements: ${S.supplements.map(s => `${s.name}${s.timing ? ` (${s.timing})` : ""}`).join(", ")}. Taken today: ${S.supplements.filter(s => todaySet.has(s.id)).map(s => s.name).join(", ") || "none yet"}. 7-day adherence ${total ? Math.round(taken / total * 100) : 0}%.`);
+  }
+  // workouts (last 7)
+  if (Array.isArray(S.workouts) && S.workouts.length){
+    const since = new Date(Date.now() - 6 * 864e5).toLocaleDateString("en-CA");
+    const ws = S.workouts.filter(w => w.date >= since);
+    if (ws.length) lines.push(`Training (last 7 days): ${ws.length} workout${ws.length > 1 ? "s" : ""} — ${ws.map(w => `${w.date} ${w.name}`).join(", ")}.`);
+  }
   return lines.join("\n");
 }
 
@@ -2259,6 +2314,155 @@ function coachReport(days){
 </script>
 <script>
 "use strict";
+/* ============================================================
+   Health hub — supplements tracker, sleep log, weekly review.
+   (Nutrition/hydration live in the Food tab; this complements them.)
+   ============================================================ */
+
+const SUPP_TIMINGS = ["Morning","Midday","Evening","Pre-workout","Bedtime","Any"];
+
+/* ---- helpers ---- */
+function suppTakenSet(date){ return new Set(S.suppLog[date] || []); }
+function suppAdherence(days){
+  if (!S.supplements.length) return null;
+  let taken = 0, total = 0;
+  for (let k = 0; k < days; k++){
+    const d = new Date(Date.now() - k * 864e5).toLocaleDateString("en-CA");
+    const set = suppTakenSet(d);
+    total += S.supplements.length;
+    S.supplements.forEach(s => { if (set.has(s.id)) taken++; });
+  }
+  return total ? Math.round((taken / total) * 100) : 0;
+}
+function sleepRecent(n){ return [...S.sleep].sort((a, b) => a.date < b.date ? -1 : 1).slice(-n); }
+function sleepAvg(days){
+  const since = new Date(Date.now() - (days - 1) * 864e5).toLocaleDateString("en-CA");
+  const es = S.sleep.filter(e => e.date >= since);
+  if (!es.length) return null;
+  const avg = a => a.reduce((x, y) => x + y, 0) / a.length;
+  return {h: avg(es.map(e => num(e.hours))), q: avg(es.map(e => num(e.quality || 0))), n: es.length};
+}
+
+/* ---- view ---- */
+function healthHTML(){
+  const tabs = [["supps","Supplements"],["sleep","Sleep"],["review","Review"]];
+  return `
+    <button class="cat-back" onclick="M.healthBack()">${ic("back", 18)} Health</button>
+    <div class="cat-title"><div class="ch-nm">Health</div><div class="ch-ds">Supplements · sleep · review</div></div>
+    <div class="chip-row seg-tabs">${tabs.map(([k, l]) =>
+      `<button class="chip ${R.healthTab === k ? "on" : ""}" onclick="M.healthGo('${k}')">${l}</button>`).join("")}</div>
+    <div style="margin-top:12px">${
+      R.healthTab === "supps" ? healthSuppHTML() :
+      R.healthTab === "sleep" ? healthSleepHTML() : healthReviewHTML()
+    }</div>`;
+}
+
+function healthSuppHTML(){
+  const t = todayStr();
+  const taken = suppTakenSet(t);
+  const adh = suppAdherence(7);
+  return `
+    <div class="card">
+      <h3>${ic("pill", 16)} Today${adh !== null ? ` <span class="badge" style="margin-inline-start:auto">${adh}% this week</span>` : ""}</h3>
+      ${S.supplements.length ? `<div class="muted" style="margin-bottom:8px">Tap to mark what you've taken today.</div>
+      ${S.supplements.map(s => {
+        const on = taken.has(s.id);
+        return `<button class="supp-row ${on ? "on" : ""}" onclick="M.suppToggle('${s.id}')">
+          <span class="supp-check">${on ? ic("check", 15) : ""}</span>
+          <span class="supp-tx"><span class="supp-nm" dir="auto">${esc(s.name)}</span>
+            <span class="supp-ds">${[s.dose, s.timing].filter(Boolean).map(esc).join(" · ")}</span></span>
+          <span class="del" aria-label="Delete supplement" onclick="event.stopPropagation();M.suppDel('${s.id}')">${ic("trash", 13)}</span>
+        </button>`;
+      }).join("")}` : `<div class="muted">Add the supplements or vitamins you take to build a daily checklist and track adherence.</div>`}
+    </div>
+    <div class="card fold ${R.suppForm.open ? "open" : ""}">
+      <h3 onclick="M.suppFormToggle()">${ic("plus", 16)} Add supplement <span class="chev">▶</span></h3>
+      <div class="fold-body">
+        <div class="field"><label>Name</label><input value="${esc(R.suppForm.name)}" oninput="R.suppForm.name=this.value" placeholder="e.g. Vitamin D3" dir="auto"></div>
+        <div class="grid2" style="margin-bottom:10px">
+          <div class="field"><label>Dose (optional)</label><input value="${esc(R.suppForm.dose)}" oninput="R.suppForm.dose=this.value" placeholder="e.g. 2000 IU"></div>
+          <div class="field"><label>Timing</label><select onchange="R.suppForm.timing=this.value">${SUPP_TIMINGS.map(x => `<option ${R.suppForm.timing === x ? "selected" : ""}>${x}</option>`).join("")}</select></div>
+        </div>
+        <button class="btn sm" onclick="M.suppSave()">Add to my list</button>
+      </div>
+    </div>
+    <div class="tiny" style="text-align:center;padding:2px 6px">MIRA answers supplement questions only from reputable evidence — ask in Health chat before starting anything new.</div>`;
+}
+
+function healthSleepHTML(){
+  const rec = sleepRecent(14);
+  const a7 = sleepAvg(7);
+  let chart = "";
+  if (rec.length >= 2){
+    const hs = rec.map(e => num(e.hours)), min = Math.min(...hs, 0), max = Math.max(...hs, 8), span = Math.max(max - min, 1);
+    const W = 154, H = 42;
+    const xy = hs.map((h, i) => `${(i / (hs.length - 1)) * (W - 8) + 4},${H - 6 - ((h - min) / span) * (H - 12)}`);
+    chart = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:56px;display:block;margin:6px 0 2px">
+      <polyline points="${xy.join(" ")}" fill="none" stroke="var(--acc)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="${xy[xy.length - 1].split(",")[0]}" cy="${xy[xy.length - 1].split(",")[1]}" r="3" fill="var(--acc)"/></svg>`;
+  }
+  return `
+    <div class="card">
+      <h3>${ic("moon", 16)} Log sleep</h3>
+      <div class="grid2" style="margin-bottom:10px">
+        <div class="field"><label>Date</label><input id="slpDate" type="date" value="${esc(R.sleepForm.date || todayStr())}" oninput="R.sleepForm.date=this.value"></div>
+        <div class="field"><label>Hours slept</label><input id="slpHours" type="number" inputmode="decimal" step="0.5" placeholder="e.g. 7.5" value="${esc(R.sleepForm.hours)}" oninput="R.sleepForm.hours=this.value"></div>
+      </div>
+      <div class="field"><label>Quality</label>
+        <div class="seg" id="slpQual">${[1,2,3,4,5].map(q => `<button data-q="${q}" onclick="M.sleepQual(${q})" class="${R.sleepQ === q ? "on" : ""}">${q}</button>`).join("")}</div></div>
+      <div class="field"><label>Note (optional)</label><input id="slpNote" placeholder="e.g. woke twice" dir="auto" value="${esc(R.sleepForm.note)}" oninput="R.sleepForm.note=this.value"></div>
+      <button class="btn sm" onclick="M.sleepSave()">Save sleep</button>
+    </div>
+    ${a7 ? `<div class="card">
+      <h3>${ic("chart", 16)} Last 7 days</h3>
+      ${chart}
+      <div class="muted">Average <b>${n1(a7.h)} h</b>/night${a7.q ? ` · quality <b>${n1(a7.q)}/5</b>` : ""} over ${a7.n} night${a7.n > 1 ? "s" : ""}.</div>
+    </div>` : ""}
+    ${rec.length ? `<div class="card">
+      <h3>Recent nights</h3>
+      ${[...rec].reverse().map(e => `<div class="set-row">
+        <div><div class="k">${fmtDate(e.date)}</div><div class="desc">${n1(e.hours)} h${e.quality ? ` · quality ${e.quality}/5` : ""}${e.note ? ` · ${esc(e.note)}` : ""}</div></div>
+        <span class="end"><button class="btn sm danger" aria-label="Delete" onclick="M.sleepDel('${e.id}')">${ic("trash", 13)}</button></span>
+      </div>`).join("")}
+    </div>` : `<div class="card"><div class="muted">No sleep logged yet. Track a few nights to see your trend.</div></div>`}`;
+}
+
+function healthReviewHTML(){
+  const tg = S.settings.targets;
+  // nutrition last 7
+  const dl = [];
+  for (let k = 0; k < 7; k++){ const d = new Date(Date.now() - k * 864e5).toLocaleDateString("en-CA"); const tt = dayTotals(d); if (tt.kcal > 0) dl.push({d, tt, water: (S.water[d] || 0) * 250}); }
+  const avg = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0;
+  const onT = tg.kcal ? dl.filter(x => x.tt.kcal >= tg.kcal * 0.9 && x.tt.kcal <= tg.kcal * 1.1).length : 0;
+  const waterHits = (() => { let n = 0; for (let k = 0; k < 7; k++){ const d = new Date(Date.now() - k * 864e5).toLocaleDateString("en-CA"); if ((S.water[d] || 0) * 250 >= S.settings.waterGoal) n++; } return n; })();
+  const slp = sleepAvg(7);
+  const adh = suppAdherence(7);
+  const wsince = new Date(Date.now() - 7 * 864e5).toLocaleDateString("en-CA");
+  const wl = S.inbody.filter(e => e.weight && e.date >= wsince).sort((a, b) => a.date < b.date ? -1 : 1);
+  const workouts = S.workouts.filter(w => w.date >= wsince).length;
+  const stat = (label, val) => `<div class="rev-stat"><div class="rv">${val}</div><div class="rl">${label}</div></div>`;
+  return `
+    <div class="card">
+      <h3>${ic("chart", 16)} This week</h3>
+      <div class="rev-grid">
+        ${stat("Days logged", `${dl.length}/7`)}
+        ${tg.kcal ? stat("On target", `${onT}/${dl.length || 0}`) : ""}
+        ${stat("Water goal", `${waterHits}/7`)}
+        ${slp ? stat("Avg sleep", `${n1(slp.h)} h`) : stat("Avg sleep", "—")}
+        ${adh !== null ? stat("Supplements", `${adh}%`) : ""}
+        ${stat("Workouts", `${workouts}`)}
+      </div>
+      ${dl.length ? `<div class="muted" style="margin-top:10px">Avg ${n0(avg(dl.map(x => x.tt.kcal)))} kcal · ${n1(avg(dl.map(x => x.tt.p)))} g protein/day${wl.length >= 2 ? ` · weight ${n1(+wl[0].weight)}→${n1(+wl[wl.length - 1].weight)} kg` : ""}.</div>` : ""}
+    </div>
+    <div class="card">
+      <h3>${ic("sun", 16)} MIRA's read</h3>
+      <div class="muted" style="margin-bottom:10px">Get an evidence-based review of your week — what's going well, what to adjust, and one priority — grounded in your own data.</div>
+      <button class="btn" onclick="M.healthReviewAsk()">Ask MIRA to review my week</button>
+    </div>`;
+}
+</script>
+<script>
+"use strict";
 /* ---------------- body composition ---------------- */
 const IB_METRICS = [
   {k: "weight", label: "Weight",   unit: "kg",  goodDir: 0},
@@ -2681,6 +2885,51 @@ window.M = {
       }
     } catch (e) { toast("Lookup failed: " + e.message, 4000); }
     R.aiExBusy = false; render();
+  },
+  /* ---- health hub ---- */
+  goHealth(sub){ R.tab = "health"; R.healthTab = sub || "supps"; R.homeCat = null; R.sheet = null; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
+  healthBack(){ R.tab = "home"; R.homeCat = "health"; render(); },
+  healthGo(t){ R.healthTab = t; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
+  suppToggle(id){
+    const t = todayStr();
+    const arr = S.suppLog[t] = S.suppLog[t] || [];
+    const i = arr.indexOf(id);
+    if (i >= 0) arr.splice(i, 1); else { arr.push(id); buzz(); }
+    save(); render();
+  },
+  suppFormToggle(){ R.suppForm.open = !R.suppForm.open; render(); },
+  suppSave(){
+    if (!R.suppForm.name.trim()){ toast("Give the supplement a name."); return; }
+    S.supplements.push({id: uid(), name: R.suppForm.name.trim(), dose: R.suppForm.dose.trim(), timing: R.suppForm.timing});
+    R.suppForm = {open: false, name: "", dose: "", timing: "Morning"};
+    save(); render();
+    toast("Added to your list ✓");
+  },
+  suppDel(id){
+    if (!confirm("Remove this supplement from your list?")) return;
+    S.supplements = S.supplements.filter(s => s.id !== id);
+    Object.keys(S.suppLog).forEach(d => { S.suppLog[d] = S.suppLog[d].filter(x => x !== id); });
+    save(); render();
+  },
+  sleepQual(q){ R.sleepQ = q; render(); },
+  sleepSave(){
+    const date = R.sleepForm.date || todayStr();
+    const hours = num(R.sleepForm.hours);
+    if (hours <= 0 || hours > 24){ toast("Enter hours slept."); return; }
+    const note = (R.sleepForm.note || "").trim();
+    S.sleep = S.sleep.filter(e => e.date !== date);   // one entry per date
+    S.sleep.push({id: uid(), date, hours, quality: R.sleepQ || 0, note});
+    R.sleepQ = 0; R.sleepForm = {date: "", hours: "", note: ""};
+    buzz(); save(); render();
+    toast(`Sleep logged: ${n1(hours)} h ✓`);
+  },
+  sleepDel(id){ S.sleep = S.sleep.filter(e => e.id !== id); save(); render(); },
+  healthReviewAsk(){
+    if (!S.settings.apiKey){ toast("Add your API key in Settings first."); R.tab = "set"; render(); return; }
+    R.mode = "health"; R.tab = "chat"; R.homeCat = null; R.convId = null; render();
+    const ta = $("#chatIn");
+    if (ta) ta.value = "Review my last week from my logged data — nutrition, hydration, sleep, supplements, training and weight. Tell me what's going well, what to adjust, and the single most important thing to focus on. Keep it evidence-based and cite where it matters.";
+    sendChat();
   },
   coachPeriod(d){ R.coachPeriod = d; render(); },
   async coachShare(){
