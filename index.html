@@ -629,7 +629,7 @@ body.kb .chatbar{padding-bottom:6px}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.29";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.30";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -951,7 +951,7 @@ function save(){
 const R = {
   tab: "home",
   homeCat: null,      // which domain's category page is open on Home
-  homeReview: false,  // weekly review view open on Home
+  reviewOpen: false,  // weekly review view open (inside Insights tab)
   dashDom: "health",  // selected domain on the Dashboard tab
   mode: S.domains[0]?.id || "work",
   convId: null,       // active conversation id (null = fresh chat)
@@ -1166,7 +1166,6 @@ function homeDashHTML(){
   </div>`;
 }
 function homeHTML(){
-  if (R.homeReview) return weeklyReviewHTML();
   if (R.homeCat) return catPageHTML();
   return `
     <div class="home-hero">
@@ -1175,7 +1174,6 @@ function homeHTML(){
     </div>
     <button class="home-search" onclick="M.searchOpen()">${ic("search", 16)} <span>Search everything…</span></button>
     ${homeDashHTML()}
-    ${weekReviewCardHTML()}
     ${(typeof achievementsHTML === "function") ? achievementsHTML() : ""}
     <div class="cat-grid">
       ${S.domains.map(d => `
@@ -1317,7 +1315,7 @@ function weeklyReviewHTML(){
   ]);
 
   return `
-    <button class="cat-back" aria-label="Back to Home" onclick="M.reviewBack()">${ic("back", 18)} Home</button>
+    <button class="cat-back" aria-label="Back to Insights" onclick="M.reviewBack()">${ic("back", 18)} Insights</button>
     <div class="cat-title">
       <div class="ch-nm">Weekly review</div>
       <div class="ch-ds">${rng}</div>
@@ -1439,6 +1437,7 @@ function trendCard(title, sub, body){
 }
 function trendEmpty(msg){ return `<div class="tc-empty">${msg}</div>`; }
 function trendsHTML(){
+  if (R.reviewOpen) return weeklyReviewHTML();
   const days = last14Dates();
   const tg = S.settings.targets || {};
   const cards = [];
@@ -1475,6 +1474,7 @@ function trendsHTML(){
     setWeeks >= 2 ? barsSVG(setSeries, {color: "#e8863d"}) : trendEmpty("Log workouts across at least 2 weeks to see your volume trend.")));
 
   return `
+    ${weekReviewCardHTML()}
     <div class="wr-note">${ic("check", 13)} Trends are drawn only from what you logged. A chart appears once there are at least two data points; until then it says so.</div>
     ${cards.join("")}
     <div class="tiny" style="text-align:center;margin:4px 0 2px;color:var(--txt2)">More data, sharper trends. Keep logging and these fill in automatically.</div>`;
@@ -4178,17 +4178,17 @@ window.num = num;
 window.M = {
   // Opening the chat surface always starts a FRESH conversation; previous
   // chats stay saved and are reachable via the Chats (clock) button.
-  tab(t){ R.tab = t; R.homeCat = null; R.sheet = null; if (t === "chat") R.convId = null; render(); },
-  goTab(t){ R.tab = t; R.homeCat = null; R.homeReview = false; R.sheet = null; if (t === "chat") R.convId = null; render(); },
-  home(catId){ R.homeCat = catId; R.homeReview = false; render(); },
+  tab(t){ R.tab = t; R.homeCat = null; R.reviewOpen = false; R.sheet = null; if (t === "chat") R.convId = null; render(); },
+  goTab(t){ R.tab = t; R.homeCat = null; R.reviewOpen = false; R.sheet = null; if (t === "chat") R.convId = null; render(); },
+  home(catId){ R.homeCat = catId; R.reviewOpen = false; render(); },
   homeBack(){ R.homeCat = null; render(); },
   dashDom(id){ R.dashDom = id; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
   backToDash(id){ R.tab = "dash"; if (id) R.dashDom = id; R.homeCat = null; R.sheet = null; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
-  openReview(){ R.homeReview = true; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
-  reviewBack(){ R.homeReview = false; render(); },
+  openReview(){ R.tab = "insights"; R.reviewOpen = true; R.homeCat = null; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
+  reviewBack(){ R.reviewOpen = false; R.tab = "insights"; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
   async genReview(){
-    if (!S.settings.apiKey){ toast("Add your API key in Settings first."); R.tab = "set"; R.homeReview = false; render(); return; }
-    R.homeReview = false; R.homeCat = null; R.sheet = null;
+    if (!S.settings.apiKey){ toast("Add your API key in Settings first."); R.tab = "set"; R.reviewOpen = false; render(); return; }
+    R.reviewOpen = false; R.homeCat = null; R.sheet = null;
     R.mode = S.domains[0]?.id || "work"; R.tab = "chat"; R.convId = null; R.deepSolve = false;
     render();
     const ta = $("#chatIn");
