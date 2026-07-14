@@ -506,6 +506,35 @@ body.kb .chatbar{padding-bottom:6px}
 .tc-s{font-size:11.5px;color:var(--txt2)}
 .chart{display:block;width:100%;height:96px}
 .tc-empty{font-size:12.5px;color:var(--txt2);line-height:1.45;padding:14px 4px;text-align:center;background:var(--card2);border-radius:10px}
+.home-chips{margin-top:2px}
+.recent-chats{display:flex;flex-direction:column;gap:8px}
+.recent-chat{display:flex;align-items:center;gap:11px;width:100%;text-align:start;padding:12px 14px;border-radius:13px;background:var(--card);border:1px solid var(--line2)}
+.recent-chat:active{transform:scale(.99)}
+.recent-chat .rch-dot{width:9px;height:9px;min-width:9px;border-radius:50%}
+.recent-chat .rch-tx{flex:1;display:flex;flex-direction:column;gap:1px;min-width:0}
+.recent-chat .rch-nm{font-size:14px;font-weight:550;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.recent-chat .rch-ds{font-size:11.5px;color:var(--txt2)}
+.recent-chat .rch-ar{color:var(--txt2)}
+.today-empty{display:flex;gap:12px;align-items:flex-start;padding:18px 16px;border-radius:15px;background:var(--card);border:1px solid var(--line2)}
+.today-empty svg{color:var(--acc);flex:0 0 auto;margin-top:2px}
+.today-empty b{font-size:15px;color:var(--txt)}
+/* floating quick-add */
+.fab{position:absolute;right:18px;bottom:calc(var(--tabh,64px) + env(safe-area-inset-bottom,0px) + 16px);width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--acc);color:var(--acc-ink,#0d0f14);box-shadow:0 8px 24px rgba(0,0,0,.35);z-index:40;transition:transform .16s}
+.fab:active{transform:scale(.93)}
+.fab.open{background:var(--card);color:var(--txt);border:1px solid var(--line2)}
+.qa-scrim{position:absolute;inset:0;background:rgba(0,0,0,.5);z-index:55;animation:qaFade .18s ease}
+.qa-sheet{position:absolute;left:0;right:0;bottom:0;z-index:56;background:var(--bg2,var(--card));border-radius:20px 20px 0 0;border-top:1px solid var(--line2);padding:8px 14px calc(env(safe-area-inset-bottom,0px) + 18px);animation:qaUp .22s cubic-bezier(.2,.8,.2,1)}
+.qa-grip{width:38px;height:4px;border-radius:2px;background:var(--line2);margin:6px auto 8px}
+.qa-h{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--txt2);margin:2px 4px 10px}
+.qa-item{display:flex;align-items:center;gap:13px;width:100%;text-align:start;padding:12px 8px;border-radius:12px;background:transparent}
+.qa-item:active{background:var(--card2)}
+.qa-item .qa-ic{width:38px;height:38px;min-width:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;background:var(--acc-soft);color:var(--acc)}
+.qa-item .qa-tx{flex:1;display:flex;flex-direction:column;gap:1px}
+.qa-item .qa-nm{font-size:15px;font-weight:550;color:var(--txt)}
+.qa-item .qa-ds{font-size:12px;color:var(--txt2)}
+.qa-item .qa-ar{color:var(--txt2)}
+@keyframes qaFade{from{opacity:0}to{opacity:1}}
+@keyframes qaUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
 .attach-pill{
   display:inline-flex;align-items:center;gap:7px;background:var(--acc-soft);border:1px solid color-mix(in srgb,var(--acc) 30%,transparent);
   border-radius:10px;padding:5px 10px;font-size:12.5px;color:var(--txt);margin:0 12px 6px;
@@ -629,7 +658,7 @@ body.kb .chatbar{padding-bottom:6px}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.30";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.31";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -952,7 +981,8 @@ const R = {
   tab: "home",
   homeCat: null,      // which domain's category page is open on Home
   reviewOpen: false,  // weekly review view open (inside Insights tab)
-  dashDom: "health",  // selected domain on the Dashboard tab
+  homeSection: "today", // selected section on Home: today | health | fitness | work | life
+  quickOpen: false,   // quick-add sheet open
   mode: S.domains[0]?.id || "work",
   convId: null,       // active conversation id (null = fresh chat)
   sheet: null,        // open bottom sheet ("chats" | null)
@@ -1037,16 +1067,17 @@ function render(){
       R.tab === "work" ? workHTML() :
       R.tab === "life" ? lifeHTML() :
       R.tab === "chat" ? chatHTML() :
-      R.tab === "dash" ? dashHTML() :
       R.tab === "insights" ? trendsHTML() :
       R.tab === "food" ? foodHTML() :
       R.tab === "body" ? bodyHTML() : settingsHTML()
     }</div>
     ${R.tab === "chat" ? chatbarHTML() : ""}
+    ${R.tab === "home" ? fabHTML() : ""}
+    ${R.quickOpen ? quickAddHTML() : ""}
     ${R.sheet === "chats" ? chatSheetHTML() : ""}
     ${R.searchOpen ? searchHTML() : ""}
     <div class="tabbar">
-      ${tabBtn("home", "home", "Home")}${tabBtn("chat", "chat", "Chat")}${tabBtn("dash", "grid", "Dashboard")}${tabBtn("insights", "trend", "Insights")}${tabBtn("set", "gear", "Settings")}
+      ${tabBtn("home", "home", "Home")}${tabBtn("chat", "chat", "Chat")}${tabBtn("insights", "trend", "Insights")}${tabBtn("set", "gear", "Settings")}
     </div>`;
   if (R.tab === "home"){ const c = $("#content"); if (c) c.scrollTop = 0; }
   if (typeof ensureFastTimer === "function") ensureFastTimer();
@@ -1063,7 +1094,7 @@ function render(){
   }
 }
 const tabBtn = (id, icon, lb) => `<button class="${R.tab === id ? "on" : ""}" onclick="M.tab('${id}')">${ic(icon, 21)}${lb}</button>`;
-const tabTitle = () => ({food: "Nutrition", body: "Body composition", dash: "Dashboard", insights: "Insights", set: "Settings"}[R.tab] || "");
+const tabTitle = () => ({food: "Nutrition", body: "Body composition", insights: "Insights", set: "Settings"}[R.tab] || "");
 const curDomain = () => S.domains.find(d => d.id === R.mode) || S.domains[0];
 function hexSoft(hex){
   const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
@@ -1165,25 +1196,41 @@ function homeDashHTML(){
     ${bill ? tile("Next bill", esc(bill.name), fmtDate(bill.next), "M.goLife('bills')") : ""}
   </div>`;
 }
+function recentChatsHTML(){
+  const convs = [...(S.convs || [])].sort((a, b) => (b.ts || 0) - (a.ts || 0)).slice(0, 3);
+  if (!convs.length) return "";
+  return `<div class="dash-sec-h">Pick up where you left off</div>
+    <div class="recent-chats">
+      ${convs.map(c => { const dom = S.domains.find(d => d.id === c.dom) || {}; return `<button class="recent-chat" onclick="M.openConv('${c.id}')">
+        <span class="rch-dot" style="background:${dom.color || "var(--acc)"}"></span>
+        <span class="rch-tx"><span class="rch-nm">${esc(c.title || "Chat")}</span><span class="rch-ds">${esc(dom.name || "")}</span></span>
+        <span class="rch-ar">${ic("chevR", 15)}</span></button>`; }).join("")}
+    </div>`;
+}
+function todayOverviewHTML(){
+  const dash = homeDashHTML();
+  return `
+    ${dash || `<div class="today-empty">${ic("target", 18)}<div><b>Your day starts here.</b><div class="muted" style="margin-top:3px">Log something with the + button, pick an area above, or ask MIRA anything.</div></div></div>`}
+    ${(typeof achievementsHTML === "function") ? achievementsHTML() : ""}
+    ${recentChatsHTML()}
+    <button class="btn sec" style="margin-top:14px" onclick="M.tab('chat')">${ic("chat", 16)} Open chat</button>`;
+}
 function homeHTML(){
-  if (R.homeCat) return catPageHTML();
+  const doms = dashDomains();
+  const sections = ["today", ...doms.map(d => d.id)];
+  if (!sections.includes(R.homeSection)) R.homeSection = "today";
+  const chip = (id, label, color, dot) => `<button class="mode-chip ${id === R.homeSection ? "on" : ""}" style="--mc:${color}" onclick="M.homeSection('${id}')">${dot ? `<span class="d"></span>` : ""}${esc(label)}</button>`;
   return `
     <div class="home-hero">
       <div class="hi">${greeting()}</div>
       <div class="q">How can I help you today?</div>
     </div>
     <button class="home-search" onclick="M.searchOpen()">${ic("search", 16)} <span>Search everything…</span></button>
-    ${homeDashHTML()}
-    ${(typeof achievementsHTML === "function") ? achievementsHTML() : ""}
-    <div class="cat-grid">
-      ${S.domains.map(d => `
-        <button class="cat-card" style="--mc:${d.color}" onclick="M.home('${d.id}')">
-          <span class="cc-ic">${ic(domIcon(d.id), 22)}</span>
-          <span class="cc-nm">${esc(d.name)}</span>
-          <span class="cc-ds">${esc(catTagline(d))}</span>
-        </button>`).join("")}
+    <div class="dash-chips home-chips">
+      ${chip("today", "Today", "var(--acc)", false)}
+      ${doms.map(d => chip(d.id, d.name, d.color, true)).join("")}
     </div>
-    <button class="btn sec" onclick="M.tab('chat')">${ic("chat", 16)} Open chat directly</button>`;
+    ${R.homeSection === "today" ? todayOverviewHTML() : domainDashHTML(R.homeSection)}`;
 }
 function catPageHTML(){
   const d = S.domains.find(x => x.id === R.homeCat) || S.domains[0];
@@ -1382,6 +1429,7 @@ function domainDashHTML(id){
     <div class="wr-grid dash-stats">
       ${tiles.map(x => `<div class="wr-tile ${x.v === "—" ? "empty" : ""}"><div class="wr-l">${x.l}</div><div class="wr-v">${x.v}</div><div class="wr-s">${x.s}</div></div>`).join("")}
     </div>
+    <button class="btn cat-ask" style="--mc:${d.color}" onclick="M.enterMode('${d.id}')">${ic("chat", 17)} Ask ${esc(d.name)}</button>
     <div class="dash-sec-h">Quick actions</div>
     <div class="feat-list">
       ${feats.map(f => `<button class="feat-card" onclick="${f.on}">
@@ -1391,14 +1439,23 @@ function domainDashHTML(id){
       </button>`).join("")}
     </div>`;
 }
-function dashHTML(){
-  const doms = dashDomains();
-  if (!doms.find(d => d.id === R.dashDom)) R.dashDom = (doms[0] || {}).id || "health";
-  return `
-    <div class="dash-chips">
-      ${doms.map(d => `<button class="mode-chip ${d.id === R.dashDom ? "on" : ""}" style="--mc:${d.color}" onclick="M.dashDom('${d.id}')"><span class="d"></span>${esc(d.name)}</button>`).join("")}
-    </div>
-    ${domainDashHTML(R.dashDom)}`;
+/* ---------------- quick add (floating +) ---------------- */
+function fabHTML(){
+  return `<button class="fab ${R.quickOpen ? "open" : ""}" aria-label="Quick add" aria-expanded="${R.quickOpen}" onclick="M.quickAdd()">${R.quickOpen ? ic("x", 24) : ic("plus", 26)}</button>`;
+}
+function quickAddHTML(){
+  const item = (icon, label, sub, act) => `<button class="qa-item" onclick="${act}"><span class="qa-ic">${ic(icon, 20)}</span><span class="qa-tx"><span class="qa-nm">${label}</span><span class="qa-ds">${sub}</span></span><span class="qa-ar">${ic("chevR", 15)}</span></button>`;
+  return `<div class="qa-scrim" onclick="M.quickClose()"></div>
+    <div class="qa-sheet">
+      <div class="qa-grip"></div>
+      <div class="qa-h">Quick add</div>
+      ${item("food", "Log food", "Add a meal or item", `M.qa('food')`)}
+      ${item("droplet", "Add water", "+1 glass · 250 ml", `M.qa('water')`)}
+      ${item("barbell", "Log workout", "Start a session", `M.qa('workout')`)}
+      ${item("trend", "Log weight", "Quick body entry", `M.qa('weight')`)}
+      ${item("checkSquare", "Add task", "A to-do or reminder", `M.qa('task')`)}
+      ${item("chat", "Ask MIRA", "Start a new chat", `M.qa('ask')`)}
+    </div>`;
 }
 
 /* ---------------- Insights tab (trends over time) ---------------- */
@@ -2303,7 +2360,7 @@ function foodHTML(){
   if (!dates.includes(t)) dates.unshift(t);
 
   return `
-  <button class="cat-back" aria-label="Back to Dashboard" onclick="M.backToDash('health')">${ic("back", 18)} Dashboard</button>
+  <button class="cat-back" aria-label="Back to Home" onclick="M.backToHome('health')">${ic("back", 18)} Home</button>
   <div class="card">
     <h3>${ic("target", 16)} Today <span class="tiny" style="margin-inline-start:auto;font-weight:400">${new Date().toLocaleDateString("en-GB",{day:"numeric",month:"long"})}</span></h3>
     <div class="bars">
@@ -3894,7 +3951,7 @@ function weightCardHTML(sorted){
 function bodyHTML(){
   const sorted = [...S.inbody].sort((a, b) => a.date < b.date ? -1 : 1);
   return `
-  <button class="cat-back" aria-label="Back to Dashboard" onclick="M.backToDash('fitness')">${ic("back", 18)} Dashboard</button>
+  <button class="cat-back" aria-label="Back to Home" onclick="M.backToHome('fitness')">${ic("back", 18)} Home</button>
   ${weightCardHTML(sorted)}
   ${measuresCardHTML()}
   ${photosCardHTML()}
@@ -4178,12 +4235,23 @@ window.num = num;
 window.M = {
   // Opening the chat surface always starts a FRESH conversation; previous
   // chats stay saved and are reachable via the Chats (clock) button.
-  tab(t){ R.tab = t; R.homeCat = null; R.reviewOpen = false; R.sheet = null; if (t === "chat") R.convId = null; render(); },
-  goTab(t){ R.tab = t; R.homeCat = null; R.reviewOpen = false; R.sheet = null; if (t === "chat") R.convId = null; render(); },
+  tab(t){ R.tab = t; R.homeCat = null; R.reviewOpen = false; R.quickOpen = false; R.sheet = null; if (t === "chat") R.convId = null; render(); },
+  goTab(t){ R.tab = t; R.homeCat = null; R.reviewOpen = false; R.quickOpen = false; R.sheet = null; if (t === "chat") R.convId = null; render(); },
   home(catId){ R.homeCat = catId; R.reviewOpen = false; render(); },
   homeBack(){ R.homeCat = null; render(); },
-  dashDom(id){ R.dashDom = id; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
-  backToDash(id){ R.tab = "dash"; if (id) R.dashDom = id; R.homeCat = null; R.sheet = null; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
+  homeSection(id){ R.tab = "home"; R.homeSection = id; R.homeCat = null; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
+  backToHome(id){ R.tab = "home"; if (id) R.homeSection = id; R.homeCat = null; R.sheet = null; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
+  quickAdd(){ R.quickOpen = !R.quickOpen; render(); },
+  quickClose(){ R.quickOpen = false; render(); },
+  qa(a){
+    R.quickOpen = false;
+    if (a === "water"){ const t = todayStr(); S.water[t] = (S.water[t] || 0) + 1; save(); render(); toast(`Water +1 glass · ${(S.water[t] * 0.25).toFixed(2)} L today`); return; }
+    if (a === "food"){ R.tab = "food"; R.homeCat = null; render(); const el = $("#ffName"); if (el) el.focus(); return; }
+    if (a === "workout"){ M.goTrain("today"); return; }
+    if (a === "weight"){ R.tab = "body"; R.homeCat = null; render(); const c = $("#content"); if (c) c.scrollTop = 0; return; }
+    if (a === "task"){ M.goWork("tasks"); return; }
+    if (a === "ask"){ R.tab = "chat"; R.convId = null; render(); const ta = $("#chatIn"); if (ta) ta.focus(); return; }
+  },
   openReview(){ R.tab = "insights"; R.reviewOpen = true; R.homeCat = null; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
   reviewBack(){ R.reviewOpen = false; R.tab = "insights"; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
   async genReview(){
@@ -4223,7 +4291,7 @@ window.M = {
 
   /* ---- training ---- */
   goTrain(sub){ R.tab = "train"; R.trainTab = sub || "today"; R.homeCat = null; R.sheet = null; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
-  trainBack(){ R.tab = "home"; R.homeCat = "fitness"; render(); },
+  trainBack(){ R.tab = "home"; R.homeSection = "fitness"; R.homeCat = null; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
   trainGo(t){ R.trainTab = t; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
   woStart(){ R.trainWO = {id: uid(), date: todayStr(), name: "Workout", items: []}; R.trainTab = "today"; render(); },
   woAddExercise(x){
@@ -4327,7 +4395,7 @@ window.M = {
   },
   /* ---- health hub ---- */
   goHealth(sub){ R.tab = "health"; R.healthTab = sub || "supps"; R.homeCat = null; R.sheet = null; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
-  healthBack(){ R.tab = "home"; R.homeCat = "health"; render(); },
+  healthBack(){ R.tab = "home"; R.homeSection = "health"; R.homeCat = null; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
   healthGo(t){ R.healthTab = t; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
   suppToggle(id){
     const t = todayStr();
@@ -4402,7 +4470,7 @@ window.M = {
   },
   /* ---- work hub ---- */
   goWork(sub){ R.tab = "work"; R.workTab = sub || "tasks"; R.noteId = null; R.homeCat = null; R.sheet = null; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
-  workBack(){ R.tab = "home"; R.homeCat = "work"; render(); },
+  workBack(){ R.tab = "home"; R.homeSection = "work"; R.homeCat = null; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
   workGo(t){ R.workTab = t; R.noteId = null; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
   taskAdd(){
     const title = R.taskForm.title.trim();
@@ -4503,7 +4571,7 @@ window.M = {
   },
   /* ---- life hub ---- */
   goLife(sub){ R.tab = "life"; R.lifeTab = sub || "trips"; R.tripId = null; R.compareId = null; R.homeCat = null; R.sheet = null; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
-  lifeBack(){ R.tab = "home"; R.homeCat = "life"; render(); },
+  lifeBack(){ R.tab = "home"; R.homeSection = "life"; R.homeCat = null; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
   lifeGo(t){ R.lifeTab = t; R.tripId = null; R.compareId = null; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
   // bills
   billFormToggle(){ R.billForm.open = !R.billForm.open; render(); },
