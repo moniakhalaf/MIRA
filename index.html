@@ -455,7 +455,8 @@ body.kb .chatbar{padding-bottom:6px}
   flex:1;background:none;border:none;resize:none;max-height:140px;min-height:42px;
   padding:9px 4px;line-height:1.45;font-size:15px;
 }
-.tool-row{display:flex;flex-wrap:wrap;gap:7px;padding:2px 4px 9px}
+.tool-row{display:flex;flex-wrap:wrap;gap:7px;padding:0 4px;max-height:0;opacity:0;overflow:hidden;pointer-events:none;transition:max-height .24s ease,opacity .18s ease,padding .24s ease}
+.tool-row.open{max-height:160px;opacity:1;padding:2px 4px 9px;pointer-events:auto}
 .tool-btn{
   display:inline-flex;align-items:center;gap:6px;padding:8px 13px;border-radius:20px;min-height:38px;
   background:var(--card2);border:1px solid var(--line2);color:var(--txt);font-size:13.5px;font-weight:500;
@@ -470,7 +471,8 @@ body.kb .chatbar{padding-bottom:6px}
 .icon-btn:active{background:rgba(255,255,255,.08)}
 .icon-btn.send{background:var(--acc);color:var(--btn-ink)}
 .icon-btn.ds.on{color:var(--acc);background:var(--acc-soft)}
-.ds-note{font-size:11.5px;color:var(--acc);text-align:center;padding:3px 0 0}
+.ds-note{font-size:11.5px;color:var(--acc);text-align:center;max-height:0;opacity:0;overflow:hidden;transition:max-height .2s ease,opacity .16s ease,padding .2s ease;padding:0}
+.ds-note.open{max-height:40px;opacity:1;padding:3px 0 0}
 .attach-pill{
   display:inline-flex;align-items:center;gap:7px;background:var(--acc-soft);border:1px solid color-mix(in srgb,var(--acc) 30%,transparent);
   border-radius:10px;padding:5px 10px;font-size:12.5px;color:var(--txt);margin:0 12px 6px;
@@ -594,7 +596,7 @@ body.kb .chatbar{padding-bottom:6px}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.25";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.26";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1659,20 +1661,20 @@ function chatSheetHTML(){
 function chatbarHTML(){
   return `<div class="chatbar">
     ${R.attach ? `<div class="attach-pill">${ic("paperclip", 13)} <b>${esc(R.attach.name)}</b><button onclick="M.attachClear()" style="color:var(--txt2)">✕</button></div>` : ""}
-    ${R.chatTools ? `<div class="tool-row">
-      <button class="tool-btn" onclick="M.attach()">${ic("paperclip", 16)} Attach</button>
-      <button class="tool-btn" onclick="M.voiceChat()">${ic("mic", 16)} Voice</button>
-      <button class="tool-btn ${R.deepSolve ? "on" : ""}" aria-pressed="${R.deepSolve}" onclick="M.toggleDS()">${ic("layers", 16)} Deep Solve</button>
-      <button class="tool-btn ${S.settings.webSearch ? "on" : ""}" aria-pressed="${!!S.settings.webSearch}" onclick="M.toggleWeb()">${ic("globe", 16)} Web search</button>
-    </div>` : ""}
+    <div class="tool-row ${R.chatTools ? "open" : ""}" aria-hidden="${!R.chatTools}">
+      <button class="tool-btn" onmousedown="event.preventDefault()" onclick="M.attach()">${ic("paperclip", 16)} Attach</button>
+      <button class="tool-btn" onmousedown="event.preventDefault()" onclick="M.voiceChat()">${ic("mic", 16)} Voice</button>
+      <button class="tool-btn ${R.deepSolve ? "on" : ""}" data-tool="ds" aria-pressed="${R.deepSolve}" onmousedown="event.preventDefault()" onclick="M.toggleDS()">${ic("layers", 16)} Deep Solve</button>
+      <button class="tool-btn ${S.settings.webSearch ? "on" : ""}" data-tool="web" aria-pressed="${!!S.settings.webSearch}" onmousedown="event.preventDefault()" onclick="M.toggleWeb()">${ic("globe", 16)} Web search</button>
+    </div>
     <div class="inner">
-      <button class="icon-btn tools-toggle ${R.chatTools ? "on" : ""}" aria-label="Options" aria-expanded="${R.chatTools}" onclick="M.toggleTools()">${R.chatTools ? ic("x", 20) : ic("plus", 22)}</button>
+      <button class="icon-btn tools-toggle ${R.chatTools ? "on" : ""}" aria-label="Options" aria-expanded="${R.chatTools}" onmousedown="event.preventDefault()" onclick="M.toggleTools()">${R.chatTools ? ic("x", 20) : ic("plus", 22)}</button>
       <textarea id="chatIn" rows="1" placeholder="Message MIRA…" dir="auto" aria-label="Message MIRA"
         oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,140)+'px'"
         onkeydown="if(event.key==='Enter'&&!event.shiftKey&&!('ontouchstart' in window)){event.preventDefault();M.send()}"></textarea>
       <button class="icon-btn send" aria-label="Send" onclick="M.send()" ${R.busy ? "disabled" : ""}>${R.busy ? "…" : ic("arrowUp", 19)}</button>
     </div>
-    ${R.deepSolve ? `<div class="ds-note">Deep Solve on — two-stage reasoning for hard problems</div>` : ""}
+    <div class="ds-note ${R.deepSolve ? "open" : ""}">Deep Solve on — two-stage reasoning for hard problems</div>
   </div>`;
 }
 function afterChatRender(){
@@ -4319,11 +4321,25 @@ window.M = {
   onbCustomDel(i){ onb.custom.splice(i, 1); render(); },
   onbDone,
 
-  toggleTools(){ R.chatTools = !R.chatTools; render(); const ta = $("#chatIn"); if (ta && !R.chatTools) ta.focus(); },
-  toggleDS(){ R.deepSolve = !R.deepSolve; render(); const ta = $("#chatIn"); if (ta) ta.focus(); },
+  toggleTools(){
+    // DOM-only toggle: never re-render, so the text input keeps focus and the keyboard stays up on iOS
+    R.chatTools = !R.chatTools;
+    const row = $(".chatbar .tool-row"), btn = $(".chatbar .tools-toggle");
+    if (row){ row.classList.toggle("open", R.chatTools); row.setAttribute("aria-hidden", String(!R.chatTools)); }
+    if (btn){ btn.classList.toggle("on", R.chatTools); btn.setAttribute("aria-expanded", String(R.chatTools)); btn.innerHTML = R.chatTools ? ic("x", 20) : ic("plus", 22); }
+  },
+  toggleDS(){
+    R.deepSolve = !R.deepSolve;
+    const b = $(".chatbar .tool-btn[data-tool='ds']");
+    if (b){ b.classList.toggle("on", R.deepSolve); b.setAttribute("aria-pressed", String(R.deepSolve)); }
+    const note = $(".chatbar .ds-note");
+    if (note) note.classList.toggle("open", R.deepSolve);
+  },
   toggleWeb(){
     S.settings.webSearch = !S.settings.webSearch;
-    save(); render();
+    save();
+    const b = $(".chatbar .tool-btn[data-tool='web']");
+    if (b){ b.classList.toggle("on", !!S.settings.webSearch); b.setAttribute("aria-pressed", String(!!S.settings.webSearch)); }
     toast(S.settings.webSearch ? "Live web search on — MIRA verifies against the internet." : "Live web search off — MIRA answers from verified knowledge.");
   },
   actEmail(p){
