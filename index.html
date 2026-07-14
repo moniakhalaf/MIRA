@@ -353,6 +353,11 @@ body.kb .chatbar{padding-bottom:6px}
 .rev-stat .rl{font-size:11px;color:var(--txt2);margin-top:2px}
 .badge-wrap{display:flex;flex-wrap:wrap;gap:8px}
 .ach-badge{display:inline-flex;align-items:center;gap:5px;padding:6px 11px;border-radius:20px;font-size:12.5px;font-weight:600;background:var(--acc-soft);color:var(--acc);border:1px solid color-mix(in srgb,var(--acc) 25%,transparent)}
+.photo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.photo-thumb{aspect-ratio:3/4;border-radius:11px;background-size:cover;background-position:center;position:relative;border:1px solid var(--line);overflow:hidden}
+.photo-thumb .pt-date{position:absolute;left:0;right:0;bottom:0;font-size:10px;padding:3px 5px;color:#fff;background:linear-gradient(transparent,rgba(0,0,0,.7))}
+.photo-view{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:71;width:88vw;max-width:460px;max-height:88vh;display:flex;flex-direction:column}
+.photo-view img{width:100%;max-height:74vh;object-fit:contain;border-radius:14px}
 .prio-dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto;display:inline-block;margin-inline-end:6px}
 .seg .prio-dot{margin-inline-end:5px;vertical-align:0}
 .task-row{display:flex;align-items:center;gap:9px;padding:10px 2px;border-top:1px solid var(--line)}
@@ -575,7 +580,7 @@ body.kb .chatbar{padding-bottom:6px}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.22";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.23";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -661,6 +666,10 @@ const I = {
   x: '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',
   flame: '<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>',
   award: '<circle cx="12" cy="8" r="6"/><path d="M15.5 13.5 17 22l-5-3-5 3 1.5-8.5"/>',
+  ruler: '<path d="M21.3 8.7 8.7 21.3a1 1 0 0 1-1.4 0l-4.6-4.6a1 1 0 0 1 0-1.4L15.3 2.7a1 1 0 0 1 1.4 0l4.6 4.6a1 1 0 0 1 0 1.4z"/><path d="M7.5 10.5l2 2"/><path d="M10.5 7.5l2 2"/><path d="M13.5 4.5l2 2"/><path d="M4.5 13.5l2 2"/>',
+  smile: '<circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/>',
+  flask: '<path d="M9 3h6M10 3v6.5L4.6 18.8A1.5 1.5 0 0 0 5.9 21h12.2a1.5 1.5 0 0 0 1.3-2.2L14 9.5V3"/><line x1="7" y1="15" x2="17" y2="15"/>',
+  image: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/>',
   trash: '<polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
   database: '<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>',
   trend: '<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>',
@@ -759,6 +768,10 @@ const BLANK = () => ({
   habits: [],         // {id, name}
   habitLog: {},       // date -> [habitId]
   fasting: {activeStart: null, goalH: 16, log: []},   // log: [{start, end, hours}]
+  measures: [],       // {id, date, waist, chest, arms, thigh, hips, neck}
+  photos: [],         // {id, date, data(jpeg dataURL)}
+  labs: [],           // {id, date, marker, value, unit}
+  mood: [],           // {id, date, mood(1-5), energy(1-5), note}
   water: {},          // date -> glasses
   inbody: [],         // {id, date, weight, score, bfm, smm, vfa, pa}
 });
@@ -800,6 +813,10 @@ function migrateChats(){
   if (!S.habitLog || typeof S.habitLog !== "object") S.habitLog = {};
   if (!S.fasting || typeof S.fasting !== "object") S.fasting = {activeStart: null, goalH: 16, log: []};
   if (!Array.isArray(S.fasting.log)) S.fasting.log = [];
+  if (!Array.isArray(S.measures)) S.measures = [];
+  if (!Array.isArray(S.photos)) S.photos = [];
+  if (!Array.isArray(S.labs)) S.labs = [];
+  if (!Array.isArray(S.mood)) S.mood = [];
   if (S.settings.profession === undefined) S.settings.profession = "";
   if (S.settings.restLen === undefined) S.settings.restLen = 90;
   if (!S.settings.coach) S.settings.coach = {name: "", email: ""};
@@ -886,9 +903,14 @@ const R = {
   progEx: "",
   coachPeriod: 30,
   plateOpen: false,
-  healthTab: "supps",  // supps | sleep | habits | fasting | review
+  healthTab: "supps",  // supps | sleep | habits | fasting | mood | review
   suppForm: {open: false, name: "", dose: "", timing: "Morning"},
   habitDraft: "",
+  moodForm: {mood: 0, energy: 0, note: ""},
+  bodyOpen: {meas: false, photo: false, lab: false},
+  measForm: {date: "", waist: "", chest: "", arms: "", thigh: "", hips: "", neck: ""},
+  labForm: {marker: "Total cholesterol", custom: "", value: "", unit: "", date: ""},
+  photoView: null,
   sleepQ: 0,
   sleepForm: {date: "", hours: "", note: ""},
   workTab: "tasks",    // tasks | notes | kit
@@ -1322,6 +1344,9 @@ function liveContext(){
     if (S.fasting.activeStart) lines.push(`Currently fasting: ${(Math.round((Date.now() - S.fasting.activeStart) / 36000) / 100)} h so far, goal ${S.fasting.goalH} h.`);
     else if ((S.fasting.log || []).length){ const last = S.fasting.log[S.fasting.log.length - 1]; lines.push(`Last fast: ${last.hours} h (goal ${S.fasting.goalH} h).`); }
   }
+  if (Array.isArray(S.mood) && S.mood.length){ const m = [...S.mood].sort((a, b) => a.date < b.date ? -1 : 1).slice(-3); lines.push(`Mood/energy (recent): ${m.map(e => `${e.date} mood ${e.mood}/5, energy ${e.energy}/5`).join("; ")}.`); }
+  if (Array.isArray(S.measures) && S.measures.length){ const l = [...S.measures].sort((a, b) => a.date < b.date ? -1 : 1).pop(); lines.push(`Latest body measurements (${l.date}): ${MEAS_FIELDS.filter(([k]) => l[k] !== "" && l[k] != null).map(([k, lab]) => `${lab} ${l[k]}cm`).join(", ")}.`); }
+  if (Array.isArray(S.labs) && S.labs.length){ const byM = {}; S.labs.forEach(x => { if (!byM[x.marker] || byM[x.marker].date < x.date) byM[x.marker] = x; }); lines.push(`Latest lab results: ${Object.values(byM).map(x => `${x.marker} ${x.value}${x.unit ? " " + x.unit : ""} (${x.date})`).join("; ")}.`); }
   // open tasks (by priority)
   if (Array.isArray(S.tasks)){
     const order = {high: 0, med: 1, low: 2};
@@ -2623,7 +2648,7 @@ function achievementsHTML(){
 
 /* ---- view ---- */
 function healthHTML(){
-  const tabs = [["supps","Supplements"],["sleep","Sleep"],["habits","Habits"],["fasting","Fasting"],["review","Review"]];
+  const tabs = [["supps","Supplements"],["sleep","Sleep"],["habits","Habits"],["fasting","Fasting"],["mood","Mood"],["review","Review"]];
   return `
     <button class="cat-back" onclick="M.healthBack()">${ic("back", 18)} Health</button>
     <div class="cat-title"><div class="ch-nm">Health</div><div class="ch-ds">Supplements · sleep · review</div></div>
@@ -2633,8 +2658,35 @@ function healthHTML(){
       R.healthTab === "supps" ? healthSuppHTML() :
       R.healthTab === "sleep" ? healthSleepHTML() :
       R.healthTab === "habits" ? healthHabitsHTML() :
-      R.healthTab === "fasting" ? healthFastHTML() : healthReviewHTML()
+      R.healthTab === "fasting" ? healthFastHTML() :
+      R.healthTab === "mood" ? healthMoodHTML() : healthReviewHTML()
     }</div>`;
+}
+function healthMoodHTML(){
+  const rec = [...S.mood].sort((a, b) => a.date < b.date ? -1 : 1).slice(-14);
+  const a7 = (() => { const since = new Date(Date.now() - 6 * 864e5).toLocaleDateString("en-CA"); const es = S.mood.filter(e => e.date >= since); if (!es.length) return null; const avg = a => a.reduce((x, y) => x + y, 0) / a.length; return {m: avg(es.map(e => e.mood)), en: avg(es.map(e => e.energy)), n: es.length}; })();
+  const f = R.moodForm;
+  const seg = (key, val) => [1,2,3,4,5].map(q => `<button class="${val === q ? "on" : ""}" onclick="R.moodForm.${key}=${q};render()">${q}</button>`).join("");
+  let chart = "";
+  if (rec.length >= 2){
+    const W = 154, H = 40;
+    const line = (arr, color) => { const xy = arr.map((v, i) => `${(i / (arr.length - 1)) * (W - 8) + 4},${H - 6 - ((v - 1) / 4) * (H - 12)}`); return `<polyline points="${xy.join(" ")}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`; };
+    chart = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:56px;display:block;margin:6px 0 2px">${line(rec.map(e => e.mood), "var(--acc)")}${line(rec.map(e => e.energy), "var(--amber)")}</svg>
+      <div class="tiny"><span style="color:var(--acc)">● mood</span> · <span style="color:var(--amber)">● energy</span></div>`;
+  }
+  return `
+    <div class="card">
+      <h3>${ic("smile", 16)} How are you today?</h3>
+      <div class="field"><label>Mood (1 low – 5 great)</label><div class="seg">${seg("mood", f.mood)}</div></div>
+      <div class="field"><label>Energy (1 low – 5 high)</label><div class="seg">${seg("energy", f.energy)}</div></div>
+      <div class="field"><label>Note (optional)</label><input id="moodNote" value="${esc(f.note)}" oninput="R.moodForm.note=this.value" placeholder="What's affecting it?" dir="auto"></div>
+      <button class="btn sm" onclick="M.moodSave()">Save check-in</button>
+    </div>
+    ${a7 ? `<div class="card"><h3>${ic("chart", 16)} Last 7 days</h3>${chart}
+      <div class="muted">Average mood <b>${n1(a7.m)}/5</b> · energy <b>${n1(a7.en)}/5</b> over ${a7.n} day${a7.n > 1 ? "s" : ""}.</div></div>` : ""}
+    ${rec.length ? `<div class="card"><h3>Recent</h3>${[...rec].reverse().map(e => `<div class="set-row">
+      <div><div class="k">${fmtDate(e.date)}</div><div class="desc">mood ${e.mood}/5 · energy ${e.energy}/5${e.note ? " · " + esc(e.note) : ""}</div></div>
+      <span class="end"><button class="btn sm danger" aria-label="Delete" onclick="M.moodDel('${e.id}')">${ic("trash", 13)}</button></span></div>`).join("")}</div>` : ""}`;
 }
 function healthHabitsHTML(){
   const t = todayStr();
@@ -3146,6 +3198,113 @@ function decideHTML(){
 </script>
 <script>
 "use strict";
+/* ============================================================
+   Body extras — measurements, progress photos, lab results.
+   Rendered as collapsible cards on the Body tab.
+   ============================================================ */
+
+const MEAS_FIELDS = [["waist","Waist"],["chest","Chest"],["arms","Arm"],["thigh","Thigh"],["hips","Hips"],["neck","Neck"]];
+const LAB_MARKERS = ["Total cholesterol","LDL","HDL","Triglycerides","Fasting glucose","HbA1c","Vitamin D","Ferritin","TSH","Custom…"];
+
+/* resize an image to a max dimension and return a JPEG dataURL (keeps storage small) */
+function resizeImage(file, max, cb){
+  const r = new FileReader();
+  r.onload = () => {
+    const img = new Image();
+    img.onload = () => {
+      let w = img.width, h = img.height;
+      if (w > max || h > max){ const s = max / Math.max(w, h); w = Math.round(w * s); h = Math.round(h * s); }
+      const c = document.createElement("canvas"); c.width = w; c.height = h;
+      c.getContext("2d").drawImage(img, 0, 0, w, h);
+      try { cb(c.toDataURL("image/jpeg", 0.72)); } catch (e) { toast("Couldn't process that image."); }
+    };
+    img.onerror = () => toast("Couldn't read that image.");
+    img.src = r.result;
+  };
+  r.readAsDataURL(file);
+}
+
+function measuresCardHTML(){
+  const sorted = [...S.measures].sort((a, b) => a.date < b.date ? -1 : 1);
+  const latest = sorted[sorted.length - 1], prev = sorted[sorted.length - 2];
+  const f = R.measForm;
+  return `<div class="card fold ${R.bodyOpen.meas ? "open" : ""}">
+    <h3 onclick="M.bodyToggle('meas')">${ic("ruler", 16)} Measurements${latest ? ` <span class="tiny" style="margin-inline-start:auto;font-weight:400">${fmtDate(latest.date)}</span>` : ""} <span class="chev">▶</span></h3>
+    <div class="fold-body">
+      ${latest ? `<div class="ib-grid" style="margin-bottom:12px">${MEAS_FIELDS.map(([k, l]) => {
+        const v = latest[k];
+        if (v === "" || v === undefined || v === null) return "";
+        let dv = "";
+        if (prev && prev[k] !== "" && isFinite(+prev[k])){ const d = +v - +prev[k]; if (Math.abs(d) > 0.05) dv = `<div class="dv ${d < 0 ? "good" : "bad"}">${d > 0 ? "▲" : "▼"} ${n1(Math.abs(d))}</div>`; }
+        return `<div class="ib-cell"><div class="k">${l}</div><div class="v">${n1(+v)}<span class="tiny"> cm</span></div>${dv}</div>`;
+      }).join("")}</div>` : `<div class="muted" style="margin-bottom:10px">Log waist, chest, arms and more (cm) to track shape change alongside weight.</div>`}
+      <div class="field"><label>Date</label><input type="date" value="${esc(f.date || todayStr())}" oninput="R.measForm.date=this.value"></div>
+      <div class="grid2" style="margin-bottom:10px">${MEAS_FIELDS.map(([k, l]) =>
+        `<div class="field"><label>${l} (cm)</label><input type="number" inputmode="decimal" value="${esc(f[k])}" oninput="R.measForm.${k}=this.value"></div>`).join("")}</div>
+      <button class="btn sm" onclick="M.measSave()">Save measurements</button>
+      ${sorted.length ? `<div class="tiny" style="margin-top:10px">${sorted.length} entr${sorted.length > 1 ? "ies" : "y"} · <button style="color:var(--acc)" onclick="M.measDelLast()">delete latest</button></div>` : ""}
+    </div>
+  </div>`;
+}
+
+function photosCardHTML(){
+  const ps = [...S.photos].sort((a, b) => a.date < b.date ? 1 : -1);
+  return `<div class="card fold ${R.bodyOpen.photo ? "open" : ""}">
+    <h3 onclick="M.bodyToggle('photo')">${ic("image", 16)} Progress photos${ps.length ? ` <span class="tiny" style="margin-inline-start:auto;font-weight:400">${ps.length}</span>` : ""} <span class="chev">▶</span></h3>
+    <div class="fold-body">
+      <button class="btn sm sec" onclick="M.photoAdd()">${ic("camera", 15)} Add photo</button>
+      ${ps.length ? `<div class="photo-grid">${ps.map(p => `<button class="photo-thumb" onclick="M.photoOpen('${p.id}')" style="background-image:url(${p.data})">
+        <span class="pt-date">${fmtDate(p.date)}</span></button>`).join("")}</div>` : `<div class="muted" style="margin-top:10px">Snap a monthly progress photo. Stored on this device only (resized to keep it small).</div>`}
+    </div>
+  </div>`;
+}
+
+function labsCardHTML(){
+  const f = R.labForm;
+  const markers = [...new Set(S.labs.map(l => l.marker))];
+  return `<div class="card fold ${R.bodyOpen.lab ? "open" : ""}">
+    <h3 onclick="M.bodyToggle('lab')">${ic("flask", 16)} Lab results${S.labs.length ? ` <span class="tiny" style="margin-inline-start:auto;font-weight:400">${markers.length} markers</span>` : ""} <span class="chev">▶</span></h3>
+    <div class="fold-body">
+      ${markers.length ? markers.map(m => {
+        const es = S.labs.filter(l => l.marker === m).sort((a, b) => a.date < b.date ? -1 : 1);
+        const last = es[es.length - 1], prev = es[es.length - 2];
+        let dv = "";
+        if (prev && isFinite(+prev.value)){ const d = +last.value - +prev.value; if (Math.abs(d) > 1e-6) dv = ` <span class="tiny">(${d > 0 ? "+" : ""}${n1(d)})</span>`; }
+        return `<div class="set-row">
+          <div><div class="k" dir="auto">${esc(m)}</div><div class="desc">${fmtDate(last.date)}${es.length > 1 ? ` · ${es.length} readings` : ""}</div></div>
+          <span class="end"><b>${esc(last.value)} ${esc(last.unit || "")}${dv}</b></span>
+        </div>`;
+      }).join("") : `<div class="muted" style="margin-bottom:10px">Track blood markers (cholesterol, glucose, vitamin D…) and watch trends over time.</div>`}
+      <div class="grid2" style="margin:10px 0">
+        <div class="field"><label>Marker</label><select onchange="R.labForm.marker=this.value;render()">${LAB_MARKERS.map(m => `<option ${f.marker === m ? "selected" : ""}>${m}</option>`).join("")}</select></div>
+        ${f.marker === "Custom…" ? `<div class="field"><label>Name</label><input value="${esc(f.custom)}" oninput="R.labForm.custom=this.value" dir="auto"></div>`
+          : `<div class="field"><label>Date</label><input type="date" value="${esc(f.date || todayStr())}" oninput="R.labForm.date=this.value"></div>`}
+      </div>
+      ${f.marker === "Custom…" ? `<div class="field"><label>Date</label><input type="date" value="${esc(f.date || todayStr())}" oninput="R.labForm.date=this.value"></div>` : ""}
+      <div class="grid2" style="margin-bottom:10px">
+        <div class="field"><label>Value</label><input type="number" inputmode="decimal" value="${esc(f.value)}" oninput="R.labForm.value=this.value"></div>
+        <div class="field"><label>Unit</label><input value="${esc(f.unit)}" oninput="R.labForm.unit=this.value" placeholder="mmol/L, mg/dL…"></div>
+      </div>
+      <button class="btn sm" onclick="M.labSave()">Add result</button>
+    </div>
+  </div>`;
+}
+
+function photoViewHTML(){
+  const p = S.photos.find(x => x.id === R.photoView);
+  if (!p) return "";
+  return `<div class="sheet-mask show" onclick="M.photoClose()"></div>
+    <div class="photo-view">
+      <img src="${p.data}" alt="Progress photo ${p.date}">
+      <div class="row" style="margin-top:12px">
+        <button class="btn sec" onclick="M.photoClose()">Close</button>
+        <button class="btn danger" style="flex:0 0 auto" onclick="M.photoDel('${p.id}')">${ic("trash", 15)} Delete</button>
+      </div>
+    </div>`;
+}
+</script>
+<script>
+"use strict";
 /* ---------------- body composition ---------------- */
 const IB_METRICS = [
   {k: "weight", label: "Weight",   unit: "kg",  goodDir: 0},
@@ -3188,6 +3347,10 @@ function bodyHTML(){
   const sorted = [...S.inbody].sort((a, b) => a.date < b.date ? -1 : 1);
   return `
   ${weightCardHTML(sorted)}
+  ${measuresCardHTML()}
+  ${photosCardHTML()}
+  ${labsCardHTML()}
+  ${R.photoView ? photoViewHTML() : ""}
   <div class="card">
     <h3>${ic("chart", 16)} InBody log</h3>
     <div class="muted">Each scan is stored with the change from the previous entry per metric. MIRA reads this log live — ask for a trend analysis in Fitness mode any time.</div>
@@ -4115,6 +4278,55 @@ window.M = {
     }
   },
   ibDel(id){ if (confirm("Delete this scan?")){ S.inbody = S.inbody.filter(e => e.id !== id); save(); render(); } },
+  bodyToggle(sec){ R.bodyOpen[sec] = !R.bodyOpen[sec]; render(); },
+  measSave(){
+    const f = R.measForm;
+    const vals = {}; let any = false;
+    MEAS_FIELDS.forEach(([k]) => { const v = f[k]; if (v !== "" && isFinite(+v)){ vals[k] = num(v); any = true; } else vals[k] = ""; });
+    if (!any){ toast("Enter at least one measurement."); return; }
+    S.measures.push({id: uid(), date: f.date || todayStr(), ...vals});
+    R.measForm = {date: "", waist: "", chest: "", arms: "", thigh: "", hips: "", neck: ""};
+    R.bodyOpen.meas = true; buzz(); save(); render();
+    toast("Measurements saved ✓");
+  },
+  measDelLast(){
+    const sorted = [...S.measures].sort((a, b) => a.date < b.date ? -1 : 1);
+    const last = sorted[sorted.length - 1];
+    if (last && confirm("Delete the latest measurement entry?")){ S.measures = S.measures.filter(m => m.id !== last.id); save(); render(); }
+  },
+  photoAdd(){
+    const inp = $("#fileImg"); inp.value = "";
+    inp.onchange = () => {
+      const file = inp.files[0]; if (!file) return;
+      if (!/^image\//.test(file.type)){ toast("Pick an image."); return; }
+      resizeImage(file, 720, data => { S.photos.push({id: uid(), date: todayStr(), data}); R.bodyOpen.photo = true; save(); render(); toast("Photo saved ✓"); });
+    };
+    inp.click();
+  },
+  photoOpen(id){ R.photoView = id; render(); },
+  photoClose(){ R.photoView = null; render(); },
+  photoDel(id){ if (confirm("Delete this photo?")){ S.photos = S.photos.filter(p => p.id !== id); R.photoView = null; save(); render(); } },
+  labSave(){
+    const f = R.labForm;
+    const marker = f.marker === "Custom…" ? f.custom.trim() : f.marker;
+    if (!marker){ toast("Name the marker."); return; }
+    if (f.value === "" || !isFinite(+f.value)){ toast("Enter the value."); return; }
+    S.labs.push({id: uid(), date: f.date || todayStr(), marker, value: num(f.value), unit: f.unit.trim()});
+    R.labForm = {marker: f.marker, custom: "", value: "", unit: f.unit, date: ""};
+    R.bodyOpen.lab = true; buzz(); save(); render();
+    toast("Result added ✓");
+  },
+  moodSave(){
+    const f = R.moodForm;
+    if (!f.mood && !f.energy){ toast("Pick a mood or energy level."); return; }
+    const t = todayStr();
+    S.mood = S.mood.filter(e => e.date !== t);
+    S.mood.push({id: uid(), date: t, mood: f.mood || 0, energy: f.energy || 0, note: f.note.trim()});
+    R.moodForm = {mood: 0, energy: 0, note: ""};
+    buzz(); save(); render();
+    toast("Check-in saved ✓");
+  },
+  moodDel(id){ S.mood = S.mood.filter(e => e.id !== id); save(); render(); },
   ibPhoto,
   ibReviewAccept(){ if (ibSaveEntry(ibReview)){ ibReview = null; render(); } },
   ibAnalyse(){
