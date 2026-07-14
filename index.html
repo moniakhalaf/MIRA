@@ -353,6 +353,11 @@ body.kb .chatbar{padding-bottom:6px}
 .rev-stat .rl{font-size:11px;color:var(--txt2);margin-top:2px}
 .badge-wrap{display:flex;flex-wrap:wrap;gap:8px}
 .ach-badge{display:inline-flex;align-items:center;gap:5px;padding:6px 11px;border-radius:20px;font-size:12.5px;font-weight:600;background:var(--acc-soft);color:var(--acc);border:1px solid color-mix(in srgb,var(--acc) 25%,transparent)}
+.photo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.photo-thumb{aspect-ratio:3/4;border-radius:11px;background-size:cover;background-position:center;position:relative;border:1px solid var(--line);overflow:hidden}
+.photo-thumb .pt-date{position:absolute;left:0;right:0;bottom:0;font-size:10px;padding:3px 5px;color:#fff;background:linear-gradient(transparent,rgba(0,0,0,.7))}
+.photo-view{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:71;width:88vw;max-width:460px;max-height:88vh;display:flex;flex-direction:column}
+.photo-view img{width:100%;max-height:74vh;object-fit:contain;border-radius:14px}
 .prio-dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto;display:inline-block;margin-inline-end:6px}
 .seg .prio-dot{margin-inline-end:5px;vertical-align:0}
 .task-row{display:flex;align-items:center;gap:9px;padding:10px 2px;border-top:1px solid var(--line)}
@@ -409,8 +414,14 @@ body.kb .chatbar{padding-bottom:6px}
 .msg.mira pre{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;overflow-x:auto;font-size:.85em}
 .msg.mira pre code{background:none;padding:0}
 .msg.mira blockquote{margin:.4em 0;padding:.2em .9em;border-inline-start:3px solid var(--acc);color:var(--txt2)}
-.msg.mira table{border-collapse:collapse;margin:.5em 0;font-size:.92em;display:block;overflow-x:auto;max-width:100%}
-.msg.mira th,.msg.mira td{border:1px solid var(--line2);padding:5px 9px;text-align:start}
+.msg.mira .tbl-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:.6em 0;max-width:100%;border:1px solid var(--line2);border-radius:10px}
+.msg.mira table{border-collapse:collapse;font-size:.9em;width:auto;min-width:100%}
+.msg.mira th,.msg.mira td{border:1px solid var(--line2);border-top:none;border-inline-start:none;padding:7px 11px;text-align:start;vertical-align:top;overflow-wrap:normal;word-break:normal}
+.msg.mira tr>*:first-child{border-inline-start:none}
+.msg.mira thead th{border-top:none}
+.msg.mira th{white-space:nowrap;font-weight:600;background:color-mix(in srgb,var(--acc) 8%,transparent)}
+.msg.mira td{min-width:76px;max-width:230px}
+.msg.mira td:first-child,.msg.mira th:first-child{min-width:110px}
 .msg .att{font-size:12px;color:var(--txt3);margin-top:5px}
 .msg-act{
   display:inline-flex;align-items:center;gap:5px;margin-top:7px;
@@ -441,9 +452,17 @@ body.kb .chatbar{padding-bottom:6px}
   box-shadow:var(--shadow);
 }
 .chatbar textarea{
-  flex:1;background:none;border:none;resize:none;max-height:120px;min-height:30px;
-  padding:5px 4px;line-height:1.4;
+  flex:1;background:none;border:none;resize:none;max-height:140px;min-height:42px;
+  padding:9px 4px;line-height:1.45;font-size:15px;
 }
+.tool-row{display:flex;flex-wrap:wrap;gap:7px;padding:2px 4px 9px}
+.tool-btn{
+  display:inline-flex;align-items:center;gap:6px;padding:8px 13px;border-radius:20px;min-height:38px;
+  background:var(--card2);border:1px solid var(--line2);color:var(--txt);font-size:13.5px;font-weight:500;
+}
+.tool-btn.on{border-color:var(--acc);color:var(--acc);background:var(--acc-soft)}
+.tool-btn:active{transform:scale(.97)}
+.icon-btn.tools-toggle.on{color:var(--acc);background:var(--acc-soft)}
 .icon-btn{
   width:40px;height:40px;min-width:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;
   font-size:19px;color:var(--txt2);background:transparent;transition:background .12s;
@@ -575,7 +594,7 @@ body.kb .chatbar{padding-bottom:6px}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.22";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.25";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -661,6 +680,14 @@ const I = {
   x: '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',
   flame: '<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>',
   award: '<circle cx="12" cy="8" r="6"/><path d="M15.5 13.5 17 22l-5-3-5 3 1.5-8.5"/>',
+  ruler: '<path d="M21.3 8.7 8.7 21.3a1 1 0 0 1-1.4 0l-4.6-4.6a1 1 0 0 1 0-1.4L15.3 2.7a1 1 0 0 1 1.4 0l4.6 4.6a1 1 0 0 1 0 1.4z"/><path d="M7.5 10.5l2 2"/><path d="M10.5 7.5l2 2"/><path d="M13.5 4.5l2 2"/><path d="M4.5 13.5l2 2"/>',
+  smile: '<circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/>',
+  flask: '<path d="M9 3h6M10 3v6.5L4.6 18.8A1.5 1.5 0 0 0 5.9 21h12.2a1.5 1.5 0 0 0 1.3-2.2L14 9.5V3"/><line x1="7" y1="15" x2="17" y2="15"/>',
+  image: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/>',
+  timer: '<circle cx="12" cy="13" r="8"/><line x1="12" y1="13" x2="12" y2="9"/><line x1="9" y1="2" x2="15" y2="2"/><line x1="12" y1="2" x2="12" y2="5"/>',
+  wallet: '<path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/>',
+  book: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>',
+  bell: '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>',
   trash: '<polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
   database: '<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>',
   trend: '<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>',
@@ -759,6 +786,15 @@ const BLANK = () => ({
   habits: [],         // {id, name}
   habitLog: {},       // date -> [habitId]
   fasting: {activeStart: null, goalH: 16, log: []},   // log: [{start, end, hours}]
+  measures: [],       // {id, date, waist, chest, arms, thigh, hips, neck}
+  photos: [],         // {id, date, data(jpeg dataURL)}
+  labs: [],           // {id, date, marker, value, unit}
+  mood: [],           // {id, date, mood(1-5), energy(1-5), note}
+  focusLog: [],       // {id, date, minutes, task}
+  budget: {income: 0},
+  expenses: [],       // {id, date, category, amount, note}
+  dates: [],          // {id, title, date, recurring}
+  reading: [],        // {id, title, kind, status}
   water: {},          // date -> glasses
   inbody: [],         // {id, date, weight, score, bfm, smm, vfa, pa}
 });
@@ -800,6 +836,17 @@ function migrateChats(){
   if (!S.habitLog || typeof S.habitLog !== "object") S.habitLog = {};
   if (!S.fasting || typeof S.fasting !== "object") S.fasting = {activeStart: null, goalH: 16, log: []};
   if (!Array.isArray(S.fasting.log)) S.fasting.log = [];
+  if (!Array.isArray(S.measures)) S.measures = [];
+  if (!Array.isArray(S.photos)) S.photos = [];
+  if (!Array.isArray(S.labs)) S.labs = [];
+  if (!Array.isArray(S.mood)) S.mood = [];
+  if (!Array.isArray(S.focusLog)) S.focusLog = [];
+  if (!S.budget || typeof S.budget !== "object") S.budget = {income: 0};
+  if (!Array.isArray(S.expenses)) S.expenses = [];
+  if (!Array.isArray(S.dates)) S.dates = [];
+  if (!Array.isArray(S.reading)) S.reading = [];
+  if (S.settings.focusLen === undefined) S.settings.focusLen = 25;
+  if (S.settings.breakLen === undefined) S.settings.breakLen = 5;
   if (S.settings.profession === undefined) S.settings.profession = "";
   if (S.settings.restLen === undefined) S.settings.restLen = 90;
   if (!S.settings.coach) S.settings.coach = {name: "", email: ""};
@@ -870,6 +917,7 @@ const R = {
   mode: S.domains[0]?.id || "work",
   convId: null,       // active conversation id (null = fresh chat)
   sheet: null,        // open bottom sheet ("chats" | null)
+  chatTools: false,   // chat-bar options row expanded
   deepSolve: false,
   pending: "",        // pin entry buffer
   attach: null,       // {name, media_type, data, kind:'image'|'pdf'}
@@ -886,18 +934,27 @@ const R = {
   progEx: "",
   coachPeriod: 30,
   plateOpen: false,
-  healthTab: "supps",  // supps | sleep | habits | fasting | review
+  healthTab: "supps",  // supps | sleep | habits | fasting | mood | review
   suppForm: {open: false, name: "", dose: "", timing: "Morning"},
   habitDraft: "",
+  moodForm: {mood: 0, energy: 0, note: ""},
+  bodyOpen: {meas: false, photo: false, lab: false},
+  measForm: {date: "", waist: "", chest: "", arms: "", thigh: "", hips: "", neck: ""},
+  labForm: {marker: "Total cholesterol", custom: "", value: "", unit: "", date: ""},
+  photoView: null,
   sleepQ: 0,
   sleepForm: {date: "", hours: "", note: ""},
-  workTab: "tasks",    // tasks | notes | kit
+  workTab: "tasks",    // tasks | notes | focus | kit
   taskForm: {title: "", priority: "med", due: "", dueTime: ""},
+  pomo: {mode: null, endsAt: 0, taskId: ""},  // mode: 'work'|'break'|null
+  expForm: {category: "Food", amount: "", note: "", date: ""},
+  dateForm: {title: "", date: "", recurring: false},
+  readForm: {title: "", kind: "Book"},
   noteId: null,        // note being edited
   taskDone: false,     // show completed tasks
   profDraft: "",       // profession input buffer
   kitBusy: false,
-  lifeTab: "trips",    // trips | bills | compare | decide
+  lifeTab: "trips",    // trips | bills | budget | compare | decide | lists
   tripId: null, compareId: null,
   billForm: {open: false, name: "", amount: "", cycle: "monthly", next: ""},
   tripForm: {open: false, dest: "", start: "", end: "", budget: ""},
@@ -952,6 +1009,7 @@ function render(){
     </div>`;
   if (R.tab === "home"){ const c = $("#content"); if (c) c.scrollTop = 0; }
   if (typeof ensureFastTimer === "function") ensureFastTimer();
+  if (typeof ensurePomo === "function") ensurePomo();
   // restore focus/caret for a state-bound input that survives re-render (e.g. library search)
   if (focusId && focusId !== "chatIn"){
     const el = document.getElementById(focusId);
@@ -1001,6 +1059,7 @@ function domFeatures(d){
   if (id === "work") return [
     {icon: "checkSquare", label: "Tasks", desc: "Priorities & to-dos", on: `M.goWork('tasks')`},
     {icon: "fileText", label: "Notes", desc: "Documents & memos", on: `M.goWork('notes')`},
+    {icon: "timer", label: "Focus timer", desc: "Pomodoro sessions", on: `M.goWork('focus')`},
     {icon: "sun", label: "Daily brief", desc: "Your day in one tap", on: `M.dailyBrief('${id}')`},
     ask("mail", "Draft an email", "Draft first — you send", "email"),
     ask("globe", "Deep research", "Trusted sources, cited", "research"),
@@ -1029,8 +1088,10 @@ function domFeatures(d){
   if (id === "life") return [
     {icon: "plane", label: "Travel planner", desc: "Trips, checklist & budget", on: `M.goLife('trips')`},
     {icon: "creditCard", label: "Bills & subscriptions", desc: "Monthly total & renewals", on: `M.goLife('bills')`},
+    {icon: "wallet", label: "Budget", desc: "Income vs spending", on: `M.goLife('budget')`},
     {icon: "scale", label: "Compare purchases", desc: "Options side by side", on: `M.goLife('compare')`},
     {icon: "target", label: "Decisions log", desc: "Weigh & record big choices", on: `M.goLife('decide')`},
+    {icon: "bell", label: "Dates & reading", desc: "Reminders & reading list", on: `M.goLife('lists')`},
     ask("globe", "Research anything", "Best option, with sources", "research"),
     ask("layers", "Deep Solve a problem", "Two-stage reasoning", "deep"),
   ];
@@ -1322,6 +1383,15 @@ function liveContext(){
     if (S.fasting.activeStart) lines.push(`Currently fasting: ${(Math.round((Date.now() - S.fasting.activeStart) / 36000) / 100)} h so far, goal ${S.fasting.goalH} h.`);
     else if ((S.fasting.log || []).length){ const last = S.fasting.log[S.fasting.log.length - 1]; lines.push(`Last fast: ${last.hours} h (goal ${S.fasting.goalH} h).`); }
   }
+  if (Array.isArray(S.mood) && S.mood.length){ const m = [...S.mood].sort((a, b) => a.date < b.date ? -1 : 1).slice(-3); lines.push(`Mood/energy (recent): ${m.map(e => `${e.date} mood ${e.mood}/5, energy ${e.energy}/5`).join("; ")}.`); }
+  if (Array.isArray(S.measures) && S.measures.length){ const l = [...S.measures].sort((a, b) => a.date < b.date ? -1 : 1).pop(); lines.push(`Latest body measurements (${l.date}): ${MEAS_FIELDS.filter(([k]) => l[k] !== "" && l[k] != null).map(([k, lab]) => `${lab} ${l[k]}cm`).join(", ")}.`); }
+  if (Array.isArray(S.labs) && S.labs.length){ const byM = {}; S.labs.forEach(x => { if (!byM[x.marker] || byM[x.marker].date < x.date) byM[x.marker] = x; }); lines.push(`Latest lab results: ${Object.values(byM).map(x => `${x.marker} ${x.value}${x.unit ? " " + x.unit : ""} (${x.date})`).join("; ")}.`); }
+  // focus sessions + budget
+  if (Array.isArray(S.focusLog)){ const n = S.focusLog.filter(f => f.date === todayStr()).length; if (n) lines.push(`Focus today: ${n} pomodoro session${n > 1 ? "s" : ""}.`); }
+  if (S.budget && (S.budget.income || (S.expenses || []).length)){
+    const ym = todayStr().slice(0, 7); const spent = (S.expenses || []).filter(e => e.date.slice(0, 7) === ym).reduce((a, e) => a + (+e.amount || 0), 0);
+    lines.push(`Budget this month: income ${S.budget.income || 0}, expenses ${Math.round(spent)} (excl. bills).`);
+  }
   // open tasks (by priority)
   if (Array.isArray(S.tasks)){
     const order = {high: 0, med: 1, low: 2};
@@ -1488,8 +1558,8 @@ function md(src){
     const cells = r => r.replace(/^\||\|$/g, "").split("|").map(c => c.trim());
     const head = cells(rows[0]);
     const bodyRows = rows.slice(/^\|[\s:\-|]+\|$/.test(rows[1]) ? 2 : 1);
-    return `<table><thead><tr>${head.map(h => `<th>${h}</th>`).join("")}</tr></thead><tbody>${
-      bodyRows.map(r => `<tr>${cells(r).map(c => `<td>${c}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
+    return `<div class="tbl-scroll"><table><thead><tr>${head.map(h => `<th>${h}</th>`).join("")}</tr></thead><tbody>${
+      bodyRows.map(r => `<tr>${cells(r).map(c => `<td>${c}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
   });
   s = s.replace(/^#{1,4}\s+(.+)$/gm, "<h3>$1</h3>");
   s = s.replace(/^&gt;\s?(.+)$/gm, "<blockquote>$1</blockquote>");
@@ -1589,13 +1659,16 @@ function chatSheetHTML(){
 function chatbarHTML(){
   return `<div class="chatbar">
     ${R.attach ? `<div class="attach-pill">${ic("paperclip", 13)} <b>${esc(R.attach.name)}</b><button onclick="M.attachClear()" style="color:var(--txt2)">✕</button></div>` : ""}
+    ${R.chatTools ? `<div class="tool-row">
+      <button class="tool-btn" onclick="M.attach()">${ic("paperclip", 16)} Attach</button>
+      <button class="tool-btn" onclick="M.voiceChat()">${ic("mic", 16)} Voice</button>
+      <button class="tool-btn ${R.deepSolve ? "on" : ""}" aria-pressed="${R.deepSolve}" onclick="M.toggleDS()">${ic("layers", 16)} Deep Solve</button>
+      <button class="tool-btn ${S.settings.webSearch ? "on" : ""}" aria-pressed="${!!S.settings.webSearch}" onclick="M.toggleWeb()">${ic("globe", 16)} Web search</button>
+    </div>` : ""}
     <div class="inner">
-      <button class="icon-btn" aria-label="Attach photo or PDF" onclick="M.attach()" title="Attach photo or PDF">${ic("paperclip", 19)}</button>
-      <button class="icon-btn" aria-label="Voice input" onclick="M.voiceChat()" title="Voice input">${ic("mic", 19)}</button>
-      <button class="icon-btn ds ${R.deepSolve ? "on" : ""}" aria-label="Deep Solve" aria-pressed="${R.deepSolve}" onclick="M.toggleDS()" title="Deep Solve">${ic("layers", 19)}</button>
-      <button class="icon-btn ds ${S.settings.webSearch ? "on" : ""}" aria-label="Live web search" aria-pressed="${!!S.settings.webSearch}" onclick="M.toggleWeb()" title="Live web search">${ic("globe", 19)}</button>
+      <button class="icon-btn tools-toggle ${R.chatTools ? "on" : ""}" aria-label="Options" aria-expanded="${R.chatTools}" onclick="M.toggleTools()">${R.chatTools ? ic("x", 20) : ic("plus", 22)}</button>
       <textarea id="chatIn" rows="1" placeholder="Message MIRA…" dir="auto" aria-label="Message MIRA"
-        oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"
+        oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,140)+'px'"
         onkeydown="if(event.key==='Enter'&&!event.shiftKey&&!('ontouchstart' in window)){event.preventDefault();M.send()}"></textarea>
       <button class="icon-btn send" aria-label="Send" onclick="M.send()" ${R.busy ? "disabled" : ""}>${R.busy ? "…" : ic("arrowUp", 19)}</button>
     </div>
@@ -2623,7 +2696,7 @@ function achievementsHTML(){
 
 /* ---- view ---- */
 function healthHTML(){
-  const tabs = [["supps","Supplements"],["sleep","Sleep"],["habits","Habits"],["fasting","Fasting"],["review","Review"]];
+  const tabs = [["supps","Supplements"],["sleep","Sleep"],["habits","Habits"],["fasting","Fasting"],["mood","Mood"],["review","Review"]];
   return `
     <button class="cat-back" onclick="M.healthBack()">${ic("back", 18)} Health</button>
     <div class="cat-title"><div class="ch-nm">Health</div><div class="ch-ds">Supplements · sleep · review</div></div>
@@ -2633,8 +2706,35 @@ function healthHTML(){
       R.healthTab === "supps" ? healthSuppHTML() :
       R.healthTab === "sleep" ? healthSleepHTML() :
       R.healthTab === "habits" ? healthHabitsHTML() :
-      R.healthTab === "fasting" ? healthFastHTML() : healthReviewHTML()
+      R.healthTab === "fasting" ? healthFastHTML() :
+      R.healthTab === "mood" ? healthMoodHTML() : healthReviewHTML()
     }</div>`;
+}
+function healthMoodHTML(){
+  const rec = [...S.mood].sort((a, b) => a.date < b.date ? -1 : 1).slice(-14);
+  const a7 = (() => { const since = new Date(Date.now() - 6 * 864e5).toLocaleDateString("en-CA"); const es = S.mood.filter(e => e.date >= since); if (!es.length) return null; const avg = a => a.reduce((x, y) => x + y, 0) / a.length; return {m: avg(es.map(e => e.mood)), en: avg(es.map(e => e.energy)), n: es.length}; })();
+  const f = R.moodForm;
+  const seg = (key, val) => [1,2,3,4,5].map(q => `<button class="${val === q ? "on" : ""}" onclick="R.moodForm.${key}=${q};render()">${q}</button>`).join("");
+  let chart = "";
+  if (rec.length >= 2){
+    const W = 154, H = 40;
+    const line = (arr, color) => { const xy = arr.map((v, i) => `${(i / (arr.length - 1)) * (W - 8) + 4},${H - 6 - ((v - 1) / 4) * (H - 12)}`); return `<polyline points="${xy.join(" ")}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`; };
+    chart = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:56px;display:block;margin:6px 0 2px">${line(rec.map(e => e.mood), "var(--acc)")}${line(rec.map(e => e.energy), "var(--amber)")}</svg>
+      <div class="tiny"><span style="color:var(--acc)">● mood</span> · <span style="color:var(--amber)">● energy</span></div>`;
+  }
+  return `
+    <div class="card">
+      <h3>${ic("smile", 16)} How are you today?</h3>
+      <div class="field"><label>Mood (1 low – 5 great)</label><div class="seg">${seg("mood", f.mood)}</div></div>
+      <div class="field"><label>Energy (1 low – 5 high)</label><div class="seg">${seg("energy", f.energy)}</div></div>
+      <div class="field"><label>Note (optional)</label><input id="moodNote" value="${esc(f.note)}" oninput="R.moodForm.note=this.value" placeholder="What's affecting it?" dir="auto"></div>
+      <button class="btn sm" onclick="M.moodSave()">Save check-in</button>
+    </div>
+    ${a7 ? `<div class="card"><h3>${ic("chart", 16)} Last 7 days</h3>${chart}
+      <div class="muted">Average mood <b>${n1(a7.m)}/5</b> · energy <b>${n1(a7.en)}/5</b> over ${a7.n} day${a7.n > 1 ? "s" : ""}.</div></div>` : ""}
+    ${rec.length ? `<div class="card"><h3>Recent</h3>${[...rec].reverse().map(e => `<div class="set-row">
+      <div><div class="k">${fmtDate(e.date)}</div><div class="desc">mood ${e.mood}/5 · energy ${e.energy}/5${e.note ? " · " + esc(e.note) : ""}</div></div>
+      <span class="end"><button class="btn sm danger" aria-label="Delete" onclick="M.moodDel('${e.id}')">${ic("trash", 13)}</button></span></div>`).join("")}</div>` : ""}`;
 }
 function healthHabitsHTML(){
   const t = todayStr();
@@ -2832,7 +2932,7 @@ function openTasks(){
 
 function workHTML(){
   if (R.workTab === "notes" && R.noteId) return workNoteEditorHTML();
-  const tabs = [["tasks","Tasks"],["notes","Notes"],["kit","Toolkit"]];
+  const tabs = [["tasks","Tasks"],["notes","Notes"],["focus","Focus"],["kit","Toolkit"]];
   return `
     <button class="cat-back" onclick="M.workBack()">${ic("back", 18)} Work</button>
     <div class="cat-title"><div class="ch-nm">Work</div><div class="ch-ds">Tasks · notes · your field toolkit</div></div>
@@ -2840,7 +2940,8 @@ function workHTML(){
       `<button class="chip ${R.workTab === k ? "on" : ""}" onclick="M.workGo('${k}')">${l}</button>`).join("")}</div>
     <div style="margin-top:12px">${
       R.workTab === "tasks" ? workTasksHTML() :
-      R.workTab === "notes" ? workNotesHTML() : workKitHTML()
+      R.workTab === "notes" ? workNotesHTML() :
+      R.workTab === "focus" ? workFocusHTML() : workKitHTML()
     }</div>`;
 }
 
@@ -2918,6 +3019,61 @@ function workNotesHTML(){
     </button>`).join("") : `<div class="card"><div class="muted">No notes yet. Create documents, memos, or meeting notes — all stored on your device.</div></div>`}`;
 }
 
+/* ---- Pomodoro focus timer ---- */
+let pomoIv = null;
+const pomoRemaining = () => Math.max(0, Math.ceil((R.pomo.endsAt - Date.now()) / 1000));
+const fmtMS = s => Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+function pomoTodayCount(){ return S.focusLog.filter(f => f.date === todayStr()).length; }
+function pomoTodayMinutes(){ return S.focusLog.filter(f => f.date === todayStr()).reduce((a, f) => a + f.minutes, 0); }
+function ensurePomo(){
+  if (R.pomo.mode && !pomoIv){
+    pomoIv = setInterval(() => {
+      const el = document.getElementById("pomoTime"), f = document.getElementById("pomoFill");
+      const rem = pomoRemaining();
+      if (el) el.textContent = fmtMS(rem);
+      if (f){ const total = (R.pomo.mode === "work" ? S.settings.focusLen : S.settings.breakLen) * 60; f.style.width = (100 * (1 - rem / total)) + "%"; }
+      if (rem <= 0) pomoComplete();
+    }, 500);
+  }
+  if (!R.pomo.mode && pomoIv){ clearInterval(pomoIv); pomoIv = null; }
+}
+function pomoComplete(){
+  clearInterval(pomoIv); pomoIv = null;
+  const wasWork = R.pomo.mode === "work";
+  if (wasWork){
+    const task = R.pomo.taskId ? (S.tasks.find(t => t.id === R.pomo.taskId) || {}).title || "" : "";
+    S.focusLog.push({id: uid(), date: todayStr(), minutes: S.settings.focusLen, task});
+    save();
+  }
+  R.pomo.mode = null;
+  buzz(300);
+  if (typeof render === "function") render();
+  toast(wasWork ? "Focus session done — take a break." : "Break over — ready to focus?", 3200);
+}
+function workFocusHTML(){
+  const running = !!R.pomo.mode;
+  const open = openTasks();
+  return `
+    <div class="card" style="text-align:center">
+      ${running ? `<div class="tiny">${R.pomo.mode === "work" ? "Focus" : "Break"}${R.pomo.taskId ? " · " + esc((S.tasks.find(t => t.id === R.pomo.taskId) || {}).title || "") : ""}</div>
+        <div id="pomoTime" style="font-size:44px;font-weight:700;color:var(--acc);font-variant-numeric:tabular-nums;margin:4px 0">${fmtMS(pomoRemaining())}</div>
+        <div class="rest-track" style="margin:6px 0 14px"><i id="pomoFill" style="width:0%"></i></div>
+        <button class="btn sec danger" onclick="M.pomoStop()">Stop</button>`
+      : `<div class="tiny">Pomodoro — focus in blocks</div>
+        <div style="font-size:20px;font-weight:600;margin:6px 0 10px">${S.settings.focusLen} min focus · ${S.settings.breakLen} min break</div>
+        <div class="seg" style="margin-bottom:10px">${[[25,5],[50,10],[15,3]].map(([w, b]) => `<button class="${S.settings.focusLen === w ? "on" : ""}" onclick="M.pomoPreset(${w},${b})">${w}/${b}</button>`).join("")}</div>
+        ${open.length ? `<div class="field" style="text-align:start"><label>Focus on (optional)</label>
+          <select onchange="R.pomo.taskId=this.value"><option value="">— no task —</option>${open.map(t => `<option value="${t.id}" ${R.pomo.taskId === t.id ? "selected" : ""}>${esc(t.title)}</option>`).join("")}</select></div>` : ""}
+        <button class="btn" onclick="M.pomoStart('work')">${ic("play", 15)} Start focus</button>`}
+    </div>
+    <div class="card">
+      <h3>${ic("timer", 16)} Today</h3>
+      <div class="rev-grid"><div class="rev-stat"><div class="rv">${pomoTodayCount()}</div><div class="rl">Sessions</div></div>
+        <div class="rev-stat"><div class="rv">${pomoTodayMinutes()}</div><div class="rl">Focus min</div></div>
+        <div class="rev-stat"><div class="rv">${S.focusLog.length}</div><div class="rl">All-time</div></div></div>
+    </div>`;
+}
+
 function workKitHTML(){
   const prof = (S.settings.profession || "").trim();
   if (!prof){
@@ -2977,7 +3133,7 @@ const cur = v => (Math.round(v * 100) / 100).toLocaleString("en", {minimumFracti
 function lifeHTML(){
   if (R.lifeTab === "trips" && R.tripId) return tripDetailHTML();
   if (R.lifeTab === "compare" && R.compareId) return compareDetailHTML();
-  const tabs = [["trips","Travel"],["bills","Bills"],["compare","Compare"],["decide","Decisions"]];
+  const tabs = [["trips","Travel"],["bills","Bills"],["budget","Budget"],["compare","Compare"],["decide","Decisions"],["lists","Dates & reading"]];
   return `
     <button class="cat-back" onclick="M.lifeBack()">${ic("back", 18)} Life</button>
     <div class="cat-title"><div class="ch-nm">Life</div><div class="ch-ds">Travel · bills · compare · decisions</div></div>
@@ -2986,7 +3142,9 @@ function lifeHTML(){
     <div style="margin-top:12px">${
       R.lifeTab === "trips" ? tripsHTML() :
       R.lifeTab === "bills" ? billsHTML() :
-      R.lifeTab === "compare" ? compareHTML() : decideHTML()
+      R.lifeTab === "budget" ? budgetHTML() :
+      R.lifeTab === "compare" ? compareHTML() :
+      R.lifeTab === "lists" ? listsHTML() : decideHTML()
     }</div>`;
 }
 
@@ -3023,6 +3181,92 @@ function billsHTML(){
         </div>`;
       }).join("")}
     </div>` : ""}`;
+}
+
+/* ---------------- Budget ---------------- */
+const EXP_CATS = ["Food","Transport","Housing","Shopping","Health","Bills","Entertainment","Other"];
+function budgetHTML(){
+  const ym = todayStr().slice(0, 7);
+  const monthExp = S.expenses.filter(e => e.date.slice(0, 7) === ym);
+  const spent = monthExp.reduce((a, e) => a + num(e.amount), 0);
+  const billsMo = S.bills.reduce((a, b) => a + num(b.amount) * (BILL_CYCLES[b.cycle] || BILL_CYCLES.monthly).perMonth, 0);
+  const income = num(S.budget.income);
+  const net = income - spent - billsMo;
+  const byCat = {};
+  monthExp.forEach(e => { byCat[e.category] = (byCat[e.category] || 0) + num(e.amount); });
+  const f = R.expForm;
+  return `
+    <div class="card">
+      <div class="field"><label>Monthly income (KWD)</label><input type="number" inputmode="decimal" value="${S.budget.income || ""}" oninput="S.budget.income=num(this.value);save()"></div>
+      <div class="rev-grid">
+        <div class="rev-stat"><div class="rv">${cur(spent + billsMo)}</div><div class="rl">Out this month</div></div>
+        <div class="rev-stat"><div class="rv" style="color:${net >= 0 ? "var(--green)" : "var(--red)"}">${cur(net)}</div><div class="rl">Net left</div></div>
+        <div class="rev-stat"><div class="rv">${cur(billsMo)}</div><div class="rl">Bills</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>${ic("plus", 16)} Add expense</h3>
+      <div class="grid2" style="margin-bottom:10px">
+        <div class="field"><label>Category</label><select onchange="R.expForm.category=this.value">${EXP_CATS.map(c => `<option ${f.category === c ? "selected" : ""}>${c}</option>`).join("")}</select></div>
+        <div class="field"><label>Amount (KWD)</label><input type="number" inputmode="decimal" value="${esc(f.amount)}" oninput="R.expForm.amount=this.value"></div>
+      </div>
+      <div class="row"><input value="${esc(f.note)}" oninput="R.expForm.note=this.value" placeholder="Note (optional)" dir="auto">
+        <button class="btn sm" style="flex:0 0 auto" onclick="M.expAdd()">Add</button></div>
+    </div>
+    ${Object.keys(byCat).length ? `<div class="card"><h3>${ic("wallet", 16)} This month by category</h3>
+      ${Object.entries(byCat).sort((a, b) => b[1] - a[1]).map(([c, v]) => `<div class="bar-line" style="margin-bottom:8px">
+        <div class="bar-top"><span class="lab">${c}</span><span class="val">${cur(v)} KWD</span></div>
+        <div class="bar"><i style="width:${Math.min(100, (v / Math.max(spent, 1)) * 100)}%"></i></div></div>`).join("")}
+    </div>` : ""}
+    ${monthExp.length ? `<div class="card"><h3>Recent expenses</h3>
+      ${[...monthExp].sort((a, b) => b.ts - a.ts).slice(0, 12).map(e => `<div class="set-row">
+        <div><div class="k">${esc(e.category)}${e.note ? ` · ${esc(e.note)}` : ""}</div><div class="desc">${fmtDate(e.date)}</div></div>
+        <span class="end"><b>${cur(e.amount)} KWD</b><button class="btn sm danger" aria-label="Delete" onclick="M.expDel('${e.id}')">${ic("trash", 13)}</button></span>
+      </div>`).join("")}
+    </div>` : ""}`;
+}
+
+/* ---------------- Dates & reading list ---------------- */
+const READ_STATUS = {todo: "To read", reading: "Reading", done: "Done"};
+function listsHTML(){
+  const df = R.dateForm, rf = R.readForm;
+  const upcoming = [...S.dates].map(d => {
+    let next = d.date;
+    if (d.recurring && next < todayStr()){ const dt = new Date(next + "T12:00"); dt.setFullYear(new Date().getFullYear()); if (dt.toLocaleDateString("en-CA") < todayStr()) dt.setFullYear(dt.getFullYear() + 1); next = dt.toLocaleDateString("en-CA"); }
+    return {...d, next};
+  }).sort((a, b) => a.next < b.next ? -1 : 1);
+  return `
+    <div class="card">
+      <h3>${ic("bell", 16)} Important dates</h3>
+      <div class="grid2" style="margin-bottom:8px">
+        <div class="field"><label>What</label><input value="${esc(df.title)}" oninput="R.dateForm.title=this.value" placeholder="e.g. Mum's birthday" dir="auto"></div>
+        <div class="field"><label>Date</label><input type="date" value="${esc(df.date)}" oninput="R.dateForm.date=this.value"></div>
+      </div>
+      <label class="row" style="gap:8px;margin-bottom:10px"><input type="checkbox" style="width:auto;min-height:0" ${df.recurring ? "checked" : ""} onchange="R.dateForm.recurring=this.checked"> <span class="tiny">Repeats every year</span></label>
+      <button class="btn sm" onclick="M.dateAdd()">Add date</button>
+      ${upcoming.length ? `<div style="margin-top:12px">${upcoming.map(d => `<div class="set-row">
+        <div><div class="k" dir="auto">${esc(d.title)}${d.recurring ? " ↻" : ""}</div><div class="desc">${fmtDate(d.next)}</div></div>
+        <span class="end"><button class="btn sm sec" aria-label="Remind" onclick="M.dateCal('${d.id}')">${ic("calendar", 13)}</button>
+          <button class="btn sm danger" aria-label="Delete" onclick="M.dateDel('${d.id}')">${ic("trash", 13)}</button></span>
+      </div>`).join("")}</div>` : ""}
+    </div>
+    <div class="card">
+      <h3>${ic("book", 16)} Reading list</h3>
+      <div class="row" style="margin-bottom:10px">
+        <input value="${esc(rf.title)}" oninput="R.readForm.title=this.value" placeholder="Title…" dir="auto" onkeydown="if(event.key==='Enter')M.readAdd()">
+        <select style="flex:0 0 96px" onchange="R.readForm.kind=this.value">${["Book","Article","Other"].map(k => `<option ${rf.kind === k ? "selected" : ""}>${k}</option>`).join("")}</select>
+        <button class="btn sm" style="flex:0 0 auto" onclick="M.readAdd()">Add</button>
+      </div>
+      ${S.reading.length ? ["reading","todo","done"].map(st => {
+        const items = S.reading.filter(r => r.status === st);
+        return items.length ? `<div class="tiny" style="margin:8px 0 4px;color:var(--txt3)">${READ_STATUS[st]}</div>
+          ${items.map(r => `<div class="set-row">
+            <button class="task-check" style="border-radius:7px" onclick="M.readCycle('${r.id}')">${r.status === "done" ? ic("check", 14) : ""}</button>
+            <div class="task-tx"><div class="task-nm ${r.status === "done" ? "" : ""}" dir="auto" style="${r.status === "done" ? "text-decoration:line-through;color:var(--txt3)" : ""}">${esc(r.title)}</div><div class="task-ds">${esc(r.kind)}</div></div>
+            <button class="del" aria-label="Delete" onclick="M.readDel('${r.id}')">${ic("trash", 13)}</button>
+          </div>`).join("")}` : "";
+      }).join("") : `<div class="muted">Add books or articles; tap the circle to move To read → Reading → Done.</div>`}
+    </div>`;
 }
 
 /* ---------------- Travel planner ---------------- */
@@ -3146,6 +3390,113 @@ function decideHTML(){
 </script>
 <script>
 "use strict";
+/* ============================================================
+   Body extras — measurements, progress photos, lab results.
+   Rendered as collapsible cards on the Body tab.
+   ============================================================ */
+
+const MEAS_FIELDS = [["waist","Waist"],["chest","Chest"],["arms","Arm"],["thigh","Thigh"],["hips","Hips"],["neck","Neck"]];
+const LAB_MARKERS = ["Total cholesterol","LDL","HDL","Triglycerides","Fasting glucose","HbA1c","Vitamin D","Ferritin","TSH","Custom…"];
+
+/* resize an image to a max dimension and return a JPEG dataURL (keeps storage small) */
+function resizeImage(file, max, cb){
+  const r = new FileReader();
+  r.onload = () => {
+    const img = new Image();
+    img.onload = () => {
+      let w = img.width, h = img.height;
+      if (w > max || h > max){ const s = max / Math.max(w, h); w = Math.round(w * s); h = Math.round(h * s); }
+      const c = document.createElement("canvas"); c.width = w; c.height = h;
+      c.getContext("2d").drawImage(img, 0, 0, w, h);
+      try { cb(c.toDataURL("image/jpeg", 0.72)); } catch (e) { toast("Couldn't process that image."); }
+    };
+    img.onerror = () => toast("Couldn't read that image.");
+    img.src = r.result;
+  };
+  r.readAsDataURL(file);
+}
+
+function measuresCardHTML(){
+  const sorted = [...S.measures].sort((a, b) => a.date < b.date ? -1 : 1);
+  const latest = sorted[sorted.length - 1], prev = sorted[sorted.length - 2];
+  const f = R.measForm;
+  return `<div class="card fold ${R.bodyOpen.meas ? "open" : ""}">
+    <h3 onclick="M.bodyToggle('meas')">${ic("ruler", 16)} Measurements${latest ? ` <span class="tiny" style="margin-inline-start:auto;font-weight:400">${fmtDate(latest.date)}</span>` : ""} <span class="chev">▶</span></h3>
+    <div class="fold-body">
+      ${latest ? `<div class="ib-grid" style="margin-bottom:12px">${MEAS_FIELDS.map(([k, l]) => {
+        const v = latest[k];
+        if (v === "" || v === undefined || v === null) return "";
+        let dv = "";
+        if (prev && prev[k] !== "" && isFinite(+prev[k])){ const d = +v - +prev[k]; if (Math.abs(d) > 0.05) dv = `<div class="dv ${d < 0 ? "good" : "bad"}">${d > 0 ? "▲" : "▼"} ${n1(Math.abs(d))}</div>`; }
+        return `<div class="ib-cell"><div class="k">${l}</div><div class="v">${n1(+v)}<span class="tiny"> cm</span></div>${dv}</div>`;
+      }).join("")}</div>` : `<div class="muted" style="margin-bottom:10px">Log waist, chest, arms and more (cm) to track shape change alongside weight.</div>`}
+      <div class="field"><label>Date</label><input type="date" value="${esc(f.date || todayStr())}" oninput="R.measForm.date=this.value"></div>
+      <div class="grid2" style="margin-bottom:10px">${MEAS_FIELDS.map(([k, l]) =>
+        `<div class="field"><label>${l} (cm)</label><input type="number" inputmode="decimal" value="${esc(f[k])}" oninput="R.measForm.${k}=this.value"></div>`).join("")}</div>
+      <button class="btn sm" onclick="M.measSave()">Save measurements</button>
+      ${sorted.length ? `<div class="tiny" style="margin-top:10px">${sorted.length} entr${sorted.length > 1 ? "ies" : "y"} · <button style="color:var(--acc)" onclick="M.measDelLast()">delete latest</button></div>` : ""}
+    </div>
+  </div>`;
+}
+
+function photosCardHTML(){
+  const ps = [...S.photos].sort((a, b) => a.date < b.date ? 1 : -1);
+  return `<div class="card fold ${R.bodyOpen.photo ? "open" : ""}">
+    <h3 onclick="M.bodyToggle('photo')">${ic("image", 16)} Progress photos${ps.length ? ` <span class="tiny" style="margin-inline-start:auto;font-weight:400">${ps.length}</span>` : ""} <span class="chev">▶</span></h3>
+    <div class="fold-body">
+      <button class="btn sm sec" onclick="M.photoAdd()">${ic("camera", 15)} Add photo</button>
+      ${ps.length ? `<div class="photo-grid">${ps.map(p => `<button class="photo-thumb" onclick="M.photoOpen('${p.id}')" style="background-image:url(${p.data})">
+        <span class="pt-date">${fmtDate(p.date)}</span></button>`).join("")}</div>` : `<div class="muted" style="margin-top:10px">Snap a monthly progress photo. Stored on this device only (resized to keep it small).</div>`}
+    </div>
+  </div>`;
+}
+
+function labsCardHTML(){
+  const f = R.labForm;
+  const markers = [...new Set(S.labs.map(l => l.marker))];
+  return `<div class="card fold ${R.bodyOpen.lab ? "open" : ""}">
+    <h3 onclick="M.bodyToggle('lab')">${ic("flask", 16)} Lab results${S.labs.length ? ` <span class="tiny" style="margin-inline-start:auto;font-weight:400">${markers.length} markers</span>` : ""} <span class="chev">▶</span></h3>
+    <div class="fold-body">
+      ${markers.length ? markers.map(m => {
+        const es = S.labs.filter(l => l.marker === m).sort((a, b) => a.date < b.date ? -1 : 1);
+        const last = es[es.length - 1], prev = es[es.length - 2];
+        let dv = "";
+        if (prev && isFinite(+prev.value)){ const d = +last.value - +prev.value; if (Math.abs(d) > 1e-6) dv = ` <span class="tiny">(${d > 0 ? "+" : ""}${n1(d)})</span>`; }
+        return `<div class="set-row">
+          <div><div class="k" dir="auto">${esc(m)}</div><div class="desc">${fmtDate(last.date)}${es.length > 1 ? ` · ${es.length} readings` : ""}</div></div>
+          <span class="end"><b>${esc(last.value)} ${esc(last.unit || "")}${dv}</b></span>
+        </div>`;
+      }).join("") : `<div class="muted" style="margin-bottom:10px">Track blood markers (cholesterol, glucose, vitamin D…) and watch trends over time.</div>`}
+      <div class="grid2" style="margin:10px 0">
+        <div class="field"><label>Marker</label><select onchange="R.labForm.marker=this.value;render()">${LAB_MARKERS.map(m => `<option ${f.marker === m ? "selected" : ""}>${m}</option>`).join("")}</select></div>
+        ${f.marker === "Custom…" ? `<div class="field"><label>Name</label><input value="${esc(f.custom)}" oninput="R.labForm.custom=this.value" dir="auto"></div>`
+          : `<div class="field"><label>Date</label><input type="date" value="${esc(f.date || todayStr())}" oninput="R.labForm.date=this.value"></div>`}
+      </div>
+      ${f.marker === "Custom…" ? `<div class="field"><label>Date</label><input type="date" value="${esc(f.date || todayStr())}" oninput="R.labForm.date=this.value"></div>` : ""}
+      <div class="grid2" style="margin-bottom:10px">
+        <div class="field"><label>Value</label><input type="number" inputmode="decimal" value="${esc(f.value)}" oninput="R.labForm.value=this.value"></div>
+        <div class="field"><label>Unit</label><input value="${esc(f.unit)}" oninput="R.labForm.unit=this.value" placeholder="mmol/L, mg/dL…"></div>
+      </div>
+      <button class="btn sm" onclick="M.labSave()">Add result</button>
+    </div>
+  </div>`;
+}
+
+function photoViewHTML(){
+  const p = S.photos.find(x => x.id === R.photoView);
+  if (!p) return "";
+  return `<div class="sheet-mask show" onclick="M.photoClose()"></div>
+    <div class="photo-view">
+      <img src="${p.data}" alt="Progress photo ${p.date}">
+      <div class="row" style="margin-top:12px">
+        <button class="btn sec" onclick="M.photoClose()">Close</button>
+        <button class="btn danger" style="flex:0 0 auto" onclick="M.photoDel('${p.id}')">${ic("trash", 15)} Delete</button>
+      </div>
+    </div>`;
+}
+</script>
+<script>
+"use strict";
 /* ---------------- body composition ---------------- */
 const IB_METRICS = [
   {k: "weight", label: "Weight",   unit: "kg",  goodDir: 0},
@@ -3188,6 +3539,10 @@ function bodyHTML(){
   const sorted = [...S.inbody].sort((a, b) => a.date < b.date ? -1 : 1);
   return `
   ${weightCardHTML(sorted)}
+  ${measuresCardHTML()}
+  ${photosCardHTML()}
+  ${labsCardHTML()}
+  ${R.photoView ? photoViewHTML() : ""}
   <div class="card">
     <h3>${ic("chart", 16)} InBody log</h3>
     <div class="muted">Each scan is stored with the change from the previous entry per metric. MIRA reads this log live — ask for a trend analysis in Fitness mode any time.</div>
@@ -3540,6 +3895,10 @@ window.M = {
     toast(`Started ${r.name}`);
   },
   routineDel(i){ if (confirm(`Delete the routine "${S.routines[i].name}"?`)){ S.routines.splice(i, 1); save(); render(); } },
+  /* ---- pomodoro ---- */
+  pomoPreset(w, b){ S.settings.focusLen = w; S.settings.breakLen = b; save(); render(); },
+  pomoStart(mode){ R.pomo.mode = mode; R.pomo.endsAt = Date.now() + (mode === "work" ? S.settings.focusLen : S.settings.breakLen) * 60000; render(); ensurePomo(); },
+  pomoStop(){ clearInterval(pomoIv); pomoIv = null; R.pomo.mode = null; render(); },
   woDelSet(i, j){ R.trainWO.items[i].sets.splice(j, 1); render(); },
   woDelEx(i){ R.trainWO.items.splice(i, 1); render(); },
   woFinish(){
@@ -3784,6 +4143,42 @@ window.M = {
     buzz(); save(); render();
   },
   billDel(id){ S.bills = S.bills.filter(b => b.id !== id); save(); render(); },
+  /* ---- budget ---- */
+  expAdd(){
+    const a = num(R.expForm.amount);
+    if (a <= 0){ toast("Enter the amount."); return; }
+    S.expenses.push({id: uid(), date: todayStr(), category: R.expForm.category, amount: a, note: R.expForm.note.trim(), ts: Date.now()});
+    R.expForm = {category: R.expForm.category, amount: "", note: "", date: ""};
+    buzz(); save(); render();
+  },
+  expDel(id){ S.expenses = S.expenses.filter(e => e.id !== id); save(); render(); },
+  /* ---- important dates ---- */
+  dateAdd(){
+    if (!R.dateForm.title.trim() || !R.dateForm.date){ toast("Add a title and date."); return; }
+    S.dates.push({id: uid(), title: R.dateForm.title.trim(), date: R.dateForm.date, recurring: R.dateForm.recurring});
+    R.dateForm = {title: "", date: "", recurring: false};
+    buzz(); save(); render();
+  },
+  dateDel(id){ S.dates = S.dates.filter(d => d.id !== id); save(); render(); },
+  dateCal(id){
+    const d = S.dates.find(x => x.id === id); if (!d) return;
+    icsDownload(d.date, "09:00", d.title, "MIRA reminder", d.id);
+    toast("Reminder ready — open it to add to your calendar.");
+  },
+  /* ---- reading list ---- */
+  readAdd(){
+    if (!R.readForm.title.trim()){ toast("Add a title."); return; }
+    S.reading.unshift({id: uid(), title: R.readForm.title.trim(), kind: R.readForm.kind, status: "todo"});
+    R.readForm = {title: "", kind: R.readForm.kind};
+    save(); render();
+  },
+  readCycle(id){
+    const r = S.reading.find(x => x.id === id); if (!r) return;
+    r.status = r.status === "todo" ? "reading" : r.status === "reading" ? "done" : "todo";
+    if (r.status === "done") buzz();
+    save(); render();
+  },
+  readDel(id){ S.reading = S.reading.filter(r => r.id !== id); save(); render(); },
   billCal(id){
     const b = S.bills.find(x => x.id === id);
     if (!b || !b.next) return;
@@ -3924,6 +4319,7 @@ window.M = {
   onbCustomDel(i){ onb.custom.splice(i, 1); render(); },
   onbDone,
 
+  toggleTools(){ R.chatTools = !R.chatTools; render(); const ta = $("#chatIn"); if (ta && !R.chatTools) ta.focus(); },
   toggleDS(){ R.deepSolve = !R.deepSolve; render(); const ta = $("#chatIn"); if (ta) ta.focus(); },
   toggleWeb(){
     S.settings.webSearch = !S.settings.webSearch;
@@ -4115,6 +4511,55 @@ window.M = {
     }
   },
   ibDel(id){ if (confirm("Delete this scan?")){ S.inbody = S.inbody.filter(e => e.id !== id); save(); render(); } },
+  bodyToggle(sec){ R.bodyOpen[sec] = !R.bodyOpen[sec]; render(); },
+  measSave(){
+    const f = R.measForm;
+    const vals = {}; let any = false;
+    MEAS_FIELDS.forEach(([k]) => { const v = f[k]; if (v !== "" && isFinite(+v)){ vals[k] = num(v); any = true; } else vals[k] = ""; });
+    if (!any){ toast("Enter at least one measurement."); return; }
+    S.measures.push({id: uid(), date: f.date || todayStr(), ...vals});
+    R.measForm = {date: "", waist: "", chest: "", arms: "", thigh: "", hips: "", neck: ""};
+    R.bodyOpen.meas = true; buzz(); save(); render();
+    toast("Measurements saved ✓");
+  },
+  measDelLast(){
+    const sorted = [...S.measures].sort((a, b) => a.date < b.date ? -1 : 1);
+    const last = sorted[sorted.length - 1];
+    if (last && confirm("Delete the latest measurement entry?")){ S.measures = S.measures.filter(m => m.id !== last.id); save(); render(); }
+  },
+  photoAdd(){
+    const inp = $("#fileImg"); inp.value = "";
+    inp.onchange = () => {
+      const file = inp.files[0]; if (!file) return;
+      if (!/^image\//.test(file.type)){ toast("Pick an image."); return; }
+      resizeImage(file, 720, data => { S.photos.push({id: uid(), date: todayStr(), data}); R.bodyOpen.photo = true; save(); render(); toast("Photo saved ✓"); });
+    };
+    inp.click();
+  },
+  photoOpen(id){ R.photoView = id; render(); },
+  photoClose(){ R.photoView = null; render(); },
+  photoDel(id){ if (confirm("Delete this photo?")){ S.photos = S.photos.filter(p => p.id !== id); R.photoView = null; save(); render(); } },
+  labSave(){
+    const f = R.labForm;
+    const marker = f.marker === "Custom…" ? f.custom.trim() : f.marker;
+    if (!marker){ toast("Name the marker."); return; }
+    if (f.value === "" || !isFinite(+f.value)){ toast("Enter the value."); return; }
+    S.labs.push({id: uid(), date: f.date || todayStr(), marker, value: num(f.value), unit: f.unit.trim()});
+    R.labForm = {marker: f.marker, custom: "", value: "", unit: f.unit, date: ""};
+    R.bodyOpen.lab = true; buzz(); save(); render();
+    toast("Result added ✓");
+  },
+  moodSave(){
+    const f = R.moodForm;
+    if (!f.mood && !f.energy){ toast("Pick a mood or energy level."); return; }
+    const t = todayStr();
+    S.mood = S.mood.filter(e => e.date !== t);
+    S.mood.push({id: uid(), date: t, mood: f.mood || 0, energy: f.energy || 0, note: f.note.trim()});
+    R.moodForm = {mood: 0, energy: 0, note: ""};
+    buzz(); save(); render();
+    toast("Check-in saved ✓");
+  },
+  moodDel(id){ S.mood = S.mood.filter(e => e.id !== id); save(); render(); },
   ibPhoto,
   ibReviewAccept(){ if (ibSaveEntry(ibReview)){ ibReview = null; render(); } },
   ibAnalyse(){
