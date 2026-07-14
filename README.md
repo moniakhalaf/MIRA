@@ -21,6 +21,8 @@ This repository contains the **standalone edition**: a single self-contained `in
 - Multiple saved conversations per mode, kept until you delete them
 - Multilingual — replies in whatever language you write in (Arabic ↔ English mid-conversation)
 - Live data awareness — your food log, targets, hydration and InBody history are fed into every conversation automatically ("what should I eat tonight?" gets exact remaining amounts)
+- **Weekly review** — a cross-domain summary of your last 7 days (training, nutrition, hydration, sleep, tasks, focus, habits, mood, spending) as honest stat tiles — blank means nothing was logged, never faked progress — plus one-tap "Ask MIRA for my weekly review" for grounded wins, watch-outs and next-week priorities
+- Guided first-run setup captures your name, profession/field and current primary goal (all editable later in Settings) so answers and reviews stay oriented to what you're working toward
 
 **Nutrition tracker**
 - Daily food log grouped by day (today open, past days collapse to one line)

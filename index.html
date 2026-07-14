@@ -474,6 +474,27 @@ body.kb .chatbar{padding-bottom:6px}
 .ds-note{font-size:11.5px;color:var(--acc);text-align:center;max-height:0;opacity:0;overflow:hidden;transition:max-height .2s ease,opacity .16s ease,padding .2s ease;padding:0}
 .ds-note.open{max-height:40px;opacity:1;padding:3px 0 0}
 .build-tag{text-align:center;font-size:10.5px;letter-spacing:.04em;color:var(--txt2);opacity:.5;padding:14px 0 4px;user-select:none}
+.opt{font-weight:400;font-size:11px;color:var(--txt2);opacity:.7;margin-inline-start:5px}
+.review-card{display:flex;align-items:center;gap:12px;width:100%;text-align:start;margin:14px 0 2px;padding:15px 16px;border-radius:16px;background:var(--card);border:1px solid var(--line2)}
+.review-card:active{transform:scale(.99)}
+.review-card .rc-ic{width:40px;height:40px;min-width:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:var(--acc-soft);color:var(--acc)}
+.review-card .rc-tx{flex:1;display:flex;flex-direction:column;gap:2px}
+.review-card .rc-nm{font-weight:650;font-size:15px;color:var(--txt)}
+.review-card .rc-ds{font-size:12.5px;color:var(--txt2);line-height:1.35}
+.review-card .rc-ar{color:var(--txt2)}
+.wr-note{font-size:12px;color:var(--txt2);line-height:1.4;background:var(--card2);border:1px solid var(--line2);border-radius:11px;padding:9px 12px;margin:4px 0 14px;display:flex;gap:7px;align-items:flex-start}
+.wr-note svg{flex:0 0 auto;margin-top:1px;color:var(--acc)}
+.wr-sec{margin-bottom:16px}
+.wr-h{display:flex;align-items:center;gap:8px;font-weight:600;font-size:13.5px;color:var(--txt);margin:0 2px 9px}
+.wr-dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+.wr-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}
+.wr-tile{background:var(--card);border:1px solid var(--line2);border-radius:13px;padding:12px 13px}
+.wr-tile.empty{opacity:.6}
+.wr-l{font-size:11.5px;color:var(--txt2);text-transform:uppercase;letter-spacing:.03em}
+.wr-v{font-size:22px;font-weight:700;color:var(--txt);margin:3px 0 2px;line-height:1.1}
+.wr-tile.empty .wr-v{color:var(--txt2)}
+.wr-s{font-size:11.5px;color:var(--txt2);line-height:1.35}
+.wr-ai{margin-top:6px}
 .attach-pill{
   display:inline-flex;align-items:center;gap:7px;background:var(--acc-soft);border:1px solid color-mix(in srgb,var(--acc) 30%,transparent);
   border-radius:10px;padding:5px 10px;font-size:12.5px;color:var(--txt);margin:0 12px 6px;
@@ -597,7 +618,7 @@ body.kb .chatbar{padding-bottom:6px}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.27";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.28";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -767,6 +788,7 @@ const BLANK = () => ({
     coach: {name: "", email: ""},
     restLen: 90,
     profession: "",
+    goal: "",
   },
   domains: JSON.parse(JSON.stringify(DEFAULT_DOMAINS)),
   convs: [],          // [{id, dom, title, ts, msgs: [{role, content, ts, att}]}]
@@ -851,6 +873,7 @@ function migrateChats(){
   if (S.settings.focusLen === undefined) S.settings.focusLen = 25;
   if (S.settings.breakLen === undefined) S.settings.breakLen = 5;
   if (S.settings.profession === undefined) S.settings.profession = "";
+  if (S.settings.goal === undefined) S.settings.goal = "";
   if (S.settings.restLen === undefined) S.settings.restLen = 90;
   if (!S.settings.coach) S.settings.coach = {name: "", email: ""};
   if (S.settings.webSearch === undefined) S.settings.webSearch = true;
@@ -917,6 +940,7 @@ function save(){
 const R = {
   tab: "home",
   homeCat: null,      // which domain's category page is open on Home
+  homeReview: false,  // weekly review view open on Home
   mode: S.domains[0]?.id || "work",
   convId: null,       // active conversation id (null = fresh chat)
   sheet: null,        // open bottom sheet ("chats" | null)
@@ -1128,6 +1152,7 @@ function homeDashHTML(){
   </div>`;
 }
 function homeHTML(){
+  if (R.homeReview) return weeklyReviewHTML();
   if (R.homeCat) return catPageHTML();
   return `
     <div class="home-hero">
@@ -1136,6 +1161,7 @@ function homeHTML(){
     </div>
     <button class="home-search" onclick="M.searchOpen()">${ic("search", 16)} <span>Search everything…</span></button>
     ${homeDashHTML()}
+    ${weekReviewCardHTML()}
     ${(typeof achievementsHTML === "function") ? achievementsHTML() : ""}
     <div class="cat-grid">
       ${S.domains.map(d => `
@@ -1164,6 +1190,128 @@ function catPageHTML(){
         <span class="fc-ar">${ic("chevR", 16)}</span>
       </button>`).join("")}
     </div>`;
+}
+
+/* ---------------- weekly review (cross-domain) ---------------- */
+function last7Dates(){
+  const out = [];
+  for (let k = 6; k >= 0; k--) out.push(new Date(Date.now() - k * 864e5).toLocaleDateString("en-CA"));
+  return out;   // oldest first
+}
+// Aggregate the last 7 days across every domain. Every figure comes from logged data;
+// categories with nothing logged are marked so, never faked as zero progress.
+function weekStats(){
+  const days = last7Dates();
+  const from = days[0];
+  const t = todayStr();
+  const inRange = d => d && d >= from && d <= t;
+  const tg = S.settings.targets || {};
+
+  // Nutrition
+  const foodDates = [...new Set((S.foods || []).filter(f => inRange(f.date)).map(f => f.date))];
+  let kcalSum = 0, pSum = 0, proteinHitDays = 0;
+  foodDates.forEach(d => { const tt = dayTotals(d); kcalSum += tt.kcal; pSum += tt.p; if (tg.protein && tt.p >= tg.protein * 0.9) proteinHitDays++; });
+  const nDaysFood = foodDates.length;
+
+  // Hydration
+  let waterHitDays = 0, waterDaysLogged = 0;
+  days.forEach(d => { const g = S.water[d] || 0; if (g){ waterDaysLogged++; if (g * 250 >= S.settings.waterGoal) waterHitDays++; } });
+
+  // Training
+  const ws = (S.workouts || []).filter(w => inRange(w.date));
+  const trainDays = new Set(ws.map(w => w.date)).size;
+  let sets = 0; ws.forEach(w => (w.items || []).forEach(it => sets += (it.sets || []).length));
+
+  // Sleep
+  const sl = (S.sleep || []).filter(e => inRange(e.date));
+  const avgSleep = sl.length ? sl.reduce((a, e) => a + (+e.hours || 0), 0) / sl.length : null;
+
+  // Fasting (completed sessions ending this week)
+  const fasts = (((S.fasting || {}).log) || []).filter(f => f.end && new Date(f.end).toLocaleDateString("en-CA") >= from);
+  const avgFast = fasts.length ? fasts.reduce((a, f) => a + (+f.hours || 0), 0) / fasts.length : null;
+
+  // Tasks (state now; completion date isn't stored, so we report live state honestly)
+  const openN = (S.tasks || []).filter(x => !x.done).length;
+  const overdueN = (S.tasks || []).filter(x => !x.done && x.due && x.due < t).length;
+  const totalTasks = (S.tasks || []).length;
+  const doneN = totalTasks - openN;
+
+  // Habits
+  let habTotal = 0, habDone = 0;
+  if ((S.habits || []).length) days.forEach(d => { const set = new Set(S.habitLog[d] || []); habTotal += S.habits.length; S.habits.forEach(h => { if (set.has(h.id)) habDone++; }); });
+
+  // Focus
+  const focusN = (S.focusLog || []).filter(f => inRange(f.date)).length;
+
+  // Mood / energy
+  const md = (S.mood || []).filter(e => inRange(e.date));
+  const avgMood = md.length ? md.reduce((a, e) => a + (+e.mood || 0), 0) / md.length : null;
+  const avgEnergy = md.length ? md.reduce((a, e) => a + (+e.energy || 0), 0) / md.length : null;
+
+  // Budget (this calendar month)
+  const ym = t.slice(0, 7);
+  const spent = (S.expenses || []).filter(e => e.date && e.date.slice(0, 7) === ym).reduce((a, e) => a + (+e.amount || 0), 0);
+  const income = (S.budget || {}).income || 0;
+
+  return {days, from, tg, nDaysFood, avgKcal: nDaysFood ? kcalSum / nDaysFood : null, avgP: nDaysFood ? pSum / nDaysFood : null, proteinHitDays,
+    waterHitDays, waterDaysLogged, ws: ws.length, trainDays, sets, sl: sl.length, avgSleep,
+    fasts: fasts.length, avgFast, openN, overdueN, doneN, totalTasks, habTotal, habDone, focusN,
+    md: md.length, avgMood, avgEnergy, spent, income};
+}
+
+function weekReviewCardHTML(){
+  const s = weekStats();
+  const anything = s.nDaysFood || s.ws || s.sl || s.fasts || s.totalTasks || s.habTotal || s.focusN || s.md || s.waterDaysLogged || s.spent || s.income;
+  if (!anything) return "";   // nothing to review yet
+  return `<button class="review-card" onclick="M.openReview()">
+    <span class="rc-ic">${ic("calendar", 20)}</span>
+    <span class="rc-tx"><span class="rc-nm">Weekly review</span><span class="rc-ds">Your last 7 days across work, health, fitness & life</span></span>
+    <span class="rc-ar">${ic("chevR", 16)}</span>
+  </button>`;
+}
+
+function weeklyReviewHTML(){
+  const s = weekStats();
+  const rng = `${fmtDate(s.from)} – ${fmtDate(todayStr())}`;
+  const pct = (a, b) => b ? Math.round(a / b * 100) : 0;
+  // tile: value present -> normal; null -> honest "not logged"
+  const tile = (label, val, sub, has) => `<div class="wr-tile ${has ? "" : "empty"}">
+    <div class="wr-l">${label}</div>
+    <div class="wr-v">${has ? val : "—"}</div>
+    <div class="wr-s">${has ? sub : "Not logged this week"}</div></div>`;
+  const sec = (title, color, tiles) => `<div class="wr-sec"><div class="wr-h"><span class="wr-dot" style="background:${color}"></span>${title}</div><div class="wr-grid">${tiles.join("")}</div></div>`;
+
+  const fitness = sec("Fitness", "#e8863d", [
+    tile("Workouts", `${s.ws}`, `${s.trainDays} active day${s.trainDays === 1 ? "" : "s"}`, s.ws > 0),
+    tile("Total sets", `${s.sets}`, "logged across sessions", s.sets > 0),
+    tile("Fasts", `${s.fasts}`, s.avgFast != null ? `avg ${(Math.round(s.avgFast * 10) / 10)} h` : "", s.fasts > 0),
+  ]);
+  const health = sec("Health", "#3bb273", [
+    tile("Avg calories", s.avgKcal != null ? n0(s.avgKcal) : "", `over ${s.nDaysFood} logged day${s.nDaysFood === 1 ? "" : "s"}${s.tg.kcal ? ` · target ${n0(s.tg.kcal)}` : ""}`, s.avgKcal != null),
+    tile("Avg protein", s.avgP != null ? n0(s.avgP) + " g" : "", s.tg.protein ? `hit target ${s.proteinHitDays}/${s.nDaysFood} days` : `over ${s.nDaysFood} days`, s.avgP != null),
+    tile("Hydration", s.waterDaysLogged ? `${s.waterHitDays}/${s.waterDaysLogged}` : "", "days met water goal", s.waterDaysLogged > 0),
+    tile("Sleep", s.avgSleep != null ? (Math.round(s.avgSleep * 10) / 10) + " h" : "", `avg over ${s.sl} night${s.sl === 1 ? "" : "s"}`, s.avgSleep != null),
+    tile("Mood", s.avgMood != null ? (Math.round(s.avgMood * 10) / 10) + "/5" : "", s.avgEnergy != null ? `energy ${(Math.round(s.avgEnergy * 10) / 10)}/5` : "", s.avgMood != null),
+  ]);
+  const work = sec("Work", "#4c7fe0", [
+    tile("Open tasks", `${s.openN}`, s.overdueN ? `${s.overdueN} overdue` : "none overdue", s.totalTasks > 0),
+    tile("Focus sessions", `${s.focusN}`, "pomodoros this week", s.focusN > 0),
+  ]);
+  const life = sec("Life", "#b57edc", [
+    tile("Habits", s.habTotal ? pct(s.habDone, s.habTotal) + "%" : "", `${s.habDone}/${s.habTotal} check-ins`, s.habTotal > 0),
+    tile("Spending", (s.income || s.spent) ? n0(s.spent) : "", s.income ? `of ${n0(s.income)} income (this month)` : "this month", (s.income || s.spent) > 0),
+  ]);
+
+  return `
+    <button class="cat-back" aria-label="Back to Home" onclick="M.reviewBack()">${ic("back", 18)} Home</button>
+    <div class="cat-title">
+      <div class="ch-nm">Weekly review</div>
+      <div class="ch-ds">${rng}</div>
+    </div>
+    <div class="wr-note">${ic("check", 13)} Every number below is from what you actually logged. Blank tiles mean nothing was recorded — not zero progress.</div>
+    ${fitness}${health}${work}${life}
+    <button class="btn wr-ai" onclick="M.genReview()">${ic("chat", 17)} Ask MIRA for my weekly review</button>
+    <div class="tiny" style="text-align:center;margin-top:9px;color:var(--txt2)">MIRA reads these figures and gives you wins, watch-outs and next-week priorities — grounded in your data.</div>`;
 }
 
 /* ---------------- global search ---------------- */
@@ -1278,7 +1426,7 @@ function signupHTML(){
 }
 
 /* ---------------- onboarding ---------------- */
-const onb = {step: 0, name: "", style: "balanced", depth: "balanced", lang: "match", key: "", domSel: new Set(["work","health","fitness","life"]), custom: []};
+const onb = {step: 0, name: "", profession: "", goal: "", style: "balanced", depth: "balanced", lang: "match", key: "", domSel: new Set(["work","health","fitness","life"]), custom: []};
 function onbHTML(){
   const segBtn = (group, val, label) => `<button class="${onb[group] === val ? "on" : ""}" onclick="M.onbSeg('${group}','${val}')">${label}</button>`;
   return `<div class="content"><div class="onb">
@@ -1288,6 +1436,10 @@ function onbHTML(){
     <div class="card">
       <div class="field"><label>Your name</label>
         <input id="onbName" value="${esc(onb.name)}" placeholder="How should MIRA address you?" oninput="onb.name=this.value"></div>
+      <div class="field"><label>Profession / field <span class="opt">optional</span></label>
+        <input id="onbProf" value="${esc(onb.profession)}" placeholder="e.g. Lawyer, Chef, Engineer, Student" dir="auto" oninput="onb.profession=this.value"></div>
+      <div class="field"><label>Your main goal right now <span class="opt">optional</span></label>
+        <input id="onbGoal" value="${esc(onb.goal)}" placeholder="e.g. Lose 4 kg, ship my thesis, build strength" dir="auto" oninput="onb.goal=this.value"></div>
       <div class="field"><label>Coaching style</label>
         <div class="seg">${segBtn("style","direct","Direct")}${segBtn("style","balanced","Balanced")}${segBtn("style","encouraging","Encouraging")}</div></div>
       <div class="field"><label>Answer depth</label>
@@ -1318,6 +1470,8 @@ function onbHTML(){
 }
 function onbDone(){
   S.settings.name = onb.name.trim();
+  S.settings.profession = onb.profession.trim();
+  S.settings.goal = onb.goal.trim();
   S.settings.style = onb.style; S.settings.depth = onb.depth; S.settings.lang = onb.lang;
   if (onb.key.trim()) S.settings.apiKey = onb.key.trim();
   S.domains = DEFAULT_DOMAINS.filter(d => onb.domSel.has(d.id)).map(d => JSON.parse(JSON.stringify(d)));
@@ -1410,6 +1564,34 @@ function liveContext(){
   return lines.join("\n");
 }
 
+// Plain-text 7-day aggregate for the weekly review, honest about what wasn't logged.
+function weekSummaryText(){
+  const s = weekStats();
+  const L = [];
+  const dp = (x, d = 1) => Math.round(x * Math.pow(10, d)) / Math.pow(10, d);
+  L.push(`Window: ${s.from} to ${todayStr()} (7 days).`);
+  L.push(s.nDaysFood ? `Nutrition: logged on ${s.nDaysFood}/7 days; avg ${n0(s.avgKcal)} kcal, ${n0(s.avgP)} g protein per logged day${s.tg.kcal ? ` (targets ${n0(s.tg.kcal)} kcal / ${n0(s.tg.protein)} g)` : ""}; protein target met on ${s.proteinHitDays}/${s.nDaysFood} logged days.` : `Nutrition: nothing logged this week.`);
+  L.push(s.waterDaysLogged ? `Hydration: water met on ${s.waterHitDays}/${s.waterDaysLogged} logged days.` : `Hydration: nothing logged this week.`);
+  L.push(s.ws ? `Training: ${s.ws} workout(s) across ${s.trainDays} day(s), ${s.sets} total sets.` : `Training: no workouts logged this week.`);
+  L.push(s.sl ? `Sleep: ${s.sl} night(s) logged, avg ${dp(s.avgSleep)} h.` : `Sleep: nothing logged this week.`);
+  L.push(s.fasts ? `Fasting: ${s.fasts} session(s), avg ${dp(s.avgFast)} h.` : `Fasting: none logged this week.`);
+  L.push(s.totalTasks ? `Tasks: ${s.openN} open (${s.overdueN} overdue), ${s.doneN} marked done overall.` : `Tasks: none created.`);
+  L.push(s.focusN ? `Focus: ${s.focusN} pomodoro session(s) this week.` : `Focus: no sessions this week.`);
+  L.push(s.habTotal ? `Habits: ${s.habDone}/${s.habTotal} check-ins (${Math.round(s.habDone / s.habTotal * 100)}%).` : `Habits: none tracked.`);
+  L.push(s.md ? `Mood/energy: ${s.md} entr(y/ies), avg mood ${dp(s.avgMood)}/5, energy ${dp(s.avgEnergy)}/5.` : `Mood/energy: nothing logged this week.`);
+  L.push((s.income || s.spent) ? `Budget (this month): spent ${n0(s.spent)}${s.income ? ` of ${n0(s.income)} income` : ""}.` : `Budget: nothing logged.`);
+  return L.join("\n");
+}
+
+function weekReviewPrompt(){
+  const goal = (S.settings.goal || "").trim();
+  return `[WEEKLY REVIEW] Give me my cross-domain weekly review from the data below.${goal ? ` My current primary goal is: ${goal}.` : ""}
+Structure it as: 1) Wins — what genuinely went well, with the numbers. 2) Watch-outs — honest gaps or slipping trends. 3) Next week — exactly 3 concrete priorities. Celebrate real progress but never invent it; where I didn't log something, say so plainly and suggest what to start tracking. Keep it tight and motivating.
+
+MY LAST 7 DAYS (logged data only):
+${weekSummaryText()}`;
+}
+
 function systemPrompt(dom){
   const st = S.settings;
   const styleTxt = {direct: "Direct — get to the point, no padding, no cheerleading.",
@@ -1479,6 +1661,9 @@ The app renders these as cards with "Open in Mail" / "Add to calendar" buttons. 
 DAILY BRIEF
 When asked for a daily brief, deliver a tight briefing under ~130 words with short headed sections: 1) Nutrition — exact remaining calories/protein and one concrete eating suggestion for the rest of the day; 2) Hydration — status vs goal; 3) Training/recovery — one pointer from the body log and recent context; 4) Focus — the single most important thing today, inferred from recent conversation (ask only if nothing is known).
 
+WEEKLY REVIEW
+When a message begins with [WEEKLY REVIEW], you are given a 7-day aggregate of the user's own logged data. Use ONLY those figures — do not invent activity for days or categories marked as not logged; instead note the gap and suggest what to start tracking. Deliver three short headed sections: Wins (with the actual numbers), Watch-outs (honest slipping trends or gaps), and Next week (exactly three concrete, specific priorities). Connect signals across domains when it genuinely helps (e.g. poor sleep alongside missed training). Keep the whole review tight and motivating without cheerleading.
+
 DEEP SOLVE
 When a message begins with [DEEP SOLVE], run the two-stage engine:
 Stage 1 — Problem map: state the core question, decompose it into sub-problems, list what must be verified, and set the reasoning approach.
@@ -1497,7 +1682,7 @@ Connect signals across areas when it genuinely helps (a heavy work week informin
 PERSONALISATION
 - Coaching style: ${styleTxt}
 - Answer depth: ${depthTxt}
-- Language: ${langTxt}
+- Language: ${langTxt}${st.goal ? `\n- The user's current primary goal: ${st.goal}. Keep advice oriented toward it when relevant.` : ""}
 - Citations stay in their source language, with a short translation of the key point when useful.
 
 LIVE USER DATA (ground truth — use it directly; do not ask the user to repeat it)
@@ -3681,6 +3866,7 @@ function settingsHTML(){
     </div>` : ""}
     <div class="field"><label>Name</label><input value="${esc(st.name)}" oninput="S.settings.name=this.value;save()"></div>
     <div class="field"><label>Profession / field</label><input value="${esc(st.profession || "")}" oninput="S.settings.profession=this.value;save()" placeholder="e.g. Lawyer, Chef, Engineer" dir="auto"></div>
+    <div class="field"><label>Primary goal</label><input value="${esc(st.goal || "")}" oninput="S.settings.goal=this.value;save()" placeholder="e.g. Lose 4 kg, ship my thesis" dir="auto"></div>
     <div class="field"><label>Coaching style</label>
       <div class="seg">${["direct","balanced","encouraging"].map(v => `<button class="${st.style === v ? "on" : ""}" onclick="M.set('style','${v}')">${v[0].toUpperCase() + v.slice(1)}</button>`).join("")}</div></div>
     <div class="field"><label>Answer depth</label>
@@ -3825,9 +4011,20 @@ window.M = {
   // Opening the chat surface always starts a FRESH conversation; previous
   // chats stay saved and are reachable via the Chats (clock) button.
   tab(t){ R.tab = t; R.homeCat = null; R.sheet = null; if (t === "chat") R.convId = null; render(); },
-  goTab(t){ R.tab = t; R.homeCat = null; R.sheet = null; if (t === "chat") R.convId = null; render(); },
-  home(catId){ R.homeCat = catId; render(); },
+  goTab(t){ R.tab = t; R.homeCat = null; R.homeReview = false; R.sheet = null; if (t === "chat") R.convId = null; render(); },
+  home(catId){ R.homeCat = catId; R.homeReview = false; render(); },
   homeBack(){ R.homeCat = null; render(); },
+  openReview(){ R.homeReview = true; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
+  reviewBack(){ R.homeReview = false; render(); },
+  async genReview(){
+    if (!S.settings.apiKey){ toast("Add your API key in Settings first."); R.tab = "set"; R.homeReview = false; render(); return; }
+    R.homeReview = false; R.homeCat = null; R.sheet = null;
+    R.mode = S.domains[0]?.id || "work"; R.tab = "chat"; R.convId = null; R.deepSolve = false;
+    render();
+    const ta = $("#chatIn");
+    if (ta) ta.value = weekReviewPrompt();
+    await sendChat();
+  },
 
   /* ---- global search ---- */
   searchOpen(){ R.searchOpen = true; R.searchQ = ""; render(); const el = $("#globalSearch"); if (el) el.focus(); },
