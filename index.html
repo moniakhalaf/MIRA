@@ -676,7 +676,7 @@ body.kb .chatbar{padding-bottom:6px}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.32";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.33";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -4992,6 +4992,8 @@ window.M = {
     logFood(it);
     reviewItems.splice(i, 1);
     if (!reviewItems.length) reviewItems = null;
+    // clear the add-food form too, so the looked-up name/amount don't linger
+    Object.assign(foodForm, {name: "", amount: "", kcal: "", p: "", c: "", f: "", conf: "user", scOpen: false});
     render();
   },
   reviewDrop(i){ reviewItems.splice(i, 1); if (!reviewItems.length) reviewItems = null; render(); },
