@@ -507,6 +507,24 @@ body.kb .chatbar{padding-bottom:6px}
 .chart{display:block;width:100%;height:96px}
 .tc-empty{font-size:12.5px;color:var(--txt2);line-height:1.45;padding:14px 4px;text-align:center;background:var(--card2);border-radius:10px}
 .home-chips{margin-top:2px}
+.hdate{font-size:12px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--acc);opacity:.85;margin-bottom:4px}
+/* progress rings (Today) */
+.ring-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:2px 0 10px}
+.ring-card{display:flex;flex-direction:column;align-items:center;gap:2px;padding:14px 6px 12px;border-radius:16px;background:var(--card);border:1px solid var(--line2)}
+.ring-card:active{transform:scale(.98)}
+.ring-wrap{position:relative;width:82px;height:82px;display:flex;align-items:center;justify-content:center}
+.ring-svg{display:block}
+.ring-mid{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;letter-spacing:-.01em}
+.ring-lb{font-size:11.5px;color:var(--txt);font-weight:550;margin-top:7px;text-align:center;line-height:1.15}
+.ring-sb{font-size:10.5px;color:var(--txt2);text-align:center}
+.mini-row{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:2px}
+.mini-tile{display:flex;align-items:center;gap:9px;padding:11px 12px;border-radius:13px;background:var(--card);border:1px solid var(--line2);text-align:start}
+.mini-tile:active{transform:scale(.98)}
+.mini-tile .mt-ic{width:32px;height:32px;min-width:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;background:var(--acc-soft);color:var(--acc)}
+.mini-tile .mt-tx{display:flex;flex-direction:column;gap:0;min-width:0;flex:1}
+.mini-tile .mt-l{font-size:10.5px;color:var(--txt2);text-transform:uppercase;letter-spacing:.03em}
+.mini-tile .mt-v{font-size:14px;font-weight:600;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mini-tile .mt-s{font-size:11px;color:var(--txt2)}
 .recent-chats{display:flex;flex-direction:column;gap:8px}
 .recent-chat{display:flex;align-items:center;gap:11px;width:100%;text-align:start;padding:12px 14px;border-radius:13px;background:var(--card);border:1px solid var(--line2)}
 .recent-chat:active{transform:scale(.99)}
@@ -658,7 +676,7 @@ body.kb .chatbar{padding-bottom:6px}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.31";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.32";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1173,28 +1191,48 @@ function domFeatures(d){
     ask("target", "Deep Solve a problem", "Two-stage reasoning", "deep"),
   ];
 }
+// Apple/Fitbit-style progress ring
+function ringSVG(pct, color){
+  const size = 82, stroke = 8, r = (size - stroke) / 2, c = 2 * Math.PI * r;
+  const p = Math.max(0, Math.min(1, pct / 100));
+  const off = c * (1 - p);
+  return `<svg class="ring-svg" viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" aria-hidden="true">
+    <circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="var(--line2)" stroke-width="${stroke}"/>
+    <circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="${color}" stroke-width="${stroke}" stroke-linecap="round"
+      stroke-dasharray="${c.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}" transform="rotate(-90 ${size / 2} ${size / 2})"/>
+  </svg>`;
+}
+function ringCard(pct, color, center, label, sub, onclick){
+  return `<button class="ring-card" onclick="${onclick}">
+    <div class="ring-wrap">${ringSVG(pct, color)}<div class="ring-mid" style="color:${color}">${center}</div></div>
+    <div class="ring-lb">${label}</div>
+    <div class="ring-sb">${sub}</div>
+  </button>`;
+}
 function homeDashHTML(){
   const t = todayStr();
   const tg = S.settings.targets;
   const tot = (typeof dayTotals === "function") ? dayTotals(t) : {kcal: 0, p: 0};
   const gl = S.water[t] || 0;
-  const waterPct = Math.min(100, (gl * 250 / S.settings.waterGoal) * 100);
-  const kcalLeft = Math.max(0, tg.kcal - tot.kcal);
-  const pLeft = Math.max(0, tg.protein - tot.p);
+  const waterMl = gl * 250, waterGoal = S.settings.waterGoal || 2500;
+  const waterPct = (waterMl / waterGoal) * 100;
+  const kcalLeft = Math.max(0, (tg.kcal || 0) - tot.kcal);
+  const pLeft = Math.max(0, (tg.protein || 0) - tot.p);
   const open = (typeof openTasks === "function") ? openTasks() : (S.tasks || []).filter(x => !x.done);
   const nextTask = open[0];
   const bill = [...(S.bills || [])].filter(b => b.next && b.next >= t).sort((a, b) => a.next < b.next ? -1 : 1)[0];
   const anyData = S.foods.length || (S.tasks || []).length || (S.bills || []).length || gl;
   if (!anyData) return "";
-  const tile = (label, val, sub, onclick) => `<button class="dash-tile" onclick="${onclick}">
-    <div class="dt-l">${label}</div><div class="dt-v">${val}</div>${sub ? `<div class="dt-s">${sub}</div>` : ""}</button>`;
-  return `<div class="dash-grid">
-    ${tg.kcal ? tile("Calories left", n0(kcalLeft), `${n0(tot.kcal)} / ${n0(tg.kcal)}`, "M.goTab('food')") : ""}
-    ${tg.protein ? tile("Protein left", n1(pLeft) + " g", `${n1(tot.p)} / ${n0(tg.protein)} g`, "M.goTab('food')") : ""}
-    ${tile("Water", (gl * 0.25).toFixed(2) + " L", `${Math.round(waterPct)}% of goal`, "M.goTab('food')")}
-    ${nextTask ? tile("Next task", esc(nextTask.title.length > 22 ? nextTask.title.slice(0, 21) + "…" : nextTask.title), nextTask.due ? "due " + fmtDate(nextTask.due) : PRIOS[nextTask.priority].label, "M.goWork('tasks')") : ""}
-    ${bill ? tile("Next bill", esc(bill.name), fmtDate(bill.next), "M.goLife('bills')") : ""}
-  </div>`;
+  const rings = [];
+  if (tg.kcal) rings.push(ringCard(tot.kcal / tg.kcal * 100, "var(--acc)", n0(kcalLeft), "Calories left", `${n0(tot.kcal)} / ${n0(tg.kcal)}`, "M.homeSection('health')"));
+  if (tg.protein) rings.push(ringCard(tot.p / tg.protein * 100, "#3bb273", n0(pLeft) + "g", "Protein left", `${n0(tot.p)} / ${n0(tg.protein)} g`, "M.homeSection('health')"));
+  rings.push(ringCard(waterPct, "#4c9fd8", (waterMl / 1000).toFixed(1).replace(/\.0$/, "") + "L", "Water", `${Math.round(waterPct)}% of goal`, "M.homeSection('health')"));
+  const tile = (icon, label, val, sub, onclick) => `<button class="mini-tile" onclick="${onclick}">
+    <span class="mt-ic">${ic(icon, 16)}</span><span class="mt-tx"><span class="mt-l">${label}</span><span class="mt-v">${val}</span>${sub ? `<span class="mt-s">${sub}</span>` : ""}</span></button>`;
+  const minis = [];
+  if (nextTask) minis.push(tile("checkSquare", "Next task", esc(nextTask.title.length > 20 ? nextTask.title.slice(0, 19) + "…" : nextTask.title), nextTask.due ? "due " + fmtDate(nextTask.due) : (PRIOS[nextTask.priority] || {}).label || "", "M.goWork('tasks')"));
+  if (bill) minis.push(tile("creditCard", "Next bill", esc(bill.name.length > 16 ? bill.name.slice(0, 15) + "…" : bill.name), fmtDate(bill.next), "M.goLife('bills')"));
+  return `<div class="ring-row">${rings.join("")}</div>${minis.length ? `<div class="mini-row">${minis.join("")}</div>` : ""}`;
 }
 function recentChatsHTML(){
   const convs = [...(S.convs || [])].sort((a, b) => (b.ts || 0) - (a.ts || 0)).slice(0, 3);
@@ -1222,6 +1260,7 @@ function homeHTML(){
   const chip = (id, label, color, dot) => `<button class="mode-chip ${id === R.homeSection ? "on" : ""}" style="--mc:${color}" onclick="M.homeSection('${id}')">${dot ? `<span class="d"></span>` : ""}${esc(label)}</button>`;
   return `
     <div class="home-hero">
+      <div class="hdate">${new Date().toLocaleDateString("en-GB", {weekday: "long", day: "numeric", month: "long"})}</div>
       <div class="hi">${greeting()}</div>
       <div class="q">How can I help you today?</div>
     </div>
