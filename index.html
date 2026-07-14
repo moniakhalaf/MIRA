@@ -414,8 +414,14 @@ body.kb .chatbar{padding-bottom:6px}
 .msg.mira pre{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;overflow-x:auto;font-size:.85em}
 .msg.mira pre code{background:none;padding:0}
 .msg.mira blockquote{margin:.4em 0;padding:.2em .9em;border-inline-start:3px solid var(--acc);color:var(--txt2)}
-.msg.mira table{border-collapse:collapse;margin:.5em 0;font-size:.92em;display:block;overflow-x:auto;max-width:100%}
-.msg.mira th,.msg.mira td{border:1px solid var(--line2);padding:5px 9px;text-align:start}
+.msg.mira .tbl-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:.6em 0;max-width:100%;border:1px solid var(--line2);border-radius:10px}
+.msg.mira table{border-collapse:collapse;font-size:.9em;width:auto;min-width:100%}
+.msg.mira th,.msg.mira td{border:1px solid var(--line2);border-top:none;border-inline-start:none;padding:7px 11px;text-align:start;vertical-align:top;overflow-wrap:normal;word-break:normal}
+.msg.mira tr>*:first-child{border-inline-start:none}
+.msg.mira thead th{border-top:none}
+.msg.mira th{white-space:nowrap;font-weight:600;background:color-mix(in srgb,var(--acc) 8%,transparent)}
+.msg.mira td{min-width:76px;max-width:230px}
+.msg.mira td:first-child,.msg.mira th:first-child{min-width:110px}
 .msg .att{font-size:12px;color:var(--txt3);margin-top:5px}
 .msg-act{
   display:inline-flex;align-items:center;gap:5px;margin-top:7px;
@@ -446,9 +452,17 @@ body.kb .chatbar{padding-bottom:6px}
   box-shadow:var(--shadow);
 }
 .chatbar textarea{
-  flex:1;background:none;border:none;resize:none;max-height:120px;min-height:30px;
-  padding:5px 4px;line-height:1.4;
+  flex:1;background:none;border:none;resize:none;max-height:140px;min-height:42px;
+  padding:9px 4px;line-height:1.45;font-size:15px;
 }
+.tool-row{display:flex;flex-wrap:wrap;gap:7px;padding:2px 4px 9px}
+.tool-btn{
+  display:inline-flex;align-items:center;gap:6px;padding:8px 13px;border-radius:20px;min-height:38px;
+  background:var(--card2);border:1px solid var(--line2);color:var(--txt);font-size:13.5px;font-weight:500;
+}
+.tool-btn.on{border-color:var(--acc);color:var(--acc);background:var(--acc-soft)}
+.tool-btn:active{transform:scale(.97)}
+.icon-btn.tools-toggle.on{color:var(--acc);background:var(--acc-soft)}
 .icon-btn{
   width:40px;height:40px;min-width:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;
   font-size:19px;color:var(--txt2);background:transparent;transition:background .12s;
@@ -580,7 +594,7 @@ body.kb .chatbar{padding-bottom:6px}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.24";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.25";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -903,6 +917,7 @@ const R = {
   mode: S.domains[0]?.id || "work",
   convId: null,       // active conversation id (null = fresh chat)
   sheet: null,        // open bottom sheet ("chats" | null)
+  chatTools: false,   // chat-bar options row expanded
   deepSolve: false,
   pending: "",        // pin entry buffer
   attach: null,       // {name, media_type, data, kind:'image'|'pdf'}
@@ -1543,8 +1558,8 @@ function md(src){
     const cells = r => r.replace(/^\||\|$/g, "").split("|").map(c => c.trim());
     const head = cells(rows[0]);
     const bodyRows = rows.slice(/^\|[\s:\-|]+\|$/.test(rows[1]) ? 2 : 1);
-    return `<table><thead><tr>${head.map(h => `<th>${h}</th>`).join("")}</tr></thead><tbody>${
-      bodyRows.map(r => `<tr>${cells(r).map(c => `<td>${c}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
+    return `<div class="tbl-scroll"><table><thead><tr>${head.map(h => `<th>${h}</th>`).join("")}</tr></thead><tbody>${
+      bodyRows.map(r => `<tr>${cells(r).map(c => `<td>${c}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
   });
   s = s.replace(/^#{1,4}\s+(.+)$/gm, "<h3>$1</h3>");
   s = s.replace(/^&gt;\s?(.+)$/gm, "<blockquote>$1</blockquote>");
@@ -1644,13 +1659,16 @@ function chatSheetHTML(){
 function chatbarHTML(){
   return `<div class="chatbar">
     ${R.attach ? `<div class="attach-pill">${ic("paperclip", 13)} <b>${esc(R.attach.name)}</b><button onclick="M.attachClear()" style="color:var(--txt2)">✕</button></div>` : ""}
+    ${R.chatTools ? `<div class="tool-row">
+      <button class="tool-btn" onclick="M.attach()">${ic("paperclip", 16)} Attach</button>
+      <button class="tool-btn" onclick="M.voiceChat()">${ic("mic", 16)} Voice</button>
+      <button class="tool-btn ${R.deepSolve ? "on" : ""}" aria-pressed="${R.deepSolve}" onclick="M.toggleDS()">${ic("layers", 16)} Deep Solve</button>
+      <button class="tool-btn ${S.settings.webSearch ? "on" : ""}" aria-pressed="${!!S.settings.webSearch}" onclick="M.toggleWeb()">${ic("globe", 16)} Web search</button>
+    </div>` : ""}
     <div class="inner">
-      <button class="icon-btn" aria-label="Attach photo or PDF" onclick="M.attach()" title="Attach photo or PDF">${ic("paperclip", 19)}</button>
-      <button class="icon-btn" aria-label="Voice input" onclick="M.voiceChat()" title="Voice input">${ic("mic", 19)}</button>
-      <button class="icon-btn ds ${R.deepSolve ? "on" : ""}" aria-label="Deep Solve" aria-pressed="${R.deepSolve}" onclick="M.toggleDS()" title="Deep Solve">${ic("layers", 19)}</button>
-      <button class="icon-btn ds ${S.settings.webSearch ? "on" : ""}" aria-label="Live web search" aria-pressed="${!!S.settings.webSearch}" onclick="M.toggleWeb()" title="Live web search">${ic("globe", 19)}</button>
+      <button class="icon-btn tools-toggle ${R.chatTools ? "on" : ""}" aria-label="Options" aria-expanded="${R.chatTools}" onclick="M.toggleTools()">${R.chatTools ? ic("x", 20) : ic("plus", 22)}</button>
       <textarea id="chatIn" rows="1" placeholder="Message MIRA…" dir="auto" aria-label="Message MIRA"
-        oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"
+        oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,140)+'px'"
         onkeydown="if(event.key==='Enter'&&!event.shiftKey&&!('ontouchstart' in window)){event.preventDefault();M.send()}"></textarea>
       <button class="icon-btn send" aria-label="Send" onclick="M.send()" ${R.busy ? "disabled" : ""}>${R.busy ? "…" : ic("arrowUp", 19)}</button>
     </div>
@@ -4301,6 +4319,7 @@ window.M = {
   onbCustomDel(i){ onb.custom.splice(i, 1); render(); },
   onbDone,
 
+  toggleTools(){ R.chatTools = !R.chatTools; render(); const ta = $("#chatIn"); if (ta && !R.chatTools) ta.focus(); },
   toggleDS(){ R.deepSolve = !R.deepSolve; render(); const ta = $("#chatIn"); if (ta) ta.focus(); },
   toggleWeb(){
     S.settings.webSearch = !S.settings.webSearch;
