@@ -17,6 +17,7 @@
   color-scheme:dark;
   /* deep ink + champagne gold */
   --bg:#0A0D13; --bg2:#10141C; --card:#141925; --card2:#1A2030;
+  --sheet-bg:#161B29;
   --line:rgba(226,232,250,.07); --line2:rgba(226,232,250,.13);
   --txt:#ECEEF3; --txt2:#9DA6BA; --txt3:#626C82;
   --gold:#D2AC64; --gold-soft:rgba(210,172,100,.13);
@@ -40,6 +41,7 @@
   color-scheme:light;
   /* warm alabaster + bronze ink */
   --bg:#F4F3EF; --bg2:#FDFCFA; --card:#FFFFFF; --card2:#FFFFFF;
+  --sheet-bg:#FFFFFF;
   --line:rgba(28,36,51,.09); --line2:rgba(28,36,51,.15);
   --txt:#1F2735; --txt2:#5C6575; --txt3:#98A0AE;
   --gold:#8E6E22; --gold-soft:rgba(142,110,34,.10);
@@ -60,6 +62,7 @@
   /* aurora glassmorphism — dark translucent surfaces keep text at AA contrast */
   --bg:#0A0C16;
   --bg2:rgba(16,20,38,.52);
+  --sheet-bg:rgba(17,21,40,.92);
   --card:rgba(19,24,44,.55); --card2:rgba(28,34,60,.62);
   --line:rgba(255,255,255,.13); --line2:rgba(255,255,255,.22);
   --txt:#F2F4FA; --txt2:#B3BBCF; --txt3:#7E879E;
@@ -540,8 +543,8 @@ body.kb .chatbar{padding-bottom:6px}
 .fab{position:absolute;right:18px;bottom:calc(var(--tabh,64px) + env(safe-area-inset-bottom,0px) + 16px);width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--acc);color:var(--acc-ink,#0d0f14);box-shadow:0 8px 24px rgba(0,0,0,.35);z-index:40;transition:transform .16s}
 .fab:active{transform:scale(.93)}
 .fab.open{background:var(--card);color:var(--txt);border:1px solid var(--line2)}
-.qa-scrim{position:absolute;inset:0;background:rgba(0,0,0,.5);z-index:55;animation:qaFade .18s ease}
-.qa-sheet{position:absolute;left:0;right:0;bottom:0;z-index:56;background:var(--bg2,var(--card));border-radius:20px 20px 0 0;border-top:1px solid var(--line2);padding:8px 14px calc(env(safe-area-inset-bottom,0px) + 18px);animation:qaUp .22s cubic-bezier(.2,.8,.2,1)}
+.qa-scrim{position:absolute;inset:0;background:rgba(0,0,0,.62);z-index:55;animation:qaFade .18s ease;backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
+.qa-sheet{position:absolute;left:0;right:0;bottom:0;z-index:56;background:var(--sheet-bg,#161B29);backdrop-filter:blur(30px) saturate(1.5);-webkit-backdrop-filter:blur(30px) saturate(1.5);border-radius:22px 22px 0 0;border-top:1px solid var(--line2);box-shadow:0 -14px 44px rgba(0,0,0,.5);padding:8px 14px calc(env(safe-area-inset-bottom,0px) + 18px);animation:qaUp .22s cubic-bezier(.2,.8,.2,1)}
 .qa-grip{width:38px;height:4px;border-radius:2px;background:var(--line2);margin:6px auto 8px}
 .qa-h{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--txt2);margin:2px 4px 10px}
 .qa-item{display:flex;align-items:center;gap:13px;width:100%;text-align:start;padding:12px 8px;border-radius:12px;background:transparent}
@@ -642,8 +645,9 @@ body.kb .chatbar{padding-bottom:6px}
 .sheet-mask{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:60;opacity:0;transition:opacity .25s}
 .sheet-mask.show{opacity:1}
 .sheet{
-  position:fixed;left:0;right:0;bottom:0;z-index:61;background:var(--card);
-  border-radius:20px 20px 0 0;border:1px solid var(--line2);border-bottom:none;
+  position:fixed;left:0;right:0;bottom:0;z-index:61;background:var(--sheet-bg,#161B29);
+  backdrop-filter:blur(30px) saturate(1.5);-webkit-backdrop-filter:blur(30px) saturate(1.5);
+  border-radius:20px 20px 0 0;border:1px solid var(--line2);border-bottom:none;box-shadow:0 -14px 44px rgba(0,0,0,.5);
   padding:16px 16px calc(var(--safe-bot) + 18px);max-height:86vh;overflow-y:auto;
   transform:translateY(105%);transition:transform .3s cubic-bezier(.32,.72,.35,1);
 }
@@ -676,7 +680,7 @@ body.kb .chatbar{padding-bottom:6px}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.33";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.34";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
