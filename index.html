@@ -580,7 +580,7 @@ body.kb .chatbar{padding-bottom:6px}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.23";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.24";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -670,6 +670,10 @@ const I = {
   smile: '<circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/>',
   flask: '<path d="M9 3h6M10 3v6.5L4.6 18.8A1.5 1.5 0 0 0 5.9 21h12.2a1.5 1.5 0 0 0 1.3-2.2L14 9.5V3"/><line x1="7" y1="15" x2="17" y2="15"/>',
   image: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/>',
+  timer: '<circle cx="12" cy="13" r="8"/><line x1="12" y1="13" x2="12" y2="9"/><line x1="9" y1="2" x2="15" y2="2"/><line x1="12" y1="2" x2="12" y2="5"/>',
+  wallet: '<path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/>',
+  book: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>',
+  bell: '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>',
   trash: '<polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
   database: '<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>',
   trend: '<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>',
@@ -772,6 +776,11 @@ const BLANK = () => ({
   photos: [],         // {id, date, data(jpeg dataURL)}
   labs: [],           // {id, date, marker, value, unit}
   mood: [],           // {id, date, mood(1-5), energy(1-5), note}
+  focusLog: [],       // {id, date, minutes, task}
+  budget: {income: 0},
+  expenses: [],       // {id, date, category, amount, note}
+  dates: [],          // {id, title, date, recurring}
+  reading: [],        // {id, title, kind, status}
   water: {},          // date -> glasses
   inbody: [],         // {id, date, weight, score, bfm, smm, vfa, pa}
 });
@@ -817,6 +826,13 @@ function migrateChats(){
   if (!Array.isArray(S.photos)) S.photos = [];
   if (!Array.isArray(S.labs)) S.labs = [];
   if (!Array.isArray(S.mood)) S.mood = [];
+  if (!Array.isArray(S.focusLog)) S.focusLog = [];
+  if (!S.budget || typeof S.budget !== "object") S.budget = {income: 0};
+  if (!Array.isArray(S.expenses)) S.expenses = [];
+  if (!Array.isArray(S.dates)) S.dates = [];
+  if (!Array.isArray(S.reading)) S.reading = [];
+  if (S.settings.focusLen === undefined) S.settings.focusLen = 25;
+  if (S.settings.breakLen === undefined) S.settings.breakLen = 5;
   if (S.settings.profession === undefined) S.settings.profession = "";
   if (S.settings.restLen === undefined) S.settings.restLen = 90;
   if (!S.settings.coach) S.settings.coach = {name: "", email: ""};
@@ -913,13 +929,17 @@ const R = {
   photoView: null,
   sleepQ: 0,
   sleepForm: {date: "", hours: "", note: ""},
-  workTab: "tasks",    // tasks | notes | kit
+  workTab: "tasks",    // tasks | notes | focus | kit
   taskForm: {title: "", priority: "med", due: "", dueTime: ""},
+  pomo: {mode: null, endsAt: 0, taskId: ""},  // mode: 'work'|'break'|null
+  expForm: {category: "Food", amount: "", note: "", date: ""},
+  dateForm: {title: "", date: "", recurring: false},
+  readForm: {title: "", kind: "Book"},
   noteId: null,        // note being edited
   taskDone: false,     // show completed tasks
   profDraft: "",       // profession input buffer
   kitBusy: false,
-  lifeTab: "trips",    // trips | bills | compare | decide
+  lifeTab: "trips",    // trips | bills | budget | compare | decide | lists
   tripId: null, compareId: null,
   billForm: {open: false, name: "", amount: "", cycle: "monthly", next: ""},
   tripForm: {open: false, dest: "", start: "", end: "", budget: ""},
@@ -974,6 +994,7 @@ function render(){
     </div>`;
   if (R.tab === "home"){ const c = $("#content"); if (c) c.scrollTop = 0; }
   if (typeof ensureFastTimer === "function") ensureFastTimer();
+  if (typeof ensurePomo === "function") ensurePomo();
   // restore focus/caret for a state-bound input that survives re-render (e.g. library search)
   if (focusId && focusId !== "chatIn"){
     const el = document.getElementById(focusId);
@@ -1023,6 +1044,7 @@ function domFeatures(d){
   if (id === "work") return [
     {icon: "checkSquare", label: "Tasks", desc: "Priorities & to-dos", on: `M.goWork('tasks')`},
     {icon: "fileText", label: "Notes", desc: "Documents & memos", on: `M.goWork('notes')`},
+    {icon: "timer", label: "Focus timer", desc: "Pomodoro sessions", on: `M.goWork('focus')`},
     {icon: "sun", label: "Daily brief", desc: "Your day in one tap", on: `M.dailyBrief('${id}')`},
     ask("mail", "Draft an email", "Draft first — you send", "email"),
     ask("globe", "Deep research", "Trusted sources, cited", "research"),
@@ -1051,8 +1073,10 @@ function domFeatures(d){
   if (id === "life") return [
     {icon: "plane", label: "Travel planner", desc: "Trips, checklist & budget", on: `M.goLife('trips')`},
     {icon: "creditCard", label: "Bills & subscriptions", desc: "Monthly total & renewals", on: `M.goLife('bills')`},
+    {icon: "wallet", label: "Budget", desc: "Income vs spending", on: `M.goLife('budget')`},
     {icon: "scale", label: "Compare purchases", desc: "Options side by side", on: `M.goLife('compare')`},
     {icon: "target", label: "Decisions log", desc: "Weigh & record big choices", on: `M.goLife('decide')`},
+    {icon: "bell", label: "Dates & reading", desc: "Reminders & reading list", on: `M.goLife('lists')`},
     ask("globe", "Research anything", "Best option, with sources", "research"),
     ask("layers", "Deep Solve a problem", "Two-stage reasoning", "deep"),
   ];
@@ -1347,6 +1371,12 @@ function liveContext(){
   if (Array.isArray(S.mood) && S.mood.length){ const m = [...S.mood].sort((a, b) => a.date < b.date ? -1 : 1).slice(-3); lines.push(`Mood/energy (recent): ${m.map(e => `${e.date} mood ${e.mood}/5, energy ${e.energy}/5`).join("; ")}.`); }
   if (Array.isArray(S.measures) && S.measures.length){ const l = [...S.measures].sort((a, b) => a.date < b.date ? -1 : 1).pop(); lines.push(`Latest body measurements (${l.date}): ${MEAS_FIELDS.filter(([k]) => l[k] !== "" && l[k] != null).map(([k, lab]) => `${lab} ${l[k]}cm`).join(", ")}.`); }
   if (Array.isArray(S.labs) && S.labs.length){ const byM = {}; S.labs.forEach(x => { if (!byM[x.marker] || byM[x.marker].date < x.date) byM[x.marker] = x; }); lines.push(`Latest lab results: ${Object.values(byM).map(x => `${x.marker} ${x.value}${x.unit ? " " + x.unit : ""} (${x.date})`).join("; ")}.`); }
+  // focus sessions + budget
+  if (Array.isArray(S.focusLog)){ const n = S.focusLog.filter(f => f.date === todayStr()).length; if (n) lines.push(`Focus today: ${n} pomodoro session${n > 1 ? "s" : ""}.`); }
+  if (S.budget && (S.budget.income || (S.expenses || []).length)){
+    const ym = todayStr().slice(0, 7); const spent = (S.expenses || []).filter(e => e.date.slice(0, 7) === ym).reduce((a, e) => a + (+e.amount || 0), 0);
+    lines.push(`Budget this month: income ${S.budget.income || 0}, expenses ${Math.round(spent)} (excl. bills).`);
+  }
   // open tasks (by priority)
   if (Array.isArray(S.tasks)){
     const order = {high: 0, med: 1, low: 2};
@@ -2884,7 +2914,7 @@ function openTasks(){
 
 function workHTML(){
   if (R.workTab === "notes" && R.noteId) return workNoteEditorHTML();
-  const tabs = [["tasks","Tasks"],["notes","Notes"],["kit","Toolkit"]];
+  const tabs = [["tasks","Tasks"],["notes","Notes"],["focus","Focus"],["kit","Toolkit"]];
   return `
     <button class="cat-back" onclick="M.workBack()">${ic("back", 18)} Work</button>
     <div class="cat-title"><div class="ch-nm">Work</div><div class="ch-ds">Tasks · notes · your field toolkit</div></div>
@@ -2892,7 +2922,8 @@ function workHTML(){
       `<button class="chip ${R.workTab === k ? "on" : ""}" onclick="M.workGo('${k}')">${l}</button>`).join("")}</div>
     <div style="margin-top:12px">${
       R.workTab === "tasks" ? workTasksHTML() :
-      R.workTab === "notes" ? workNotesHTML() : workKitHTML()
+      R.workTab === "notes" ? workNotesHTML() :
+      R.workTab === "focus" ? workFocusHTML() : workKitHTML()
     }</div>`;
 }
 
@@ -2970,6 +3001,61 @@ function workNotesHTML(){
     </button>`).join("") : `<div class="card"><div class="muted">No notes yet. Create documents, memos, or meeting notes — all stored on your device.</div></div>`}`;
 }
 
+/* ---- Pomodoro focus timer ---- */
+let pomoIv = null;
+const pomoRemaining = () => Math.max(0, Math.ceil((R.pomo.endsAt - Date.now()) / 1000));
+const fmtMS = s => Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+function pomoTodayCount(){ return S.focusLog.filter(f => f.date === todayStr()).length; }
+function pomoTodayMinutes(){ return S.focusLog.filter(f => f.date === todayStr()).reduce((a, f) => a + f.minutes, 0); }
+function ensurePomo(){
+  if (R.pomo.mode && !pomoIv){
+    pomoIv = setInterval(() => {
+      const el = document.getElementById("pomoTime"), f = document.getElementById("pomoFill");
+      const rem = pomoRemaining();
+      if (el) el.textContent = fmtMS(rem);
+      if (f){ const total = (R.pomo.mode === "work" ? S.settings.focusLen : S.settings.breakLen) * 60; f.style.width = (100 * (1 - rem / total)) + "%"; }
+      if (rem <= 0) pomoComplete();
+    }, 500);
+  }
+  if (!R.pomo.mode && pomoIv){ clearInterval(pomoIv); pomoIv = null; }
+}
+function pomoComplete(){
+  clearInterval(pomoIv); pomoIv = null;
+  const wasWork = R.pomo.mode === "work";
+  if (wasWork){
+    const task = R.pomo.taskId ? (S.tasks.find(t => t.id === R.pomo.taskId) || {}).title || "" : "";
+    S.focusLog.push({id: uid(), date: todayStr(), minutes: S.settings.focusLen, task});
+    save();
+  }
+  R.pomo.mode = null;
+  buzz(300);
+  if (typeof render === "function") render();
+  toast(wasWork ? "Focus session done — take a break." : "Break over — ready to focus?", 3200);
+}
+function workFocusHTML(){
+  const running = !!R.pomo.mode;
+  const open = openTasks();
+  return `
+    <div class="card" style="text-align:center">
+      ${running ? `<div class="tiny">${R.pomo.mode === "work" ? "Focus" : "Break"}${R.pomo.taskId ? " · " + esc((S.tasks.find(t => t.id === R.pomo.taskId) || {}).title || "") : ""}</div>
+        <div id="pomoTime" style="font-size:44px;font-weight:700;color:var(--acc);font-variant-numeric:tabular-nums;margin:4px 0">${fmtMS(pomoRemaining())}</div>
+        <div class="rest-track" style="margin:6px 0 14px"><i id="pomoFill" style="width:0%"></i></div>
+        <button class="btn sec danger" onclick="M.pomoStop()">Stop</button>`
+      : `<div class="tiny">Pomodoro — focus in blocks</div>
+        <div style="font-size:20px;font-weight:600;margin:6px 0 10px">${S.settings.focusLen} min focus · ${S.settings.breakLen} min break</div>
+        <div class="seg" style="margin-bottom:10px">${[[25,5],[50,10],[15,3]].map(([w, b]) => `<button class="${S.settings.focusLen === w ? "on" : ""}" onclick="M.pomoPreset(${w},${b})">${w}/${b}</button>`).join("")}</div>
+        ${open.length ? `<div class="field" style="text-align:start"><label>Focus on (optional)</label>
+          <select onchange="R.pomo.taskId=this.value"><option value="">— no task —</option>${open.map(t => `<option value="${t.id}" ${R.pomo.taskId === t.id ? "selected" : ""}>${esc(t.title)}</option>`).join("")}</select></div>` : ""}
+        <button class="btn" onclick="M.pomoStart('work')">${ic("play", 15)} Start focus</button>`}
+    </div>
+    <div class="card">
+      <h3>${ic("timer", 16)} Today</h3>
+      <div class="rev-grid"><div class="rev-stat"><div class="rv">${pomoTodayCount()}</div><div class="rl">Sessions</div></div>
+        <div class="rev-stat"><div class="rv">${pomoTodayMinutes()}</div><div class="rl">Focus min</div></div>
+        <div class="rev-stat"><div class="rv">${S.focusLog.length}</div><div class="rl">All-time</div></div></div>
+    </div>`;
+}
+
 function workKitHTML(){
   const prof = (S.settings.profession || "").trim();
   if (!prof){
@@ -3029,7 +3115,7 @@ const cur = v => (Math.round(v * 100) / 100).toLocaleString("en", {minimumFracti
 function lifeHTML(){
   if (R.lifeTab === "trips" && R.tripId) return tripDetailHTML();
   if (R.lifeTab === "compare" && R.compareId) return compareDetailHTML();
-  const tabs = [["trips","Travel"],["bills","Bills"],["compare","Compare"],["decide","Decisions"]];
+  const tabs = [["trips","Travel"],["bills","Bills"],["budget","Budget"],["compare","Compare"],["decide","Decisions"],["lists","Dates & reading"]];
   return `
     <button class="cat-back" onclick="M.lifeBack()">${ic("back", 18)} Life</button>
     <div class="cat-title"><div class="ch-nm">Life</div><div class="ch-ds">Travel · bills · compare · decisions</div></div>
@@ -3038,7 +3124,9 @@ function lifeHTML(){
     <div style="margin-top:12px">${
       R.lifeTab === "trips" ? tripsHTML() :
       R.lifeTab === "bills" ? billsHTML() :
-      R.lifeTab === "compare" ? compareHTML() : decideHTML()
+      R.lifeTab === "budget" ? budgetHTML() :
+      R.lifeTab === "compare" ? compareHTML() :
+      R.lifeTab === "lists" ? listsHTML() : decideHTML()
     }</div>`;
 }
 
@@ -3075,6 +3163,92 @@ function billsHTML(){
         </div>`;
       }).join("")}
     </div>` : ""}`;
+}
+
+/* ---------------- Budget ---------------- */
+const EXP_CATS = ["Food","Transport","Housing","Shopping","Health","Bills","Entertainment","Other"];
+function budgetHTML(){
+  const ym = todayStr().slice(0, 7);
+  const monthExp = S.expenses.filter(e => e.date.slice(0, 7) === ym);
+  const spent = monthExp.reduce((a, e) => a + num(e.amount), 0);
+  const billsMo = S.bills.reduce((a, b) => a + num(b.amount) * (BILL_CYCLES[b.cycle] || BILL_CYCLES.monthly).perMonth, 0);
+  const income = num(S.budget.income);
+  const net = income - spent - billsMo;
+  const byCat = {};
+  monthExp.forEach(e => { byCat[e.category] = (byCat[e.category] || 0) + num(e.amount); });
+  const f = R.expForm;
+  return `
+    <div class="card">
+      <div class="field"><label>Monthly income (KWD)</label><input type="number" inputmode="decimal" value="${S.budget.income || ""}" oninput="S.budget.income=num(this.value);save()"></div>
+      <div class="rev-grid">
+        <div class="rev-stat"><div class="rv">${cur(spent + billsMo)}</div><div class="rl">Out this month</div></div>
+        <div class="rev-stat"><div class="rv" style="color:${net >= 0 ? "var(--green)" : "var(--red)"}">${cur(net)}</div><div class="rl">Net left</div></div>
+        <div class="rev-stat"><div class="rv">${cur(billsMo)}</div><div class="rl">Bills</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>${ic("plus", 16)} Add expense</h3>
+      <div class="grid2" style="margin-bottom:10px">
+        <div class="field"><label>Category</label><select onchange="R.expForm.category=this.value">${EXP_CATS.map(c => `<option ${f.category === c ? "selected" : ""}>${c}</option>`).join("")}</select></div>
+        <div class="field"><label>Amount (KWD)</label><input type="number" inputmode="decimal" value="${esc(f.amount)}" oninput="R.expForm.amount=this.value"></div>
+      </div>
+      <div class="row"><input value="${esc(f.note)}" oninput="R.expForm.note=this.value" placeholder="Note (optional)" dir="auto">
+        <button class="btn sm" style="flex:0 0 auto" onclick="M.expAdd()">Add</button></div>
+    </div>
+    ${Object.keys(byCat).length ? `<div class="card"><h3>${ic("wallet", 16)} This month by category</h3>
+      ${Object.entries(byCat).sort((a, b) => b[1] - a[1]).map(([c, v]) => `<div class="bar-line" style="margin-bottom:8px">
+        <div class="bar-top"><span class="lab">${c}</span><span class="val">${cur(v)} KWD</span></div>
+        <div class="bar"><i style="width:${Math.min(100, (v / Math.max(spent, 1)) * 100)}%"></i></div></div>`).join("")}
+    </div>` : ""}
+    ${monthExp.length ? `<div class="card"><h3>Recent expenses</h3>
+      ${[...monthExp].sort((a, b) => b.ts - a.ts).slice(0, 12).map(e => `<div class="set-row">
+        <div><div class="k">${esc(e.category)}${e.note ? ` · ${esc(e.note)}` : ""}</div><div class="desc">${fmtDate(e.date)}</div></div>
+        <span class="end"><b>${cur(e.amount)} KWD</b><button class="btn sm danger" aria-label="Delete" onclick="M.expDel('${e.id}')">${ic("trash", 13)}</button></span>
+      </div>`).join("")}
+    </div>` : ""}`;
+}
+
+/* ---------------- Dates & reading list ---------------- */
+const READ_STATUS = {todo: "To read", reading: "Reading", done: "Done"};
+function listsHTML(){
+  const df = R.dateForm, rf = R.readForm;
+  const upcoming = [...S.dates].map(d => {
+    let next = d.date;
+    if (d.recurring && next < todayStr()){ const dt = new Date(next + "T12:00"); dt.setFullYear(new Date().getFullYear()); if (dt.toLocaleDateString("en-CA") < todayStr()) dt.setFullYear(dt.getFullYear() + 1); next = dt.toLocaleDateString("en-CA"); }
+    return {...d, next};
+  }).sort((a, b) => a.next < b.next ? -1 : 1);
+  return `
+    <div class="card">
+      <h3>${ic("bell", 16)} Important dates</h3>
+      <div class="grid2" style="margin-bottom:8px">
+        <div class="field"><label>What</label><input value="${esc(df.title)}" oninput="R.dateForm.title=this.value" placeholder="e.g. Mum's birthday" dir="auto"></div>
+        <div class="field"><label>Date</label><input type="date" value="${esc(df.date)}" oninput="R.dateForm.date=this.value"></div>
+      </div>
+      <label class="row" style="gap:8px;margin-bottom:10px"><input type="checkbox" style="width:auto;min-height:0" ${df.recurring ? "checked" : ""} onchange="R.dateForm.recurring=this.checked"> <span class="tiny">Repeats every year</span></label>
+      <button class="btn sm" onclick="M.dateAdd()">Add date</button>
+      ${upcoming.length ? `<div style="margin-top:12px">${upcoming.map(d => `<div class="set-row">
+        <div><div class="k" dir="auto">${esc(d.title)}${d.recurring ? " ↻" : ""}</div><div class="desc">${fmtDate(d.next)}</div></div>
+        <span class="end"><button class="btn sm sec" aria-label="Remind" onclick="M.dateCal('${d.id}')">${ic("calendar", 13)}</button>
+          <button class="btn sm danger" aria-label="Delete" onclick="M.dateDel('${d.id}')">${ic("trash", 13)}</button></span>
+      </div>`).join("")}</div>` : ""}
+    </div>
+    <div class="card">
+      <h3>${ic("book", 16)} Reading list</h3>
+      <div class="row" style="margin-bottom:10px">
+        <input value="${esc(rf.title)}" oninput="R.readForm.title=this.value" placeholder="Title…" dir="auto" onkeydown="if(event.key==='Enter')M.readAdd()">
+        <select style="flex:0 0 96px" onchange="R.readForm.kind=this.value">${["Book","Article","Other"].map(k => `<option ${rf.kind === k ? "selected" : ""}>${k}</option>`).join("")}</select>
+        <button class="btn sm" style="flex:0 0 auto" onclick="M.readAdd()">Add</button>
+      </div>
+      ${S.reading.length ? ["reading","todo","done"].map(st => {
+        const items = S.reading.filter(r => r.status === st);
+        return items.length ? `<div class="tiny" style="margin:8px 0 4px;color:var(--txt3)">${READ_STATUS[st]}</div>
+          ${items.map(r => `<div class="set-row">
+            <button class="task-check" style="border-radius:7px" onclick="M.readCycle('${r.id}')">${r.status === "done" ? ic("check", 14) : ""}</button>
+            <div class="task-tx"><div class="task-nm ${r.status === "done" ? "" : ""}" dir="auto" style="${r.status === "done" ? "text-decoration:line-through;color:var(--txt3)" : ""}">${esc(r.title)}</div><div class="task-ds">${esc(r.kind)}</div></div>
+            <button class="del" aria-label="Delete" onclick="M.readDel('${r.id}')">${ic("trash", 13)}</button>
+          </div>`).join("")}` : "";
+      }).join("") : `<div class="muted">Add books or articles; tap the circle to move To read → Reading → Done.</div>`}
+    </div>`;
 }
 
 /* ---------------- Travel planner ---------------- */
@@ -3703,6 +3877,10 @@ window.M = {
     toast(`Started ${r.name}`);
   },
   routineDel(i){ if (confirm(`Delete the routine "${S.routines[i].name}"?`)){ S.routines.splice(i, 1); save(); render(); } },
+  /* ---- pomodoro ---- */
+  pomoPreset(w, b){ S.settings.focusLen = w; S.settings.breakLen = b; save(); render(); },
+  pomoStart(mode){ R.pomo.mode = mode; R.pomo.endsAt = Date.now() + (mode === "work" ? S.settings.focusLen : S.settings.breakLen) * 60000; render(); ensurePomo(); },
+  pomoStop(){ clearInterval(pomoIv); pomoIv = null; R.pomo.mode = null; render(); },
   woDelSet(i, j){ R.trainWO.items[i].sets.splice(j, 1); render(); },
   woDelEx(i){ R.trainWO.items.splice(i, 1); render(); },
   woFinish(){
@@ -3947,6 +4125,42 @@ window.M = {
     buzz(); save(); render();
   },
   billDel(id){ S.bills = S.bills.filter(b => b.id !== id); save(); render(); },
+  /* ---- budget ---- */
+  expAdd(){
+    const a = num(R.expForm.amount);
+    if (a <= 0){ toast("Enter the amount."); return; }
+    S.expenses.push({id: uid(), date: todayStr(), category: R.expForm.category, amount: a, note: R.expForm.note.trim(), ts: Date.now()});
+    R.expForm = {category: R.expForm.category, amount: "", note: "", date: ""};
+    buzz(); save(); render();
+  },
+  expDel(id){ S.expenses = S.expenses.filter(e => e.id !== id); save(); render(); },
+  /* ---- important dates ---- */
+  dateAdd(){
+    if (!R.dateForm.title.trim() || !R.dateForm.date){ toast("Add a title and date."); return; }
+    S.dates.push({id: uid(), title: R.dateForm.title.trim(), date: R.dateForm.date, recurring: R.dateForm.recurring});
+    R.dateForm = {title: "", date: "", recurring: false};
+    buzz(); save(); render();
+  },
+  dateDel(id){ S.dates = S.dates.filter(d => d.id !== id); save(); render(); },
+  dateCal(id){
+    const d = S.dates.find(x => x.id === id); if (!d) return;
+    icsDownload(d.date, "09:00", d.title, "MIRA reminder", d.id);
+    toast("Reminder ready — open it to add to your calendar.");
+  },
+  /* ---- reading list ---- */
+  readAdd(){
+    if (!R.readForm.title.trim()){ toast("Add a title."); return; }
+    S.reading.unshift({id: uid(), title: R.readForm.title.trim(), kind: R.readForm.kind, status: "todo"});
+    R.readForm = {title: "", kind: R.readForm.kind};
+    save(); render();
+  },
+  readCycle(id){
+    const r = S.reading.find(x => x.id === id); if (!r) return;
+    r.status = r.status === "todo" ? "reading" : r.status === "reading" ? "done" : "todo";
+    if (r.status === "done") buzz();
+    save(); render();
+  },
+  readDel(id){ S.reading = S.reading.filter(r => r.id !== id); save(); render(); },
   billCal(id){
     const b = S.bills.find(x => x.id === id);
     if (!b || !b.next) return;
