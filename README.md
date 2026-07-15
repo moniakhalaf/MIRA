@@ -33,6 +33,7 @@ This repository contains the **standalone edition**: a single self-contained `in
 - Portion scaler, saved-foods one-tap re-entry (individually forgettable)
 - Photo & PDF intake — nutrition labels read exactly (official, always override databases); meal photos estimated and labelled; everything reviewed before saving
 - "Find macros" for unknown items with honest confidence labels: **official / estimate / not available**
+- **Share food log** — pick any From/To date range (or quick 7/30-day/today) and export it as a **shareable message** (native share sheet → WhatsApp, email, Notes…), a **CSV spreadsheet** (Excel/Google Sheets), a **printable PDF**, or copy to clipboard — with daily breakdown, averages, targets, and estimate labels preserved
 - Sanity checking — energy must be consistent with macros (4P + 4C + 9F); impossible numbers are rejected with the reason shown
 - Pan-Arab food and Kuwait restaurant awareness, cooking-method aware (مشوي / مقلي / مسلوق …)
 
