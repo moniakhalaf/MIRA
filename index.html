@@ -104,6 +104,58 @@
 :root[data-theme="glass"] .card{border-color:rgba(255,255,255,.16)}
 :root[data-theme="glass"] .chatbar{background:transparent}
 
+:root[data-theme="oled"]{
+  color-scheme:dark;
+  /* true black — battery-friendly on OLED, maximum contrast */
+  --bg:#000000; --bg2:#08080A; --card:#0F0F13; --card2:#16161C;
+  --sheet-bg:#121216;
+  --line:rgba(255,255,255,.08); --line2:rgba(255,255,255,.15);
+  --txt:#F3F3F6; --txt2:#9A9AA6; --txt3:#5C5C67;
+  --gold:#E6C074; --gold-soft:rgba(230,192,116,.14);
+  --acc:#E6C074; --acc-soft:rgba(230,192,116,.14);
+  --btn-ink:#100D06;
+  --green:#3DC495; --amber:#E3AE48; --red:#E56A6A;
+  --water:#5EA9DF; --water-ink:#BEE3FF;
+  --glass:rgba(0,0,0,.9);
+  --key:rgba(255,255,255,.05); --code:rgba(255,255,255,.07);
+  --track:#08080A; --lockbg:#000000;
+  --shadow:0 12px 36px rgba(0,0,0,.7); --cardshadow:0 0 0 1px rgba(255,255,255,.02);
+}
+:root[data-theme="midnight"]{
+  color-scheme:dark;
+  /* deep navy with champagne gold — luxe night look */
+  --bg:#0A0F1F; --bg2:#0F1730; --card:#141D38; --card2:#1C2748;
+  --sheet-bg:#16203D;
+  --line:rgba(180,200,255,.09); --line2:rgba(180,200,255,.17);
+  --txt:#EAEEF8; --txt2:#9FB0D0; --txt3:#61729A;
+  --gold:#E2C07E; --gold-soft:rgba(226,192,126,.15);
+  --acc:#E2C07E; --acc-soft:rgba(226,192,126,.15);
+  --btn-ink:#0E1226;
+  --green:#43C79A; --amber:#E3B152; --red:#E77A7A;
+  --water:#6FB6E8; --water-ink:#D6ECFF;
+  --glass:rgba(10,15,31,.86);
+  --key:rgba(180,200,255,.06); --code:rgba(180,200,255,.09);
+  --track:#0F1730; --lockbg:#0F1730;
+  --shadow:0 14px 40px rgba(0,0,0,.55); --cardshadow:0 1px 2px rgba(0,0,0,.3);
+}
+:root[data-theme="sepia"]{
+  color-scheme:light;
+  /* warm paper + bronze ink — easy on the eyes */
+  --bg:#F1E9DA; --bg2:#F8F2E6; --card:#FBF6EC; --card2:#F5EEDF;
+  --sheet-bg:#FBF6EC;
+  --line:rgba(74,56,32,.10); --line2:rgba(74,56,32,.18);
+  --txt:#3A2E1E; --txt2:#6E5E48; --txt3:#9C8B72;
+  --gold:#9A6720; --gold-soft:rgba(165,106,32,.12);
+  --acc:#A56A20; --acc-soft:rgba(165,106,32,.12);
+  --btn-ink:#FBF6EC;
+  --green:#4E7A44; --amber:#9A6E20; --red:#B0503E;
+  --water:#4A7C9E; --water-ink:#3A6079;
+  --glass:rgba(248,242,230,.9);
+  --key:rgba(74,56,32,.05); --code:rgba(74,56,32,.07);
+  --track:#E4D8C2; --lockbg:#EAE0CD;
+  --shadow:0 12px 36px rgba(74,56,32,.15); --cardshadow:0 1px 2px rgba(74,56,32,.06),0 4px 16px rgba(74,56,32,.05);
+}
+
 body,.topbar,.tabbar,.card,.chatbar .inner,input,select,textarea{transition:background-color .25s,border-color .25s,color .25s}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;padding:0;height:100%;background:var(--bg)}
@@ -493,6 +545,15 @@ body.kb .chatbar{padding-bottom:6px}
 .rep-sum{font-size:12.5px;color:var(--txt2);background:var(--card2);border:1px solid var(--line2);border-radius:10px;padding:9px 12px;margin:2px 0 12px}
 .rep-actions{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
 .rep-actions .btn{width:100%}
+.theme-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
+.theme-swatch{display:flex;flex-direction:column;align-items:center;gap:6px;padding:6px 4px 4px;border-radius:12px;border:1px solid transparent;background:transparent;transition:transform .12s}
+.theme-swatch.on{border-color:var(--acc);background:var(--acc-soft)}
+.theme-swatch:active{transform:scale(.95)}
+.ts-prev{position:relative;width:100%;aspect-ratio:1;border-radius:11px;border:1px solid var(--line2);overflow:hidden;box-shadow:var(--cardshadow)}
+.ts-card{position:absolute;left:15%;right:15%;top:19%;height:24%;border-radius:4px}
+.ts-dot{position:absolute;right:15%;bottom:15%;width:28%;height:28%;border-radius:50%}
+.ts-nm{font-size:11px;color:var(--txt2);font-weight:550}
+.theme-swatch.on .ts-nm{color:var(--acc)}
 .opt{font-weight:400;font-size:11px;color:var(--txt2);opacity:.7;margin-inline-start:5px}
 .review-card{display:flex;align-items:center;gap:12px;width:100%;text-align:start;margin:14px 0 2px;padding:15px 16px;border-radius:16px;background:var(--card);border:1px solid var(--line2)}
 .review-card:active{transform:scale(.99)}
@@ -701,7 +762,7 @@ body.kb .chatbar{padding-bottom:6px}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.37";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.38";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -966,6 +1027,15 @@ function migrateChats(){
 migrateChats();
 
 /* ---------------- theme ---------------- */
+const THEMES = [
+  ["dark", "Dark", {bg: "#0A0D13", card: "#1A2030", acc: "#D2AC64"}],
+  ["light", "Light", {bg: "#F4F3EF", card: "#FFFFFF", acc: "#8E6E22"}],
+  ["glass", "Glass", {bg: "linear-gradient(135deg,#241a55,#0A0C16 62%)", card: "#2a3252", acc: "#E2BE78"}],
+  ["oled", "OLED", {bg: "#000000", card: "#16161C", acc: "#E6C074"}],
+  ["midnight", "Midnight", {bg: "#0A0F1F", card: "#1C2748", acc: "#E2C07E"}],
+  ["sepia", "Sepia", {bg: "#F1E9DA", card: "#FBF6EC", acc: "#A56A20"}],
+  ["auto", "Auto", {bg: "linear-gradient(120deg,#0A0D13 0 50%,#F4F3EF 50% 100%)", card: "#9aa0b0", acc: "#D2AC64"}],
+];
 function applyTheme(){
   const pref = S.settings.theme || "dark";
   const actual = pref === "auto"
@@ -973,7 +1043,8 @@ function applyTheme(){
     : pref;
   document.documentElement.dataset.theme = actual;
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.content = actual === "light" ? "#F4F3EF" : actual === "glass" ? "#0A0C16" : "#0A0D13";
+  const bar = {light: "#F4F3EF", glass: "#0A0C16", oled: "#000000", midnight: "#0A0F1F", sepia: "#F1E9DA", dark: "#0A0D13"};
+  if (meta) meta.content = bar[actual] || "#0A0D13";
 }
 matchMedia("(prefers-color-scheme: light)").addEventListener("change", () => {
   if (S.settings.theme === "auto") applyTheme();
@@ -4307,9 +4378,15 @@ function settingsHTML(){
 
   <div class="card">
     <h3>${ic("sun", 16)} Appearance</h3>
-    <div class="seg">${[["dark","Dark"],["light","Light"],["glass","Glass"],["auto","Auto"]].map(([v,l]) =>
-      `<button class="${(st.theme || "dark") === v ? "on" : ""}" onclick="M.theme('${v}')">${l}</button>`).join("")}</div>
-    <div class="tiny" style="margin-top:8px">Glass is a frosted, aurora-lit look. Auto follows your device's light/dark setting.</div>
+    <div class="theme-grid">${THEMES.map(([v, l, c]) => `
+      <button class="theme-swatch ${(st.theme || "dark") === v ? "on" : ""}" onclick="M.theme('${v}')" aria-label="${l} theme">
+        <span class="ts-prev" style="background:${c.bg}">
+          <span class="ts-card" style="background:${c.card}"></span>
+          <span class="ts-dot" style="background:${c.acc}"></span>
+        </span>
+        <span class="ts-nm">${l}</span>
+      </button>`).join("")}</div>
+    <div class="tiny" style="margin-top:10px">Glass is frosted & aurora-lit · OLED is true black · Midnight is deep navy · Sepia is warm paper · Auto follows your device.</div>
   </div>
 
   <div class="card">

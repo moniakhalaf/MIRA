@@ -43,7 +43,7 @@ This repository contains the **standalone edition**: a single self-contained `in
 - One-tap trend analysis in Fitness mode
 
 **Design**
-- Dark and light themes with an Auto option that follows the device setting
+- Seven themes chosen from a visual swatch grid: Dark, Light, Glass (frosted aurora), OLED (true black), Midnight (deep navy + gold), Sepia (warm paper), and Auto (follows the device setting)
 - Monochrome line-icon system, mobile-first sizing, installs full-screen to the home screen
 - Email sign-up screen built in but feature-flagged off (`FEATURES.emailSignup` in `index.html`) until the hosted backend is published
 
