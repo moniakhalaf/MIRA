@@ -10,7 +10,7 @@ This repository contains the **standalone edition**: a single self-contained `in
 - **Work** — emails, memos, prioritisation, academic support, and deep SAP S/4HANA expertise (MM deepest; SD, FI, CO, PP, PM, QM, EWM, PS, HCM, RE-FX)
 - **Health** — nutrition, sleep, recovery and supplementation from reputable evidence, with macro arithmetic shown step by step
 - **Fitness** — evidence-based training and body-composition interpretation from your own InBody log
-- **Life** — purchases, travel, tech, finance/legal facts, and Kuwait/GCC local matters
+- **Life** — purchases, travel, tech, finance/legal facts, and Kuwait/GCC local matters. Add a trip (destination, dates, budget) and MIRA runs a live web search to find real flight and hotel options from trusted sources, cited with links — not just a place to log the plan
 
 **Core intelligence**
 - Source-verification protocol in every answer: reputable sources only (peer-reviewed journals, WHO/NIH/EFSA, official vendor docs), conflicts shown, nothing invented

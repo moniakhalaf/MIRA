@@ -762,7 +762,7 @@ body.kb .chatbar{padding-bottom:6px}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.39";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.40";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1099,6 +1099,7 @@ const R = {
   quickOpen: false,   // quick-add sheet open
   reportOpen: false,  // food-log report card expanded
   frFrom: "", frTo: "", // food report date range (empty = default last 7 days)
+  forceWeb: false,    // one-shot: force live web search for the next send (trip research etc.)
   mode: S.domains[0]?.id || "work",
   convId: null,       // active conversation id (null = fresh chat)
   sheet: null,        // open bottom sheet ("chats" | null)
@@ -2315,7 +2316,8 @@ async function sendChat(){
   const dom = curDomain();
   const ds = R.deepSolve;
   const att = R.attach;
-  R.attach = null; R.deepSolve = false;
+  const useWeb = S.settings.webSearch || R.forceWeb;
+  R.attach = null; R.deepSolve = false; R.forceWeb = false;
   let conv = activeConv();
   if (!conv){
     conv = {id: uid(), dom: dom.id, title: String(text || (att ? att.name : "") || "New chat").slice(0, 48), ts: Date.now(), msgs: []};
@@ -2353,7 +2355,7 @@ async function sendChat(){
     const full = await apiCall({
       model: S.settings.model, max_tokens: ds ? 8000 : 4000, stream: true,
       system: systemPrompt(dom),
-      ...(S.settings.webSearch ? {tools: [{type: "web_search_20250305", name: "web_search", max_uses: 5}]} : {}),
+      ...(useWeb ? {tools: [{type: "web_search_20250305", name: "web_search", max_uses: 6}]} : {}),
       messages: [...hist, {role: "user", content: lastContent}],
     }, partial => {
       holder.content = partial;
@@ -4059,7 +4061,7 @@ function tripsHTML(){
       <span class="fc-tx"><span class="fc-nm" dir="auto">${esc(t.dest || "Trip")}</span>
         <span class="fc-ds">${t.start ? fmtDate(t.start) : ""}${t.end ? " → " + fmtDate(t.end) : ""}${(t.checklist || []).length ? ` · ${t.checklist.filter(c => c.done).length}/${t.checklist.length} done` : ""}</span></span>
       <span class="fc-ar">${ic("chevR", 16)}</span>
-    </button>`).join("") : `<div class="card"><div class="muted">No trips yet. Create one, then build a checklist and ask MIRA to plan it.</div></div>`}`;
+    </button>`).join("") : `<div class="card"><div class="muted">No trips yet. Add your destination, dates and budget — then MIRA can search live for flights and hotels from trusted sources, and you build a checklist alongside.</div></div>`}`;
 }
 function tripDetailHTML(){
   const t = S.trips.find(x => x.id === R.tripId);
@@ -4069,7 +4071,9 @@ function tripDetailHTML(){
     <button class="cat-back" onclick="M.tripClose()">${ic("back", 18)} All trips</button>
     <div class="cat-title"><div class="ch-nm" dir="auto">${esc(t.dest || "Trip")}</div>
       <div class="ch-ds">${t.start ? fmtDate(t.start) : ""}${t.end ? " → " + fmtDate(t.end) : ""}${t.budget ? " · budget " + cur(t.budget) : ""}</div></div>
-    <button class="btn cat-ask" onclick="M.tripPlan()">${ic("chat", 17)} Ask MIRA to plan this trip</button>
+    <button class="btn cat-ask" onclick="M.tripFind()">${ic("globe", 17)} Find flights & hotels</button>
+    <button class="btn sec" style="margin:-4px 0 14px" onclick="M.tripPlan()">${ic("chat", 16)} Plan itinerary & practical info</button>
+    <div class="tiny" style="margin:-8px 2px 14px;color:var(--txt2)">Flight/hotel search runs a live web search on your API key and cites its sources. Always confirm prices on the booking site before paying.</div>
     <div class="card">
       <h3>${ic("checkSquare", 16)} Checklist</h3>
       ${cl.length ? cl.map(c => `<div class="task-row ${c.done ? "done" : ""}">
@@ -5013,6 +5017,24 @@ window.M = {
     R.mode = "life"; R.tab = "chat"; R.homeCat = null; R.convId = null; render();
     const ta = $("#chatIn");
     if (ta){ ta.value = `Help me plan a trip to ${t.dest}${t.start ? ` from ${t.start}` : ""}${t.end ? ` to ${t.end}` : ""}${t.budget ? `, budget around ${cur(t.budget)} KWD` : ""}. Give an itinerary, and cited practical info (entry requirements, weather, typical costs, getting around). I'm travelling from Kuwait.`; ta.style.height = "auto"; ta.style.height = Math.min(ta.scrollHeight, 120) + "px"; ta.focus(); }
+  },
+  async tripFind(){
+    const t = S.trips.find(x => x.id === R.tripId); if (!t) return;
+    if (!S.settings.apiKey){ toast("Add your API key in Settings first."); R.tab = "set"; render(); return; }
+    const dates = t.start ? ` for ${t.start}${t.end ? ` to ${t.end}` : ""}` : "";
+    const budget = t.budget ? ` My total budget is about ${cur(t.budget)} KWD.` : "";
+    R.forceWeb = true;   // one-shot: research live even if web search is off
+    R.mode = "life"; R.tab = "chat"; R.homeCat = null; R.convId = null; R.sheet = null;
+    render();
+    const prompt = `[RESEARCH] Find me real, current flight and hotel options for my trip to ${t.dest}${dates}. I'm flying from Kuwait (KWI).${budget}
+
+1) FLIGHTS — round-trip KWI ⇄ ${t.dest} for those dates: list a few concrete options with airline, whether it's direct or has stops, approximate fare in KWD, and a booking/source link for each.
+2) HOTELS — ${t.budget ? "within my budget" : "a budget, a mid-range and an upscale pick"}, well-rated, in convenient areas: give nightly price range, area, rating, and a link for each.
+
+Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking.com, hotel websites). Cite every option with a working link and the date checked. Clearly label anything you can't verify live as an estimate. Finish with one recommended flight + hotel pairing and the rough total.`;
+    const ta = $("#chatIn");
+    if (ta) ta.value = prompt;
+    await sendChat();
   },
   // comparisons
   cmpNew(){
