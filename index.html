@@ -876,7 +876,7 @@ body.kb .chatbar{padding-bottom:6px}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.52";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.53";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -2479,6 +2479,7 @@ function afterChatRender(){
 }
 
 /* ---------------- API ---------------- */
+const API_SLEEP = ms => new Promise(r => setTimeout(r, ms));
 async function apiCall(body, onDelta){
   const headers = {
     "content-type": "application/json",
@@ -2486,13 +2487,40 @@ async function apiCall(body, onDelta){
     "anthropic-version": "2023-06-01",
     "anthropic-dangerous-direct-browser-access": "true",
   };
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST", headers, body: JSON.stringify(body),
-  });
-  if (!res.ok){
-    let msg = `API error ${res.status}`;
-    try { msg = (await res.json()).error?.message || msg; } catch (e) {}
-    throw new Error(msg);
+  // Transient upstream conditions (server overloaded / rate limited / gateway) are
+  // retried automatically with exponential backoff before the error reaches the user.
+  const RETRYABLE = new Set([408, 429, 500, 502, 503, 529]);
+  const MAX_TRIES = 4;
+  let res;
+  for (let attempt = 0; ; attempt++){
+    try {
+      res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST", headers, body: JSON.stringify(body),
+      });
+    } catch (netErr){
+      if (attempt < MAX_TRIES - 1){ await API_SLEEP(700 * 2 ** attempt + Math.random() * 400); continue; }
+      throw new Error("Couldn't reach Anthropic — check your internet connection and try again.");
+    }
+    if (res.ok) break;
+    let msg = `API error ${res.status}`, type = "";
+    try { const ej = await res.json(); msg = ej.error?.message || msg; type = ej.error?.type || ""; } catch (e) {}
+    const overloaded = res.status === 529 || type === "overloaded_error" || /overload/i.test(msg);
+    const retryable = RETRYABLE.has(res.status) || overloaded;
+    if (retryable && attempt < MAX_TRIES - 1){
+      const ra = parseFloat(res.headers.get("retry-after"));
+      await API_SLEEP(Number.isFinite(ra) ? ra * 1000 : 700 * 2 ** attempt + Math.random() * 400);
+      continue;
+    }
+    if (overloaded){
+      const e = new Error("Anthropic's servers are busy right now (overloaded). MIRA already retried a few times — please try again in a moment."); e.status = 529; throw e;
+    }
+    if (res.status === 401 || res.status === 403){
+      const e = new Error("Your API key was rejected — check it in Settings."); e.status = res.status; throw e;
+    }
+    if (res.status === 429){
+      const e = new Error("Rate limit reached on your API key — wait a moment and try again."); e.status = 429; throw e;
+    }
+    const e = new Error(msg); e.status = res.status; throw e;
   }
   if (!body.stream) {
     const j = await res.json();
@@ -3184,7 +3212,9 @@ async function findMacros(){
       reviewItems = [{name: j.name || name, amount: j.amount || foodForm.amount, kcal: j.kcal, p: j.p, c: j.c, f: j.f,
         conf: j.conf === "official" ? "official" : "estimate", note: j.note || ""}];
     }
-  } catch (e) { toast("Lookup failed: " + e.message, 4000); }
+  } catch (e) {
+    toast(e.status ? e.message : "Couldn't read the macros back — please try again.", 5000);
+  }
   findBusy = false; render();
 }
 
