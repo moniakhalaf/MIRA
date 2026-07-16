@@ -587,6 +587,8 @@ body.kb .chatbar{padding-bottom:6px}
 .rc-or{text-align:center;color:var(--txt2);font-size:12px;margin:14px 0;position:relative}
 .rc-or span{background:var(--card);padding:0 12px;position:relative;z-index:1}
 .rc-or:before{content:"";position:absolute;left:0;right:0;top:50%;height:1px;background:var(--line2)}
+.rc-rebuild-bar{height:6px;border-radius:99px;background:var(--key);overflow:hidden;margin-top:9px}
+.rc-rebuild-bar span{display:block;height:100%;background:var(--gold);border-radius:99px;transition:width .4s ease}
 .rc-filters{display:flex;gap:7px;overflow-x:auto;padding-bottom:11px;scrollbar-width:none}
 .rc-filters::-webkit-scrollbar{display:none}
 .rc-chip{flex:0 0 auto;padding:7px 13px;border-radius:18px;background:var(--card2);border:1px solid var(--line2);color:var(--txt2);font-size:13px;font-weight:500}
@@ -874,7 +876,7 @@ body.kb .chatbar{padding-bottom:6px}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.51";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.52";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -3971,6 +3973,13 @@ function recipeImportPanelHTML(){
       <input id="rcQuery" placeholder="e.g. high-protein GCC dinners under 500 kcal" dir="auto"></div>
     <button class="btn sm sec" onclick="M.recipeDiscover()" ${R.recipeBusy ? "disabled" : ""}>${R.recipeBusy ? "Searching…" : ic("search", 15) + " Find healthy recipes"}</button>
     <div class="tiny" style="margin-top:9px;color:var(--txt2)">Runs a live web search on your API key. MIRA keeps only reasonably healthy recipes, pulls the photo where the page allows it, and cites the source. Instagram/TikTok links aren't always readable — paste the caption if a link doesn't work.</div>
+    <div class="rc-or"><span>or</span></div>
+    <div class="field" style="margin-bottom:8px"><label>Rebuild the whole library from the web</label></div>
+    ${(() => { const rb = R.recipeRebuild; const busy = rb && rb.running;
+      return `<button class="btn sm" onclick="M.recipeRebuildWeb()" ${busy || R.recipeBusy ? "disabled" : ""}>${busy ? `Building your library… ${rb.done}/${rb.total}` : ic("globe", 15) + " Rebuild library from the web"}</button>
+      ${busy ? `<div class="rc-rebuild-bar"><span style="width:${Math.round((rb.done / rb.total) * 100)}%"></span></div><div class="tiny" style="margin-top:4px;color:var(--txt2)">Searching trusted healthy-recipe sites — ${rb.added} recipe${rb.added === 1 ? "" : "s"} added so far. Please keep this screen open.</div>` : ""}`;
+    })()}
+    <div class="tiny" style="margin-top:9px;color:var(--txt2)">Replaces the starter recipes with a fresh set MIRA searches out across trusted healthy-recipe sites — breakfast, lunch/dinner, salads, snacks, sweets and drinks, each with macros and a cited source. Your own added or imported recipes are kept. Uses several web searches on your API key.</div>
   </div>`;
 }
 function recipesHTML(){
@@ -6145,6 +6154,40 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
       R.recipeBusy = false; R.recipeImportOpen = false; save(); render();
       toast(n ? `Added ${n} recipe${n > 1 ? "s" : ""} ✓` : "No suitable recipes found — try rewording.");
     } catch (e) { R.recipeBusy = false; render(); toast("Search failed: " + e.message, 4400); }
+  },
+  async recipeRebuildWeb(){
+    if (!S.settings.apiKey){ toast("Add your API key in Settings first."); R.tab = "set"; render(); return; }
+    if (R.recipeRebuild && R.recipeRebuild.running) return;
+    const cats = [
+      ["breakfast", "healthy breakfasts (eggs, oats, yogurt, GCC breakfasts)"],
+      ["main", "healthy high-protein lunch or dinner mains (include some GCC/Arab dishes)"],
+      ["salad", "healthy salads"],
+      ["snack", "healthy snacks or dips"],
+      ["sweet", "healthier desserts / sweets"],
+      ["drink", "healthy drinks or smoothies"],
+    ];
+    R.recipeRebuild = {running: true, done: 0, total: cats.length, added: 0};
+    R.recipeImportOpen = true; render();
+    // keep the user's own recipes; drop the previous auto-seeded set
+    S.recipes = (S.recipes || []).filter(r => !r.seed);
+    for (const [meal, desc] of cats){
+      try {
+        const reply = await apiCall({
+          model: S.settings.model, max_tokens: 3800,
+          tools: [{type: "web_search_20250305", name: "web_search", max_uses: 6}],
+          system: `You are MIRA's healthy-recipe librarian. Using live web search of trusted recipe sources (reputable food sites, health organisations, well-known chefs), find 5–6 genuinely healthy recipes for the requested category. Return ONLY a JSON array; each item: {"name":str,"image":str(a real photo URL from the source page or ""),"cuisine":str,"meal":"${meal}","tags":[str],"servings":int,"per":{"kcal":num,"p":num,"c":num,"f":num} for ONE serving,"ingredients":[str],"steps":[str],"source":str(the real recipe URL you used),"healthNote":str}. Every recipe MUST set "meal":"${meal}" and MUST include a real source URL you actually opened. Prefer pages that expose a photo URL for "image". Estimate macros from standard composition only where the source doesn't publish them and say so in healthNote; never invent official figures. Favour balanced whole-food recipes; include Kuwait/GCC-friendly options where relevant. Return ONLY the JSON array — no prose.`,
+          messages: [{role: "user", content: `Find 5–6 ${desc}. I'm based in Kuwait (GCC). Set "meal":"${meal}" on every recipe.`}],
+        });
+        const j = tryParseJson(reply);
+        const arr = Array.isArray(j) ? j : (Array.isArray(j.recipes) ? j.recipes : [j]);
+        arr.forEach(x => { if (x && x.name && String(x.name).trim()){ const r = saveRecipe({...x, meal}); r.seed = true; R.recipeRebuild.added++; } });
+      } catch (e) { /* skip a failed category, keep going */ }
+      R.recipeRebuild.done++; save(); render();
+    }
+    S.recipesSeeded = true; S.recipesSeedV = STARTER_SEED_V;
+    const added = R.recipeRebuild.added;
+    R.recipeRebuild.running = false; R.recipeFilter = "all"; save(); render();
+    toast(added ? `Rebuilt your recipe box — ${added} recipes from the web ✓` : "Couldn't fetch recipes — check your key/connection and try again.", 5200);
   },
   recipeAddManual(){ R.recipeForm = {name: "", image: "", meal: "main", servings: "1", cuisine: "", kcal: "", p: "", c: "", f: "", tags: "", ingredients: "", steps: ""}; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
   recipeFormCancel(){ R.recipeForm = null; render(); },
