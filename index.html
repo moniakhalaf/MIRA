@@ -554,6 +554,41 @@ body.kb .chatbar{padding-bottom:6px}
 .ts-dot{position:absolute;right:15%;bottom:15%;width:28%;height:28%;border-radius:50%}
 .ts-nm{font-size:11px;color:var(--txt2);font-weight:550}
 .theme-swatch.on .ts-nm{color:var(--acc)}
+/* healthy recipes */
+.rc-actions{display:flex;gap:10px;margin-bottom:12px}
+.rc-actions .btn{flex:1;width:auto}
+.rc-import{margin-bottom:14px}
+.rc-or{text-align:center;color:var(--txt2);font-size:12px;margin:14px 0;position:relative}
+.rc-or span{background:var(--card);padding:0 12px;position:relative;z-index:1}
+.rc-or:before{content:"";position:absolute;left:0;right:0;top:50%;height:1px;background:var(--line2)}
+.rc-filters{display:flex;gap:7px;overflow-x:auto;padding-bottom:11px;scrollbar-width:none}
+.rc-filters::-webkit-scrollbar{display:none}
+.rc-chip{flex:0 0 auto;padding:7px 13px;border-radius:18px;background:var(--card2);border:1px solid var(--line2);color:var(--txt2);font-size:13px;font-weight:500}
+.rc-chip.on{background:var(--acc-soft);border-color:var(--acc);color:var(--acc)}
+.rc-search{display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line2);border-radius:12px;padding:0 12px;margin-bottom:14px;color:var(--txt3)}
+.rc-search input{flex:1;border:none;background:none;padding:11px 0;color:var(--txt);min-height:40px}
+.recipe-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.recipe-card{display:flex;flex-direction:column;text-align:start;border-radius:15px;overflow:hidden;background:var(--card);border:1px solid var(--line2)}
+.recipe-card:active{transform:scale(.98)}
+.rc-hero{position:relative;aspect-ratio:16/10;overflow:hidden;background:linear-gradient(135deg,hsl(var(--h,30) 44% 33%),hsl(var(--h,30) 40% 19%))}
+.rc-hero img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.rc-hero .rc-ph{position:absolute;inset:0;display:none;align-items:center;justify-content:center;color:rgba(255,255,255,.55)}
+.rc-hero.noimg .rc-ph{display:flex}
+.rc-hero.big{aspect-ratio:16/9;border-radius:16px}
+.rc-body{padding:11px 12px 13px;display:flex;flex-direction:column;gap:5px}
+.rc-nm{font-size:14px;font-weight:600;color:var(--txt);line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.rc-macros{font-size:12px;color:var(--txt2)}
+.rc-tags{display:flex;flex-wrap:wrap;gap:5px}
+.rc-tag{font-size:10.5px;font-weight:600;padding:3px 8px;border-radius:20px;background:var(--acc-soft);color:var(--acc)}
+.rc-macrobar{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:14px}
+.rcm{background:var(--card);border:1px solid var(--line2);border-radius:12px;padding:12px 6px;text-align:center}
+.rcm b{display:block;font-size:19px;font-weight:700;color:var(--txt)}
+.rcm span{font-size:11px;color:var(--txt2)}
+.rc-note{font-size:12.5px;color:var(--txt2);background:var(--card2);border:1px solid var(--line2);border-radius:11px;padding:9px 12px;margin-top:12px;display:flex;gap:7px;align-items:flex-start}
+.rc-note svg{color:var(--acc);flex:0 0 auto;margin-top:1px}
+.rc-list,.rc-steps{margin:8px 0 0;padding-inline-start:1.2em}
+.rc-list li,.rc-steps li{margin:.3em 0;line-height:1.45}
+.rc-formimg{width:100%;border-radius:12px;margin-bottom:10px;max-height:220px;object-fit:cover;display:block}
 .opt{font-weight:400;font-size:11px;color:var(--txt2);opacity:.7;margin-inline-start:5px}
 .review-card{display:flex;align-items:center;gap:12px;width:100%;text-align:start;margin:14px 0 2px;padding:15px 16px;border-radius:16px;background:var(--card);border:1px solid var(--line2)}
 .review-card:active{transform:scale(.99)}
@@ -762,7 +797,7 @@ body.kb .chatbar{padding-bottom:6px}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.40";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.41";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -939,6 +974,7 @@ const BLANK = () => ({
   foods: [],          // {id, date, name, amount, kcal, p, c, f, conf, ts}
   savedFoods: [],     // {name, amount, kcal, p, c, f}
   meals: [],          // {id, name, items: [{name, amount, kcal, p, c, f}]}
+  recipes: [],        // {id, name, image, cuisine, tags[], servings, per:{kcal,p,c,f}, ingredients[], steps[], source, healthNote, ts}
   exercises: [],      // user-added exercises {id, n, m, e, c, source}
   workouts: [],       // {id, date, name, items:[{name, muscle, sets:[{reps, weight}], note}], ts}
   routines: [],       // {id, name, items:[{name, muscle}]}
@@ -1009,6 +1045,7 @@ function migrateChats(){
   if (!Array.isArray(S.photos)) S.photos = [];
   if (!Array.isArray(S.labs)) S.labs = [];
   if (!Array.isArray(S.mood)) S.mood = [];
+  if (!Array.isArray(S.recipes)) S.recipes = [];
   if (!Array.isArray(S.focusLog)) S.focusLog = [];
   if (!S.budget || typeof S.budget !== "object") S.budget = {income: 0};
   if (!Array.isArray(S.expenses)) S.expenses = [];
@@ -1100,6 +1137,12 @@ const R = {
   reportOpen: false,  // food-log report card expanded
   frFrom: "", frTo: "", // food report date range (empty = default last 7 days)
   forceWeb: false,    // one-shot: force live web search for the next send (trip research etc.)
+  recipeId: null,     // open recipe detail
+  recipeFilter: "all",// recipe tag filter
+  recipeQ: "",        // recipe search
+  recipeForm: null,   // {name, image, servings, kcal, p, c, f, ingredients, steps, cuisine, tags, source} when adding manually
+  recipeImportOpen: false, // import/discover panel open
+  recipeBusy: false,  // AI import/discover in progress
   mode: S.domains[0]?.id || "work",
   convId: null,       // active conversation id (null = fresh chat)
   sheet: null,        // open bottom sheet ("chats" | null)
@@ -1185,6 +1228,7 @@ function render(){
       R.tab === "life" ? lifeHTML() :
       R.tab === "chat" ? chatHTML() :
       R.tab === "insights" ? trendsHTML() :
+      R.tab === "recipes" ? recipesHTML() :
       R.tab === "food" ? foodHTML() :
       R.tab === "body" ? bodyHTML() : settingsHTML()
     }</div>
@@ -1261,6 +1305,7 @@ function domFeatures(d){
     {icon: "pill", label: "Supplements", desc: "Daily checklist & adherence", on: `M.goHealth('supps')`},
     {icon: "moon", label: "Sleep log", desc: "Hours, quality & trend", on: `M.goHealth('sleep')`},
     {icon: "chart", label: "Health review", desc: "Your week at a glance", on: `M.goHealth('review')`},
+    {icon: "book", label: "Healthy recipes", desc: "Import from a link, discover & save", on: `M.goRecipes()`},
     {icon: "share", label: "Share food log", desc: "Export a date range (PDF/CSV)", on: `M.openFoodReport()`},
     go("droplet", "Hydration", "Track your water", "food"),
     {icon: "sun", label: "Daily brief", desc: "What to eat, drink & do", on: `M.dailyBrief('${id}')`},
@@ -3658,6 +3703,154 @@ function healthReviewHTML(){
       <button class="btn" onclick="M.healthReviewAsk()">Ask MIRA to review my week</button>
     </div>`;
 }
+
+/* ================= Healthy recipes (recipe box) ================= */
+const RECIPE_TAG_LABELS = {"high-protein": "High-protein", "low-carb": "Low-carb", "vegetarian": "Vegetarian", "vegan": "Vegan", "quick": "Quick", "arab": "Arab/GCC", "breakfast": "Breakfast", "salad": "Salad", "treat": "Treat", "gluten-free": "Gluten-free", "high-fibre": "High-fibre"};
+function tagLabel(t){ return RECIPE_TAG_LABELS[t] || (t.charAt(0).toUpperCase() + t.slice(1)); }
+function recipeFilters(){ return [["all", "All"], ["high-protein", "High-protein"], ["low-carb", "Low-carb"], ["vegetarian", "Vegetarian"], ["quick", "Quick"], ["arab", "Arab/GCC"], ["breakfast", "Breakfast"]]; }
+function normTags(t){
+  let arr = Array.isArray(t) ? t : String(t || "").split(",");
+  return [...new Set(arr.map(x => String(x).trim().toLowerCase().replace(/\s+/g, "-")).filter(Boolean))].slice(0, 6);
+}
+function recipeHue(r){ let h = 0; const s = (r.name || "") + (r.cuisine || ""); for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 360; return h; }
+function recipeHeroHTML(r, big){
+  return `<div class="rc-hero ${r.image ? "" : "noimg"} ${big ? "big" : ""}" style="--h:${recipeHue(r)}">
+    ${r.image ? `<img src="${esc(r.image)}" alt="" loading="lazy" onerror="this.remove();this.closest('.rc-hero').classList.add('noimg')">` : ""}
+    <span class="rc-ph">${ic("food", big ? 34 : 24)}</span>
+  </div>`;
+}
+function recipeCardHTML(r){
+  return `<button class="recipe-card" onclick="M.recipeOpen('${r.id}')">
+    ${recipeHeroHTML(r, false)}
+    <div class="rc-body">
+      <div class="rc-nm" dir="auto">${esc(r.name)}</div>
+      <div class="rc-macros">${n0(r.per.kcal)} kcal · ${n0(r.per.p)}g protein</div>
+      ${(r.tags || []).length ? `<div class="rc-tags">${r.tags.slice(0, 2).map(t => `<span class="rc-tag">${esc(tagLabel(t))}</span>`).join("")}</div>` : ""}
+    </div>
+  </button>`;
+}
+function recipeMatch(r){
+  const q = (R.recipeQ || "").trim().toLowerCase();
+  const tagOk = R.recipeFilter === "all" || (r.tags || []).includes(R.recipeFilter);
+  const qOk = !q || (r.name + " " + (r.cuisine || "") + " " + (r.tags || []).join(" ") + " " + (r.ingredients || []).join(" ")).toLowerCase().includes(q);
+  return tagOk && qOk;
+}
+function recipeImportPanelHTML(){
+  return `<div class="card rc-import">
+    <div class="field" style="margin-bottom:8px"><label>Paste a recipe link — or the recipe text</label>
+      <textarea id="rcImport" rows="2" placeholder="https://…  (recipe site, Instagram, TikTok) — or paste the recipe/caption" dir="auto"></textarea></div>
+    <button class="btn sm" onclick="M.recipeImport()" ${R.recipeBusy ? "disabled" : ""}>${R.recipeBusy ? "Reading…" : ic("globe", 15) + " Import this recipe"}</button>
+    <div class="rc-or"><span>or</span></div>
+    <div class="field" style="margin-bottom:8px"><label>Ask MIRA to find healthy recipes</label>
+      <input id="rcQuery" placeholder="e.g. high-protein GCC dinners under 500 kcal" dir="auto"></div>
+    <button class="btn sm sec" onclick="M.recipeDiscover()" ${R.recipeBusy ? "disabled" : ""}>${R.recipeBusy ? "Searching…" : ic("search", 15) + " Find healthy recipes"}</button>
+    <div class="tiny" style="margin-top:9px;color:var(--txt2)">Runs a live web search on your API key. MIRA keeps only reasonably healthy recipes, pulls the photo where the page allows it, and cites the source. Instagram/TikTok links aren't always readable — paste the caption if a link doesn't work.</div>
+  </div>`;
+}
+function recipesHTML(){
+  if (R.recipeForm) return recipeFormHTML();
+  if (R.recipeId) return recipeDetailHTML();
+  const list = S.recipes.filter(recipeMatch);
+  return `
+    <button class="cat-back" onclick="M.backToHome('health')">${ic("back", 18)} Home</button>
+    <div class="cat-title"><div class="ch-nm">Healthy recipes</div>
+      <div class="ch-ds">Your recipe box — import from a link, discover with MIRA, or add your own</div></div>
+    <div class="rc-actions">
+      <button class="btn ${R.recipeImportOpen ? "sec" : ""}" onclick="M.recipeImportToggle()">${ic("plus", 16)} Import / discover</button>
+      <button class="btn sec" onclick="M.recipeAddManual()">${ic("edit", 15)} Add manually</button>
+    </div>
+    ${R.recipeImportOpen ? recipeImportPanelHTML() : ""}
+    <div class="rc-filters">${recipeFilters().map(([v, l]) => `<button class="rc-chip ${R.recipeFilter === v ? "on" : ""}" onclick="M.recipeFilter('${v}')">${l}</button>`).join("")}</div>
+    <div class="rc-search">${ic("search", 15)}<input id="recipeSearch" value="${esc(R.recipeQ)}" placeholder="Search your recipes…" oninput="M.recipeSearch(this.value)" dir="auto"></div>
+    ${list.length ? `<div class="recipe-grid">${list.map(recipeCardHTML).join("")}</div>`
+      : `<div class="card"><div class="muted">${S.recipes.length ? "No recipes match that filter or search." : "Your recipe box is empty. Import one from a link, ask MIRA to find some, or add your own — all healthy."}</div></div>`}`;
+}
+function recipeDetailHTML(){
+  const r = S.recipes.find(x => x.id === R.recipeId);
+  if (!r){ R.recipeId = null; return recipesHTML(); }
+  return `
+    <button class="cat-back" onclick="M.recipeClose()">${ic("back", 18)} Recipes</button>
+    ${recipeHeroHTML(r, true)}
+    <div class="cat-title" style="margin-top:14px"><div class="ch-nm" dir="auto">${esc(r.name)}</div>
+      <div class="ch-ds">${r.cuisine ? esc(r.cuisine) + " · " : ""}${r.servings || 1} serving${(r.servings || 1) > 1 ? "s" : ""}${r.source ? ` · <a href="${esc(r.source)}" target="_blank" rel="noopener">source</a>` : ""}</div></div>
+    <div class="rc-macrobar">
+      <div class="rcm"><b>${n0(r.per.kcal)}</b><span>kcal</span></div>
+      <div class="rcm"><b>${n0(r.per.p)}g</b><span>protein</span></div>
+      <div class="rcm"><b>${n0(r.per.c)}g</b><span>carbs</span></div>
+      <div class="rcm"><b>${n0(r.per.f)}g</b><span>fat</span></div>
+    </div>
+    <div class="tiny" style="text-align:center;color:var(--txt2);margin-top:4px">per serving${r.per.kcal ? "" : " — macros not set"}</div>
+    ${r.healthNote ? `<div class="rc-note">${ic("check", 13)} ${esc(r.healthNote)}</div>` : ""}
+    ${(r.tags || []).length ? `<div class="rc-tags" style="margin:12px 2px">${r.tags.map(t => `<span class="rc-tag">${esc(tagLabel(t))}</span>`).join("")}</div>` : ""}
+    <button class="btn" style="margin:6px 0 4px" onclick="M.recipeLog('${r.id}')">${ic("plus", 16)} Log a serving to today's food</button>
+    <div class="card"><h3>${ic("list", 16)} Ingredients</h3>
+      <ul class="rc-list">${(r.ingredients || []).length ? r.ingredients.map(i => `<li dir="auto">${esc(i)}</li>`).join("") : `<li class="muted">Not listed.</li>`}</ul></div>
+    <div class="card"><h3>${ic("book", 16)} Method</h3>
+      <ol class="rc-steps">${(r.steps || []).length ? r.steps.map(s => `<li dir="auto">${esc(s)}</li>`).join("") : `<li class="muted">Not listed.</li>`}</ol></div>
+    <button class="btn sec danger" onclick="M.recipeDel('${r.id}')">${ic("trash", 14)} Delete recipe</button>`;
+}
+function recipeFormHTML(){
+  const f = R.recipeForm;
+  return `
+    <button class="cat-back" onclick="M.recipeFormCancel()">${ic("back", 18)} Recipes</button>
+    <div class="cat-title"><div class="ch-nm">Add a recipe</div></div>
+    <div class="card">
+      ${f.image ? `<img class="rc-formimg" src="${esc(f.image)}" alt="">` : ""}
+      <button class="btn sm sec" onclick="M.recipePhoto()">${ic("camera", 15)} ${f.image ? "Change photo" : "Add a photo (optional)"}</button>
+      <div class="field" style="margin-top:12px"><label>Name</label><input value="${esc(f.name)}" oninput="R.recipeForm.name=this.value" dir="auto" placeholder="e.g. Grilled chicken bowl"></div>
+      <div class="row">
+        <div class="field" style="flex:1"><label>Servings</label><input type="number" inputmode="numeric" value="${esc(f.servings)}" oninput="R.recipeForm.servings=this.value"></div>
+        <div class="field" style="flex:2"><label>Cuisine (optional)</label><input value="${esc(f.cuisine)}" oninput="R.recipeForm.cuisine=this.value" dir="auto"></div>
+      </div>
+      <label style="display:block;font-size:13px;font-weight:600;color:var(--txt2);margin-bottom:6px">Per serving</label>
+      <div class="grid4" style="margin-bottom:10px">
+        <div class="field"><label>kcal</label><input type="number" inputmode="decimal" value="${esc(f.kcal)}" oninput="R.recipeForm.kcal=this.value"></div>
+        <div class="field"><label>P</label><input type="number" inputmode="decimal" value="${esc(f.p)}" oninput="R.recipeForm.p=this.value"></div>
+        <div class="field"><label>C</label><input type="number" inputmode="decimal" value="${esc(f.c)}" oninput="R.recipeForm.c=this.value"></div>
+        <div class="field"><label>F</label><input type="number" inputmode="decimal" value="${esc(f.f)}" oninput="R.recipeForm.f=this.value"></div>
+      </div>
+      <div class="field"><label>Tags (comma-separated)</label><input value="${esc(f.tags)}" oninput="R.recipeForm.tags=this.value" placeholder="high-protein, quick" dir="auto"></div>
+      <div class="field"><label>Ingredients (one per line)</label><textarea rows="5" oninput="R.recipeForm.ingredients=this.value" dir="auto">${esc(f.ingredients)}</textarea></div>
+      <div class="field"><label>Method (one step per line)</label><textarea rows="6" oninput="R.recipeForm.steps=this.value" dir="auto">${esc(f.steps)}</textarea></div>
+      <button class="btn" onclick="M.recipeFormSave()">Save recipe</button>
+    </div>`;
+}
+function saveRecipe(j){
+  const per = j.per || {};
+  const r = {id: uid(), name: String(j.name || "Recipe").trim(), image: String(j.image || "").trim(),
+    cuisine: String(j.cuisine || "").trim(), tags: normTags(j.tags), servings: Math.max(1, parseInt(j.servings) || 1),
+    per: {kcal: num(per.kcal), p: num(per.p), c: num(per.c), f: num(per.f)},
+    ingredients: (Array.isArray(j.ingredients) ? j.ingredients : []).map(x => String(x)).filter(Boolean),
+    steps: (Array.isArray(j.steps) ? j.steps : []).map(x => String(x)).filter(Boolean),
+    source: String(j.source || "").trim(), healthNote: String(j.healthNote || "").trim(), ts: Date.now()};
+  S.recipes.unshift(r);
+  return r;
+}
+function seedStarterRecipes(){
+  if (S.recipesSeeded) return;
+  S.recipesSeeded = true;
+  const R6 = [
+    {name: "Grilled chicken & quinoa bowl", cuisine: "Mediterranean", tags: ["high-protein", "quick"], servings: 1, per: {kcal: 480, p: 45, c: 42, f: 13},
+      ingredients: ["150 g chicken breast", "3/4 cup cooked quinoa", "Handful cherry tomatoes & cucumber", "Handful baby spinach", "1 tsp olive oil, lemon, salt, pepper"],
+      steps: ["Season and grill the chicken 5–6 min per side; slice.", "Toss quinoa, spinach and chopped veg with olive oil and lemon.", "Top with chicken and season."], healthNote: "Lean protein + whole-grain carbs and fibre."},
+    {name: "Greek yogurt & berry breakfast bowl", cuisine: "—", tags: ["high-protein", "breakfast", "quick", "vegetarian"], servings: 1, per: {kcal: 320, p: 24, c: 38, f: 8},
+      ingredients: ["200 g plain 0–2% Greek yogurt", "1 cup mixed berries", "1 tbsp chia seeds", "2 tbsp oats", "Drizzle of honey (optional)"],
+      steps: ["Spoon yogurt into a bowl.", "Top with berries, oats and chia.", "Add a little honey if you like."], healthNote: "High protein, high fibre, no added processing."},
+    {name: "Lentil soup (shorbat adas)", cuisine: "Levantine / GCC", tags: ["vegetarian", "high-fibre", "arab"], servings: 4, per: {kcal: 250, p: 15, c: 38, f: 4},
+      ingredients: ["1.5 cups red lentils, rinsed", "1 onion, 2 garlic cloves", "1 carrot", "1 tsp cumin, pinch turmeric", "6 cups water/stock, lemon to serve"],
+      steps: ["Sauté onion, garlic and carrot briefly.", "Add lentils, spices and water; simmer 25–30 min.", "Blend smooth; serve with lemon."], healthNote: "Plant protein and fibre; naturally low fat."},
+    {name: "Baked salmon with greens", cuisine: "—", tags: ["high-protein", "low-carb"], servings: 1, per: {kcal: 420, p: 38, c: 8, f: 26},
+      ingredients: ["170 g salmon fillet", "2 cups broccoli or green beans", "1 tsp olive oil", "Lemon, garlic, salt, pepper"],
+      steps: ["Bake salmon at 200°C for 12–15 min.", "Steam or roast the greens.", "Finish with lemon and garlic."], healthNote: "Omega-3 rich, very low carb."},
+    {name: "Chickpea & tomato salad (balela)", cuisine: "Levantine", tags: ["vegetarian", "high-fibre", "arab", "quick"], servings: 2, per: {kcal: 300, p: 12, c: 40, f: 11},
+      ingredients: ["1 can chickpeas, drained", "2 tomatoes, 1/2 cucumber, chopped", "Handful parsley & mint", "1 tbsp olive oil, lemon, sumac"],
+      steps: ["Combine chickpeas and chopped veg.", "Dress with olive oil, lemon and sumac.", "Fold through the herbs."], healthNote: "Fibre and plant protein; no cooking needed."},
+    {name: "Oats & egg-white power breakfast", cuisine: "—", tags: ["high-protein", "breakfast"], servings: 1, per: {kcal: 350, p: 30, c: 40, f: 7},
+      ingredients: ["1/2 cup oats", "4 egg whites + 1 whole egg", "1 cup milk or water", "Cinnamon; berries to top"],
+      steps: ["Cook oats with milk.", "Scramble the eggs separately.", "Serve together with cinnamon and berries."], healthNote: "Balanced high-protein start to the day."},
+  ];
+  R6.forEach(x => saveRecipe(x));
+}
 </script>
 <script>
 "use strict";
@@ -5388,6 +5581,72 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
     render();
   },
   reviewDrop(i){ reviewItems.splice(i, 1); if (!reviewItems.length) reviewItems = null; render(); },
+  /* ---- healthy recipes (recipe box) ---- */
+  goRecipes(){ R.tab = "recipes"; R.homeCat = null; R.reviewOpen = false; R.quickOpen = false; R.recipeId = null; R.recipeForm = null; seedStarterRecipes(); save(); render(); const c = $("#content"); if (c) c.scrollTop = 0; },
+  recipeOpen(id){ R.recipeId = id; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
+  recipeClose(){ R.recipeId = null; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
+  recipeFilter(v){ R.recipeFilter = v; render(); },
+  recipeSearch(v){ R.recipeQ = v; render(); },
+  recipeImportToggle(){ R.recipeImportOpen = !R.recipeImportOpen; render(); },
+  async recipeImport(){
+    const el = $("#rcImport"); const text = (el ? el.value : "").trim();
+    if (!text){ toast("Paste a recipe link or the recipe text first."); return; }
+    if (!S.settings.apiKey){ toast("Add your API key in Settings first."); R.tab = "set"; render(); return; }
+    R.recipeBusy = true; render();
+    try {
+      const reply = await apiCall({
+        model: S.settings.model, max_tokens: 2200,
+        tools: [{type: "web_search_20250305", name: "web_search", max_uses: 4}],
+        system: `You are MIRA's healthy-recipe importer. From the given recipe link or pasted text, produce ONE structured recipe as JSON. If given a URL you have web search — read it and pull the recipe's own photo URL into "image" when the page exposes one. Prefer reasonably healthy recipes; if the dish is indulgent, still import it but explain in healthNote and add a "treat" tag. Return ONLY a JSON object: {"name":str,"image":str(url or ""),"cuisine":str,"tags":[str],"servings":int,"per":{"kcal":num,"p":num,"c":num,"f":num} for ONE serving,"ingredients":[str],"steps":[str],"source":str(url or ""),"healthNote":str}. Estimate macros from standard composition when not published and say so in healthNote; never invent official numbers. Tags are short lowercase words (high-protein, low-carb, vegetarian, quick, arab, breakfast).`,
+        messages: [{role: "user", content: `Import this into a healthy recipe:\n\n${text}`}],
+      });
+      const j = tryParseJson(reply);
+      const r = saveRecipe(j);
+      R.recipeBusy = false; R.recipeImportOpen = false; save(); render();
+      toast(`Saved: ${r.name} ✓`);
+    } catch (e) { R.recipeBusy = false; render(); toast("Couldn't read that recipe: " + e.message, 4400); }
+  },
+  async recipeDiscover(){
+    const el = $("#rcQuery"); const q = (el ? el.value : "").trim();
+    if (!q){ toast("Describe what you'd like MIRA to find."); return; }
+    if (!S.settings.apiKey){ toast("Add your API key in Settings first."); R.tab = "set"; render(); return; }
+    R.recipeBusy = true; render();
+    try {
+      const reply = await apiCall({
+        model: S.settings.model, max_tokens: 3600,
+        tools: [{type: "web_search_20250305", name: "web_search", max_uses: 6}],
+        system: `You are MIRA's healthy-recipe finder. Find 3–5 genuinely healthy recipes matching the request, using trusted cooking sources. Return ONLY a JSON array; each item: {"name":str,"image":str(a photo URL from the source or ""),"cuisine":str,"tags":[str],"servings":int,"per":{"kcal":num,"p":num,"c":num,"f":num} for ONE serving,"ingredients":[str],"steps":[str],"source":str(url),"healthNote":str}. Every recipe must include a real source URL you actually used. Estimate macros from standard composition where not published and note it; never invent official figures. Favour balanced whole-food recipes; include Kuwait/GCC-friendly options where relevant.`,
+        messages: [{role: "user", content: `Find healthy recipes: ${q}. I'm based in Kuwait (GCC).`}],
+      });
+      const j = tryParseJson(reply);
+      const arr = Array.isArray(j) ? j : (Array.isArray(j.recipes) ? j.recipes : [j]);
+      let n = 0; arr.forEach(x => { if (x && x.name){ saveRecipe(x); n++; } });
+      R.recipeBusy = false; R.recipeImportOpen = false; save(); render();
+      toast(n ? `Added ${n} recipe${n > 1 ? "s" : ""} ✓` : "No suitable recipes found — try rewording.");
+    } catch (e) { R.recipeBusy = false; render(); toast("Search failed: " + e.message, 4400); }
+  },
+  recipeAddManual(){ R.recipeForm = {name: "", image: "", servings: "1", cuisine: "", kcal: "", p: "", c: "", f: "", tags: "", ingredients: "", steps: ""}; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
+  recipeFormCancel(){ R.recipeForm = null; render(); },
+  recipePhoto(){
+    const inp = $("#fileImg"); inp.value = "";
+    inp.onchange = () => { const file = inp.files[0]; if (!file) return; if (!/^image\//.test(file.type)){ toast("Pick an image."); return; } resizeImage(file, 800, data => { if (R.recipeForm){ R.recipeForm.image = data; render(); } }); };
+    inp.click();
+  },
+  recipeFormSave(){
+    const f = R.recipeForm; if (!f) return;
+    if (!f.name.trim()){ toast("Give the recipe a name."); return; }
+    const r = saveRecipe({name: f.name, image: f.image, cuisine: f.cuisine, servings: f.servings, tags: f.tags,
+      per: {kcal: f.kcal, p: f.p, c: f.c, f: f.f},
+      ingredients: (f.ingredients || "").split("\n").map(s => s.trim()).filter(Boolean),
+      steps: (f.steps || "").split("\n").map(s => s.trim()).filter(Boolean)});
+    R.recipeForm = null; R.recipeId = r.id; save(); render();
+    toast("Recipe saved ✓");
+  },
+  recipeLog(id){
+    const r = S.recipes.find(x => x.id === id); if (!r) return;
+    logFood({name: r.name, amount: "1 serving", kcal: r.per.kcal, p: r.per.p, c: r.per.c, f: r.per.f, conf: "estimate"});
+  },
+  recipeDel(id){ S.recipes = S.recipes.filter(x => x.id !== id); R.recipeId = null; save(); render(); toast("Recipe removed."); },
 
   ibSave(){
     if (ibSaveEntry({...ibForm, date: ibForm.date || todayStr()})){
