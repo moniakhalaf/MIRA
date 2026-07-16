@@ -598,6 +598,17 @@ body.kb .chatbar{padding-bottom:6px}
 .mood-face.on .mf-e{filter:none;transform:scale(1.12)}
 .mood-face.on .mf-l{color:var(--txt);font-weight:650}
 .mood-face:active{transform:scale(.94)}
+.mood-lift{display:flex;gap:12px;align-items:flex-start;padding:15px 16px;margin-bottom:14px;border-radius:15px;background:linear-gradient(135deg,var(--acc-soft),var(--card));border:1px solid var(--acc);animation:liftIn .32s cubic-bezier(.2,.8,.2,1)}
+.mood-lift .ml-ic{width:36px;height:36px;min-width:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--acc);color:var(--btn-ink)}
+.mood-lift .ml-tx{flex:1;min-width:0}
+.mood-lift .ml-q{font-size:15px;line-height:1.5;color:var(--txt);font-weight:500}
+.mood-lift .ml-by{font-size:12.5px;color:var(--txt2);margin-top:5px}
+.mood-lift .ml-note{font-size:12.5px;color:var(--txt2);line-height:1.45;margin-top:9px;padding-top:9px;border-top:1px solid var(--line2)}
+.mood-lift .ml-actions{display:flex;gap:8px;margin-top:11px}
+.mood-lift .ml-btn{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:600;padding:7px 12px;border-radius:18px;background:var(--acc);color:var(--btn-ink)}
+.mood-lift .ml-btn.ghost{background:transparent;border:1px solid var(--line2);color:var(--txt2)}
+@keyframes liftIn{from{opacity:0;transform:translateY(-6px) scale(.98)}}
+@media(prefers-reduced-motion:reduce){.mood-lift{animation:none}}
 .ci-factors{display:flex;flex-wrap:wrap;gap:7px;margin-top:6px}
 .ci-fac{padding:7px 13px;border-radius:18px;background:var(--card2);border:1px solid var(--line2);color:var(--txt2);font-size:13px;font-weight:500}
 .ci-fac.on{background:var(--acc-soft);border-color:var(--acc);color:var(--acc)}
@@ -820,7 +831,7 @@ body.kb .chatbar{padding-bottom:6px}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.42";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.43";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1169,6 +1180,7 @@ const R = {
   recipeImportOpen: false, // import/discover panel open
   recipeBusy: false,  // AI import/discover in progress
   ciDraft: null,      // today's wellness check-in editing buffer {mood, factors:[], gratitude, journal}
+  ciQuote: null,      // supportive quote shown when mood is below "Good"
   mode: S.domains[0]?.id || "work",
   convId: null,       // active conversation id (null = fresh chat)
   sheet: null,        // open bottom sheet ("chats" | null)
@@ -3890,6 +3902,28 @@ function seedStarterRecipes(){
 
 /* ================= Wellness check-in ================= */
 const MOOD_FACES = [{v: 1, e: "😖", l: "Awful", h: 4}, {v: 2, e: "😕", l: "Low", h: 30}, {v: 3, e: "😐", l: "Okay", h: 45}, {v: 4, e: "🙂", l: "Good", h: 95}, {v: 5, e: "😄", l: "Great", h: 140}];
+// Supportive lines shown when mood is below "Good". Honest and warm — proverbs/Rumi are accurately attributed; the rest are gentle affirmations, not fake cheer.
+const MOOD_LIFTS = {
+  low: [
+    {t: "Hard days are part of the story, not the whole story. You've made it through every one so far."},
+    {t: "This too shall pass.", by: "Proverb"},
+    {t: "Fall seven times, stand up eight.", by: "Japanese proverb"},
+    {t: "The wound is the place where the Light enters you.", by: "Rumi"},
+    {t: "Be gentle with yourself today — you're doing the best you can with what you have right now."},
+    {t: "You don't have to feel okay to be worthy of care. Rest counts as progress."},
+    {t: "Even showing up here and checking in on yourself is a real step. That matters."},
+  ],
+  okay: [
+    {t: "Every day may not be great, but there's usually something good in it — even a small thing."},
+    {t: "Steady is underrated. A calm, ordinary day is a solid foundation."},
+    {t: "Progress isn't always loud. Keep going, gently."},
+    {t: "You showed up and checked in — that's a quiet win worth counting."},
+  ],
+};
+function pickLift(mood){
+  const bucket = mood <= 2 ? MOOD_LIFTS.low : MOOD_LIFTS.okay;
+  return bucket[Math.floor(Math.random() * bucket.length)];
+}
 const CI_FACTORS = ["Work", "Sleep", "Exercise", "Health", "Family", "Friends", "Money", "Stress", "Food", "Weather"];
 function todayCheckin(){ const t = todayStr(); return (S.checkins || []).find(c => c.date === t); }
 function checkinScore(ci){
@@ -3908,7 +3942,7 @@ function scoreBasis(ci){
   return b.join(" + ");
 }
 function wellnessHTML(){
-  if (!R.ciDraft){ const c = todayCheckin(); R.ciDraft = {mood: c ? c.mood : 0, factors: c ? [...(c.factors || [])] : [], gratitude: c ? c.gratitude || "" : "", journal: c ? c.journal || "" : ""}; }
+  if (!R.ciDraft){ const c = todayCheckin(); R.ciDraft = {mood: c ? c.mood : 0, factors: c ? [...(c.factors || [])] : [], gratitude: c ? c.gratitude || "" : "", journal: c ? c.journal || "" : ""}; if (R.ciDraft.mood && R.ciDraft.mood <= 3 && !R.ciQuote) R.ciQuote = pickLift(R.ciDraft.mood); }
   const d = R.ciDraft;
   const ci = todayCheckin();
   const score = checkinScore({date: todayStr(), mood: d.mood});
@@ -3925,6 +3959,16 @@ function wellnessHTML(){
       <div class="mood-faces">${MOOD_FACES.map(f => `<button class="mood-face ${d.mood === f.v ? "on" : ""}" style="--fh:${f.h}" onclick="M.ciMood(${f.v})">
         <span class="mf-e">${f.e}</span><span class="mf-l">${f.l}</span></button>`).join("")}</div>
     </div>
+
+    ${d.mood && d.mood <= 3 && R.ciQuote ? `<div class="mood-lift">
+      <span class="ml-ic">${ic("heart", 17)}</span>
+      <div class="ml-tx">
+        <div class="ml-q" dir="auto">${esc(R.ciQuote.t)}</div>
+        ${R.ciQuote.by ? `<div class="ml-by">— ${esc(R.ciQuote.by)}</div>` : ""}
+        ${d.mood === 1 ? `<div class="ml-note">If today feels heavy, you don't have to carry it alone — talking to someone you trust, or a professional, can genuinely help.</div>` : ""}
+        <div class="ml-actions"><button class="ml-btn" onclick="M.wellnessRead()">${ic("chat", 14)} Talk to MIRA</button><button class="ml-btn ghost" onclick="M.ciQuoteNew()">${ic("refresh", 13)} Another</button></div>
+      </div>
+    </div>` : ""}
 
     <div class="card">
       <h3>${ic("compass", 15)} What's affecting today? <span class="opt">optional</span></h3>
@@ -5757,7 +5801,8 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
   recipeDel(id){ S.recipes = S.recipes.filter(x => x.id !== id); R.recipeId = null; save(); render(); toast("Recipe removed."); },
   /* ---- wellness check-in ---- */
   goWellness(){ R.tab = "wellness"; R.homeCat = null; R.reviewOpen = false; R.quickOpen = false; R.ciDraft = null; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
-  ciMood(n){ if (!R.ciDraft) R.ciDraft = {mood: 0, factors: [], gratitude: "", journal: ""}; R.ciDraft.mood = n; M.ciPersist(); render(); },
+  ciMood(n){ if (!R.ciDraft) R.ciDraft = {mood: 0, factors: [], gratitude: "", journal: ""}; R.ciDraft.mood = n; R.ciQuote = n <= 3 ? pickLift(n) : null; M.ciPersist(); render(); },
+  ciQuoteNew(){ if (R.ciDraft && R.ciDraft.mood && R.ciDraft.mood <= 3) R.ciQuote = pickLift(R.ciDraft.mood); render(); },
   ciFactor(t){ if (!R.ciDraft) return; const a = R.ciDraft.factors; const i = a.indexOf(t); if (i >= 0) a.splice(i, 1); else a.push(t); M.ciPersist(); render(); },
   ciPersist(){
     const d = R.ciDraft; if (!d) return;
