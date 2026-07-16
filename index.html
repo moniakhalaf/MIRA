@@ -874,7 +874,7 @@ body.kb .chatbar{padding-bottom:6px}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.47";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.48";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -3119,14 +3119,41 @@ function logFood(it){
 
 /* find and parse the JSON payload in a model reply that may also contain prose */
 function tryParseJson(t){
+  if (t == null) throw new Error("empty reply");
+  // 1) fenced ```json blocks, last one first
   const fenced = t.match(/```(?:json)?\s*([\s\S]*?)```/g) || [];
   for (const block of fenced.reverse()){
     try { return JSON.parse(block.replace(/^```(?:json)?\s*/, "").replace(/```$/, "")); } catch (e) {}
   }
+  // 2) balanced-brace forward scan: walk every {/[ and find its matching close,
+  //    honouring strings and escapes so braces inside quotes don't derail it
+  for (const open of ["{", "["]){
+    const close = open === "{" ? "}" : "]";
+    for (let start = t.indexOf(open); start >= 0; start = t.indexOf(open, start + 1)){
+      let depth = 0, inStr = false, esc = false;
+      for (let j = start; j < t.length; j++){
+        const c = t[j];
+        if (inStr){
+          if (esc) esc = false;
+          else if (c === "\\") esc = true;
+          else if (c === '"') inStr = false;
+        } else if (c === '"') inStr = true;
+        else if (c === open) depth++;
+        else if (c === close){
+          depth--;
+          if (depth === 0){
+            try { return JSON.parse(t.slice(start, j + 1)); } catch (e) {}
+            break;
+          }
+        }
+      }
+    }
+  }
+  // 3) backward last-open scan (handles truncated / nested prose)
   for (const [open, close] of [["{", "}"], ["[", "]"]]){
     const end = t.lastIndexOf(close);
     let i = t.length;
-    for (let n = 0; n < 12 && (i = t.lastIndexOf(open, i - 1)) >= 0; n++){
+    for (let n = 0; n < 16 && (i = t.lastIndexOf(open, i - 1)) >= 0; n++){
       if (end > i){ try { return JSON.parse(t.slice(i, end + 1)); } catch (e) {} }
       if (i === 0) break;
     }
@@ -5945,14 +5972,18 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
       const reply = await apiCall({
         model: S.settings.model, max_tokens: 2200,
         tools: [{type: "web_search_20250305", name: "web_search", max_uses: 4}],
-        system: `You are MIRA's healthy-recipe importer. From the given recipe link or pasted text, produce ONE structured recipe as JSON. If given a URL you have web search — read it and pull the recipe's own photo URL into "image" when the page exposes one. Prefer reasonably healthy recipes; if the dish is indulgent, still import it but explain in healthNote and add a "treat" tag. Return ONLY a JSON object: {"name":str,"image":str(url or ""),"cuisine":str,"tags":[str],"servings":int,"per":{"kcal":num,"p":num,"c":num,"f":num} for ONE serving,"ingredients":[str],"steps":[str],"source":str(url or ""),"healthNote":str}. Estimate macros from standard composition when not published and say so in healthNote; never invent official numbers. Tags are short lowercase words (high-protein, low-carb, vegetarian, quick, arab, breakfast).`,
+        system: `You are MIRA's healthy-recipe importer. From the given recipe link or pasted text, produce ONE structured recipe as JSON. If given a URL you have web search — read it and pull the recipe's own photo URL into "image" when the page exposes one. Prefer reasonably healthy recipes; if the dish is indulgent, still import it but explain in healthNote and add a "treat" tag. Return ONLY a JSON object: {"name":str,"image":str(url or ""),"cuisine":str,"tags":[str],"servings":int,"per":{"kcal":num,"p":num,"c":num,"f":num} for ONE serving,"ingredients":[str],"steps":[str],"source":str(url or ""),"healthNote":str}. Estimate macros from standard composition when not published and say so in healthNote; never invent official numbers. Tags are short lowercase words (high-protein, low-carb, vegetarian, quick, arab, breakfast). CRITICAL: You MUST ALWAYS return the JSON object and NOTHING else — never reply with prose, an apology, or an explanation. If you cannot open the link (Instagram, TikTok and some sites block reading), reconstruct a representative healthy version of the dish from its name and any visible text, set "source" to the given URL, and in "healthNote" clearly say this is a reconstructed version — not read from the original — and invite the user to paste the caption for accuracy. If you truly cannot identify any dish, still return a JSON object with an empty "name" and a "healthNote" explaining what you'd need.`,
         messages: [{role: "user", content: `Import this into a healthy recipe:\n\n${text}`}],
       });
       const j = tryParseJson(reply);
+      if (!j || !j.name || !String(j.name).trim()) throw new Error("no dish identified");
       const r = saveRecipe(j);
       R.recipeBusy = false; R.recipeImportOpen = false; save(); render();
       toast(`Saved: ${r.name} ✓`);
-    } catch (e) { R.recipeBusy = false; render(); toast("Couldn't read that recipe: " + e.message, 4400); }
+    } catch (e) {
+      R.recipeBusy = false; render();
+      toast("MIRA couldn't pull a recipe from that link. Instagram & TikTok usually block reading — paste the recipe text or caption here instead.", 5200);
+    }
   },
   async recipeDiscover(){
     const el = $("#rcQuery"); const q = (el ? el.value : "").trim();
