@@ -208,6 +208,24 @@ body.kb .chatbar{padding-bottom:6px}
 @media(prefers-reduced-motion:reduce){.content.view-enter{animation:none}}
 .empty-state{text-align:center;color:var(--txt2);font-size:13px;line-height:1.5;padding:22px 16px;background:var(--card);border:1px solid var(--line2);border-radius:14px}
 .empty-state b{display:block;color:var(--txt);font-size:14.5px;margin-bottom:3px}
+/* budget dashboard */
+.budget-dash{display:flex;align-items:center;gap:16px;margin-top:6px}
+.donut{width:118px;height:118px;flex:0 0 auto}
+.donut .d-c{fill:var(--txt);font-size:15px;font-weight:700}
+.donut .d-l{fill:var(--txt2);font-size:9px;text-transform:uppercase;letter-spacing:.06em}
+.budget-legend{flex:1;display:flex;flex-direction:column;gap:7px;min-width:0}
+.bl-row{display:flex;align-items:center;gap:8px;font-size:13px}
+.bl-dot{width:10px;height:10px;min-width:10px;border-radius:3px;display:inline-block}
+.bl-c{color:var(--txt);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bl-v{color:var(--txt);font-weight:600;display:flex;gap:6px;align-items:baseline}
+.bl-p{color:var(--txt2);font-weight:500;font-size:11.5px}
+.budget-top{font-size:12.5px;color:var(--txt2);line-height:1.45;margin-top:12px;padding-top:11px;border-top:1px solid var(--line2);display:flex;gap:6px;align-items:flex-start}
+.budget-top svg{color:var(--acc);flex:0 0 auto;margin-top:1px}
+.budget-top b{color:var(--txt)}
+.save-proj{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.sp-cell{background:var(--card2);border:1px solid var(--line2);border-radius:11px;padding:11px 6px;text-align:center}
+.sp-cell .sp-v{font-size:17px;font-weight:700;color:var(--acc)}
+.sp-cell .sp-l{font-size:11px;color:var(--txt2);margin-top:2px}
 .tabbar{
   flex:0 0 auto;
   display:flex;justify-content:space-around;
@@ -856,7 +874,7 @@ body.kb .chatbar{padding-bottom:6px}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.46";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.47";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1110,6 +1128,9 @@ function migrateChats(){
   if (!Array.isArray(S.checkins)) S.checkins = [];
   if (!Array.isArray(S.focusLog)) S.focusLog = [];
   if (!S.budget || typeof S.budget !== "object") S.budget = {income: 0};
+  if (S.budget.saveTarget === undefined) S.budget.saveTarget = null;
+  if (S.budget.goalName === undefined) S.budget.goalName = "";
+  if (S.budget.goalAmount === undefined) S.budget.goalAmount = 0;
   if (!Array.isArray(S.expenses)) S.expenses = [];
   if (!Array.isArray(S.dates)) S.dates = [];
   if (!Array.isArray(S.reading)) S.reading = [];
@@ -2242,6 +2263,9 @@ When asked for a daily brief, deliver a tight briefing under ~130 words with sho
 
 WEEKLY REVIEW
 When a message begins with [WEEKLY REVIEW], you are given a 7-day aggregate of the user's own logged data. Use ONLY those figures — do not invent activity for days or categories marked as not logged; instead note the gap and suggest what to start tracking. Deliver three short headed sections: Wins (with the actual numbers), Watch-outs (honest slipping trends or gaps), and Next week (exactly three concrete, specific priorities). Connect signals across domains when it genuinely helps (e.g. poor sleep alongside missed training). Keep the whole review tight and motivating without cheerleading.
+
+BUDGET
+When a message begins with [BUDGET], you're given the user's monthly income, spending by category and net. Be a practical, honest money coach — not a licensed adviser. Anchor everything to their real numbers: name the biggest categories, quantify realistic cuts in KWD/month AND KWD/year, and give concrete, GCC-relevant ideas (no generic filler). Show the savings projection they asked for with clear arithmetic. Be encouraging but never pushy or shaming, flag if they're spending more than they earn, and present this as information to decide from, not regulated financial advice.
 
 WELLNESS
 When a message begins with [WELLNESS], you're given the user's recent mood/gratitude/journal check-ins. Respond with warmth but complete honesty — never toxic positivity, never hollow reassurance. Reflect back the real pattern you see (mood trend, recurring factors that lift or drain them), validate it plainly, and offer ONE small, evidence-based step. Do not diagnose or make clinical claims. If the entries suggest sustained low mood, hopelessness or risk, gently and non-alarmingly encourage them to reach out to someone they trust or a professional, and (for Kuwait/GCC) note that support lines exist. Keep it short and human.
@@ -4407,25 +4431,70 @@ function billsHTML(){
 
 /* ---------------- Budget ---------------- */
 const EXP_CATS = ["Food","Transport","Housing","Shopping","Health","Bills","Entertainment","Other"];
+const EXP_COLORS = {Food: "#3bb273", Transport: "#4c9fd8", Housing: "#b57edc", Shopping: "#e0864d", Health: "#e06b6b", Bills: "#d8a24c", Entertainment: "#6fb6a8", Other: "#8a94a8"};
+function donutSVG(entries, total){
+  const cx = 62, cy = 62, r = 46, sw = 17, C = 2 * Math.PI * r;
+  let acc = 0, segs = "";
+  entries.forEach(([cat, val]) => {
+    const frac = total ? val / total : 0, len = frac * C;
+    segs += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${EXP_COLORS[cat] || "#8a94a8"}" stroke-width="${sw}" stroke-dasharray="${len.toFixed(1)} ${(C - len).toFixed(1)}" stroke-dashoffset="${(-acc * C).toFixed(1)}" transform="rotate(-90 ${cx} ${cy})"/>`;
+    acc += frac;
+  });
+  return `<svg viewBox="0 0 124 124" class="donut" aria-hidden="true">${segs || `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--line2)" stroke-width="${sw}"/>`}
+    <text x="${cx}" y="${cy - 1}" text-anchor="middle" class="d-c">${cur(total)}</text>
+    <text x="${cx}" y="${cy + 15}" text-anchor="middle" class="d-l">spent</text></svg>`;
+}
 function budgetHTML(){
   const ym = todayStr().slice(0, 7);
   const monthExp = S.expenses.filter(e => e.date.slice(0, 7) === ym);
   const spent = monthExp.reduce((a, e) => a + num(e.amount), 0);
   const billsMo = S.bills.reduce((a, b) => a + num(b.amount) * (BILL_CYCLES[b.cycle] || BILL_CYCLES.monthly).perMonth, 0);
   const income = num(S.budget.income);
-  const net = income - spent - billsMo;
-  const byCat = {};
-  monthExp.forEach(e => { byCat[e.category] = (byCat[e.category] || 0) + num(e.amount); });
+  const totalOut = spent + billsMo;
+  const net = income - totalOut;
+  const saveRate = income > 0 ? Math.round(net / income * 100) : null;
+  const catTot = {};
+  monthExp.forEach(e => { catTot[e.category] = (catTot[e.category] || 0) + num(e.amount); });
+  if (billsMo) catTot["Bills"] = (catTot["Bills"] || 0) + billsMo;
+  const entries = Object.entries(catTot).sort((a, b) => b[1] - a[1]);
+  const top = entries[0];
+  const saveT = S.budget.saveTarget != null ? S.budget.saveTarget : Math.max(0, Math.round(net));
+  const goalAmt = num(S.budget.goalAmount);
+  const monthsToGoal = goalAmt > 0 && saveT > 0 ? Math.ceil(goalAmt / saveT) : null;
   const f = R.expForm;
   return `
     <div class="card">
       <div class="field"><label>Monthly income (KWD)</label><input type="number" inputmode="decimal" value="${S.budget.income || ""}" oninput="S.budget.income=num(this.value);save()"></div>
       <div class="rev-grid">
-        <div class="rev-stat"><div class="rv">${cur(spent + billsMo)}</div><div class="rl">Out this month</div></div>
+        <div class="rev-stat"><div class="rv">${cur(totalOut)}</div><div class="rl">Out this month</div></div>
         <div class="rev-stat"><div class="rv" style="color:${net >= 0 ? "var(--green)" : "var(--red)"}">${cur(net)}</div><div class="rl">Net left</div></div>
-        <div class="rev-stat"><div class="rv">${cur(billsMo)}</div><div class="rl">Bills</div></div>
+        <div class="rev-stat"><div class="rv">${saveRate != null ? saveRate + "%" : "—"}</div><div class="rl">Savings rate</div></div>
       </div>
     </div>
+
+    ${entries.length ? `<div class="card">
+      <h3>${ic("wallet", 16)} Where it goes</h3>
+      <div class="budget-dash">
+        ${donutSVG(entries, totalOut)}
+        <div class="budget-legend">${entries.map(([c, v]) => `<div class="bl-row"><span class="bl-dot" style="background:${EXP_COLORS[c] || "#8a94a8"}"></span><span class="bl-c">${esc(c)}</span><span class="bl-v">${cur(v)}<span class="bl-p">${totalOut ? Math.round(v / totalOut * 100) : 0}%</span></span></div>`).join("")}</div>
+      </div>
+      ${top ? `<div class="budget-top">${ic("trend", 13)} Most goes to <b>${esc(top[0])}</b> — ${cur(top[1])} KWD (${totalOut ? Math.round(top[1] / totalOut * 100) : 0}% of spending)</div>` : ""}
+    </div>` : ""}
+
+    <div class="card">
+      <h3>${ic("target", 16)} Savings plan</h3>
+      <div class="field"><label>Save each month (KWD)</label><input type="number" inputmode="decimal" value="${saveT || ""}" placeholder="${Math.max(0, Math.round(net))}" oninput="S.budget.saveTarget=num(this.value);save()"></div>
+      <div class="save-proj">
+        ${[3, 6, 12].map(m => `<div class="sp-cell"><div class="sp-v">${cur(saveT * m)}</div><div class="sp-l">${m === 12 ? "1 year" : m + " months"}</div></div>`).join("")}
+      </div>
+      <div class="row" style="margin-top:12px;gap:8px">
+        <div class="field" style="flex:2;margin:0"><label>Saving toward (optional)</label><input value="${esc(S.budget.goalName || "")}" oninput="S.budget.goalName=this.value;save()" placeholder="e.g. new laptop, Umrah, emergency fund" dir="auto"></div>
+        <div class="field" style="flex:1;margin:0"><label>Cost (KWD)</label><input type="number" inputmode="decimal" value="${S.budget.goalAmount || ""}" oninput="S.budget.goalAmount=num(this.value);save()"></div>
+      </div>
+      ${monthsToGoal ? `<div class="budget-top" style="margin-top:10px">${ic("check", 13)} At ${cur(saveT)} KWD/month you'll reach <b>${esc(S.budget.goalName || "your goal")}</b> in about <b>${monthsToGoal} month${monthsToGoal === 1 ? "" : "s"}</b> (${fmtDate(new Date(Date.now() + monthsToGoal * 30 * 864e5).toLocaleDateString("en-CA"))}).</div>` : goalAmt > 0 ? `<div class="tiny" style="margin-top:8px;color:var(--txt2)">Set a monthly saving amount above to see when you'll reach it.</div>` : ""}
+      <button class="btn" style="margin-top:12px" onclick="M.budgetAdvise()">${ic("chat", 16)} Ask MIRA how to save more</button>
+    </div>
+
     <div class="card">
       <h3>${ic("plus", 16)} Add expense</h3>
       <div class="grid2" style="margin-bottom:10px">
@@ -4435,17 +4504,13 @@ function budgetHTML(){
       <div class="row"><input value="${esc(f.note)}" oninput="R.expForm.note=this.value" placeholder="Note (optional)" dir="auto">
         <button class="btn sm" style="flex:0 0 auto" onclick="M.expAdd()">Add</button></div>
     </div>
-    ${Object.keys(byCat).length ? `<div class="card"><h3>${ic("wallet", 16)} This month by category</h3>
-      ${Object.entries(byCat).sort((a, b) => b[1] - a[1]).map(([c, v]) => `<div class="bar-line" style="margin-bottom:8px">
-        <div class="bar-top"><span class="lab">${c}</span><span class="val">${cur(v)} KWD</span></div>
-        <div class="bar"><i style="width:${Math.min(100, (v / Math.max(spent, 1)) * 100)}%"></i></div></div>`).join("")}
-    </div>` : ""}
+
     ${monthExp.length ? `<div class="card"><h3>Recent expenses</h3>
       ${[...monthExp].sort((a, b) => b.ts - a.ts).slice(0, 12).map(e => `<div class="set-row">
-        <div><div class="k">${esc(e.category)}${e.note ? ` · ${esc(e.note)}` : ""}</div><div class="desc">${fmtDate(e.date)}</div></div>
+        <div><div class="k"><span class="bl-dot" style="background:${EXP_COLORS[e.category] || "#8a94a8"};margin-inline-end:7px"></span>${esc(e.category)}${e.note ? ` · ${esc(e.note)}` : ""}</div><div class="desc">${fmtDate(e.date)}</div></div>
         <span class="end"><b>${cur(e.amount)} KWD</b><button class="btn sm danger" aria-label="Delete" onclick="M.expDel('${e.id}')">${ic("trash", 13)}</button></span>
       </div>`).join("")}
-    </div>` : ""}`;
+    </div>` : `<div class="empty-state"><b>No expenses logged this month</b>Add what you spend and MIRA will show where it goes and how to save.</div>`}`;
 }
 
 /* ---------------- Dates & reading list ---------------- */
@@ -5413,6 +5478,25 @@ window.M = {
     buzz(); save(); render();
   },
   expDel(id){ S.expenses = S.expenses.filter(e => e.id !== id); save(); render(); },
+  async budgetAdvise(){
+    if (!S.settings.apiKey){ toast("Add your API key in Settings first."); R.tab = "set"; render(); return; }
+    const ym = todayStr().slice(0, 7);
+    const monthExp = S.expenses.filter(e => e.date.slice(0, 7) === ym);
+    const spent = monthExp.reduce((a, e) => a + num(e.amount), 0);
+    const billsMo = S.bills.reduce((a, b) => a + num(b.amount) * (BILL_CYCLES[b.cycle] || BILL_CYCLES.monthly).perMonth, 0);
+    const income = num(S.budget.income);
+    const net = income - spent - billsMo;
+    if (!income && !spent){ toast("Add your income and a few expenses first."); return; }
+    const catTot = {}; monthExp.forEach(e => { catTot[e.category] = (catTot[e.category] || 0) + num(e.amount); });
+    if (billsMo) catTot["Bills"] = (catTot["Bills"] || 0) + billsMo;
+    const cats = Object.entries(catTot).sort((a, b) => b[1] - a[1]).map(([c, v]) => `${c} ${cur(v)}`).join(", ");
+    const saveT = S.budget.saveTarget != null ? S.budget.saveTarget : Math.max(0, Math.round(net));
+    const goal = num(S.budget.goalAmount) > 0 ? ` I'm saving toward ${S.budget.goalName || "a goal"} costing ${cur(S.budget.goalAmount)} KWD.` : "";
+    R.mode = "life"; R.tab = "chat"; R.homeCat = null; R.convId = null; render();
+    const ta = $("#chatIn");
+    if (ta) ta.value = `[BUDGET] Here's my money this month (Kuwait, KWD). Give me honest, specific ways to save — name my biggest categories, suggest realistic cuts with the KWD/month and KWD/year impact, and a few practical Kuwait/GCC-friendly ideas. Then, if I save ${cur(saveT)} KWD/month, tell me what that adds up to in 6 and 12 months and a sensible use for it.${goal} No guilt, just useful and specific.\n\nIncome: ${cur(income)} KWD/month\nSpent (excl. bills): ${cur(spent)} KWD\nRecurring bills: ${cur(billsMo)} KWD/month\nNet left: ${cur(net)} KWD\nBy category: ${cats}`;
+    await sendChat();
+  },
   /* ---- important dates ---- */
   dateAdd(){
     if (!R.dateForm.title.trim() || !R.dateForm.date){ toast("Add a title and date."); return; }
