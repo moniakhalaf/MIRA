@@ -12,6 +12,7 @@ This repository contains the **standalone edition**: a single self-contained `in
 - **Wellness check-in** — a daily mood check with five emoji faces, "what's affecting today" factors, a gratitude line and a private journal. Produces a 0–100 wellness score (with a trend chart in Insights) and an on-demand, honest, evidence-based read from MIRA — warm but never toxic-positive, with a gentle nudge to seek support if entries look concerning
 - **Fitness** — evidence-based training and body-composition interpretation from your own InBody log
 - **Life** — purchases, travel, tech, finance/legal facts, and Kuwait/GCC local matters. Add a trip (destination, dates, budget) and MIRA runs a live web search to find real flight and hotel options from trusted sources, cited with links — not just a place to log the plan
+- **Budget dashboard** — log income and expenses by category and see a spending **donut** ("where it goes most"), your **savings rate**, and a **savings plan**: set a monthly saving amount to project 3/6/12-month totals, add a goal (e.g. a new laptop) to get an ETA, and tap **"Ask MIRA how to save more"** for honest, specific, numbers-anchored saving ideas (information to decide from, not regulated advice)
 
 **Core intelligence**
 - Source-verification protocol in every answer: reputable sources only (peer-reviewed journals, WHO/NIH/EFSA, official vendor docs), conflicts shown, nothing invented
