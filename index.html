@@ -679,6 +679,23 @@ body.kb .chatbar{padding-bottom:6px}
 .mini-tile .mt-l{font-size:10.5px;color:var(--txt2);text-transform:uppercase;letter-spacing:.03em}
 .mini-tile .mt-v{font-size:14px;font-weight:600;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mini-tile .mt-s{font-size:11px;color:var(--txt2)}
+.today-custrow{display:flex;justify-content:flex-end;margin:-2px 0 8px}
+.today-customize{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--txt2);padding:6px 11px;border-radius:16px;background:var(--card2);border:1px solid var(--line2)}
+.today-customize:active{transform:scale(.96)}
+.today-empty2{font-size:13px;color:var(--txt2);text-align:center;padding:18px 12px;background:var(--card);border:1px solid var(--line2);border-radius:14px}
+.widget-sheet{max-height:78vh;display:flex;flex-direction:column;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 10px)}
+.ws-head{display:flex;align-items:center;justify-content:space-between;padding:0 4px 4px}
+.ws-done{font-size:14px;font-weight:600;color:var(--acc);padding:6px 10px}
+.ws-body{overflow-y:auto;-webkit-overflow-scrolling:touch;margin-top:4px}
+.ws-cat{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--txt3);margin:14px 6px 6px}
+.ws-row{display:flex;align-items:center;justify-content:space-between;width:100%;text-align:start;padding:12px 12px;border-radius:12px;background:transparent;border:1px solid transparent}
+.ws-row.on{background:var(--acc-soft);border-color:color-mix(in srgb,var(--acc) 40%,transparent)}
+.ws-row:active{transform:scale(.99)}
+.ws-rl{font-size:14.5px;font-weight:500;color:var(--txt);display:flex;align-items:center;gap:8px}
+.ws-kind{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;color:var(--txt3);background:var(--card2);padding:2px 7px;border-radius:10px}
+.ws-row.on .ws-kind{color:var(--txt2)}
+.ws-tog{width:26px;height:26px;border-radius:50%;border:1.5px solid var(--line2);display:flex;align-items:center;justify-content:center;color:var(--acc);flex:0 0 auto}
+.ws-row.on .ws-tog{border-color:var(--acc);background:var(--acc-soft)}
 .recent-chats{display:flex;flex-direction:column;gap:8px}
 .recent-chat{display:flex;align-items:center;gap:11px;width:100%;text-align:start;padding:12px 14px;border-radius:13px;background:var(--card);border:1px solid var(--line2)}
 .recent-chat:active{transform:scale(.99)}
@@ -831,7 +848,7 @@ body.kb .chatbar{padding-bottom:6px}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.43";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.44";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1002,6 +1019,7 @@ const BLANK = () => ({
     restLen: 90,
     profession: "",
     goal: "",
+    widgets: ["cal", "protein", "water", "task", "bill"],
   },
   domains: JSON.parse(JSON.stringify(DEFAULT_DOMAINS)),
   convs: [],          // [{id, dom, title, ts, msgs: [{role, content, ts, att}]}]
@@ -1091,6 +1109,7 @@ function migrateChats(){
   if (S.settings.breakLen === undefined) S.settings.breakLen = 5;
   if (S.settings.profession === undefined) S.settings.profession = "";
   if (S.settings.goal === undefined) S.settings.goal = "";
+  if (!Array.isArray(S.settings.widgets)) S.settings.widgets = ["cal", "protein", "water", "task", "bill"];
   if (S.settings.restLen === undefined) S.settings.restLen = 90;
   if (!S.settings.coach) S.settings.coach = {name: "", email: ""};
   if (S.settings.webSearch === undefined) S.settings.webSearch = true;
@@ -1181,6 +1200,7 @@ const R = {
   recipeBusy: false,  // AI import/discover in progress
   ciDraft: null,      // today's wellness check-in editing buffer {mood, factors:[], gratitude, journal}
   ciQuote: null,      // supportive quote shown when mood is below "Good"
+  widgetsOpen: false, // Home "Today" widget customization sheet
   mode: S.domains[0]?.id || "work",
   convId: null,       // active conversation id (null = fresh chat)
   sheet: null,        // open bottom sheet ("chats" | null)
@@ -1274,6 +1294,7 @@ function render(){
     ${R.tab === "chat" ? chatbarHTML() : ""}
     ${R.tab === "home" ? fabHTML() : ""}
     ${R.quickOpen ? quickAddHTML() : ""}
+    ${R.widgetsOpen ? widgetSheetHTML() : ""}
     ${R.sheet === "chats" ? chatSheetHTML() : ""}
     ${R.searchOpen ? searchHTML() : ""}
     <div class="tabbar">
@@ -1394,30 +1415,75 @@ function ringCard(pct, color, center, label, sub, onclick){
     <div class="ring-sb">${sub}</div>
   </button>`;
 }
+const WIDGET_META = [
+  {id: "cal", label: "Calories left", kind: "ring", cat: "Health"},
+  {id: "protein", label: "Protein left", kind: "ring", cat: "Health"},
+  {id: "water", label: "Water", kind: "ring", cat: "Health"},
+  {id: "carbs", label: "Carbs left", kind: "ring", cat: "Health"},
+  {id: "fat", label: "Fat left", kind: "ring", cat: "Health"},
+  {id: "wellness", label: "Wellness score", kind: "ring", cat: "Health"},
+  {id: "sleep", label: "Last night's sleep", kind: "tile", cat: "Health"},
+  {id: "mood", label: "Today's mood", kind: "tile", cat: "Health"},
+  {id: "weight", label: "Latest weight", kind: "tile", cat: "Fitness"},
+  {id: "workouts", label: "Workouts this week", kind: "tile", cat: "Fitness"},
+  {id: "fasting", label: "Fasting", kind: "tile", cat: "Fitness"},
+  {id: "task", label: "Next task", kind: "tile", cat: "Work"},
+  {id: "tasksopen", label: "Open tasks", kind: "tile", cat: "Work"},
+  {id: "focus", label: "Focus today", kind: "tile", cat: "Work"},
+  {id: "bill", label: "Next bill", kind: "tile", cat: "Life"},
+  {id: "habits", label: "Habits today", kind: "tile", cat: "Life"},
+  {id: "budget", label: "Spent this month", kind: "tile", cat: "Life"},
+];
+function widgetData(id){
+  const t = todayStr(), tg = S.settings.targets || {};
+  const scoreColor = s => s >= 66 ? "#3bb273" : s >= 40 ? "var(--amber)" : "#e06b6b";
+  if (id === "cal"){ const tot = dayTotals(t); return {kind: "ring", pct: tg.kcal ? tot.kcal / tg.kcal * 100 : 0, color: "var(--acc)", center: tg.kcal ? n0(Math.max(0, tg.kcal - tot.kcal)) : n0(tot.kcal), label: tg.kcal ? "Calories left" : "Calories", sub: tg.kcal ? `${n0(tot.kcal)} / ${n0(tg.kcal)}` : "today", onclick: "M.homeSection('health')"}; }
+  if (id === "protein"){ const tot = dayTotals(t); return {kind: "ring", pct: tg.protein ? tot.p / tg.protein * 100 : 0, color: "#3bb273", center: (tg.protein ? n0(Math.max(0, tg.protein - tot.p)) : n0(tot.p)) + "g", label: tg.protein ? "Protein left" : "Protein", sub: tg.protein ? `${n0(tot.p)} / ${n0(tg.protein)} g` : "today", onclick: "M.homeSection('health')"}; }
+  if (id === "carbs"){ const tot = dayTotals(t); return {kind: "ring", pct: tg.carbs ? tot.c / tg.carbs * 100 : 0, color: "#d8a24c", center: (tg.carbs ? n0(Math.max(0, tg.carbs - tot.c)) : n0(tot.c)) + "g", label: tg.carbs ? "Carbs left" : "Carbs", sub: tg.carbs ? `${n0(tot.c)} / ${n0(tg.carbs)} g` : "today", onclick: "M.homeSection('health')"}; }
+  if (id === "fat"){ const tot = dayTotals(t); return {kind: "ring", pct: tg.fat ? tot.f / tg.fat * 100 : 0, color: "#b57edc", center: (tg.fat ? n0(Math.max(0, tg.fat - tot.f)) : n0(tot.f)) + "g", label: tg.fat ? "Fat left" : "Fat", sub: tg.fat ? `${n0(tot.f)} / ${n0(tg.fat)} g` : "today", onclick: "M.homeSection('health')"}; }
+  if (id === "water"){ const ml = (S.water[t] || 0) * 250, goal = S.settings.waterGoal || 2500; return {kind: "ring", pct: ml / goal * 100, color: "#4c9fd8", center: (ml / 1000).toFixed(1).replace(/\.0$/, "") + "L", label: "Water", sub: `${Math.round(ml / goal * 100)}% of goal`, onclick: "M.homeSection('health')"}; }
+  if (id === "wellness"){ const c = (typeof todayCheckin === "function") ? todayCheckin() : null; const s = c ? checkinScore(c) : null; return {kind: "ring", pct: s || 0, color: s != null ? scoreColor(s) : "var(--txt3)", center: s != null ? "" + s : "—", label: "Wellness", sub: s != null ? "today's score" : "check in", onclick: "M.goWellness()"}; }
+  if (id === "sleep"){ const l = [...(S.sleep || [])].sort((a, b) => a.date < b.date ? -1 : 1).pop(); return {kind: "tile", icon: "moon", label: "Last sleep", val: l ? l.hours + " h" : "—", sub: l ? fmtDate(l.date) : "not logged", onclick: "M.goHealth('sleep')"}; }
+  if (id === "mood"){ const c = (typeof todayCheckin === "function") ? todayCheckin() : null; const f = c && c.mood ? MOOD_FACES.find(x => x.v === c.mood) : null; return {kind: "tile", icon: "smile", label: "Mood", val: f ? f.l : "—", sub: c && checkinScore(c) != null ? "score " + checkinScore(c) : "check in", onclick: "M.goWellness()"}; }
+  if (id === "weight"){ const wl = [...(S.inbody || [])].filter(e => e.weight).sort((a, b) => a.date < b.date ? -1 : 1); const l = wl[wl.length - 1]; return {kind: "tile", icon: "trend", label: "Weight", val: l ? l.weight + " kg" : "—", sub: l ? fmtDate(l.date) : "no entry", onclick: "M.homeSection('fitness')"}; }
+  if (id === "workouts"){ const s = weekStats(); return {kind: "tile", icon: "barbell", label: "Workouts · 7d", val: "" + s.ws, sub: `${s.trainDays} active day${s.trainDays === 1 ? "" : "s"}`, onclick: "M.homeSection('fitness')"}; }
+  if (id === "fasting"){ if (S.fasting && S.fasting.activeStart){ const h = Math.round((Date.now() - S.fasting.activeStart) / 36000) / 100; return {kind: "tile", icon: "flame", label: "Fasting now", val: h + " h", sub: `goal ${S.fasting.goalH} h`, onclick: "M.goHealth('supps')"}; } const last = S.fasting && (S.fasting.log || []).slice(-1)[0]; return {kind: "tile", icon: "flame", label: "Last fast", val: last ? last.hours + " h" : "—", sub: last ? "completed" : "not started", onclick: "M.homeSection('fitness')"}; }
+  if (id === "task"){ const nx = ((typeof openTasks === "function") ? openTasks() : (S.tasks || []).filter(x => !x.done))[0]; return {kind: "tile", icon: "checkSquare", label: "Next task", val: nx ? esc(nx.title.length > 18 ? nx.title.slice(0, 17) + "…" : nx.title) : "—", sub: nx ? (nx.due ? "due " + fmtDate(nx.due) : (PRIOS[nx.priority] || {}).label || "") : "all clear", onclick: "M.goWork('tasks')"}; }
+  if (id === "tasksopen"){ const open = (S.tasks || []).filter(x => !x.done); const od = open.filter(x => x.due && x.due < t).length; return {kind: "tile", icon: "list", label: "Open tasks", val: "" + open.length, sub: od ? od + " overdue" : "none overdue", onclick: "M.goWork('tasks')"}; }
+  if (id === "focus"){ const n = (S.focusLog || []).filter(f => f.date === t).length; return {kind: "tile", icon: "timer", label: "Focus today", val: "" + n, sub: "pomodoros", onclick: "M.goWork('focus')"}; }
+  if (id === "bill"){ const b = [...(S.bills || [])].filter(x => x.next && x.next >= t).sort((a, b) => a.next < b.next ? -1 : 1)[0]; return {kind: "tile", icon: "creditCard", label: "Next bill", val: b ? esc(b.name.length > 16 ? b.name.slice(0, 15) + "…" : b.name) : "—", sub: b ? fmtDate(b.next) : "none due", onclick: "M.goLife('bills')"}; }
+  if (id === "habits"){ const set = new Set(S.habitLog[t] || []); const tot = (S.habits || []).length; const done = (S.habits || []).filter(h => set.has(h.id)).length; return {kind: "tile", icon: "check", label: "Habits today", val: tot ? `${done}/${tot}` : "—", sub: tot ? (done === tot ? "all done" : "keep going") : "none set", onclick: "M.goHealth('supps')"}; }
+  if (id === "budget"){ const ym = t.slice(0, 7); const spent = (S.expenses || []).filter(e => e.date && e.date.slice(0, 7) === ym).reduce((a, e) => a + (+e.amount || 0), 0); const inc = (S.budget || {}).income || 0; return {kind: "tile", icon: "wallet", label: "Spent · month", val: (inc || spent) ? n0(spent) : "—", sub: inc ? `of ${n0(inc)}` : "this month", onclick: "M.goLife('budget')"}; }
+  return null;
+}
 function homeDashHTML(){
-  const t = todayStr();
-  const tg = S.settings.targets;
-  const tot = (typeof dayTotals === "function") ? dayTotals(t) : {kcal: 0, p: 0};
-  const gl = S.water[t] || 0;
-  const waterMl = gl * 250, waterGoal = S.settings.waterGoal || 2500;
-  const waterPct = (waterMl / waterGoal) * 100;
-  const kcalLeft = Math.max(0, (tg.kcal || 0) - tot.kcal);
-  const pLeft = Math.max(0, (tg.protein || 0) - tot.p);
-  const open = (typeof openTasks === "function") ? openTasks() : (S.tasks || []).filter(x => !x.done);
-  const nextTask = open[0];
-  const bill = [...(S.bills || [])].filter(b => b.next && b.next >= t).sort((a, b) => a.next < b.next ? -1 : 1)[0];
-  const anyData = S.foods.length || (S.tasks || []).length || (S.bills || []).length || gl;
-  if (!anyData) return "";
-  const rings = [];
-  if (tg.kcal) rings.push(ringCard(tot.kcal / tg.kcal * 100, "var(--acc)", n0(kcalLeft), "Calories left", `${n0(tot.kcal)} / ${n0(tg.kcal)}`, "M.homeSection('health')"));
-  if (tg.protein) rings.push(ringCard(tot.p / tg.protein * 100, "#3bb273", n0(pLeft) + "g", "Protein left", `${n0(tot.p)} / ${n0(tg.protein)} g`, "M.homeSection('health')"));
-  rings.push(ringCard(waterPct, "#4c9fd8", (waterMl / 1000).toFixed(1).replace(/\.0$/, "") + "L", "Water", `${Math.round(waterPct)}% of goal`, "M.homeSection('health')"));
-  const tile = (icon, label, val, sub, onclick) => `<button class="mini-tile" onclick="${onclick}">
-    <span class="mt-ic">${ic(icon, 16)}</span><span class="mt-tx"><span class="mt-l">${label}</span><span class="mt-v">${val}</span>${sub ? `<span class="mt-s">${sub}</span>` : ""}</span></button>`;
-  const minis = [];
-  if (nextTask) minis.push(tile("checkSquare", "Next task", esc(nextTask.title.length > 20 ? nextTask.title.slice(0, 19) + "…" : nextTask.title), nextTask.due ? "due " + fmtDate(nextTask.due) : (PRIOS[nextTask.priority] || {}).label || "", "M.goWork('tasks')"));
-  if (bill) minis.push(tile("creditCard", "Next bill", esc(bill.name.length > 16 ? bill.name.slice(0, 15) + "…" : bill.name), fmtDate(bill.next), "M.goLife('bills')"));
-  return `<div class="ring-row">${rings.join("")}</div>${minis.length ? `<div class="mini-row">${minis.join("")}</div>` : ""}`;
+  const sel = (S.settings.widgets || []);
+  const rings = [], tiles = [];
+  sel.forEach(id => {
+    const meta = WIDGET_META.find(m => m.id === id); if (!meta) return;
+    const d = widgetData(id); if (!d) return;
+    if (d.kind === "ring") rings.push(ringCard(d.pct, d.color, d.center, d.label, d.sub, d.onclick));
+    else tiles.push(`<button class="mini-tile" onclick="${d.onclick}"><span class="mt-ic">${ic(d.icon, 16)}</span><span class="mt-tx"><span class="mt-l">${d.label}</span><span class="mt-v">${d.val}</span>${d.sub ? `<span class="mt-s">${d.sub}</span>` : ""}</span></button>`);
+  });
+  const custom = `<button class="today-customize" onclick="M.widgetsOpen()">${ic("sliders", 14)} Customize</button>`;
+  const body = `${rings.length ? `<div class="ring-row">${rings.join("")}</div>` : ""}${tiles.length ? `<div class="mini-row">${tiles.join("")}</div>` : ""}`;
+  return `<div class="today-custrow">${custom}</div>${body || `<div class="today-empty2">No widgets selected. Tap Customize to choose what you see here.</div>`}`;
+}
+function widgetSheetHTML(){
+  const on = new Set(S.settings.widgets || []);
+  const cats = {};
+  WIDGET_META.forEach(m => { (cats[m.cat] = cats[m.cat] || []).push(m); });
+  return `<div class="qa-scrim" onclick="M.widgetsClose()"></div>
+    <div class="qa-sheet widget-sheet">
+      <div class="qa-grip"></div>
+      <div class="ws-head"><div class="qa-h" style="margin:0">Customize Today</div><button class="ws-done" onclick="M.widgetsClose()">Done</button></div>
+      <div class="ws-body">
+        ${Object.entries(cats).map(([cat, items]) => `<div class="ws-cat">${cat}</div>
+          ${items.map(m => `<button class="ws-row ${on.has(m.id) ? "on" : ""}" onclick="M.widgetToggle('${m.id}')">
+            <span class="ws-rl">${esc(m.label)} <span class="ws-kind">${m.kind}</span></span>
+            <span class="ws-tog">${on.has(m.id) ? ic("check", 16) : ""}</span></button>`).join("")}`).join("")}
+      </div>
+    </div>`;
 }
 function recentChatsHTML(){
   const convs = [...(S.convs || [])].sort((a, b) => (b.ts || 0) - (a.ts || 0)).slice(0, 3);
@@ -4945,14 +5011,17 @@ window.num = num;
 window.M = {
   // Opening the chat surface always starts a FRESH conversation; previous
   // chats stay saved and are reachable via the Chats (clock) button.
-  tab(t){ R.tab = t; R.homeCat = null; R.reviewOpen = false; R.quickOpen = false; R.sheet = null; if (t === "chat") R.convId = null; render(); },
-  goTab(t){ R.tab = t; R.homeCat = null; R.reviewOpen = false; R.quickOpen = false; R.sheet = null; if (t === "chat") R.convId = null; render(); },
+  tab(t){ R.tab = t; R.homeCat = null; R.reviewOpen = false; R.quickOpen = false; R.widgetsOpen = false; R.sheet = null; if (t === "chat") R.convId = null; render(); },
+  goTab(t){ R.tab = t; R.homeCat = null; R.reviewOpen = false; R.quickOpen = false; R.widgetsOpen = false; R.sheet = null; if (t === "chat") R.convId = null; render(); },
   home(catId){ R.homeCat = catId; R.reviewOpen = false; render(); },
   homeBack(){ R.homeCat = null; render(); },
   homeSection(id){ R.tab = "home"; R.homeSection = id; R.homeCat = null; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
   backToHome(id){ R.tab = "home"; if (id) R.homeSection = id; R.homeCat = null; R.sheet = null; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
   quickAdd(){ R.quickOpen = !R.quickOpen; render(); },
   quickClose(){ R.quickOpen = false; render(); },
+  widgetsOpen(){ R.widgetsOpen = true; render(); },
+  widgetsClose(){ R.widgetsOpen = false; render(); },
+  widgetToggle(id){ const w = S.settings.widgets; const i = w.indexOf(id); if (i >= 0) w.splice(i, 1); else w.push(id); save(); render(); },
   qa(a){
     R.quickOpen = false;
     if (a === "water"){ const t = todayStr(); S.water[t] = (S.water[t] || 0) + 1; save(); render(); toast(`Water +1 glass · ${(S.water[t] * 0.25).toFixed(2)} L today`); return; }
