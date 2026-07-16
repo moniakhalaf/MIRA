@@ -874,7 +874,7 @@ body.kb .chatbar{padding-bottom:6px}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.48";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.49";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1052,7 +1052,8 @@ const BLANK = () => ({
   foods: [],          // {id, date, name, amount, kcal, p, c, f, conf, ts}
   savedFoods: [],     // {name, amount, kcal, p, c, f}
   meals: [],          // {id, name, items: [{name, amount, kcal, p, c, f}]}
-  recipes: [],        // {id, name, image, cuisine, tags[], servings, per:{kcal,p,c,f}, ingredients[], steps[], source, healthNote, ts}
+  recipes: [],        // {id, name, image, cuisine, tags[], servings, per:{kcal,p,c,f}, ingredients[], steps[], source, healthNote, seed, ts}
+  recipesSeedV: 0,    // version of the seeded starter recipe set (bump to refresh existing users)
   exercises: [],      // user-added exercises {id, n, m, e, c, source}
   workouts: [],       // {id, date, name, items:[{name, muscle, sets:[{reps, weight}], note}], ts}
   routines: [],       // {id, name, items:[{name, muscle}]}
@@ -3921,7 +3922,7 @@ function normTags(t){
 function recipeHue(r){ let h = 0; const s = (r.name || "") + (r.cuisine || ""); for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 360; return h; }
 function recipeHeroHTML(r, big){
   return `<div class="rc-hero ${r.image ? "" : "noimg"} ${big ? "big" : ""}" style="--h:${recipeHue(r)}">
-    ${r.image ? `<img src="${esc(r.image)}" alt="" loading="lazy" onerror="this.remove();this.closest('.rc-hero').classList.add('noimg')">` : ""}
+    ${r.image ? `<img src="${esc(r.image)}" alt="" loading="lazy" onerror="var h=this.closest('.rc-hero');if(h)h.classList.add('noimg');this.remove()">` : ""}
     <span class="rc-ph">${ic("food", big ? 34 : 24)}</span>
   </div>`;
 }
@@ -4032,30 +4033,53 @@ function saveRecipe(j){
   S.recipes.unshift(r);
   return r;
 }
+// Photos come from Wikimedia Commons (free-licence media) via the stable
+// Special:FilePath endpoint, so they load in any browser without a hash.
+function commonsImg(file){ return "https://commons.wikimedia.org/wiki/Special:FilePath/" + encodeURIComponent(file) + "?width=900"; }
+const STARTER_SEED_V = 2;
+// legacy v1 starter names, so an upgrade replaces the old photoless set cleanly
+const LEGACY_STARTER_NAMES = new Set([
+  "Grilled chicken & quinoa bowl", "Greek yogurt & berry breakfast bowl", "Lentil soup (shorbat adas)",
+  "Baked salmon with greens", "Chickpea & tomato salad (balela)", "Oats & egg-white power breakfast",
+]);
 function seedStarterRecipes(){
-  if (S.recipesSeeded) return;
-  S.recipesSeeded = true;
-  const R6 = [
-    {name: "Grilled chicken & quinoa bowl", cuisine: "Mediterranean", tags: ["high-protein", "quick"], servings: 1, per: {kcal: 480, p: 45, c: 42, f: 13},
-      ingredients: ["150 g chicken breast", "3/4 cup cooked quinoa", "Handful cherry tomatoes & cucumber", "Handful baby spinach", "1 tsp olive oil, lemon, salt, pepper"],
-      steps: ["Season and grill the chicken 5–6 min per side; slice.", "Toss quinoa, spinach and chopped veg with olive oil and lemon.", "Top with chicken and season."], healthNote: "Lean protein + whole-grain carbs and fibre."},
-    {name: "Greek yogurt & berry breakfast bowl", cuisine: "—", tags: ["high-protein", "breakfast", "quick", "vegetarian"], servings: 1, per: {kcal: 320, p: 24, c: 38, f: 8},
-      ingredients: ["200 g plain 0–2% Greek yogurt", "1 cup mixed berries", "1 tbsp chia seeds", "2 tbsp oats", "Drizzle of honey (optional)"],
-      steps: ["Spoon yogurt into a bowl.", "Top with berries, oats and chia.", "Add a little honey if you like."], healthNote: "High protein, high fibre, no added processing."},
-    {name: "Lentil soup (shorbat adas)", cuisine: "Levantine / GCC", tags: ["vegetarian", "high-fibre", "arab"], servings: 4, per: {kcal: 250, p: 15, c: 38, f: 4},
-      ingredients: ["1.5 cups red lentils, rinsed", "1 onion, 2 garlic cloves", "1 carrot", "1 tsp cumin, pinch turmeric", "6 cups water/stock, lemon to serve"],
-      steps: ["Sauté onion, garlic and carrot briefly.", "Add lentils, spices and water; simmer 25–30 min.", "Blend smooth; serve with lemon."], healthNote: "Plant protein and fibre; naturally low fat."},
-    {name: "Baked salmon with greens", cuisine: "—", tags: ["high-protein", "low-carb"], servings: 1, per: {kcal: 420, p: 38, c: 8, f: 26},
-      ingredients: ["170 g salmon fillet", "2 cups broccoli or green beans", "1 tsp olive oil", "Lemon, garlic, salt, pepper"],
-      steps: ["Bake salmon at 200°C for 12–15 min.", "Steam or roast the greens.", "Finish with lemon and garlic."], healthNote: "Omega-3 rich, very low carb."},
-    {name: "Chickpea & tomato salad (balela)", cuisine: "Levantine", tags: ["vegetarian", "high-fibre", "arab", "quick"], servings: 2, per: {kcal: 300, p: 12, c: 40, f: 11},
-      ingredients: ["1 can chickpeas, drained", "2 tomatoes, 1/2 cucumber, chopped", "Handful parsley & mint", "1 tbsp olive oil, lemon, sumac"],
-      steps: ["Combine chickpeas and chopped veg.", "Dress with olive oil, lemon and sumac.", "Fold through the herbs."], healthNote: "Fibre and plant protein; no cooking needed."},
-    {name: "Oats & egg-white power breakfast", cuisine: "—", tags: ["high-protein", "breakfast"], servings: 1, per: {kcal: 350, p: 30, c: 40, f: 7},
-      ingredients: ["1/2 cup oats", "4 egg whites + 1 whole egg", "1 cup milk or water", "Cinnamon; berries to top"],
-      steps: ["Cook oats with milk.", "Scramble the eggs separately.", "Serve together with cinnamon and berries."], healthNote: "Balanced high-protein start to the day."},
+  if ((S.recipesSeedV || 0) >= STARTER_SEED_V) return;
+  // remove only previously auto-seeded starters (flagged, or legacy by name) — keep the user's own
+  S.recipes = (S.recipes || []).filter(r => !(r.seed || LEGACY_STARTER_NAMES.has(r.name)));
+  // Macros are per serving, estimated from standard (USDA-style) food composition
+  // and kept internally consistent (≈4·protein + 4·carb + 9·fat) — honest estimates, not lab values.
+  const STARTERS = [
+    {name: "Grilled chicken & quinoa bowl", cuisine: "Mediterranean", img: "Grilled Chicken Breasts (28905381261).jpg", tags: ["high-protein", "quick"], servings: 1, per: {kcal: 480, p: 45, c: 42, f: 13},
+      ingredients: ["150 g chicken breast", "¾ cup cooked quinoa", "Handful cherry tomatoes & cucumber, chopped", "1 cup baby spinach", "1 tsp olive oil, juice of ½ lemon, salt & pepper"],
+      steps: ["Season the chicken and grill 5–6 min per side until 74°C inside; rest, then slice.", "Toss the quinoa, spinach and chopped veg with the olive oil and lemon.", "Top with the sliced chicken and season to taste."], healthNote: "Lean protein with whole-grain carbs and fibre. Macros are estimated from standard composition."},
+    {name: "Shakshuka (baked eggs in tomato)", cuisine: "Levantine / North African", img: "Shakshuka 011.jpg", tags: ["high-protein", "vegetarian", "arab", "breakfast"], servings: 2, per: {kcal: 280, p: 18, c: 14, f: 16},
+      ingredients: ["1 tsp olive oil", "1 onion + 1 red pepper, sliced", "2 garlic cloves", "400 g chopped tomatoes", "1 tsp cumin, ½ tsp paprika", "4 eggs", "Parsley to serve"],
+      steps: ["Soften the onion and pepper in the oil, then add garlic and spices for 1 min.", "Pour in the tomatoes and simmer 10 min until thick; season.", "Make 4 wells, crack in the eggs, cover and cook 5–7 min to your liking.", "Scatter with parsley and serve."], healthNote: "Protein-rich, vegetable-forward and low in refined carbs. Estimated macros."},
+    {name: "Lentil soup (shorbat adas)", cuisine: "Levantine / GCC", img: "Bowl of lentil soup with green and red lentils.jpg", tags: ["vegetarian", "vegan", "high-fibre", "arab"], servings: 4, per: {kcal: 250, p: 15, c: 38, f: 4},
+      ingredients: ["1½ cups red lentils, rinsed", "1 onion + 2 garlic cloves", "1 carrot", "1 tsp cumin, pinch turmeric", "6 cups water or stock", "Lemon wedges to serve"],
+      steps: ["Briefly sauté the onion, garlic and carrot.", "Add the lentils, spices and water; simmer 25–30 min until soft.", "Blend smooth, adjust seasoning and serve with lemon."], healthNote: "Plant protein and fibre; naturally low fat. Estimated macros."},
+    {name: "Baked salmon with greens", cuisine: "—", img: "Liat Portal for Foodie Disorder - Oven-baked teriyaki salmon with vegetables.jpg", tags: ["high-protein", "low-carb"], servings: 1, per: {kcal: 420, p: 38, c: 8, f: 26},
+      ingredients: ["170 g salmon fillet", "2 cups broccoli or green beans", "1 tsp olive oil", "Lemon, garlic, salt & pepper"],
+      steps: ["Bake the salmon at 200°C for 12–15 min until it flakes.", "Steam or roast the greens with the oil and garlic.", "Finish with a squeeze of lemon."], healthNote: "Omega-3 rich and very low carb. Estimated macros."},
+    {name: "Chickpea & tomato salad (balela)", cuisine: "Levantine", img: "Colorful healthy Chickpea Salad - 49859083608.jpg", tags: ["vegetarian", "vegan", "high-fibre", "arab", "quick", "salad"], servings: 2, per: {kcal: 300, p: 12, c: 40, f: 11},
+      ingredients: ["1 can (400 g) chickpeas, drained", "2 tomatoes + ½ cucumber, chopped", "Handful parsley & mint", "1 tbsp olive oil, lemon, sumac"],
+      steps: ["Combine the chickpeas and chopped vegetables.", "Dress with the olive oil, lemon and sumac.", "Fold through the herbs and serve."], healthNote: "Fibre and plant protein, no cooking needed. Estimated macros."},
+    {name: "Tabbouleh (parsley & bulgur salad)", cuisine: "Levantine", img: "Flickr - cyclonebill - Tabbouleh.jpg", tags: ["vegetarian", "vegan", "high-fibre", "arab", "salad"], servings: 4, per: {kcal: 170, p: 4, c: 20, f: 9},
+      ingredients: ["2 large bunches parsley, finely chopped", "¼ cup fine bulgur, soaked", "2 tomatoes, finely diced", "3 spring onions + handful mint", "2 tbsp olive oil, juice of 1 lemon, salt"],
+      steps: ["Soak the bulgur in a little water until tender, then drain.", "Chop the parsley, mint, tomato and spring onion very finely.", "Combine everything with the olive oil, lemon and salt just before serving."], healthNote: "Herb-forward, high-fibre and rich in vitamin C. Estimated macros."},
+    {name: "Hummus", cuisine: "Levantine / GCC", img: "Hummus.jpg", tags: ["vegetarian", "vegan", "high-fibre", "arab"], servings: 6, per: {kcal: 150, p: 5, c: 12, f: 9},
+      ingredients: ["1 can (400 g) chickpeas, drained (reserve liquid)", "2 tbsp tahini", "1 garlic clove", "Juice of 1 lemon", "1 tbsp olive oil, pinch cumin & salt"],
+      steps: ["Blend the chickpeas, tahini, garlic, lemon and salt.", "Loosen with a little reserved chickpea liquid until smooth and creamy.", "Serve drizzled with olive oil and a pinch of cumin."], healthNote: "Plant protein plus healthy fats from tahini and olive oil — portion-aware. Estimated macros."},
+    {name: "Greek yogurt & berry parfait", cuisine: "—", img: "Fruit and Yogurt Breakfast Parfait, Trimingham.JPG", tags: ["high-protein", "breakfast", "quick", "vegetarian"], servings: 1, per: {kcal: 300, p: 20, c: 35, f: 7},
+      ingredients: ["200 g plain 0–2% Greek yogurt", "1 cup mixed berries", "3 tbsp granola or oats", "1 tsp honey (optional)"],
+      steps: ["Layer half the yogurt in a glass or bowl.", "Add berries and granola, then the rest of the yogurt.", "Top with more berries and a little honey if you like."], healthNote: "High protein and fibre with no heavy processing. Estimated macros."},
+    {name: "Fruit & oats breakfast bowl", cuisine: "—", img: "Fruit and oatmeal.jpg", tags: ["breakfast", "high-fibre", "vegetarian"], servings: 1, per: {kcal: 290, p: 10, c: 45, f: 6},
+      ingredients: ["½ cup rolled oats", "1 cup milk or water", "1 small banana or apple, sliced", "1 tbsp chopped nuts or seeds", "Cinnamon to taste"],
+      steps: ["Simmer the oats with the milk for 4–5 min, stirring, until creamy.", "Top with the fruit, nuts and a dusting of cinnamon.", "Add a splash more milk to loosen if needed."], healthNote: "Slow-release wholegrain carbs with fibre. Estimated macros."},
   ];
-  R6.forEach(x => saveRecipe(x));
+  STARTERS.forEach(x => { const r = saveRecipe({...x, image: commonsImg(x.img)}); r.seed = true; });
+  S.recipesSeeded = true;
+  S.recipesSeedV = STARTER_SEED_V;
 }
 
 /* ================= Wellness check-in ================= */
