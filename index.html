@@ -589,6 +589,29 @@ body.kb .chatbar{padding-bottom:6px}
 .rc-list,.rc-steps{margin:8px 0 0;padding-inline-start:1.2em}
 .rc-list li,.rc-steps li{margin:.3em 0;line-height:1.45}
 .rc-formimg{width:100%;border-radius:12px;margin-bottom:10px;max-height:220px;object-fit:cover;display:block}
+/* wellness check-in */
+.mood-faces{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:6px}
+.mood-face{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 2px;border-radius:13px;background:transparent;border:1px solid transparent;transition:transform .12s}
+.mood-face .mf-e{font-size:30px;line-height:1;filter:grayscale(.55) opacity(.72);transition:filter .15s,transform .15s}
+.mood-face .mf-l{font-size:10.5px;color:var(--txt2);font-weight:500}
+.mood-face.on{background:hsl(var(--fh) 55% 50% / .14);border-color:hsl(var(--fh) 60% 55% / .6)}
+.mood-face.on .mf-e{filter:none;transform:scale(1.12)}
+.mood-face.on .mf-l{color:var(--txt);font-weight:650}
+.mood-face:active{transform:scale(.94)}
+.ci-factors{display:flex;flex-wrap:wrap;gap:7px;margin-top:6px}
+.ci-fac{padding:7px 13px;border-radius:18px;background:var(--card2);border:1px solid var(--line2);color:var(--txt2);font-size:13px;font-weight:500}
+.ci-fac.on{background:var(--acc-soft);border-color:var(--acc);color:var(--acc)}
+.wellness-score{text-align:center;margin-top:14px}
+.wellness-score .ws-l{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--txt2);font-weight:600}
+.wellness-score .ws-num{font-size:52px;font-weight:800;line-height:1.05;margin:6px 0 2px;letter-spacing:-.02em}
+.wellness-score .ws-sub{font-size:12.5px;color:var(--txt2)}
+.ci-history{display:flex;flex-direction:column;gap:8px}
+.ci-hist{display:flex;align-items:center;gap:11px;padding:11px 13px;border-radius:13px;background:var(--card);border:1px solid var(--line2)}
+.ci-hist .ci-h-face{font-size:24px;line-height:1}
+.ci-hist .ci-h-tx{flex:1;display:flex;flex-direction:column;gap:1px;min-width:0}
+.ci-hist .ci-h-d{font-size:13px;font-weight:600;color:var(--txt)}
+.ci-hist .ci-h-g{font-size:12px;color:var(--txt2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ci-hist .ci-h-s{font-size:15px;font-weight:700;color:var(--acc);flex:0 0 auto}
 .opt{font-weight:400;font-size:11px;color:var(--txt2);opacity:.7;margin-inline-start:5px}
 .review-card{display:flex;align-items:center;gap:12px;width:100%;text-align:start;margin:14px 0 2px;padding:15px 16px;border-radius:16px;background:var(--card);border:1px solid var(--line2)}
 .review-card:active{transform:scale(.99)}
@@ -797,7 +820,7 @@ body.kb .chatbar{padding-bottom:6px}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.41";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.42";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -995,6 +1018,7 @@ const BLANK = () => ({
   photos: [],         // {id, date, data(jpeg dataURL)}
   labs: [],           // {id, date, marker, value, unit}
   mood: [],           // {id, date, mood(1-5), energy(1-5), note}
+  checkins: [],       // {id, date, mood(1-5), factors:[str], gratitude, journal, ts} — daily wellness check-in
   focusLog: [],       // {id, date, minutes, task}
   budget: {income: 0},
   expenses: [],       // {id, date, category, amount, note}
@@ -1046,6 +1070,7 @@ function migrateChats(){
   if (!Array.isArray(S.labs)) S.labs = [];
   if (!Array.isArray(S.mood)) S.mood = [];
   if (!Array.isArray(S.recipes)) S.recipes = [];
+  if (!Array.isArray(S.checkins)) S.checkins = [];
   if (!Array.isArray(S.focusLog)) S.focusLog = [];
   if (!S.budget || typeof S.budget !== "object") S.budget = {income: 0};
   if (!Array.isArray(S.expenses)) S.expenses = [];
@@ -1143,6 +1168,7 @@ const R = {
   recipeForm: null,   // {name, image, servings, kcal, p, c, f, ingredients, steps, cuisine, tags, source} when adding manually
   recipeImportOpen: false, // import/discover panel open
   recipeBusy: false,  // AI import/discover in progress
+  ciDraft: null,      // today's wellness check-in editing buffer {mood, factors:[], gratitude, journal}
   mode: S.domains[0]?.id || "work",
   convId: null,       // active conversation id (null = fresh chat)
   sheet: null,        // open bottom sheet ("chats" | null)
@@ -1229,6 +1255,7 @@ function render(){
       R.tab === "chat" ? chatHTML() :
       R.tab === "insights" ? trendsHTML() :
       R.tab === "recipes" ? recipesHTML() :
+      R.tab === "wellness" ? wellnessHTML() :
       R.tab === "food" ? foodHTML() :
       R.tab === "body" ? bodyHTML() : settingsHTML()
     }</div>
@@ -1303,6 +1330,7 @@ function domFeatures(d){
   if (id === "health") return [
     go("food", "Food log", "Today's macros & targets", "food"),
     {icon: "pill", label: "Supplements", desc: "Daily checklist & adherence", on: `M.goHealth('supps')`},
+    {icon: "smile", label: "Wellness check-in", desc: "Mood, gratitude & journal", on: `M.goWellness()`},
     {icon: "moon", label: "Sleep log", desc: "Hours, quality & trend", on: `M.goHealth('sleep')`},
     {icon: "chart", label: "Health review", desc: "Your week at a glance", on: `M.goHealth('review')`},
     {icon: "book", label: "Healthy recipes", desc: "Import from a link, discover & save", on: `M.goRecipes()`},
@@ -1707,6 +1735,11 @@ function trendsHTML(){
   cards.push(trendCard("Sleep · 14 days", "hours per night",
     sleepDays >= 2 ? barsSVG(sleeps, {color: "#b57edc"}) : trendEmpty("Log at least 2 nights of sleep to see your trend.")));
 
+  // Wellness score (line, from check-ins)
+  const ciPts = days.map(d => { const c = (S.checkins || []).find(x => x.date === d); return c ? {d, v: checkinScore(c)} : null; }).filter(p => p && p.v != null);
+  cards.push(trendCard("Wellness · 14 days", "daily score /100",
+    ciPts.length >= 2 ? lineSVG(ciPts, {color: "#3bb273"}) : trendEmpty("Do at least 2 wellness check-ins to see your mood trend.")));
+
   // Training sets per week (bars, last 6 weeks)
   const weeks = []; for (let w = 5; w >= 0; w--){ const start = new Date(Date.now() - (w * 7 + 6) * 864e5).toLocaleDateString("en-CA"); const end = new Date(Date.now() - (w * 7) * 864e5).toLocaleDateString("en-CA"); weeks.push({start, end}); }
   const setSeries = weeks.map(wk => { let s = 0; (S.workouts || []).filter(x => x.date >= wk.start && x.date <= wk.end).forEach(x => (x.items || []).forEach(it => s += (it.sets || []).length)); return s; });
@@ -2090,6 +2123,9 @@ When asked for a daily brief, deliver a tight briefing under ~130 words with sho
 
 WEEKLY REVIEW
 When a message begins with [WEEKLY REVIEW], you are given a 7-day aggregate of the user's own logged data. Use ONLY those figures — do not invent activity for days or categories marked as not logged; instead note the gap and suggest what to start tracking. Deliver three short headed sections: Wins (with the actual numbers), Watch-outs (honest slipping trends or gaps), and Next week (exactly three concrete, specific priorities). Connect signals across domains when it genuinely helps (e.g. poor sleep alongside missed training). Keep the whole review tight and motivating without cheerleading.
+
+WELLNESS
+When a message begins with [WELLNESS], you're given the user's recent mood/gratitude/journal check-ins. Respond with warmth but complete honesty — never toxic positivity, never hollow reassurance. Reflect back the real pattern you see (mood trend, recurring factors that lift or drain them), validate it plainly, and offer ONE small, evidence-based step. Do not diagnose or make clinical claims. If the entries suggest sustained low mood, hopelessness or risk, gently and non-alarmingly encourage them to reach out to someone they trust or a professional, and (for Kuwait/GCC) note that support lines exist. Keep it short and human.
 
 DEEP SOLVE
 When a message begins with [DEEP SOLVE], run the two-stage engine:
@@ -3850,6 +3886,78 @@ function seedStarterRecipes(){
       steps: ["Cook oats with milk.", "Scramble the eggs separately.", "Serve together with cinnamon and berries."], healthNote: "Balanced high-protein start to the day."},
   ];
   R6.forEach(x => saveRecipe(x));
+}
+
+/* ================= Wellness check-in ================= */
+const MOOD_FACES = [{v: 1, e: "😖", l: "Awful", h: 4}, {v: 2, e: "😕", l: "Low", h: 30}, {v: 3, e: "😐", l: "Okay", h: 45}, {v: 4, e: "🙂", l: "Good", h: 95}, {v: 5, e: "😄", l: "Great", h: 140}];
+const CI_FACTORS = ["Work", "Sleep", "Exercise", "Health", "Family", "Friends", "Money", "Stress", "Food", "Weather"];
+function todayCheckin(){ const t = todayStr(); return (S.checkins || []).find(c => c.date === t); }
+function checkinScore(ci){
+  if (!ci) return null;
+  const parts = [];
+  if (ci.mood) parts.push(ci.mood / 5 * 100);
+  const sl = (S.sleep || []).find(s => s.date === ci.date); if (sl && sl.quality) parts.push(sl.quality / 5 * 100);
+  const md = (S.mood || []).find(m => m.date === ci.date); if (md && md.energy) parts.push(md.energy / 5 * 100);
+  return parts.length ? Math.round(parts.reduce((a, b) => a + b, 0) / parts.length) : null;
+}
+function scoreBasis(ci){
+  const b = [];
+  if (ci && ci.mood) b.push("mood");
+  if ((S.sleep || []).some(s => s.date === ci.date && s.quality)) b.push("sleep quality");
+  if ((S.mood || []).some(m => m.date === ci.date && m.energy)) b.push("energy");
+  return b.join(" + ");
+}
+function wellnessHTML(){
+  if (!R.ciDraft){ const c = todayCheckin(); R.ciDraft = {mood: c ? c.mood : 0, factors: c ? [...(c.factors || [])] : [], gratitude: c ? c.gratitude || "" : "", journal: c ? c.journal || "" : ""}; }
+  const d = R.ciDraft;
+  const ci = todayCheckin();
+  const score = checkinScore({date: todayStr(), mood: d.mood});
+  const recent = [...(S.checkins || [])].filter(c => c.mood || c.gratitude || c.journal).sort((a, b) => a.date < b.date ? 1 : -1).slice(0, 6);
+  const wk = last7Dates().map(dt => { const c = (S.checkins || []).find(x => x.date === dt); return c ? checkinScore(c) : null; }).filter(v => v != null);
+  const wkAvg = wk.length ? Math.round(wk.reduce((a, b) => a + b, 0) / wk.length) : null;
+  return `
+    <button class="cat-back" onclick="M.backToHome('health')">${ic("back", 18)} Home</button>
+    <div class="cat-title"><div class="ch-nm">Wellness check-in</div>
+      <div class="ch-ds">${new Date().toLocaleDateString("en-GB", {weekday: "long", day: "numeric", month: "long"})}</div></div>
+
+    <div class="card">
+      <h3 style="justify-content:center">How are you feeling today?</h3>
+      <div class="mood-faces">${MOOD_FACES.map(f => `<button class="mood-face ${d.mood === f.v ? "on" : ""}" style="--fh:${f.h}" onclick="M.ciMood(${f.v})">
+        <span class="mf-e">${f.e}</span><span class="mf-l">${f.l}</span></button>`).join("")}</div>
+    </div>
+
+    <div class="card">
+      <h3>${ic("compass", 15)} What's affecting today? <span class="opt">optional</span></h3>
+      <div class="ci-factors">${CI_FACTORS.map(t => `<button class="ci-fac ${(d.factors || []).includes(t) ? "on" : ""}" onclick="M.ciFactor('${t}')">${t}</button>`).join("")}</div>
+    </div>
+
+    <div class="card">
+      <h3>${ic("heart", 15)} One good thing today</h3>
+      <input id="ciGrat" value="${esc(d.gratitude)}" placeholder="A small win, a moment, someone…" dir="auto" oninput="R.ciDraft.gratitude=this.value" onblur="M.ciPersist()">
+    </div>
+
+    <div class="card">
+      <h3>${ic("fileText", 15)} Journal <span class="opt">private</span></h3>
+      <textarea id="ciJournal" rows="5" placeholder="Whatever's on your mind…" dir="auto" oninput="R.ciDraft.journal=this.value" onblur="M.ciPersist()">${esc(d.journal)}</textarea>
+    </div>
+
+    <button class="btn" onclick="M.ciSave()">${ic("check", 16)} Save today's check-in</button>
+
+    <div class="card wellness-score">
+      <div class="ws-l">Today's wellness</div>
+      <div class="ws-ring">${score != null ? `<div class="ws-num" style="color:${score >= 66 ? "var(--green)" : score >= 40 ? "var(--amber)" : "var(--red)"}">${score}</div>` : `<div class="ws-num muted">—</div>`}</div>
+      <div class="ws-sub">${score != null ? `based on your ${scoreBasis({date: todayStr(), mood: d.mood})}` : "log your mood to see a score"}${wkAvg != null ? ` · 7-day avg ${wkAvg}` : ""}</div>
+      <div class="tiny" style="margin-top:4px;color:var(--txt2)">Full trend is on the Insights tab.</div>
+    </div>
+
+    <button class="btn sec" onclick="M.wellnessRead()">${ic("chat", 16)} Ask MIRA how I'm doing</button>
+
+    ${recent.length ? `<div class="dash-sec-h">Recent check-ins</div>
+      <div class="ci-history">${recent.map(c => { const face = MOOD_FACES.find(f => f.v === c.mood); return `<div class="ci-hist">
+        <span class="ci-h-face">${face ? face.e : "·"}</span>
+        <span class="ci-h-tx"><span class="ci-h-d">${fmtDate(c.date)}</span>${c.gratitude ? `<span class="ci-h-g" dir="auto">${esc(c.gratitude)}</span>` : c.journal ? `<span class="ci-h-g" dir="auto">${esc(c.journal.slice(0, 60))}${c.journal.length > 60 ? "…" : ""}</span>` : ""}</span>
+        ${checkinScore(c) != null ? `<span class="ci-h-s">${checkinScore(c)}</span>` : ""}
+      </div>`; }).join("")}</div>` : ""}`;
 }
 </script>
 <script>
@@ -5647,6 +5755,37 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
     logFood({name: r.name, amount: "1 serving", kcal: r.per.kcal, p: r.per.p, c: r.per.c, f: r.per.f, conf: "estimate"});
   },
   recipeDel(id){ S.recipes = S.recipes.filter(x => x.id !== id); R.recipeId = null; save(); render(); toast("Recipe removed."); },
+  /* ---- wellness check-in ---- */
+  goWellness(){ R.tab = "wellness"; R.homeCat = null; R.reviewOpen = false; R.quickOpen = false; R.ciDraft = null; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
+  ciMood(n){ if (!R.ciDraft) R.ciDraft = {mood: 0, factors: [], gratitude: "", journal: ""}; R.ciDraft.mood = n; M.ciPersist(); render(); },
+  ciFactor(t){ if (!R.ciDraft) return; const a = R.ciDraft.factors; const i = a.indexOf(t); if (i >= 0) a.splice(i, 1); else a.push(t); M.ciPersist(); render(); },
+  ciPersist(){
+    const d = R.ciDraft; if (!d) return;
+    const t = todayStr();
+    let ci = S.checkins.find(c => c.date === t);
+    const empty = !d.mood && !(d.gratitude || "").trim() && !(d.journal || "").trim() && !(d.factors || []).length;
+    if (empty){ if (ci) S.checkins = S.checkins.filter(c => c !== ci); save(); return; }
+    if (!ci){ ci = {id: uid(), date: t, ts: Date.now()}; S.checkins.push(ci); }
+    ci.mood = d.mood || 0; ci.factors = [...(d.factors || [])]; ci.gratitude = (d.gratitude || "").trim(); ci.journal = (d.journal || "").trim(); ci.ts = Date.now();
+    save();
+  },
+  ciSave(){
+    const d = R.ciDraft;
+    const empty = !d || (!d.mood && !(d.gratitude || "").trim() && !(d.journal || "").trim() && !(d.factors || []).length);
+    M.ciPersist(); render();
+    toast(empty ? "Add how you're feeling first." : "Check-in saved ✓");
+  },
+  async wellnessRead(){
+    if (!S.settings.apiKey){ toast("Add your API key in Settings first."); R.tab = "set"; render(); return; }
+    M.ciPersist();
+    const recent = [...(S.checkins || [])].filter(c => c.mood || c.gratitude || c.journal).sort((a, b) => a.date < b.date ? 1 : -1).slice(0, 10).reverse();
+    if (!recent.length){ toast("Do a check-in first."); return; }
+    const lines = recent.map(c => { const f = MOOD_FACES.find(x => x.v === c.mood); return `${c.date}: mood ${c.mood ? f.l + ` (${c.mood}/5)` : "—"}${(c.factors || []).length ? `, factors: ${c.factors.join(", ")}` : ""}${c.gratitude ? `, grateful for: ${c.gratitude}` : ""}${c.journal ? `, journal: ${c.journal}` : ""}`; }).join("\n");
+    R.mode = "health"; R.tab = "chat"; R.homeCat = null; R.convId = null; render();
+    const ta = $("#chatIn");
+    if (ta) ta.value = `[WELLNESS] Here are my recent wellness check-ins. Give me a short, honest, warm-but-real read on how I'm doing — spot any genuine pattern (mood trend, recurring factors, what seems to lift or drain me), name it plainly, and give me ONE small, evidence-based suggestion. No toxic positivity and no clinical diagnosis; if anything looks genuinely concerning, gently say it may be worth speaking to someone you trust or a professional.\n\n${lines}`;
+    await sendChat();
+  },
 
   ibSave(){
     if (ibSaveEntry({...ibForm, date: ibForm.date || todayStr()})){
