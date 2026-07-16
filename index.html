@@ -369,6 +369,9 @@ body.kb .chatbar{padding-bottom:6px}
   min-height:66px;box-shadow:var(--cardshadow);transition:transform .12s;
 }
 .feat-card:active{transform:scale(.98)}
+.search-results .feat-card.search-nav{background:var(--acc-soft);border-color:color-mix(in srgb,var(--acc) 30%,transparent)}
+.search-results .feat-card.search-nav .fc-ic{background:var(--acc);color:var(--btn-ink)}
+.search-results .feat-card.search-nav .fc-nm{color:var(--acc)}
 .feat-card .fc-ic{
   width:42px;height:42px;flex:0 0 auto;border-radius:12px;display:flex;align-items:center;justify-content:center;
   background:var(--acc-soft);color:var(--acc);
@@ -848,7 +851,7 @@ body.kb .chatbar{padding-bottom:6px}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.44";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.45";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1347,47 +1350,47 @@ function greeting(){
 }
 function domFeatures(d){
   const id = d.id;
-  const ask = (icon, label, desc, key) => ({icon, label, desc, on: `M.enterMode('${id}',${key ? `'${key}'` : ""})`});
-  const go = (icon, label, desc, tab) => ({icon, label, desc, on: `M.goTab('${tab}')`});
+  const ask = (icon, label, desc, key, g) => ({icon, label, desc, g: g || "Ask MIRA", on: `M.enterMode('${id}',${key ? `'${key}'` : ""})`});
+  const go = (icon, label, desc, tab, g) => ({icon, label, desc, g, on: `M.goTab('${tab}')`});
   if (id === "work") return [
-    {icon: "checkSquare", label: "Tasks", desc: "Priorities & to-dos", on: `M.goWork('tasks')`},
-    {icon: "fileText", label: "Notes", desc: "Documents & memos", on: `M.goWork('notes')`},
-    {icon: "timer", label: "Focus timer", desc: "Pomodoro sessions", on: `M.goWork('focus')`},
-    {icon: "sun", label: "Daily brief", desc: "Your day in one tap", on: `M.dailyBrief('${id}')`},
+    {icon: "checkSquare", label: "Tasks", desc: "Priorities & to-dos", g: "Track", on: `M.goWork('tasks')`},
+    {icon: "fileText", label: "Notes", desc: "Documents & memos", g: "Track", on: `M.goWork('notes')`},
+    {icon: "timer", label: "Focus timer", desc: "Pomodoro sessions", g: "Track", on: `M.goWork('focus')`},
+    {icon: "sun", label: "Daily brief", desc: "Your day in one tap", g: "Plan", on: `M.dailyBrief('${id}')`},
+    {icon: "layers", label: "My field toolkit", desc: "Tools for your profession", g: "Plan", on: `M.goWork('kit')`},
     ask("mail", "Draft an email", "Draft first — you send", "email"),
     ask("globe", "Deep research", "Trusted sources, cited", "research"),
-    {icon: "layers", label: "My field toolkit", desc: "Tools for your profession", on: `M.goWork('kit')`},
     ask("edit", "Academic support", "Argument · method · refs", "academic"),
     ask("target", "Deep Solve a problem", "Two-stage reasoning", "deep"),
   ];
   if (id === "health") return [
-    go("food", "Food log", "Today's macros & targets", "food"),
-    {icon: "pill", label: "Supplements", desc: "Daily checklist & adherence", on: `M.goHealth('supps')`},
-    {icon: "smile", label: "Wellness check-in", desc: "Mood, gratitude & journal", on: `M.goWellness()`},
-    {icon: "moon", label: "Sleep log", desc: "Hours, quality & trend", on: `M.goHealth('sleep')`},
-    {icon: "chart", label: "Health review", desc: "Your week at a glance", on: `M.goHealth('review')`},
-    {icon: "book", label: "Healthy recipes", desc: "Import from a link, discover & save", on: `M.goRecipes()`},
-    {icon: "share", label: "Share food log", desc: "Export a date range (PDF/CSV)", on: `M.openFoodReport()`},
-    go("droplet", "Hydration", "Track your water", "food"),
-    {icon: "sun", label: "Daily brief", desc: "What to eat, drink & do", on: `M.dailyBrief('${id}')`},
+    go("food", "Food log", "Today's macros & targets", "food", "Track"),
+    {icon: "smile", label: "Wellness check-in", desc: "Mood, gratitude & journal", g: "Track", on: `M.goWellness()`},
+    {icon: "moon", label: "Sleep log", desc: "Hours, quality & trend", g: "Track", on: `M.goHealth('sleep')`},
+    {icon: "pill", label: "Supplements", desc: "Daily checklist & adherence", g: "Track", on: `M.goHealth('supps')`},
+    go("droplet", "Hydration", "Track your water", "food", "Track"),
+    {icon: "book", label: "Healthy recipes", desc: "Import from a link, discover & save", g: "Plan", on: `M.goRecipes()`},
+    {icon: "chart", label: "Health review", desc: "Your week at a glance", g: "Plan", on: `M.goHealth('review')`},
+    {icon: "sun", label: "Daily brief", desc: "What to eat, drink & do", g: "Plan", on: `M.dailyBrief('${id}')`},
+    {icon: "share", label: "Share food log", desc: "Export a date range (PDF/CSV)", g: "Tools", on: `M.openFoodReport()`},
     ask("chat", "Ask about health", "Evidence-based answers", ""),
   ];
   if (id === "fitness") return [
-    {icon: "barbell", label: "Workout log", desc: "Track sets, reps & PRs", on: `M.goTrain('today')`},
-    {icon: "list", label: "Exercise library", desc: "Cited how-to · add your own", on: `M.goTrain('library')`},
-    go("weight", "Body composition", "InBody log & metrics", "body"),
-    go("trend", "Log weight", "Quick entry + chart", "body"),
-    {icon: "chart", label: "Analyse my trend", desc: "From your InBody log", on: `M.ibAnalyse()`},
+    {icon: "barbell", label: "Workout log", desc: "Track sets, reps & PRs", g: "Track", on: `M.goTrain('today')`},
+    go("weight", "Body composition", "InBody log & metrics", "body", "Track"),
+    go("trend", "Log weight", "Quick entry + chart", "body", "Track"),
+    {icon: "list", label: "Exercise library", desc: "Cited how-to · add your own", g: "Plan", on: `M.goTrain('library')`},
+    {icon: "chart", label: "Analyse my trend", desc: "From your InBody log", g: "Plan", on: `M.ibAnalyse()`},
+    {icon: "share", label: "Coach report", desc: "Share progress with a coach", g: "Tools", on: `M.goTrain('coach')`},
     ask("activity", "Training programme", "Evidence-based plan", "training"),
-    {icon: "share", label: "Coach report", desc: "Share progress with a coach", on: `M.goTrain('coach')`},
   ];
   if (id === "life") return [
-    {icon: "plane", label: "Travel planner", desc: "Trips, checklist & budget", on: `M.goLife('trips')`},
-    {icon: "creditCard", label: "Bills & subscriptions", desc: "Monthly total & renewals", on: `M.goLife('bills')`},
-    {icon: "wallet", label: "Budget", desc: "Income vs spending", on: `M.goLife('budget')`},
-    {icon: "scale", label: "Compare purchases", desc: "Options side by side", on: `M.goLife('compare')`},
-    {icon: "target", label: "Decisions log", desc: "Weigh & record big choices", on: `M.goLife('decide')`},
-    {icon: "bell", label: "Dates & reading", desc: "Reminders & reading list", on: `M.goLife('lists')`},
+    {icon: "creditCard", label: "Bills & subscriptions", desc: "Monthly total & renewals", g: "Track", on: `M.goLife('bills')`},
+    {icon: "wallet", label: "Budget", desc: "Income vs spending", g: "Track", on: `M.goLife('budget')`},
+    {icon: "bell", label: "Dates & reading", desc: "Reminders & reading list", g: "Track", on: `M.goLife('lists')`},
+    {icon: "plane", label: "Travel planner", desc: "Trips, flights & hotels", g: "Plan", on: `M.goLife('trips')`},
+    {icon: "scale", label: "Compare purchases", desc: "Options side by side", g: "Plan", on: `M.goLife('compare')`},
+    {icon: "target", label: "Decisions log", desc: "Weigh & record big choices", g: "Plan", on: `M.goLife('decide')`},
     ask("globe", "Research anything", "Best option, with sources", "research"),
     ask("layers", "Deep Solve a problem", "Two-stage reasoning", "deep"),
   ];
@@ -1715,19 +1718,22 @@ function domainDashHTML(id){
   if (!d) return `<div class="muted" style="padding:20px 0">No domains enabled.</div>`;
   const tiles = domDashTiles(d.id);
   const feats = domFeatures(d);
+  const groups = ["Track", "Plan", "Tools", "Ask MIRA"];
+  const featCard = f => `<button class="feat-card" onclick="${f.on}">
+    <span class="fc-ic">${ic(f.icon, 20)}</span>
+    <span class="fc-tx"><span class="fc-nm">${esc(f.label)}</span><span class="fc-ds">${esc(f.desc)}</span></span>
+    <span class="fc-ar">${ic("chevR", 16)}</span></button>`;
+  const sections = groups.map(g => {
+    const items = feats.filter(f => (f.g || "Ask MIRA") === g);
+    if (!items.length) return "";
+    return `<div class="dash-sec-h">${g}</div><div class="feat-list">${items.map(featCard).join("")}</div>`;
+  }).join("");
   return `
     <div class="wr-grid dash-stats">
       ${tiles.map(x => `<div class="wr-tile ${x.v === "—" ? "empty" : ""}"><div class="wr-l">${x.l}</div><div class="wr-v">${x.v}</div><div class="wr-s">${x.s}</div></div>`).join("")}
     </div>
     <button class="btn cat-ask" style="--mc:${d.color}" onclick="M.enterMode('${d.id}')">${ic("chat", 17)} Ask ${esc(d.name)}</button>
-    <div class="dash-sec-h">Quick actions</div>
-    <div class="feat-list">
-      ${feats.map(f => `<button class="feat-card" onclick="${f.on}">
-        <span class="fc-ic">${ic(f.icon, 20)}</span>
-        <span class="fc-tx"><span class="fc-nm">${esc(f.label)}</span><span class="fc-ds">${esc(f.desc)}</span></span>
-        <span class="fc-ar">${ic("chevR", 16)}</span>
-      </button>`).join("")}
-    </div>`;
+    ${sections}`;
 }
 /* ---------------- quick add (floating +) ---------------- */
 function fabHTML(){
@@ -1833,12 +1839,32 @@ function trendsHTML(){
 }
 
 /* ---------------- global search ---------------- */
+const SEARCH_NAV = [
+  {kw: "recipe recipes healthy cook meal import", icon: "book", label: "Healthy recipes", sub: "Open recipe box", go: "M.goRecipes()"},
+  {kw: "wellness mood check-in journal gratitude feeling", icon: "smile", label: "Wellness check-in", sub: "Mood & journal", go: "M.goWellness()"},
+  {kw: "sleep rest", icon: "moon", label: "Sleep log", sub: "Hours & quality", go: "M.goHealth('sleep')"},
+  {kw: "supplement supplements vitamin", icon: "pill", label: "Supplements", sub: "Daily checklist", go: "M.goHealth('supps')"},
+  {kw: "food nutrition macro calorie hydration water protein", icon: "food", label: "Food log", sub: "Nutrition tracker", go: "M.goTab('food')"},
+  {kw: "body composition inbody scan measurement photo", icon: "weight", label: "Body composition", sub: "InBody & weight", go: "M.goTab('body')"},
+  {kw: "workout training exercise gym lift", icon: "barbell", label: "Workout log", sub: "Sets & reps", go: "M.goTrain('today')"},
+  {kw: "task todo to-do reminder priority", icon: "checkSquare", label: "Tasks", sub: "Priorities", go: "M.goWork('tasks')"},
+  {kw: "note memo document", icon: "fileText", label: "Notes", sub: "Documents", go: "M.goWork('notes')"},
+  {kw: "focus pomodoro timer deep work", icon: "timer", label: "Focus timer", sub: "Pomodoro", go: "M.goWork('focus')"},
+  {kw: "budget expense spending money", icon: "wallet", label: "Budget", sub: "Income vs spending", go: "M.goLife('budget')"},
+  {kw: "bill subscription renewal", icon: "creditCard", label: "Bills", sub: "Subscriptions", go: "M.goLife('bills')"},
+  {kw: "trip travel flight hotel holiday vacation", icon: "plane", label: "Travel planner", sub: "Trips & bookings", go: "M.goLife('trips')"},
+  {kw: "insight trend chart weekly review analytics", icon: "trend", label: "Insights", sub: "Trends & weekly review", go: "M.goTab('insights')"},
+  {kw: "setting theme appearance backup api key pin lock", icon: "gear", label: "Settings", sub: "Appearance, backup, key", go: "M.goTab('set')"},
+];
 function searchAll(q){
   const query = q.trim().toLowerCase();
   if (!query) return [];
   const hit = s => s && String(s).toLowerCase().includes(query);
   const out = [];
-  const push = (type, id, icon, label, sub) => out.push({type, id, icon, label, sub});
+  const push = (type, id, icon, label, sub, go) => out.push({type, id, icon, label, sub, go});
+  // navigation / feature jumps first
+  SEARCH_NAV.filter(n => (n.label + " " + n.kw).toLowerCase().includes(query)).slice(0, 5).forEach(n => push("nav", null, n.icon, n.label, n.sub, n.go));
+  (S.recipes || []).filter(r => hit(r.name) || (r.tags || []).some(t => hit(t)) || (r.ingredients || []).some(i => hit(i))).slice(0, 5).forEach(r => push("recipe", r.id, "book", r.name, `Recipe · ${n0(r.per.kcal)} kcal`));
   (S.tasks || []).filter(t => hit(t.title)).slice(0, 6).forEach(t => push("task", t.id, "checkSquare", t.title, t.done ? "Task · done" : "Task" + (t.due ? " · due " + t.due : "")));
   (S.notes || []).filter(n => hit(n.title) || hit(n.body)).slice(0, 6).forEach(n => push("note", n.id, "fileText", n.title || "Untitled note", "Note"));
   (S.savedFoods || []).filter(f => hit(f.name)).slice(0, 6).forEach(f => push("food", null, "food", f.name, `${n0(f.kcal)} kcal · ${n1(f.p)}P`));
@@ -1861,14 +1887,15 @@ function searchHTML(){
   <div class="search-panel">
     <div class="search-bar">
       ${ic("search", 18)}
-      <input id="globalSearch" value="${esc(R.searchQ)}" oninput="R.searchQ=this.value;render()" placeholder="Search tasks, notes, foods, chats…" autocomplete="off">
+      <input id="globalSearch" value="${esc(R.searchQ)}" oninput="R.searchQ=this.value;render()" placeholder="Go to anything — a screen, task, food, recipe, chat…" autocomplete="off">
       <button class="icon-btn" aria-label="Close search" onclick="M.searchClose()">${ic("x", 20)}</button>
     </div>
     <div class="search-results">
-      ${!R.searchQ.trim() ? `<div class="muted" style="padding:14px 4px">Type to search across everything on this device.</div>`
-        : res.length ? res.map(r => `<button class="feat-card" onclick="M.searchGo('${r.type}','${r.id}')">
+      ${!R.searchQ.trim() ? `<div class="muted" style="padding:14px 4px">Jump to any screen or search everything on this device — try "recipes", "sleep", "budget"…</div>`
+        : res.length ? res.map(r => `<button class="feat-card ${r.type === "nav" ? "search-nav" : ""}" onclick="${r.go ? `M.searchNav(${JSON.stringify(r.go).replace(/"/g, "&quot;")})` : `M.searchGo('${r.type}','${r.id}')`}">
           <span class="fc-ic">${ic(r.icon, 18)}</span>
           <span class="fc-tx"><span class="fc-nm" dir="auto">${esc(r.label)}</span><span class="fc-ds">${esc(r.sub)}</span></span>
+          ${r.type === "nav" ? `<span class="fc-ar">${ic("chevR", 15)}</span>` : ""}
         </button>`).join("")
         : `<div class="muted" style="padding:14px 4px">No matches for "${esc(R.searchQ)}".</div>`}
     </div>
@@ -5059,10 +5086,12 @@ window.M = {
       case "trip": R.tab = "life"; R.lifeTab = "trips"; R.tripId = id; R.compareId = null; break;
       case "compare": R.tab = "life"; R.lifeTab = "compare"; R.compareId = id; R.tripId = null; break;
       case "decision": R.tab = "life"; R.lifeTab = "decide"; R.tripId = R.compareId = null; break;
+      case "recipe": R.tab = "recipes"; R.recipeId = id; R.recipeForm = null; break;
       case "chat": { const c = S.convs.find(x => x.id === id); if (c){ R.mode = c.dom; R.convId = c.id; } R.tab = "chat"; break; }
     }
     render();
   },
+  searchNav(go){ R.searchOpen = false; R.searchQ = ""; (new Function(go))(); },
 
   /* ---- voice input ---- */
   voiceChat(){ startVoice(t => { const ta = $("#chatIn"); if (ta){ ta.value = (ta.value ? ta.value + " " : "") + t; ta.style.height = "auto"; ta.style.height = Math.min(ta.scrollHeight, 120) + "px"; ta.focus(); } }); },
