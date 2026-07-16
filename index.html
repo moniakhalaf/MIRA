@@ -874,7 +874,7 @@ body.kb .chatbar{padding-bottom:6px}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.49";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.50";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -3914,7 +3914,26 @@ function healthReviewHTML(){
 /* ================= Healthy recipes (recipe box) ================= */
 const RECIPE_TAG_LABELS = {"high-protein": "High-protein", "low-carb": "Low-carb", "vegetarian": "Vegetarian", "vegan": "Vegan", "quick": "Quick", "arab": "Arab/GCC", "breakfast": "Breakfast", "salad": "Salad", "treat": "Treat", "gluten-free": "Gluten-free", "high-fibre": "High-fibre"};
 function tagLabel(t){ return RECIPE_TAG_LABELS[t] || (t.charAt(0).toUpperCase() + t.slice(1)); }
-function recipeFilters(){ return [["all", "All"], ["high-protein", "High-protein"], ["low-carb", "Low-carb"], ["vegetarian", "Vegetarian"], ["quick", "Quick"], ["arab", "Arab/GCC"], ["breakfast", "Breakfast"]]; }
+// Meal categories the recipe box is organised by
+const RECIPE_CATS = [["all", "All"], ["breakfast", "Breakfast"], ["main", "Lunch / Dinner"], ["salad", "Salads"], ["snack", "Snacks"], ["sweet", "Sweets"], ["drink", "Drinks"]];
+const MEAL_LABELS = {breakfast: "Breakfast", main: "Lunch / Dinner", salad: "Salad", snack: "Snack", sweet: "Sweet", drink: "Drink"};
+function recipeFilters(){ return RECIPE_CATS; }
+// Map any AI/user-supplied meal word (or infer from tags) to one of our categories
+function normMeal(m, tags){
+  m = String(m || "").toLowerCase().trim();
+  const map = {breakfast: "breakfast", brunch: "breakfast", main: "main", lunch: "main", dinner: "main",
+    "lunch/dinner": "main", "lunch / dinner": "main", entree: "main", "entrée": "main", soup: "main", stew: "main",
+    salad: "salad", snack: "snack", appetizer: "snack", appetiser: "snack", starter: "snack", side: "snack", dip: "snack",
+    dessert: "sweet", sweet: "sweet", treat: "sweet", drink: "drink", beverage: "drink", smoothie: "drink", juice: "drink"};
+  if (map[m]) return map[m];
+  const t = (Array.isArray(tags) ? tags : []).map(x => String(x).toLowerCase());
+  if (t.includes("breakfast")) return "breakfast";
+  if (t.includes("salad")) return "salad";
+  if (t.includes("dessert") || t.includes("sweet") || t.includes("treat")) return "sweet";
+  if (t.includes("snack")) return "snack";
+  if (t.includes("drink") || t.includes("smoothie")) return "drink";
+  return "main";
+}
 function normTags(t){
   let arr = Array.isArray(t) ? t : String(t || "").split(",");
   return [...new Set(arr.map(x => String(x).trim().toLowerCase().replace(/\s+/g, "-")).filter(Boolean))].slice(0, 6);
@@ -3938,9 +3957,9 @@ function recipeCardHTML(r){
 }
 function recipeMatch(r){
   const q = (R.recipeQ || "").trim().toLowerCase();
-  const tagOk = R.recipeFilter === "all" || (r.tags || []).includes(R.recipeFilter);
+  const catOk = R.recipeFilter === "all" || (r.meal || "main") === R.recipeFilter;
   const qOk = !q || (r.name + " " + (r.cuisine || "") + " " + (r.tags || []).join(" ") + " " + (r.ingredients || []).join(" ")).toLowerCase().includes(q);
-  return tagOk && qOk;
+  return catOk && qOk;
 }
 function recipeImportPanelHTML(){
   return `<div class="card rc-import">
@@ -4005,6 +4024,10 @@ function recipeFormHTML(){
       ${f.image ? `<img class="rc-formimg" src="${esc(f.image)}" alt="">` : ""}
       <button class="btn sm sec" onclick="M.recipePhoto()">${ic("camera", 15)} ${f.image ? "Change photo" : "Add a photo (optional)"}</button>
       <div class="field" style="margin-top:12px"><label>Name</label><input value="${esc(f.name)}" oninput="R.recipeForm.name=this.value" dir="auto" placeholder="e.g. Grilled chicken bowl"></div>
+      <div class="field"><label>Category</label>
+        <select oninput="R.recipeForm.meal=this.value" onchange="R.recipeForm.meal=this.value">
+          ${RECIPE_CATS.filter(([v]) => v !== "all").map(([v, l]) => `<option value="${v}" ${(f.meal || "main") === v ? "selected" : ""}>${l}</option>`).join("")}
+        </select></div>
       <div class="row">
         <div class="field" style="flex:1"><label>Servings</label><input type="number" inputmode="numeric" value="${esc(f.servings)}" oninput="R.recipeForm.servings=this.value"></div>
         <div class="field" style="flex:2"><label>Cuisine (optional)</label><input value="${esc(f.cuisine)}" oninput="R.recipeForm.cuisine=this.value" dir="auto"></div>
@@ -4025,7 +4048,7 @@ function recipeFormHTML(){
 function saveRecipe(j){
   const per = j.per || {};
   const r = {id: uid(), name: String(j.name || "Recipe").trim(), image: String(j.image || "").trim(),
-    cuisine: String(j.cuisine || "").trim(), tags: normTags(j.tags), servings: Math.max(1, parseInt(j.servings) || 1),
+    cuisine: String(j.cuisine || "").trim(), tags: normTags(j.tags), meal: normMeal(j.meal, j.tags), servings: Math.max(1, parseInt(j.servings) || 1),
     per: {kcal: num(per.kcal), p: num(per.p), c: num(per.c), f: num(per.f)},
     ingredients: (Array.isArray(j.ingredients) ? j.ingredients : []).map(x => String(x)).filter(Boolean),
     steps: (Array.isArray(j.steps) ? j.steps : []).map(x => String(x)).filter(Boolean),
@@ -4036,7 +4059,7 @@ function saveRecipe(j){
 // Photos come from Wikimedia Commons (free-licence media) via the stable
 // Special:FilePath endpoint, so they load in any browser without a hash.
 function commonsImg(file){ return "https://commons.wikimedia.org/wiki/Special:FilePath/" + encodeURIComponent(file) + "?width=900"; }
-const STARTER_SEED_V = 2;
+const STARTER_SEED_V = 3;
 // legacy v1 starter names, so an upgrade replaces the old photoless set cleanly
 const LEGACY_STARTER_NAMES = new Set([
   "Grilled chicken & quinoa bowl", "Greek yogurt & berry breakfast bowl", "Lentil soup (shorbat adas)",
@@ -4049,35 +4072,130 @@ function seedStarterRecipes(){
   // Macros are per serving, estimated from standard (USDA-style) food composition
   // and kept internally consistent (≈4·protein + 4·carb + 9·fat) — honest estimates, not lab values.
   const STARTERS = [
-    {name: "Grilled chicken & quinoa bowl", cuisine: "Mediterranean", img: "Grilled Chicken Breasts (28905381261).jpg", tags: ["high-protein", "quick"], servings: 1, per: {kcal: 480, p: 45, c: 42, f: 13},
-      ingredients: ["150 g chicken breast", "¾ cup cooked quinoa", "Handful cherry tomatoes & cucumber, chopped", "1 cup baby spinach", "1 tsp olive oil, juice of ½ lemon, salt & pepper"],
-      steps: ["Season the chicken and grill 5–6 min per side until 74°C inside; rest, then slice.", "Toss the quinoa, spinach and chopped veg with the olive oil and lemon.", "Top with the sliced chicken and season to taste."], healthNote: "Lean protein with whole-grain carbs and fibre. Macros are estimated from standard composition."},
-    {name: "Shakshuka (baked eggs in tomato)", cuisine: "Levantine / North African", img: "Shakshuka 011.jpg", tags: ["high-protein", "vegetarian", "arab", "breakfast"], servings: 2, per: {kcal: 280, p: 18, c: 14, f: 16},
+    // ===== Breakfast =====
+    {name: "Shakshuka (baked eggs in tomato)", meal: "breakfast", cuisine: "Levantine / North African", img: "Shakshuka 011.jpg", tags: ["high-protein", "vegetarian", "arab"], servings: 2, per: {kcal: 280, p: 18, c: 14, f: 16},
       ingredients: ["1 tsp olive oil", "1 onion + 1 red pepper, sliced", "2 garlic cloves", "400 g chopped tomatoes", "1 tsp cumin, ½ tsp paprika", "4 eggs", "Parsley to serve"],
       steps: ["Soften the onion and pepper in the oil, then add garlic and spices for 1 min.", "Pour in the tomatoes and simmer 10 min until thick; season.", "Make 4 wells, crack in the eggs, cover and cook 5–7 min to your liking.", "Scatter with parsley and serve."], healthNote: "Protein-rich, vegetable-forward and low in refined carbs. Estimated macros."},
-    {name: "Lentil soup (shorbat adas)", cuisine: "Levantine / GCC", img: "Bowl of lentil soup with green and red lentils.jpg", tags: ["vegetarian", "vegan", "high-fibre", "arab"], servings: 4, per: {kcal: 250, p: 15, c: 38, f: 4},
-      ingredients: ["1½ cups red lentils, rinsed", "1 onion + 2 garlic cloves", "1 carrot", "1 tsp cumin, pinch turmeric", "6 cups water or stock", "Lemon wedges to serve"],
-      steps: ["Briefly sauté the onion, garlic and carrot.", "Add the lentils, spices and water; simmer 25–30 min until soft.", "Blend smooth, adjust seasoning and serve with lemon."], healthNote: "Plant protein and fibre; naturally low fat. Estimated macros."},
-    {name: "Baked salmon with greens", cuisine: "—", img: "Liat Portal for Foodie Disorder - Oven-baked teriyaki salmon with vegetables.jpg", tags: ["high-protein", "low-carb"], servings: 1, per: {kcal: 420, p: 38, c: 8, f: 26},
-      ingredients: ["170 g salmon fillet", "2 cups broccoli or green beans", "1 tsp olive oil", "Lemon, garlic, salt & pepper"],
-      steps: ["Bake the salmon at 200°C for 12–15 min until it flakes.", "Steam or roast the greens with the oil and garlic.", "Finish with a squeeze of lemon."], healthNote: "Omega-3 rich and very low carb. Estimated macros."},
-    {name: "Chickpea & tomato salad (balela)", cuisine: "Levantine", img: "Colorful healthy Chickpea Salad - 49859083608.jpg", tags: ["vegetarian", "vegan", "high-fibre", "arab", "quick", "salad"], servings: 2, per: {kcal: 300, p: 12, c: 40, f: 11},
-      ingredients: ["1 can (400 g) chickpeas, drained", "2 tomatoes + ½ cucumber, chopped", "Handful parsley & mint", "1 tbsp olive oil, lemon, sumac"],
-      steps: ["Combine the chickpeas and chopped vegetables.", "Dress with the olive oil, lemon and sumac.", "Fold through the herbs and serve."], healthNote: "Fibre and plant protein, no cooking needed. Estimated macros."},
-    {name: "Tabbouleh (parsley & bulgur salad)", cuisine: "Levantine", img: "Flickr - cyclonebill - Tabbouleh.jpg", tags: ["vegetarian", "vegan", "high-fibre", "arab", "salad"], servings: 4, per: {kcal: 170, p: 4, c: 20, f: 9},
-      ingredients: ["2 large bunches parsley, finely chopped", "¼ cup fine bulgur, soaked", "2 tomatoes, finely diced", "3 spring onions + handful mint", "2 tbsp olive oil, juice of 1 lemon, salt"],
-      steps: ["Soak the bulgur in a little water until tender, then drain.", "Chop the parsley, mint, tomato and spring onion very finely.", "Combine everything with the olive oil, lemon and salt just before serving."], healthNote: "Herb-forward, high-fibre and rich in vitamin C. Estimated macros."},
-    {name: "Hummus", cuisine: "Levantine / GCC", img: "Hummus.jpg", tags: ["vegetarian", "vegan", "high-fibre", "arab"], servings: 6, per: {kcal: 150, p: 5, c: 12, f: 9},
-      ingredients: ["1 can (400 g) chickpeas, drained (reserve liquid)", "2 tbsp tahini", "1 garlic clove", "Juice of 1 lemon", "1 tbsp olive oil, pinch cumin & salt"],
-      steps: ["Blend the chickpeas, tahini, garlic, lemon and salt.", "Loosen with a little reserved chickpea liquid until smooth and creamy.", "Serve drizzled with olive oil and a pinch of cumin."], healthNote: "Plant protein plus healthy fats from tahini and olive oil — portion-aware. Estimated macros."},
-    {name: "Greek yogurt & berry parfait", cuisine: "—", img: "Fruit and Yogurt Breakfast Parfait, Trimingham.JPG", tags: ["high-protein", "breakfast", "quick", "vegetarian"], servings: 1, per: {kcal: 300, p: 20, c: 35, f: 7},
+    {name: "Greek yogurt & berry parfait", meal: "breakfast", cuisine: "—", img: "Fruit and Yogurt Breakfast Parfait, Trimingham.JPG", tags: ["high-protein", "quick", "vegetarian"], servings: 1, per: {kcal: 300, p: 20, c: 35, f: 7},
       ingredients: ["200 g plain 0–2% Greek yogurt", "1 cup mixed berries", "3 tbsp granola or oats", "1 tsp honey (optional)"],
       steps: ["Layer half the yogurt in a glass or bowl.", "Add berries and granola, then the rest of the yogurt.", "Top with more berries and a little honey if you like."], healthNote: "High protein and fibre with no heavy processing. Estimated macros."},
-    {name: "Fruit & oats breakfast bowl", cuisine: "—", img: "Fruit and oatmeal.jpg", tags: ["breakfast", "high-fibre", "vegetarian"], servings: 1, per: {kcal: 290, p: 10, c: 45, f: 6},
+    {name: "Fruit & oats breakfast bowl", meal: "breakfast", cuisine: "—", img: "Fruit and oatmeal.jpg", tags: ["high-fibre", "vegetarian"], servings: 1, per: {kcal: 290, p: 10, c: 45, f: 6},
       ingredients: ["½ cup rolled oats", "1 cup milk or water", "1 small banana or apple, sliced", "1 tbsp chopped nuts or seeds", "Cinnamon to taste"],
       steps: ["Simmer the oats with the milk for 4–5 min, stirring, until creamy.", "Top with the fruit, nuts and a dusting of cinnamon.", "Add a splash more milk to loosen if needed."], healthNote: "Slow-release wholegrain carbs with fibre. Estimated macros."},
+    {name: "Peanut butter & banana overnight oats", meal: "breakfast", cuisine: "—", tags: ["high-fibre", "vegetarian", "quick"], servings: 1, per: {kcal: 350, p: 14, c: 50, f: 10},
+      ingredients: ["½ cup rolled oats", "½ cup milk + 2 tbsp Greek yogurt", "1 tbsp peanut butter", "½ banana, sliced", "1 tsp chia seeds, pinch cinnamon"],
+      steps: ["Stir the oats, milk, yogurt, chia and cinnamon in a jar.", "Swirl through the peanut butter and top with banana.", "Cover and chill overnight; eat cold or warmed."], healthNote: "No-cook, high-fibre and balanced for a busy morning. Estimated macros."},
+    {name: "Chia pudding with berries", meal: "breakfast", cuisine: "—", img: "Chia Pudding.PNG", tags: ["high-fibre", "vegetarian", "gluten-free", "quick"], servings: 1, per: {kcal: 250, p: 10, c: 25, f: 12},
+      ingredients: ["3 tbsp chia seeds", "1 cup milk (dairy or unsweetened plant)", "½ tsp vanilla", "½ cup berries", "1 tsp honey (optional)"],
+      steps: ["Whisk the chia, milk and vanilla; leave 5 min then whisk again to stop clumps.", "Chill at least 3 h or overnight until set like pudding.", "Top with berries and a little honey."], healthNote: "Fibre and omega-3 ALA from chia. Estimated macros."},
+    {name: "Veggie omelette", meal: "breakfast", cuisine: "—", img: "Omelette.JPG", tags: ["high-protein", "low-carb", "vegetarian", "quick"], servings: 1, per: {kcal: 280, p: 21, c: 6, f: 18},
+      ingredients: ["3 eggs (or 2 eggs + 2 whites)", "Handful spinach, ¼ pepper, few cherry tomatoes", "1 tsp olive oil", "Salt, pepper, chilli flakes"],
+      steps: ["Soften the vegetables in the oil for 2 min.", "Pour in the beaten eggs and cook gently, drawing the edges in.", "Fold over when just set and serve."], healthNote: "High protein, low carb, plenty of vegetables. Estimated macros."},
+    {name: "Ful medames (stewed fava beans)", meal: "breakfast", cuisine: "Egyptian / GCC", img: "Ful medames.jpg", tags: ["vegetarian", "vegan", "high-fibre", "arab"], servings: 2, per: {kcal: 260, p: 13, c: 30, f: 9},
+      ingredients: ["1 can (400 g) fava beans (ful)", "1 garlic clove, crushed", "Juice of 1 lemon", "1 tbsp olive oil", "Cumin, chopped tomato & parsley to serve"],
+      steps: ["Warm the beans in a little of their liquid, then lightly mash.", "Stir in the garlic, lemon, cumin and salt.", "Top with tomato, parsley and a drizzle of olive oil."], healthNote: "Classic high-fibre plant-protein breakfast. Estimated macros."},
+    {name: "Banana protein pancakes", meal: "breakfast", cuisine: "—", img: "Pancakes with fruit.jpg", tags: ["high-protein", "vegetarian"], servings: 1, per: {kcal: 360, p: 28, c: 40, f: 9},
+      ingredients: ["1 ripe banana", "2 eggs", "3 tbsp oats", "1 scoop (25 g) whey or ¼ cup Greek yogurt", "Pinch baking powder & cinnamon"],
+      steps: ["Blend everything to a smooth batter.", "Cook small pancakes in a non-stick pan, 1–2 min per side.", "Serve with berries or a little honey."], healthNote: "High-protein spin on pancakes, no refined flour or sugar. Estimated macros."},
+    {name: "Berry smoothie bowl", meal: "breakfast", cuisine: "—", img: "Smoothie bowl.jpg", tags: ["high-protein", "vegetarian", "quick"], servings: 1, per: {kcal: 330, p: 18, c: 48, f: 7},
+      ingredients: ["1 cup frozen berries", "½ frozen banana", "150 g Greek yogurt", "Splash of milk", "Top: 2 tbsp granola, seeds, extra fruit"],
+      steps: ["Blend the berries, banana, yogurt and a little milk to a thick spoonable purée.", "Pour into a bowl.", "Top with granola, seeds and fresh fruit."], healthNote: "Thick, high-protein and fruit-forward. Estimated macros."},
+
+    // ===== Lunch / Dinner =====
+    {name: "Grilled chicken & quinoa bowl", meal: "main", cuisine: "Mediterranean", img: "Grilled Chicken Breasts (28905381261).jpg", tags: ["high-protein", "quick"], servings: 1, per: {kcal: 480, p: 45, c: 42, f: 13},
+      ingredients: ["150 g chicken breast", "¾ cup cooked quinoa", "Handful cherry tomatoes & cucumber, chopped", "1 cup baby spinach", "1 tsp olive oil, juice of ½ lemon, salt & pepper"],
+      steps: ["Season the chicken and grill 5–6 min per side until 74°C inside; rest, then slice.", "Toss the quinoa, spinach and chopped veg with the olive oil and lemon.", "Top with the sliced chicken and season to taste."], healthNote: "Lean protein with whole-grain carbs and fibre. Estimated macros."},
+    {name: "Baked salmon with greens", meal: "main", cuisine: "—", img: "Liat Portal for Foodie Disorder - Oven-baked teriyaki salmon with vegetables.jpg", tags: ["high-protein", "low-carb"], servings: 1, per: {kcal: 420, p: 38, c: 8, f: 26},
+      ingredients: ["170 g salmon fillet", "2 cups broccoli or green beans", "1 tsp olive oil", "Lemon, garlic, salt & pepper"],
+      steps: ["Bake the salmon at 200°C for 12–15 min until it flakes.", "Steam or roast the greens with the oil and garlic.", "Finish with a squeeze of lemon."], healthNote: "Omega-3 rich and very low carb. Estimated macros."},
+    {name: "Lentil soup (shorbat adas)", meal: "main", cuisine: "Levantine / GCC", img: "Bowl of lentil soup with green and red lentils.jpg", tags: ["vegetarian", "vegan", "high-fibre", "arab"], servings: 4, per: {kcal: 250, p: 15, c: 38, f: 4},
+      ingredients: ["1½ cups red lentils, rinsed", "1 onion + 2 garlic cloves", "1 carrot", "1 tsp cumin, pinch turmeric", "6 cups water or stock", "Lemon wedges to serve"],
+      steps: ["Briefly sauté the onion, garlic and carrot.", "Add the lentils, spices and water; simmer 25–30 min until soft.", "Blend smooth, adjust seasoning and serve with lemon."], healthNote: "Plant protein and fibre; naturally low fat. Estimated macros."},
+    {name: "Chicken shawarma bowl", meal: "main", cuisine: "Levantine / GCC", img: "Shawerma Roll.JPG", tags: ["high-protein", "arab"], servings: 1, per: {kcal: 480, p: 42, c: 40, f: 16},
+      ingredients: ["150 g chicken thigh/breast, sliced", "1 tsp shawarma spice + garlic, lemon, 1 tsp oil", "¾ cup rice or 1 small wholewheat wrap", "Tomato, cucumber, pickles, lettuce", "1 tbsp garlic-yogurt sauce"],
+      steps: ["Marinate the chicken in the spice, garlic, lemon and oil 15 min, then pan-sear until cooked.", "Build a bowl with the rice/greens and salad.", "Top with the chicken and a spoon of garlic-yogurt sauce."], healthNote: "Shawarma flavour, lighter build — grilled not deep-fried. Estimated macros."},
+    {name: "Lighter chicken kabsa", meal: "main", cuisine: "GCC / Saudi", img: "Kabsa.jpg", tags: ["high-protein", "arab"], servings: 4, per: {kcal: 500, p: 38, c: 55, f: 14},
+      ingredients: ["600 g skinless chicken pieces", "1½ cups basmati rice", "1 onion, 2 tomatoes, garlic", "1 tbsp kabsa spice (bezar), pinch saffron", "1 tbsp oil, 3 cups stock"],
+      steps: ["Brown the chicken and onion in the oil, add garlic, tomato and spices.", "Add stock and simmer the chicken until tender; lift out.", "Cook the rinsed rice in the fragrant broth 15 min; return the chicken to serve."], healthNote: "Skinless chicken and less oil than the classic. Estimated macros."},
+    {name: "Grilled kofta kebab with salad", meal: "main", cuisine: "Levantine / GCC", img: "Grilled Kefta Skewers.jpg", tags: ["high-protein", "low-carb", "arab"], servings: 4, per: {kcal: 370, p: 30, c: 12, f: 22},
+      ingredients: ["500 g lean minced beef or lamb", "1 grated onion + handful parsley", "1 tsp seven-spice, salt, pepper", "Side salad of tomato, cucumber, parsley", "Lemon to serve"],
+      steps: ["Mix the mince, onion, parsley and spices; shape onto skewers.", "Grill 3–4 min per side until cooked through.", "Serve with the fresh salad and lemon."], healthNote: "Use lean mince to keep the fat sensible. Estimated macros."},
+    {name: "Grilled tilapia with vegetables", meal: "main", cuisine: "—", img: "Grilled tilapia fillet.jpg", tags: ["high-protein", "low-carb", "quick"], servings: 1, per: {kcal: 300, p: 36, c: 10, f: 12},
+      ingredients: ["170 g tilapia or other white fish fillet", "2 cups courgette & pepper, sliced", "1 tsp olive oil", "Garlic, lemon, paprika, salt"],
+      steps: ["Rub the fish with garlic, paprika, lemon and a little oil.", "Grill or pan-sear 3–4 min per side until it flakes.", "Serve over the quickly sautéed vegetables."], healthNote: "Very lean, high-protein and light. Estimated macros."},
+    {name: "Chicken & vegetable stir-fry", meal: "main", cuisine: "Asian-inspired", tags: ["high-protein", "quick"], servings: 2, per: {kcal: 410, p: 40, c: 35, f: 12},
+      ingredients: ["250 g chicken breast, sliced", "4 cups mixed veg (broccoli, pepper, carrot, snap peas)", "1 tbsp low-sodium soy + garlic + ginger", "1 tsp sesame oil", "1 cup cooked brown rice to share"],
+      steps: ["Sear the chicken in a hot pan until just cooked; set aside.", "Stir-fry the vegetables 3–4 min so they stay crisp.", "Return the chicken, add the soy-garlic-ginger, toss and serve over rice."], healthNote: "Loads of vegetables, lean protein, minimal added fat. Estimated macros."},
+    {name: "Baked falafel plate", meal: "main", cuisine: "Levantine / GCC", img: "Bowl of falafel.jpg", tags: ["vegetarian", "vegan", "high-fibre", "arab"], servings: 2, per: {kcal: 380, p: 16, c: 40, f: 16},
+      ingredients: ["1 can (400 g) chickpeas (not cooked to mush)", "Onion, garlic, big handful parsley & coriander", "1 tsp cumin + 1 tsp coriander, 2 tbsp flour", "Spray of oil for baking", "Salad + 1 tbsp tahini sauce to serve"],
+      steps: ["Blitz the chickpeas, onion, garlic, herbs and spices to a coarse paste; stir in the flour.", "Shape into patties, spray with oil and bake at 200°C for 20–25 min, turning once.", "Serve with salad and tahini sauce."], healthNote: "Baked, not fried — far less fat than take-away falafel. Estimated macros."},
+    {name: "Grilled halloumi & roasted vegetables", meal: "main", cuisine: "Mediterranean", img: "Grilled Halloumi.jpg", tags: ["vegetarian", "low-carb"], servings: 1, per: {kcal: 390, p: 22, c: 14, f: 26},
+      ingredients: ["90 g halloumi, sliced", "2 cups courgette, pepper & aubergine", "1 tsp olive oil", "Oregano, lemon, black pepper"],
+      steps: ["Toss the vegetables with the oil and oregano and roast at 200°C for 20 min.", "Grill or pan-sear the halloumi 1 min per side until golden.", "Plate the vegetables, top with halloumi and a squeeze of lemon."], healthNote: "Vegetarian protein — halloumi is salty, so keep the portion modest. Estimated macros."},
+    {name: "Red lentil dal", meal: "main", cuisine: "South Asian", tags: ["vegetarian", "vegan", "high-fibre", "gluten-free"], servings: 4, per: {kcal: 250, p: 14, c: 35, f: 6},
+      ingredients: ["1½ cups red lentils, rinsed", "1 onion, 2 garlic cloves, thumb of ginger", "1 tsp cumin, 1 tsp turmeric, ½ tsp chilli", "1 chopped tomato", "1 tsp oil, 4 cups water, coriander"],
+      steps: ["Soften the onion, garlic and ginger in the oil, add the spices for 1 min.", "Add the lentils, tomato and water; simmer 20–25 min until thick.", "Season and finish with coriander; serve with rice or flatbread."], healthNote: "High-fibre plant protein, warming and low fat. Estimated macros."},
+
+    // ===== Salads =====
+    {name: "Tabbouleh (parsley & bulgur salad)", meal: "salad", cuisine: "Levantine", img: "Flickr - cyclonebill - Tabbouleh.jpg", tags: ["vegetarian", "vegan", "high-fibre", "arab"], servings: 4, per: {kcal: 170, p: 4, c: 20, f: 9},
+      ingredients: ["2 large bunches parsley, finely chopped", "¼ cup fine bulgur, soaked", "2 tomatoes, finely diced", "3 spring onions + handful mint", "2 tbsp olive oil, juice of 1 lemon, salt"],
+      steps: ["Soak the bulgur in a little water until tender, then drain.", "Chop the parsley, mint, tomato and spring onion very finely.", "Combine everything with the olive oil, lemon and salt just before serving."], healthNote: "Herb-forward, high-fibre and rich in vitamin C. Estimated macros."},
+    {name: "Chickpea & tomato salad (balela)", meal: "salad", cuisine: "Levantine", img: "Colorful healthy Chickpea Salad - 49859083608.jpg", tags: ["vegetarian", "vegan", "high-fibre", "arab", "quick"], servings: 2, per: {kcal: 300, p: 12, c: 40, f: 11},
+      ingredients: ["1 can (400 g) chickpeas, drained", "2 tomatoes + ½ cucumber, chopped", "Handful parsley & mint", "1 tbsp olive oil, lemon, sumac"],
+      steps: ["Combine the chickpeas and chopped vegetables.", "Dress with the olive oil, lemon and sumac.", "Fold through the herbs and serve."], healthNote: "Fibre and plant protein, no cooking needed. Estimated macros."},
+    {name: "Fattoush", meal: "salad", cuisine: "Levantine", img: "Fattoush mixed-salad.jpg", tags: ["vegetarian", "vegan", "high-fibre", "arab"], servings: 4, per: {kcal: 200, p: 5, c: 22, f: 10},
+      ingredients: ["Romaine, tomato, cucumber, radish, spring onion", "Handful parsley & mint", "1 small wholewheat pita, toasted", "2 tbsp olive oil, lemon, 1 tsp sumac", "Pomegranate molasses (optional)"],
+      steps: ["Chop the vegetables and herbs into a big bowl.", "Whisk the oil, lemon, sumac and a little molasses; toss through.", "Break the toasted pita over the top just before serving so it stays crisp."], healthNote: "Vegetable-packed; toast the bread instead of frying. Estimated macros."},
+    {name: "Greek salad (horiatiki)", meal: "salad", cuisine: "Greek", img: "Greek salad from supermarket.JPG", tags: ["vegetarian", "low-carb", "gluten-free"], servings: 2, per: {kcal: 230, p: 7, c: 10, f: 18},
+      ingredients: ["2 tomatoes + 1 cucumber, chunky", "½ red onion + green pepper", "Handful olives", "60 g feta", "1 tbsp olive oil, oregano, red-wine vinegar"],
+      steps: ["Chop the tomato, cucumber, onion and pepper into big pieces.", "Add the olives and a slab of feta on top.", "Dress with the oil, vinegar and oregano."], healthNote: "Whole vegetables and healthy fats; feta adds salt so go easy. Estimated macros."},
+
+    // ===== Snacks =====
+    {name: "Hummus", meal: "snack", cuisine: "Levantine / GCC", img: "Hummus.jpg", tags: ["vegetarian", "vegan", "high-fibre", "arab"], servings: 6, per: {kcal: 150, p: 5, c: 12, f: 9},
+      ingredients: ["1 can (400 g) chickpeas, drained (reserve liquid)", "2 tbsp tahini", "1 garlic clove", "Juice of 1 lemon", "1 tbsp olive oil, pinch cumin & salt"],
+      steps: ["Blend the chickpeas, tahini, garlic, lemon and salt.", "Loosen with a little reserved chickpea liquid until smooth and creamy.", "Serve drizzled with olive oil and a pinch of cumin."], healthNote: "Plant protein plus healthy fats — pair with vegetables. Estimated macros."},
+    {name: "Baba ghanoush (smoky aubergine dip)", meal: "snack", cuisine: "Levantine", img: "Baba Ghanoush.jpg", tags: ["vegetarian", "vegan", "low-carb", "arab"], servings: 6, per: {kcal: 140, p: 3, c: 9, f: 9},
+      ingredients: ["2 aubergines", "2 tbsp tahini", "1 garlic clove", "Juice of 1 lemon", "1 tbsp olive oil, salt, parsley"],
+      steps: ["Char the aubergines over a flame or roast at 220°C until collapsed; cool and scoop the flesh.", "Mash with the tahini, garlic, lemon and salt.", "Drizzle with olive oil and parsley."], healthNote: "Low-carb, smoky and rich in fibre. Estimated macros."},
+    {name: "Crispy roasted chickpeas", meal: "snack", cuisine: "—", img: "Roasted grams.JPG", tags: ["vegetarian", "vegan", "high-fibre", "gluten-free"], servings: 4, per: {kcal: 190, p: 8, c: 22, f: 7},
+      ingredients: ["1 can (400 g) chickpeas, drained & dried", "2 tsp olive oil", "1 tsp paprika or cumin", "Salt to taste"],
+      steps: ["Pat the chickpeas very dry and toss with the oil and spices.", "Roast at 200°C for 25–30 min, shaking once, until crisp.", "Cool a little — they crisp further — and store in a jar."], healthNote: "A crunchy, high-fibre swap for crisps. Estimated macros."},
+    {name: "Edamame with sea salt", meal: "snack", cuisine: "Japanese", img: "Edamame - boild green soybeans.jpg", tags: ["vegetarian", "vegan", "high-protein", "gluten-free", "quick"], servings: 4, per: {kcal: 130, p: 11, c: 8, f: 5},
+      ingredients: ["400 g frozen edamame in the pod", "Flaky sea salt", "Chilli flakes (optional)"],
+      steps: ["Boil or steam the edamame 4–5 min.", "Drain and toss with sea salt (and chilli if you like).", "Squeeze the beans straight from the pods."], healthNote: "Complete plant protein, quick and satisfying. Estimated macros."},
+    {name: "Labneh with za'atar & olive oil", meal: "snack", cuisine: "Levantine / GCC", tags: ["vegetarian", "low-carb", "arab", "quick"], servings: 4, per: {kcal: 150, p: 7, c: 6, f: 10},
+      ingredients: ["250 g labneh (strained yogurt)", "1 tbsp olive oil", "1 tbsp za'atar", "Cucumber & vegetable sticks to dip"],
+      steps: ["Spread the labneh in a shallow bowl.", "Make a well and pour in the olive oil; scatter za'atar.", "Serve with vegetable sticks or a little wholewheat bread."], healthNote: "Protein-rich dip; lighter than cream cheese. Estimated macros."},
+
+    // ===== Sweets =====
+    {name: "Fresh fruit salad", meal: "sweet", cuisine: "—", img: "Fruit salad.JPG", tags: ["vegetarian", "vegan", "gluten-free", "quick"], servings: 4, per: {kcal: 120, p: 2, c: 28, f: 1},
+      ingredients: ["Mixed seasonal fruit (melon, berries, apple, orange, grapes)", "Squeeze of lime", "Few mint leaves", "1 tsp honey (optional)"],
+      steps: ["Chop the fruit into bite-size pieces.", "Toss with the lime and torn mint.", "Chill and serve — add a little honey only if needed."], healthNote: "Naturally sweet, hydrating and full of vitamin C. Estimated macros."},
+    {name: "Greek yogurt with honey & walnuts", meal: "sweet", cuisine: "—", tags: ["high-protein", "vegetarian", "quick"], servings: 1, per: {kcal: 240, p: 18, c: 18, f: 10},
+      ingredients: ["200 g plain Greek yogurt", "1 tsp honey", "1 tbsp chopped walnuts", "Pinch of cinnamon"],
+      steps: ["Spoon the yogurt into a bowl.", "Drizzle with honey and scatter the walnuts.", "Dust with cinnamon."], healthNote: "A high-protein dessert that satisfies a sweet craving. Estimated macros."},
+    {name: "Dark chocolate & berries", meal: "sweet", cuisine: "—", tags: ["vegetarian", "gluten-free", "quick"], servings: 1, per: {kcal: 190, p: 3, c: 18, f: 11},
+      ingredients: ["20 g dark chocolate (≥ 70%)", "1 cup mixed berries", "Optional: 1 tbsp Greek yogurt to dip"],
+      steps: ["Arrange the berries on a plate.", "Melt or snap the dark chocolate over them.", "Enjoy slowly — dark chocolate is rich."], healthNote: "Antioxidant-rich and portion-controlled. Estimated macros."},
+    {name: "Baked cinnamon apple", meal: "sweet", cuisine: "—", tags: ["vegetarian", "vegan", "gluten-free"], servings: 1, per: {kcal: 180, p: 2, c: 30, f: 6},
+      ingredients: ["1 apple, cored", "½ tsp cinnamon", "1 tbsp chopped nuts or oats", "Few drops vanilla, tiny drizzle honey"],
+      steps: ["Fill the cored apple with the nuts/oats, cinnamon and vanilla.", "Bake at 180°C for 20–25 min until soft.", "Drizzle with a little honey to serve."], healthNote: "A warm dessert with fibre and no refined sugar hit. Estimated macros."},
+    {name: "Date & nut energy balls", meal: "sweet", cuisine: "GCC-friendly", tags: ["vegetarian", "vegan", "high-fibre"], servings: 12, per: {kcal: 90, p: 2, c: 12, f: 4},
+      ingredients: ["1 cup pitted dates", "½ cup oats", "½ cup nuts (almond/walnut)", "1 tbsp cocoa (optional)", "Pinch salt"],
+      steps: ["Blitz the dates, oats, nuts and cocoa to a sticky mixture.", "Roll into 12 small balls.", "Chill 30 min to firm up; keep in the fridge."], healthNote: "Whole-food sweetness from dates — one or two is a portion. Estimated macros (per ball)."},
+
+    // ===== Drinks =====
+    {name: "Green smoothie", meal: "drink", cuisine: "—", img: "Smoothie.JPG", tags: ["vegetarian", "vegan", "high-fibre", "quick"], servings: 1, per: {kcal: 170, p: 4, c: 35, f: 1},
+      ingredients: ["1 cup spinach", "1 banana", "½ green apple", "½ cup water or coconut water", "Squeeze of lemon, few ice cubes"],
+      steps: ["Add everything to a blender.", "Blend until smooth, loosening with more water if needed.", "Drink fresh."], healthNote: "A green way to add fruit and veg — whole fruit keeps the fibre. Estimated macros."},
+    {name: "Berry-banana protein smoothie", meal: "drink", cuisine: "—", img: "Banana Smoothie.jpg", tags: ["high-protein", "vegetarian", "quick"], servings: 1, per: {kcal: 320, p: 28, c: 40, f: 5},
+      ingredients: ["1 cup milk (dairy or plant)", "½ banana + ¾ cup mixed berries", "1 scoop (25 g) protein or 150 g Greek yogurt", "Few ice cubes"],
+      steps: ["Blend the milk, fruit and protein until smooth.", "Add ice for a thicker, colder shake.", "Great as a breakfast-on-the-go or post-workout."], healthNote: "Balanced protein-and-carb recovery drink. Estimated macros."},
+    {name: "Ayran (salted yogurt drink)", meal: "drink", cuisine: "GCC / Turkish", tags: ["vegetarian", "low-carb", "arab", "quick"], servings: 2, per: {kcal: 90, p: 6, c: 8, f: 4},
+      ingredients: ["1 cup plain yogurt", "1 cup cold water", "Pinch of salt", "Few dried mint leaves (optional)"],
+      steps: ["Whisk the yogurt, water and salt until frothy.", "Add mint if you like.", "Serve cold — refreshing with grilled or spiced food."], healthNote: "Hydrating, protein-containing and low in sugar. Estimated macros."},
   ];
-  STARTERS.forEach(x => { const r = saveRecipe({...x, image: commonsImg(x.img)}); r.seed = true; });
+  STARTERS.forEach(x => { const r = saveRecipe({...x, image: x.img ? commonsImg(x.img) : ""}); r.seed = true; });
   S.recipesSeeded = true;
   S.recipesSeedV = STARTER_SEED_V;
 }
@@ -5996,7 +6114,7 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
       const reply = await apiCall({
         model: S.settings.model, max_tokens: 2200,
         tools: [{type: "web_search_20250305", name: "web_search", max_uses: 4}],
-        system: `You are MIRA's healthy-recipe importer. From the given recipe link or pasted text, produce ONE structured recipe as JSON. If given a URL you have web search — read it and pull the recipe's own photo URL into "image" when the page exposes one. Prefer reasonably healthy recipes; if the dish is indulgent, still import it but explain in healthNote and add a "treat" tag. Return ONLY a JSON object: {"name":str,"image":str(url or ""),"cuisine":str,"tags":[str],"servings":int,"per":{"kcal":num,"p":num,"c":num,"f":num} for ONE serving,"ingredients":[str],"steps":[str],"source":str(url or ""),"healthNote":str}. Estimate macros from standard composition when not published and say so in healthNote; never invent official numbers. Tags are short lowercase words (high-protein, low-carb, vegetarian, quick, arab, breakfast). CRITICAL: You MUST ALWAYS return the JSON object and NOTHING else — never reply with prose, an apology, or an explanation. If you cannot open the link (Instagram, TikTok and some sites block reading), reconstruct a representative healthy version of the dish from its name and any visible text, set "source" to the given URL, and in "healthNote" clearly say this is a reconstructed version — not read from the original — and invite the user to paste the caption for accuracy. If you truly cannot identify any dish, still return a JSON object with an empty "name" and a "healthNote" explaining what you'd need.`,
+        system: `You are MIRA's healthy-recipe importer. From the given recipe link or pasted text, produce ONE structured recipe as JSON. If given a URL you have web search — read it and pull the recipe's own photo URL into "image" when the page exposes one. Prefer reasonably healthy recipes; if the dish is indulgent, still import it but explain in healthNote and add a "treat" tag. Return ONLY a JSON object: {"name":str,"image":str(url or ""),"cuisine":str,"meal":str,"tags":[str],"servings":int,"per":{"kcal":num,"p":num,"c":num,"f":num} for ONE serving,"ingredients":[str],"steps":[str],"source":str(url or ""),"healthNote":str}. "meal" is the category and MUST be exactly one of: "breakfast", "main" (lunch/dinner), "salad", "snack", "sweet" (dessert), "drink". Estimate macros from standard composition when not published and say so in healthNote; never invent official numbers. Tags are short lowercase words (high-protein, low-carb, vegetarian, quick, arab). CRITICAL: You MUST ALWAYS return the JSON object and NOTHING else — never reply with prose, an apology, or an explanation. If you cannot open the link (Instagram, TikTok and some sites block reading), reconstruct a representative healthy version of the dish from its name and any visible text, set "source" to the given URL, and in "healthNote" clearly say this is a reconstructed version — not read from the original — and invite the user to paste the caption for accuracy. If you truly cannot identify any dish, still return a JSON object with an empty "name" and a "healthNote" explaining what you'd need.`,
         messages: [{role: "user", content: `Import this into a healthy recipe:\n\n${text}`}],
       });
       const j = tryParseJson(reply);
@@ -6018,7 +6136,7 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
       const reply = await apiCall({
         model: S.settings.model, max_tokens: 3600,
         tools: [{type: "web_search_20250305", name: "web_search", max_uses: 6}],
-        system: `You are MIRA's healthy-recipe finder. Find 3–5 genuinely healthy recipes matching the request, using trusted cooking sources. Return ONLY a JSON array; each item: {"name":str,"image":str(a photo URL from the source or ""),"cuisine":str,"tags":[str],"servings":int,"per":{"kcal":num,"p":num,"c":num,"f":num} for ONE serving,"ingredients":[str],"steps":[str],"source":str(url),"healthNote":str}. Every recipe must include a real source URL you actually used. Estimate macros from standard composition where not published and note it; never invent official figures. Favour balanced whole-food recipes; include Kuwait/GCC-friendly options where relevant.`,
+        system: `You are MIRA's healthy-recipe finder. Find 3–5 genuinely healthy recipes matching the request, using trusted cooking sources. Return ONLY a JSON array; each item: {"name":str,"image":str(a photo URL from the source or ""),"cuisine":str,"meal":str,"tags":[str],"servings":int,"per":{"kcal":num,"p":num,"c":num,"f":num} for ONE serving,"ingredients":[str],"steps":[str],"source":str(url),"healthNote":str}. "meal" MUST be exactly one of: "breakfast", "main", "salad", "snack", "sweet", "drink". Every recipe must include a real source URL you actually used. Estimate macros from standard composition where not published and note it; never invent official figures. Favour balanced whole-food recipes; include Kuwait/GCC-friendly options where relevant.`,
         messages: [{role: "user", content: `Find healthy recipes: ${q}. I'm based in Kuwait (GCC).`}],
       });
       const j = tryParseJson(reply);
@@ -6028,7 +6146,7 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
       toast(n ? `Added ${n} recipe${n > 1 ? "s" : ""} ✓` : "No suitable recipes found — try rewording.");
     } catch (e) { R.recipeBusy = false; render(); toast("Search failed: " + e.message, 4400); }
   },
-  recipeAddManual(){ R.recipeForm = {name: "", image: "", servings: "1", cuisine: "", kcal: "", p: "", c: "", f: "", tags: "", ingredients: "", steps: ""}; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
+  recipeAddManual(){ R.recipeForm = {name: "", image: "", meal: "main", servings: "1", cuisine: "", kcal: "", p: "", c: "", f: "", tags: "", ingredients: "", steps: ""}; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
   recipeFormCancel(){ R.recipeForm = null; render(); },
   recipePhoto(){
     const inp = $("#fileImg"); inp.value = "";
@@ -6038,7 +6156,7 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
   recipeFormSave(){
     const f = R.recipeForm; if (!f) return;
     if (!f.name.trim()){ toast("Give the recipe a name."); return; }
-    const r = saveRecipe({name: f.name, image: f.image, cuisine: f.cuisine, servings: f.servings, tags: f.tags,
+    const r = saveRecipe({name: f.name, image: f.image, cuisine: f.cuisine, meal: f.meal, servings: f.servings, tags: f.tags,
       per: {kcal: f.kcal, p: f.p, c: f.c, f: f.f},
       ingredients: (f.ingredients || "").split("\n").map(s => s.trim()).filter(Boolean),
       steps: (f.steps || "").split("\n").map(s => s.trim()).filter(Boolean)});
