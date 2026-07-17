@@ -608,6 +608,10 @@ body.kb .chatbar{padding-bottom:6px}
 .snack-card .sc-amt{color:var(--txt3);font-weight:400}
 .snack-card .sc-why{font-size:13px;color:var(--txt2);margin:7px 0 10px;line-height:1.45}
 .snack-card .btn{width:auto}
+.ideas-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:16px 2px 9px}
+.ideas-head span{font-size:12px;font-weight:750;letter-spacing:.06em;text-transform:uppercase;color:var(--txt3)}
+.ideas-x{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:600;color:var(--txt2);background:var(--key);padding:5px 11px;border-radius:99px}
+.ideas-x:active{transform:scale(.96);color:var(--txt)}
 .fd-chips{display:flex;flex-wrap:wrap;gap:8px}
 .fd-chip{padding:6px 12px;border-radius:99px;background:var(--key);font-size:12.5px;color:var(--txt2)}
 .fd-chip b{color:var(--txt);font-weight:700}
@@ -972,7 +976,7 @@ body.kb .chatbar{padding-bottom:6px}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.64";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.65";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -3289,14 +3293,15 @@ function finishDayCardHTML(){
     <div class="card-h-row"><h3>${ic("target", 16)} Finish your day</h3>${last ? `<span class="set-status"><span class="dot"></span>last meal ${esc(entryTime(last))}</span>` : ""}</div>
     <div class="muted" style="margin:9px 0 10px">You still have room today — here's what's left to hit your targets:</div>
     <div class="fd-chips">${chip("kcal", remK, "")}${tg.protein ? chip("protein", remP, "g") : ""}${tg.carbs ? chip("carbs", remC, "g") : ""}${tg.fat ? chip("fat", remF, "g") : ""}</div>
-    <button class="btn sm" style="margin-top:12px" onclick="M.finishSuggest()" ${R.finishBusy ? "disabled" : ""}>${R.finishBusy ? "Thinking…" : ic("search", 15) + " Suggest what to eat"}</button>
-    ${ideas.length ? `<div class="snack-grid" style="margin-top:14px">${ideas.map((s, i) => `<div class="snack-card ai">
+    <button class="btn sm" style="margin-top:12px" onclick="M.finishSuggest()" ${R.finishBusy ? "disabled" : ""}>${R.finishBusy ? "Thinking…" : ic("search", 15) + (ideas.length ? " Suggest again" : " Suggest what to eat")}</button>
+    ${ideas.length ? `<div class="ideas-head"><span>Ideas to fill the gap</span><button class="ideas-x" onclick="M.finishClear()">${ic("x", 15)} Dismiss</button></div>
+    <div class="snack-grid">${ideas.map((s, i) => `<div class="snack-card ai">
       <div class="sc-top"><div class="sc-nm" dir="auto">${esc(s.name)}</div></div>
       <div class="sc-macros">${n0(s.kcal)} kcal · ${n0(s.p)}P · ${n0(s.c)}C · ${n0(s.f)}F${s.amount ? ` <span class="sc-amt">· ${esc(s.amount)}</span>` : ""}</div>
       ${s.why ? `<div class="sc-why" dir="auto">${esc(s.why)}</div>` : ""}
       <button class="btn sm sec" onclick="M.finishLog(${i})">${ic("plus", 14)} Log this</button>
     </div>`).join("")}</div>
-    <div class="tiny" style="margin-top:8px;color:var(--txt2)">Ideas to fill the gap — macros are estimates, logged with the current time.</div>` : ""}
+    <div class="tiny" style="margin-top:8px;color:var(--txt2)">Macros are estimates, logged with the current time. These clear when you leave the page.</div>` : ""}
   </div>`;
 }
 
@@ -4284,14 +4289,15 @@ function healthSnacksHTML(){
       <div class="muted" style="margin:2px 0 12px">${remK != null
         ? `You have about <b>${n0(remK)} kcal</b>${remP != null ? ` and <b>${n1(remP)} g protein</b>` : ""} left today. MIRA can suggest healthy snacks that fit — grounded in evidence, macros labelled as estimates.`
         : `Set daily targets in Settings and MIRA will tailor snacks to what's left in your day. Meanwhile, here are solid go-to options below.`}</div>
-      <button class="btn sm" onclick="M.snackSuggest()" ${busy ? "disabled" : ""}>${busy ? "Thinking…" : ic("search", 15) + " Suggest snacks that fit my day"}</button>
-      ${ideas.length ? `<div class="snack-grid" style="margin-top:14px">${ideas.map((s, i) => `<div class="snack-card ai">
+      <button class="btn sm" onclick="M.snackSuggest()" ${busy ? "disabled" : ""}>${busy ? "Thinking…" : ic("search", 15) + (ideas.length ? " Suggest again" : " Suggest snacks that fit my day")}</button>
+      ${ideas.length ? `<div class="ideas-head"><span>Suggested for you</span><button class="ideas-x" onclick="M.snackClear()">${ic("x", 15)} Dismiss</button></div>
+      <div class="snack-grid">${ideas.map((s, i) => `<div class="snack-card ai">
         <div class="sc-top"><div class="sc-nm" dir="auto">${esc(s.name)}</div>${s.tag ? `<span class="rc-tag">${esc(tagLabel(s.tag))}</span>` : ""}</div>
         <div class="sc-macros">${n0(s.kcal)} kcal · ${n0(s.p)}P · ${n0(s.c)}C · ${n0(s.f)}F${s.amount ? ` <span class="sc-amt">· ${esc(s.amount)}</span>` : ""}</div>
         ${s.why ? `<div class="sc-why" dir="auto">${esc(s.why)}</div>` : ""}
         <button class="btn sm sec" onclick="M.snackLogAI(${i})">${ic("plus", 14)} Log this snack</button>
       </div>`).join("")}</div>
-      <div class="tiny" style="margin-top:8px;color:var(--txt2)">Personalised by MIRA on your API key. Macros are estimates from standard composition.</div>` : ""}
+      <div class="tiny" style="margin-top:8px;color:var(--txt2)">Personalised on your API key · macros are estimates. These clear when you leave the page.</div>` : ""}
     </div>
 
     <div class="cat-title" style="margin:4px 2px 6px"><div class="ch-nm" style="font-size:16px">Great go-to snacks</div>
@@ -5954,12 +5960,12 @@ window.num = num;
 window.M = {
   // Opening the chat surface always starts a FRESH conversation; previous
   // chats stay saved and are reachable via the Chats (clock) button.
-  tab(t){ R.tab = t; R.homeCat = null; R.reviewOpen = false; R.quickOpen = false; R.widgetsOpen = false; R.sheet = null; if (t === "chat") R.convId = null; render(); },
-  goTab(t){ R.tab = t; R.homeCat = null; R.reviewOpen = false; R.quickOpen = false; R.widgetsOpen = false; R.sheet = null; if (t === "chat") R.convId = null; render(); },
+  tab(t){ R.tab = t; R.homeCat = null; R.reviewOpen = false; R.quickOpen = false; R.widgetsOpen = false; R.sheet = null; R.finishIdeas = null; R.snackIdeas = null; if (t === "chat") R.convId = null; render(); },
+  goTab(t){ R.tab = t; R.homeCat = null; R.reviewOpen = false; R.quickOpen = false; R.widgetsOpen = false; R.sheet = null; R.finishIdeas = null; R.snackIdeas = null; if (t === "chat") R.convId = null; render(); },
   home(catId){ R.homeCat = catId; R.reviewOpen = false; render(); },
   homeBack(){ R.homeCat = null; render(); },
   homeSection(id){ R.tab = "home"; R.homeSection = id; R.homeCat = null; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
-  backToHome(id){ R.tab = "home"; if (id) R.homeSection = id; R.homeCat = null; R.sheet = null; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
+  backToHome(id){ R.tab = "home"; if (id) R.homeSection = id; R.homeCat = null; R.sheet = null; R.finishIdeas = null; R.snackIdeas = null; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
   quickAdd(){ R.quickOpen = !R.quickOpen; render(); },
   quickClose(){ R.quickOpen = false; render(); },
   widgetsOpen(){ R.widgetsOpen = true; render(); },
@@ -6190,8 +6196,12 @@ window.M = {
   snackLogAI(i){
     const s = (R.snackIdeas || [])[i]; if (!s) return;
     logFood({name: s.name, amount: s.amount || "1 serving", kcal: num(s.kcal), p: num(s.p), c: num(s.c), f: num(s.f), conf: "estimate"});
+    R.snackIdeas = (R.snackIdeas || []).filter((_, idx) => idx !== i);
+    if (!R.snackIdeas.length) R.snackIdeas = null;
+    render();
     toast(`Logged: ${s.name} ✓`);
   },
+  snackClear(){ R.snackIdeas = null; render(); },
   async snackSuggest(){
     if (!S.settings.apiKey){ toast("Add your API key in Settings first."); R.tab = "set"; render(); return; }
     const t = todayStr(); const tot = dayTotals(t); const tg = S.settings.targets || {};
@@ -6796,8 +6806,12 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
   finishLog(i){
     const s = (R.finishIdeas || [])[i]; if (!s) return;
     logFood({name: s.name, amount: s.amount || "1 serving", kcal: num(s.kcal), p: num(s.p), c: num(s.c), f: num(s.f), conf: "estimate"});
+    R.finishIdeas = (R.finishIdeas || []).filter((_, idx) => idx !== i);
+    if (!R.finishIdeas.length) R.finishIdeas = null;
+    render();
     toast(`Logged: ${s.name} ✓`);
   },
+  finishClear(){ R.finishIdeas = null; render(); },
   acHide(){ const el = $("#acList"); if (el) el.innerHTML = ""; },
   acPick(i){
     const f = S.savedFoods[i];
