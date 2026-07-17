@@ -612,6 +612,9 @@ body.kb .chatbar{padding-bottom:6px}
 .ideas-head span{font-size:12px;font-weight:750;letter-spacing:.06em;text-transform:uppercase;color:var(--txt3)}
 .ideas-x{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:600;color:var(--txt2);background:var(--key);padding:5px 11px;border-radius:99px}
 .ideas-x:active{transform:scale(.96);color:var(--txt)}
+/* native time inputs must shrink to their column, never overflow into the next field */
+.field{min-width:0}
+input[type="time"]{width:100%;min-width:0;max-width:100%;box-sizing:border-box}
 .fd-chips{display:flex;flex-wrap:wrap;gap:8px}
 .fd-chip{padding:6px 12px;border-radius:99px;background:var(--key);font-size:12.5px;color:var(--txt2)}
 .fd-chip b{color:var(--txt);font-weight:700}
@@ -976,7 +979,7 @@ body.kb .chatbar{padding-bottom:6px}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.65";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.66";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -3196,10 +3199,10 @@ function foodHTML(){
       </div>
       <div class="field"><label>Meal</label>
         <div class="seg">${FOOD_MEALS.map(([v, l]) => `<button class="${(foodForm.meal || mealFromTime(foodForm.time || nowHM())) === v ? "on" : ""}" onclick="M.foodMeal('${v}')">${l}</button>`).join("")}</div></div>
-      <div class="row" style="gap:10px;margin-bottom:12px">
-        <div class="field" style="flex:2"><label>Amount eaten</label><input id="ffAmount" value="${esc(foodForm.amount)}" placeholder="e.g. 150 g / 1 piece" oninput="foodForm.amount=this.value"></div>
-        <div class="field" style="flex:1.15"><label>Time</label><input id="ffTime" type="time" value="${esc(foodForm.time || nowHM())}" oninput="foodForm.time=this.value"></div>
-        <div class="field" style="flex:1.25"><label>Calories</label><input id="ffK" type="number" inputmode="decimal" value="${esc(foodForm.kcal)}" oninput="foodForm.kcal=this.value"></div>
+      <div class="field"><label>Amount eaten</label><input id="ffAmount" value="${esc(foodForm.amount)}" placeholder="e.g. 150 g / 1 piece" oninput="foodForm.amount=this.value"></div>
+      <div class="grid2" style="margin-bottom:12px">
+        <div class="field"><label>Time</label><input id="ffTime" type="time" value="${esc(foodForm.time || nowHM())}" oninput="foodForm.time=this.value"></div>
+        <div class="field"><label>Calories (kcal)</label><input id="ffK" type="number" inputmode="decimal" value="${esc(foodForm.kcal)}" oninput="foodForm.kcal=this.value"></div>
       </div>
       <div class="grid4" style="margin-bottom:12px">
         <div class="field"><label>Protein g</label><input id="ffP" type="number" inputmode="decimal" value="${esc(foodForm.p)}" oninput="foodForm.p=this.value"></div>
