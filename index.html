@@ -249,7 +249,16 @@ body.kb .chatbar{padding-bottom:6px}
 }
 .lock.open{opacity:0;transform:scale(1.06);pointer-events:none}
 .lock .logo{font-size:36px;letter-spacing:.3em;color:var(--gold);text-indent:.3em}
-.lock .hint{color:var(--txt2);font-size:14px}
+.lock .hint{color:var(--txt2);font-size:14px;text-align:center;max-width:300px}
+.enc-lock .enc-badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--gold);
+  background:var(--gold-soft);border:1px solid var(--line2);padding:5px 12px;border-radius:99px;margin-top:-8px}
+.enc-form{display:flex;flex-direction:column;gap:12px;width:100%;max-width:320px}
+.enc-form input{width:100%;text-align:center;font-size:16px;padding:14px}
+.enc-form .btn{width:100%}
+.enc-form .enc-face{display:flex;align-items:center;justify-content:center;gap:8px}
+.enc-note{font-size:12px;color:var(--txt3);text-align:center;max-width:320px;line-height:1.5}
+/* encryption block in Settings */
+.enc-warn{background:rgba(221,164,63,.12);border:1px solid rgba(221,164,63,.3);border-radius:10px;padding:10px 12px;font-size:12.5px;color:var(--amber);line-height:1.5;margin:10px 0}
 .pin-dots{display:flex;gap:16px;height:18px}
 .pin-dots i{
   width:14px;height:14px;border-radius:50%;border:1.5px solid var(--txt3);
@@ -963,7 +972,7 @@ body.kb .chatbar{padding-bottom:6px}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.63";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.64";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1128,6 +1137,7 @@ const BLANK = () => ({
     name: "", style: "balanced", depth: "balanced", lang: "match",
     apiKey: "", model: "claude-sonnet-5", pinHash: null, webSearch: true,
     theme: "dark", account: null,
+    encOn: false, faceAuto: true, autoLockMin: 0,   // on-device encryption + auto-lock
     targets: {kcal: 2000, protein: 120, carbs: 0, fat: 0},
     waterGoal: 2500,
     coach: {name: "", email: ""},
@@ -1175,10 +1185,39 @@ const BLANK = () => ({
   inbody: [],         // {id, date, weight, score, bfm, smm, vfa, pa}
 });
 
+/* ===== On-device encryption (envelope: a random data key wrapped by your
+   passphrase, and optionally by a Face ID / fingerprint passkey via WebAuthn
+   PRF). AES-GCM 256 for data + key wrapping; PBKDF2 250k for the passphrase.
+   The passphrase is always the master key; Face ID is a convenience layer. ===== */
+const SEC = {
+  te: new TextEncoder(), td: new TextDecoder(), ITER: 250000,
+  b64(buf){ let s = ""; const b = new Uint8Array(buf); for (let i = 0; i < b.length; i++) s += String.fromCharCode(b[i]); return btoa(s); },
+  ub64(s){ const bin = atob(s); const b = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) b[i] = bin.charCodeAt(i); return b; },
+  rand(n){ return crypto.getRandomValues(new Uint8Array(n)); },
+  async kekFromPass(pass, salt){
+    const base = await crypto.subtle.importKey("raw", SEC.te.encode(pass), "PBKDF2", false, ["deriveKey"]);
+    return crypto.subtle.deriveKey({name: "PBKDF2", salt, iterations: SEC.ITER, hash: "SHA-256"}, base, {name: "AES-GCM", length: 256}, false, ["wrapKey", "unwrapKey"]);
+  },
+  async kekFromRaw(raw){
+    const base = await crypto.subtle.importKey("raw", raw, "HKDF", false, ["deriveKey"]);
+    return crypto.subtle.deriveKey({name: "HKDF", salt: SEC.te.encode("mira-prf-v1"), info: SEC.te.encode("kek"), hash: "SHA-256"}, base, {name: "AES-GCM", length: 256}, false, ["wrapKey", "unwrapKey"]);
+  },
+  genDEK(){ return crypto.subtle.generateKey({name: "AES-GCM", length: 256}, true, ["encrypt", "decrypt"]); },
+  async wrapDEK(dek, kek){ const iv = SEC.rand(12); const ct = await crypto.subtle.wrapKey("raw", dek, kek, {name: "AES-GCM", iv}); return {iv: SEC.b64(iv), ct: SEC.b64(ct)}; },
+  unwrapDEK(w, kek){ return crypto.subtle.unwrapKey("raw", SEC.ub64(w.ct), kek, {name: "AES-GCM", iv: SEC.ub64(w.iv)}, {name: "AES-GCM", length: 256}, true, ["encrypt", "decrypt"]); },
+  async encData(dek, plaintext){ const iv = SEC.rand(12); const ct = await crypto.subtle.encrypt({name: "AES-GCM", iv}, dek, SEC.te.encode(plaintext)); return {iv: SEC.b64(iv), ct: SEC.b64(ct)}; },
+  async decData(dek, d){ const pt = await crypto.subtle.decrypt({name: "AES-GCM", iv: SEC.ub64(d.iv)}, dek, SEC.ub64(d.ct)); return SEC.td.decode(pt); },
+};
+
 let S = BLANK();
+let _encWrapper = null;   // when data is encrypted, holds the on-disk envelope until unlocked
 try {
   const raw = localStorage.getItem("mira.data");
-  if (raw) S = Object.assign(BLANK(), JSON.parse(raw));
+  if (raw){
+    const parsed = JSON.parse(raw);
+    if (parsed && parsed.mira_enc === 1) _encWrapper = parsed;        // encrypted — unlock before use
+    else S = Object.assign(BLANK(), parsed);
+  }
 } catch (e) { console.warn("MIRA: could not load saved data", e); }
 
 /* migrate the old one-chat-per-domain format into conversations */
@@ -1297,10 +1336,105 @@ function bindViewport(){
 let saveT = null;
 function save(){
   clearTimeout(saveT);
-  saveT = setTimeout(() => {
-    try { localStorage.setItem("mira.data", JSON.stringify(S)); }
-    catch (e) { toast("Storage full — export a backup and clear old chats."); }
-  }, 150);
+  saveT = setTimeout(persist, 150);
+}
+async function persist(){
+  try {
+    if (R._dek && R._enc){
+      const data = await SEC.encData(R._dek, JSON.stringify(S));
+      const w = {mira_enc: 1, v: 2, passSalt: R._enc.passSalt, iter: SEC.ITER, passWrap: R._enc.passWrap, data};
+      if (R._enc.prf) w.prf = R._enc.prf;
+      localStorage.setItem("mira.data", JSON.stringify(w));
+    } else {
+      localStorage.setItem("mira.data", JSON.stringify(S));
+    }
+  } catch (e) { toast("Storage error — export a backup and clear old chats."); }
+}
+/* Turn on encryption: wrap a fresh data key with the passphrase, verify the
+   round-trip, and only then keep it. Returns nothing; throws on failure. */
+async function encEnable(pass){
+  const dek = await SEC.genDEK();
+  const passSaltRaw = SEC.rand(16);
+  const kek = await SEC.kekFromPass(pass, passSaltRaw);
+  const passWrap = await SEC.wrapDEK(dek, kek);
+  R._dek = dek;
+  R._enc = {passSalt: SEC.b64(passSaltRaw), passWrap, prf: null};
+  S.settings.encOn = true;
+  await persist();
+  // verify: re-read, unwrap with the passphrase, decrypt, confirm it parses
+  const w = JSON.parse(localStorage.getItem("mira.data"));
+  const kek2 = await SEC.kekFromPass(pass, SEC.ub64(w.passSalt));
+  const dek2 = await SEC.unwrapDEK(w.passWrap, kek2);
+  const parsed = JSON.parse(await SEC.decData(dek2, w.data));
+  if (!parsed || !parsed.settings) throw new Error("verification failed");
+}
+async function encUnlockWith(dek, w){
+  const parsed = JSON.parse(await SEC.decData(dek, w.data));
+  S = Object.assign(BLANK(), parsed); window.S = S;
+  R._dek = dek; R._enc = {passSalt: w.passSalt, passWrap: w.passWrap, prf: w.prf || null};
+  _encWrapper = null;
+  migrateChats(); applyTheme();
+  R.mode = (S.domains[0] && S.domains[0].id) || "work"; R.convId = null;
+  touchActivity();
+  render();
+}
+async function encUnlockPass(pass){
+  const w = _encWrapper; if (!w) return;
+  const kek = await SEC.kekFromPass(pass, SEC.ub64(w.passSalt));
+  const dek = await SEC.unwrapDEK(w.passWrap, kek);   // throws on wrong passphrase
+  await encUnlockWith(dek, w);
+}
+function encLock(){
+  if (!R._enc && !S.settings.encOn) return;
+  // drop the key from memory and re-show the unlock screen
+  _encWrapper = JSON.parse(localStorage.getItem("mira.data"));
+  R._dek = null;
+  render();
+}
+/* auto-lock timer */
+let _lockTimer = null;
+function touchActivity(){
+  clearTimeout(_lockTimer);
+  const mins = S.settings.autoLockMin || 0;
+  if (mins > 0 && R._dek) _lockTimer = setTimeout(encLock, mins * 60000);
+}
+/* ---- Face ID / fingerprint via WebAuthn PRF ---- */
+async function facePrfOutput(rawId, prfSalt){
+  const assertion = await navigator.credentials.get({publicKey: {
+    challenge: SEC.rand(32),
+    allowCredentials: [{type: "public-key", id: rawId}],
+    userVerification: "required", timeout: 60000,
+    extensions: {prf: {eval: {first: prfSalt}}},
+  }});
+  const ext = assertion.getClientExtensionResults();
+  return (ext && ext.prf && ext.prf.results && ext.prf.results.first) ? ext.prf.results.first : null;
+}
+async function faceRegister(){
+  if (!window.PublicKeyCredential) throw new Error("Passkeys aren't supported on this browser.");
+  if (!R._dek) throw new Error("Unlock first.");
+  const prfSalt = SEC.rand(32);
+  const cred = await navigator.credentials.create({publicKey: {
+    challenge: SEC.rand(32),
+    rp: {name: "MIRA"},
+    user: {id: SEC.rand(16), name: (S.settings.name || "MIRA") + " · MIRA", displayName: S.settings.name || "MIRA"},
+    pubKeyCredParams: [{type: "public-key", alg: -7}, {type: "public-key", alg: -257}],
+    authenticatorSelection: {authenticatorAttachment: "platform", userVerification: "required", residentKey: "preferred"},
+    timeout: 60000, extensions: {prf: {}},
+  }});
+  const prfOut = await facePrfOutput(cred.rawId, prfSalt);
+  if (!prfOut) throw new Error("This device can't create a Face ID key for encryption (PRF unsupported).");
+  const kek = await SEC.kekFromRaw(prfOut);
+  const wrap = await SEC.wrapDEK(R._dek, kek);
+  R._enc.prf = {credId: SEC.b64(cred.rawId), salt: SEC.b64(prfSalt), wrap};
+  await persist();
+}
+async function faceUnlock(){
+  const w = _encWrapper; if (!w || !w.prf) throw new Error("Face ID isn't set up.");
+  const prfOut = await facePrfOutput(SEC.ub64(w.prf.credId), SEC.ub64(w.prf.salt));
+  if (!prfOut) throw new Error("Couldn't derive the Face ID key.");
+  const kek = await SEC.kekFromRaw(prfOut);
+  const dek = await SEC.unwrapDEK(w.prf.wrap, kek);
+  await encUnlockWith(dek, w);
 }
 
 /* runtime (not persisted) */
@@ -1347,6 +1481,7 @@ const R = {
   habitDraft: "",
   editFoodId: null,    // id of the food entry currently being edited (null = logging new)
   mealMenuId: null,    // id of the food entry whose quick meal-move picker is open
+  _dek: null, _enc: null, _encBusy: false, _encErr: "", _faceTried: false, encSetup: null,  // encryption runtime
   moodForm: {mood: 0, energy: 0, note: ""},
   bodyOpen: {meas: false, photo: false, lab: false},
   measForm: {date: "", waist: "", chest: "", arms: "", thigh: "", hips: "", neck: ""},
@@ -1419,6 +1554,7 @@ function renderMain(){
   // preserve scroll on a same-screen data re-render (e.g. toggling a day, logging food)
   const prevScroll = (() => { const c = $("#content"); return c ? c.scrollTop : 0; })();
   const sameView = viewKey() === R._vk;
+  if (_encWrapper && !R._dek){ app.innerHTML = encLockHTML(); if (_encWrapper.prf && !R._faceTried && S.settings.faceAuto !== false){ R._faceTried = true; setTimeout(() => M.encFaceUnlock(true), 350); } return; }
   if (S.settings.pinHash && !R.unlocked){ app.innerHTML = lockHTML(); return; }
   if (FEATURES.emailSignup && !S.settings.account && !S.onboarded){ app.innerHTML = signupHTML(); return; }
   if (!S.onboarded){ app.innerHTML = onbHTML(); return; }
@@ -1480,6 +1616,7 @@ function renderMain(){
     if (ta && keepInput){ ta.value = keepInput; ta.style.height = "auto"; ta.style.height = Math.min(ta.scrollHeight, 120) + "px"; }
     afterChatRender();
   }
+  if (R._dek) touchActivity();
 }
 const tabBtn = (id, icon, lb) => `<button class="${R.tab === id ? "on" : ""}" onclick="M.tab('${id}')">${ic(icon, 21)}${lb}</button>`;
 const tabTitle = () => ({food: "Nutrition", body: "Body composition", insights: "Insights", set: "Settings"}[R.tab] || "");
@@ -2181,6 +2318,20 @@ function lockHTML(){
       <button class="ghost" onclick="M.pinDel()" aria-label="Delete digit">⌫</button>
     </div>
     <button class="forgot" onclick="M.pinForgot()">Forgot PIN?</button>
+  </div>`;
+}
+function encLockHTML(){
+  const hasFace = !!(_encWrapper && _encWrapper.prf);
+  return `<div class="lock enc-lock" id="lock">
+    <div class="logo">MIRA</div>
+    <div class="enc-badge">${ic("lock", 15)} Encrypted</div>
+    <div class="hint">Your data is encrypted on this device.</div>
+    <div class="enc-form">
+      <input id="encPass" type="password" inputmode="text" autocomplete="current-password" placeholder="Passphrase" onkeydown="if(event.key==='Enter')M.encUnlock()">
+      <button class="btn" onclick="M.encUnlock()" ${R._encBusy ? "disabled" : ""}>${R._encBusy ? "Unlocking…" : "Unlock"}</button>
+      ${hasFace ? `<button class="btn sec enc-face" onclick="M.encFaceUnlock(false)" ${R._encBusy ? "disabled" : ""}>${ic("user", 16)} Unlock with Face ID / fingerprint</button>` : ""}
+    </div>
+    <div class="enc-note" id="encNote">${R._encErr ? esc(R._encErr) : "Only your passphrase (or registered Face ID) can decrypt this."}</div>
   </div>`;
 }
 async function pinPress(d){
@@ -5663,7 +5814,37 @@ function settingsHTML(){
       <button class="btn sm sec" onclick="M.pinSet()">${st.pinHash ? "Change PIN" : "Set PIN"}</button>
       ${st.pinHash ? `<button class="btn sm danger" onclick="M.pinOff()">Remove PIN</button>` : ""}
     </div>
-    <div class="tiny" style="margin-top:8px">A PIN in a local file is a casual lock, not hardened security — keep sensitive data backed up and private.</div>
+    <div class="tiny" style="margin-top:8px">A PIN is a casual screen lock — for real protection use encryption below.</div>
+  </div>
+
+  <div class="card" id="setEncrypt">
+    <div class="card-h-row"><h3>${ic("key", 16)} Encryption</h3>
+      <span class="set-status ${st.encOn ? "on" : ""}"><span class="dot"></span>${st.encOn ? "Encrypted" : "Off"}</span></div>
+    ${st.encOn ? `
+      <div class="muted" style="margin:12px 0 10px">Your data is <b>encrypted at rest</b> on this device (AES-GCM). It can only be read with your passphrase${R._enc && R._enc.prf ? " or Face ID" : ""}.</div>
+      <div class="row" style="flex-wrap:wrap">
+        ${R._enc && R._enc.prf
+          ? `<button class="btn sm sec" onclick="M.encFaceDisable()">Remove Face ID</button>`
+          : `<button class="btn sm" onclick="M.encFaceEnable()">${ic("user", 15)} Enable Face ID / fingerprint</button>`}
+        <button class="btn sm sec" onclick="M.encLockNow()">${ic("lock", 15)} Lock now</button>
+        <button class="btn sm danger" onclick="M.encDisable()">Turn off encryption</button>
+      </div>
+      <div class="field" style="margin-top:12px"><label>Auto-lock when idle</label>
+        <select onchange="M.autoLockSet(this.value)">
+          ${[["0","Never"],["1","After 1 minute"],["5","After 5 minutes"],["15","After 15 minutes"],["60","After 1 hour"]].map(([v,l]) => `<option value="${v}" ${String(st.autoLockMin || 0) === v ? "selected" : ""}>${l}</option>`).join("")}
+        </select></div>
+    ` : R.encSetup === "on" ? `
+      <div class="enc-warn">${ic("key", 13)} <b>Write your passphrase down somewhere safe.</b> It's the only way to read your data — if you forget it, your logs cannot be recovered (that's what makes it secure). MIRA can't reset it.</div>
+      <div class="field"><label>New passphrase (min 8 characters)</label><input id="encP1" type="password" autocomplete="new-password" placeholder="Passphrase"></div>
+      <div class="field"><label>Confirm passphrase</label><input id="encP2" type="password" autocomplete="new-password" placeholder="Repeat it" onkeydown="if(event.key==='Enter')M.encConfirm()"></div>
+      <div class="row">
+        <button class="btn sm" onclick="M.encConfirm()" ${R._encBusy ? "disabled" : ""}>${R._encBusy ? "Encrypting…" : "Encrypt my data"}</button>
+        <button class="btn sm sec" onclick="M.encCancel()">Cancel</button>
+      </div>
+    ` : `
+      <div class="muted" style="margin:12px 0 10px">Lock your logs, chats and API key behind a passphrase. Everything is encrypted on this device (AES-GCM); nothing readable is left in storage or backups. Add Face ID after setup for quick unlock.</div>
+      <button class="btn sm" onclick="M.encStart()">${ic("lock", 15)} Encrypt my data</button>
+    `}
   </div>
 
   ${(() => {
@@ -5691,16 +5872,27 @@ function settingsHTML(){
   </div>`;
 }
 
-function backup(){
-  S.lastBackup = Date.now(); save();
-  const data = JSON.stringify(S, null, 2);
+async function backup(){
+  S.lastBackup = Date.now();
+  let data, encrypted = false;
+  if (R._dek && R._enc){
+    // export the encrypted envelope — safe to store anywhere, needs the passphrase
+    const d = await SEC.encData(R._dek, JSON.stringify(S));
+    const w = {mira_enc: 1, v: 2, passSalt: R._enc.passSalt, iter: SEC.ITER, passWrap: R._enc.passWrap, data: d};
+    if (R._enc.prf) w.prf = R._enc.prf;
+    localStorage.setItem("mira.data", JSON.stringify(w));
+    data = JSON.stringify(w, null, 2); encrypted = true;
+  } else {
+    save();
+    data = JSON.stringify(S, null, 2);
+  }
   const blob = new Blob([data], {type: "application/json"});
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  a.download = `mira-backup-${todayStr()}.json`;
+  a.download = `mira-backup-${todayStr()}${encrypted ? "-encrypted" : ""}.json`;
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-  toast("Backup exported ✓ (includes your API key — keep it private)");
+  toast(encrypted ? "Encrypted backup exported ✓ (needs your passphrase)" : "Backup exported ✓ (includes your API key — keep it private)");
   render();
 }
 // Rough on-device storage picture for the Settings meter.
@@ -5724,6 +5916,15 @@ function restore(){
     r.onload = () => {
       try {
         const j = JSON.parse(r.result);
+        if (j && j.mira_enc === 1){
+          // encrypted backup — store it and unlock with the passphrase
+          if (!confirm("Restore this ENCRYPTED backup? You'll unlock it with its passphrase.")) return;
+          localStorage.setItem("mira.data", JSON.stringify(j));
+          _encWrapper = j; R._dek = null; R._enc = null; R._faceTried = false; R.tab = "home";
+          render();
+          toast("Encrypted backup loaded — enter its passphrase to unlock.", 4200);
+          return;
+        }
         if (!j || typeof j !== "object" || !("foods" in j) || !("settings" in j)) throw new Error("not a MIRA backup");
         if (!confirm("Replace everything on this device with this backup?")) return;
         S = Object.assign(BLANK(), j);
@@ -5777,6 +5978,53 @@ window.M = {
     save(); render();
   },
   goBackup(){ R.tab = "set"; render(); setTimeout(() => M.setJump("setBackup"), 70); },
+  /* ---- on-device encryption ---- */
+  encStart(){ if (!window.crypto || !crypto.subtle){ toast("This browser can't encrypt (needs HTTPS)."); return; } R.encSetup = "on"; render(); },
+  encCancel(){ R.encSetup = null; render(); },
+  async encConfirm(){
+    const p1 = ($("#encP1") || {}).value || "", p2 = ($("#encP2") || {}).value || "";
+    if (p1.length < 8){ toast("Use at least 8 characters."); return; }
+    if (p1 !== p2){ toast("The two passphrases don't match."); return; }
+    R._encBusy = true; render();
+    try {
+      await encEnable(p1);
+      R._encBusy = false; R.encSetup = null; save(); render();
+      toast("Your data is now encrypted ✓");
+    } catch (e) {
+      // revert to plaintext so nothing is half-encrypted
+      R._dek = null; R._enc = null; S.settings.encOn = false; R._encBusy = false;
+      try { localStorage.setItem("mira.data", JSON.stringify(S)); } catch (_) {}
+      render();
+      toast("Couldn't enable encryption — nothing changed.", 4200);
+    }
+  },
+  async encDisable(){
+    if (!confirm("Turn off encryption? Your data will be stored unencrypted again on this device.")) return;
+    R._dek = null; R._enc = null; S.settings.encOn = false;
+    try { localStorage.setItem("mira.data", JSON.stringify(S)); } catch (_) {}
+    render(); toast("Encryption turned off.");
+  },
+  encLockNow(){ encLock(); },
+  autoLockSet(v){ S.settings.autoLockMin = parseInt(v) || 0; save(); touchActivity(); render(); },
+  async encFaceEnable(){
+    toast("Confirm with Face ID / fingerprint…", 2000);
+    try { await faceRegister(); render(); toast("Face ID unlock enabled ✓"); }
+    catch (e) { toast(e.message || "Couldn't enable Face ID here.", 4600); }
+  },
+  encFaceDisable(){ if (R._enc){ R._enc.prf = null; persist(); render(); toast("Face ID unlock removed."); } },
+  async encUnlock(){
+    const el = $("#encPass"); const pass = el ? el.value : "";
+    if (!pass){ R._encErr = "Enter your passphrase."; render(); return; }
+    R._encBusy = true; R._encErr = ""; render();
+    try { await encUnlockPass(pass); R._encBusy = false; }
+    catch (e) { R._encBusy = false; R._encErr = "Wrong passphrase — try again."; render(); const p = $("#encPass"); if (p){ p.value = ""; p.focus(); } }
+  },
+  async encFaceUnlock(auto){
+    if (R._encBusy) return;
+    R._encBusy = true; if (!auto){ R._encErr = ""; render(); }
+    try { await faceUnlock(); R._encBusy = false; }
+    catch (e) { R._encBusy = false; if (!auto){ R._encErr = "Face ID didn't work — use your passphrase."; } render(); }
+  },
   qa(a){
     R.quickOpen = false;
     if (a === "water"){ const t = todayStr(); S.water[t] = (S.water[t] || 0) + 1; save(); render(); toast(`Water +1 glass · ${(S.water[t] * 0.25).toFixed(2)} L today`); return; }
@@ -6942,6 +7190,7 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
     localStorage.removeItem("mira.data");
     S = BLANK();
     window.S = S;
+    _encWrapper = null; R._dek = null; R._enc = null;
     R.unlocked = true; R.tab = "chat"; R.mode = "work"; R.convId = null; R.sheet = null;
     applyTheme();
     render();
