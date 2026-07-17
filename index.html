@@ -850,6 +850,27 @@ body.kb .chatbar{padding-bottom:6px}
 .rv-scale .rv-pack{flex:0 0 auto;font-size:12px;font-weight:700;color:var(--gold);background:var(--card);border:1px solid var(--line2);padding:6px 11px;border-radius:99px}
 .rv-scale .rv-pack:active{transform:scale(.96)}
 .rv-scale .rv-note{flex-basis:100%;font-size:11.5px;color:var(--txt2);margin-top:1px}
+/* undo snackbar */
+.snackbar{position:fixed;left:50%;transform:translateX(-50%) translateY(20px);bottom:calc(72px + env(safe-area-inset-bottom));z-index:70;
+  display:flex;align-items:center;gap:14px;padding:11px 12px 11px 16px;border-radius:12px;background:var(--card2);border:1px solid var(--line2);
+  box-shadow:0 10px 30px rgba(0,0,0,.4);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;max-width:calc(100% - 28px)}
+.snackbar.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
+.snackbar #snackMsg{font-size:13.5px;color:var(--txt)}
+.snackbar #snackBtn{flex:0 0 auto;font-size:13px;font-weight:700;color:var(--gold);background:none;padding:6px 10px;border-radius:8px}
+.snackbar #snackBtn:active{background:var(--gold-soft)}
+/* food entry edit button */
+.food-it .edit{flex:0 0 auto;color:var(--txt3);min-width:36px;min-height:36px;display:flex;align-items:center;justify-content:center;border-radius:9px;background:none}
+.food-it .edit:active{background:var(--key);color:var(--acc)}
+.edit-banner{display:flex;align-items:center;gap:10px;padding:9px 12px;margin-bottom:10px;border-radius:10px;background:var(--acc-soft);border:1px solid var(--line2);font-size:13px;color:var(--txt2)}
+.edit-banner button{flex:0 0 auto;margin-inline-start:auto;width:auto}
+/* crash recovery screen */
+.crash{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.crash-box{max-width:420px;text-align:center;background:var(--card);border:1px solid var(--line2);border-radius:18px;padding:26px 22px}
+.crash-t{font-size:19px;font-weight:750;margin-bottom:8px}
+.crash-d{font-size:14px;color:var(--txt2);line-height:1.5;margin-bottom:12px}
+.crash-err{font-size:11.5px;color:var(--txt3);font-family:ui-monospace,monospace;word-break:break-word;background:var(--bg2);border-radius:8px;padding:8px 10px;margin-bottom:16px}
+.crash-btns{display:flex;gap:10px;justify-content:center}
+.crash-btns .btn{width:auto}
 .fold>h3{cursor:pointer;user-select:none;margin-bottom:0}
 .fold>h3 .chev{margin-inline-start:auto;color:var(--txt3);transition:transform .2s;font-size:12px}
 .fold.open>h3{margin-bottom:10px}
@@ -919,6 +940,7 @@ body.kb .chatbar{padding-bottom:6px}
 <body>
 <div id="app"></div>
 <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+<div id="snackbar" class="snackbar" role="status"><span id="snackMsg"></span><button id="snackBtn" onclick="undoDo()">Undo</button></div>
 <input type="file" id="fileImg" accept="image/*,application/pdf" class="hidden">
 <input type="file" id="fileBackup" accept=".json,application/json" class="hidden">
 <script>
@@ -936,7 +958,7 @@ body.kb .chatbar{padding-bottom:6px}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.60";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.61";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1318,6 +1340,7 @@ const R = {
   healthTab: "supps",  // supps | sleep | habits | fasting | mood | review
   suppForm: {open: false, name: "", dose: "", timing: "Morning"},
   habitDraft: "",
+  editFoodId: null,    // id of the food entry currently being edited (null = logging new)
   moodForm: {mood: 0, energy: 0, note: ""},
   bodyOpen: {meas: false, photo: false, lab: false},
   measForm: {date: "", waist: "", chest: "", arms: "", thigh: "", hips: "", neck: ""},
@@ -1345,7 +1368,43 @@ const R = {
 };
 
 /* ---------------- root render ---------------- */
+// Crash guard: a bug in one screen must never white-screen the whole app.
+// All data is safe in localStorage, so we show a recovery screen instead.
 function render(){
+  try { renderMain(); }
+  catch (e){ renderCrash(e); }
+}
+function renderCrash(e){
+  try { console.error("MIRA render error:", e); } catch (_) {}
+  const app = document.getElementById("app");
+  if (!app) return;
+  app.innerHTML = `<div class="crash"><div class="crash-box">
+    <div class="crash-t">Something went wrong</div>
+    <div class="crash-d">A display error occurred, but <b>your data is safe</b> on this device. Try reloading — if it keeps happening, export a backup and reinstall.</div>
+    <div class="crash-err">${esc(String((e && e.message) || e || "unknown error"))}</div>
+    <div class="crash-btns">
+      <button class="btn" onclick="location.reload()">Reload</button>
+      <button class="btn sec" onclick="try{backup()}catch(_){}">Export backup</button>
+    </div>
+  </div></div>`;
+}
+// Lightweight undo snackbar (DOM-managed, survives re-renders like the toast).
+let _undoFn = null, _undoTimer = null;
+function undoBar(msg, fn, ms = 6000){
+  _undoFn = fn;
+  const b = $("#snackbar"); if (!b) { toast(msg); return; }
+  const m = $("#snackMsg"); if (m) m.textContent = msg;
+  b.classList.add("show");
+  clearTimeout(_undoTimer);
+  _undoTimer = setTimeout(() => { b.classList.remove("show"); _undoFn = null; }, ms);
+}
+function undoDo(){
+  const b = $("#snackbar"); if (b) b.classList.remove("show");
+  clearTimeout(_undoTimer);
+  const fn = _undoFn; _undoFn = null;
+  if (fn) fn();
+}
+function renderMain(){
   const app = $("#app");
   const keepInput = $("#chatIn") ? $("#chatIn").value : "";
   const ae = document.activeElement;
@@ -2871,6 +2930,7 @@ function foodItemHTML(f){
   return `<div class="food-it">
     <div><div class="nm" dir="auto">${esc(f.name)} ${f.conf && f.conf !== "user" ? `<span class="badge ${f.conf}">${f.conf}</span>` : ""}</div>
     <div class="meta">${entryTime(f) ? `<span class="fi-time">${esc(entryTime(f))}</span> · ` : ""}${f.amount ? esc(f.amount) + " · " : ""}${n0(f.kcal)} kcal · ${n1(f.p)}P · ${n1(f.c)}C · ${n1(f.f)}F</div></div>
+    <button class="edit" aria-label="Edit ${esc(f.name)}" onclick="M.foodEdit('${f.id}')">${ic("edit", 14)}</button>
     <button class="del" aria-label="Delete ${esc(f.name)}" onclick="M.foodDel('${f.id}')">✕</button>
   </div>`;
 }
@@ -2962,8 +3022,9 @@ function foodHTML(){
   </div>
 
   <div class="card fold open" id="addFoodCard">
-    <h3 onclick="this.parentElement.classList.toggle('open')">${ic("plus", 16)} Log food <span class="chev">▶</span></h3>
+    <h3 onclick="this.parentElement.classList.toggle('open')">${ic(R.editFoodId ? "edit" : "plus", 16)} ${R.editFoodId ? "Edit entry" : "Log food"} <span class="chev">▶</span></h3>
     <div class="fold-body">
+      ${R.editFoodId ? `<div class="edit-banner">${ic("edit", 14)} Editing a logged entry <button class="btn sm sec" onclick="M.foodEditCancel()">Cancel</button></div>` : ""}
       <div class="field ac-wrap"><label>Food name</label>
         <input id="ffName" value="${esc(foodForm.name)}" placeholder="Start typing — saved foods appear" dir="auto" autocomplete="off" style="padding-right:44px"
           oninput="M.ffName(this.value)" onfocus="M.ffName(this.value)" onblur="setTimeout(()=>M.acHide(),180)">
@@ -2981,7 +3042,7 @@ function foodHTML(){
         <div class="field"><label>Protein g</label><input id="ffP" type="number" inputmode="decimal" value="${esc(foodForm.p)}" oninput="foodForm.p=this.value"></div>
         <div class="field"><label>Carbs g</label><input id="ffC" type="number" inputmode="decimal" value="${esc(foodForm.c)}" oninput="foodForm.c=this.value"></div>
         <div class="field"><label>Fat g</label><input id="ffF" type="number" inputmode="decimal" value="${esc(foodForm.f)}" oninput="foodForm.f=this.value"></div>
-        <div class="field"><label>&nbsp;</label><button class="btn sm" style="width:100%;min-height:44px" onclick="M.foodSave()">Save</button></div>
+        <div class="field"><label>&nbsp;</label><button class="btn sm" style="width:100%;min-height:44px" onclick="M.foodSave()">${R.editFoodId ? "Update" : "Save"}</button></div>
       </div>
       <div class="grid2" style="gap:8px">
         <button class="btn sm sec" style="width:100%" onclick="M.scToggle()">${ic("sliders", 15)} Portion scaler</button>
@@ -3335,6 +3396,19 @@ function foodSaveDirect(){
   const s = sanity(it);
   if (s.errors.length){ toast(s.errors[0], 4200); return; }
   if (s.warnings.length) toast(s.warnings[0], 3600);
+  if (R.editFoodId){
+    const f = S.foods.find(x => x.id === R.editFoodId);
+    if (f){
+      const time = (it.time || "").trim() || nowHM();
+      Object.assign(f, {name: it.name.trim(), amount: (it.amount || "").trim(), time, meal: it.meal || mealFromTime(time),
+        kcal: num(it.kcal), p: num(it.p), c: num(it.c), f: num(it.f), conf: it.conf || "user"});
+    }
+    R.editFoodId = null;
+    Object.assign(foodForm, {name: "", amount: "", time: "", meal: "", kcal: "", p: "", c: "", f: "", conf: "user", scOpen: false});
+    save(); render();
+    toast(f ? "Entry updated ✓" : "That entry no longer exists.");
+    return;
+  }
   logFood(it);
   Object.assign(foodForm, {name: "", amount: "", time: "", meal: "", kcal: "", p: "", c: "", f: "", conf: "user", scOpen: false});
   render();
@@ -6485,7 +6559,27 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
     toast(`Scaled to ${eat}/${base} ✓`);
   },
   foodSave: foodSaveDirect,
-  foodDel(id){ S.foods = S.foods.filter(f => f.id !== id); save(); render(); },
+  foodDel(id){
+    const idx = S.foods.findIndex(f => f.id === id);
+    if (idx < 0) return;
+    const removed = S.foods[idx];
+    if (R.editFoodId === id) R.editFoodId = null;   // don't leave the form editing a deleted entry
+    S.foods.splice(idx, 1); save(); render();
+    undoBar("Entry deleted", () => { S.foods.splice(Math.min(idx, S.foods.length), 0, removed); save(); render(); toast("Restored ✓"); });
+  },
+  foodEdit(id){
+    const f = S.foods.find(x => x.id === id); if (!f) return;
+    R.editFoodId = id; R.tab = "food"; R.homeCat = null;
+    Object.assign(foodForm, {name: f.name, amount: f.amount || "", time: entryTime(f), meal: entryMeal(f),
+      kcal: String(f.kcal ?? ""), p: String(f.p ?? ""), c: String(f.c ?? ""), f: String(f.f ?? ""), conf: f.conf || "user", scOpen: false});
+    render();
+    const card = $("#addFoodCard"); if (card){ card.classList.add("open"); card.scrollIntoView({behavior: "smooth", block: "start"}); }
+  },
+  foodEditCancel(){
+    R.editFoodId = null;
+    Object.assign(foodForm, {name: "", amount: "", time: "", meal: "", kcal: "", p: "", c: "", f: "", conf: "user", scOpen: false});
+    render();
+  },
   findMacros,
   extractPhoto,
   /* ---- food-log report (date range, multi-format) ---- */
