@@ -612,9 +612,11 @@ body.kb .chatbar{padding-bottom:6px}
 .ideas-head span{font-size:12px;font-weight:750;letter-spacing:.06em;text-transform:uppercase;color:var(--txt3)}
 .ideas-x{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:600;color:var(--txt2);background:var(--key);padding:5px 11px;border-radius:99px}
 .ideas-x:active{transform:scale(.96);color:var(--txt)}
-/* native time inputs must shrink to their column, never overflow into the next field */
+/* native date/time pickers have a large intrinsic width — force them to shrink
+   to their column so they never overflow into an adjacent field */
 .field{min-width:0}
-input[type="time"]{width:100%;min-width:0;max-width:100%;box-sizing:border-box}
+input[type="time"],input[type="date"],input[type="datetime-local"],input[type="month"]{
+  width:100%;min-width:0;max-width:100%;box-sizing:border-box}
 .fd-chips{display:flex;flex-wrap:wrap;gap:8px}
 .fd-chip{padding:6px 12px;border-radius:99px;background:var(--key);font-size:12.5px;color:var(--txt2)}
 .fd-chip b{color:var(--txt);font-weight:700}
@@ -979,7 +981,7 @@ input[type="time"]{width:100%;min-width:0;max-width:100%;box-sizing:border-box}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.66";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.67";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
