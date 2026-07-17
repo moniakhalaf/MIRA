@@ -981,7 +981,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.69";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.70";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -5623,7 +5623,9 @@ function settingsHTML(){
   const heroSub = [st.profession, st.goal].filter(Boolean).join(" · ") || "Tap Profile to personalise MIRA";
   const modelName = (MODELS.find(m => m.id === st.model) || {}).name || st.model || "—";
   const themeName = (THEMES.find(t => t[0] === (st.theme || "dark")) || [,"Dark"])[1];
-  const nav = [["setProfile","Profile"],["setAppearance","Appearance"],["setNutrition","Nutrition"],["setDomains","Domains"],["setAI","Assistant"],["setSecurity","Privacy"]];
+  const langRow = LANGUAGES.find(l => l[0] === st.lang);
+  const langLabel = (!st.lang || st.lang === "match") ? "Match what I write" : (langRow ? langRow[2] : st.lang);
+  const nav = [["setProfile","Profile"],["setLanguage","Language"],["setAppearance","Appearance"],["setNutrition","Nutrition"],["setDomains","Domains"],["setAI","Assistant"],["setSecurity","Privacy"]];
   return `
   <div class="set-hero">
     <span class="set-avatar">${esc(initial)}</span>
@@ -5645,14 +5647,19 @@ function settingsHTML(){
     <div class="field"><label>Primary goal</label><input value="${esc(st.goal || "")}" oninput="S.settings.goal=this.value;save()" placeholder="e.g. Lose 4 kg, ship my thesis" dir="auto"></div>
     <div class="field"><label>Coaching style</label>
       <div class="seg">${["direct","balanced","encouraging"].map(v => `<button class="${st.style === v ? "on" : ""}" onclick="M.set('style','${v}')">${v[0].toUpperCase() + v.slice(1)}</button>`).join("")}</div></div>
-    <div class="field"><label>Answer depth</label>
+    <div class="field" style="margin-bottom:0"><label>Answer depth</label>
       <div class="seg">${["short","balanced","detailed"].map(v => `<button class="${st.depth === v ? "on" : ""}" onclick="M.set('depth','${v}')">${v[0].toUpperCase() + v.slice(1)}</button>`).join("")}</div></div>
-    <div class="field" style="margin-bottom:0"><label>Language</label>
+  </div>
+
+  <div class="set-group-label">Language</div>
+  <div class="card" id="setLanguage">
+    <div class="card-h-row"><h3>${ic("globe", 16)} Language</h3><span class="set-status">${esc(langLabel)}</span></div>
+    <div class="field" style="margin:10px 0 0"><label>MIRA replies in</label>
       <select onchange="M.set('lang',this.value)">
         <option value="match" ${(st.lang || "match") === "match" ? "selected" : ""}>Match what I write</option>
         ${LANGUAGES.map(([code, en, native]) => `<option value="${code}" ${st.lang === code ? "selected" : ""}>${native}${native === en ? "" : " — " + en}</option>`).join("")}
       </select>
-      <div class="tiny" style="margin-top:6px">MIRA writes all its replies, suggestions and reviews in this language. Menu labels stay in English for now.</div></div>
+      <div class="tiny" style="margin-top:8px">MIRA writes all its replies, suggestions, macro lookups and reviews in this language. Choose <b>Match what I write</b> to switch language mid-conversation. Menu labels stay in English for now.</div></div>
   </div>
 
   <div class="set-group-label">Appearance</div>
