@@ -981,7 +981,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.68";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.69";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1138,6 +1138,32 @@ const MODELS = [
   {id: "claude-opus-4-8",            name: "Claude Opus 4.8 (most capable)"},
   {id: "claude-haiku-4-5-20251001",  name: "Claude Haiku 4.5 (fastest)"},
 ];
+
+// [code, English name, native name, rtl] — MIRA writes its replies in the chosen language.
+const LANGUAGES = [
+  ["en","English","English",false], ["ar","Arabic","العربية",true], ["es","Spanish","Español",false],
+  ["fr","French","Français",false], ["de","German","Deutsch",false], ["it","Italian","Italiano",false],
+  ["pt","Portuguese","Português",false], ["ru","Russian","Русский",false], ["zh","Chinese","中文",false],
+  ["ja","Japanese","日本語",false], ["ko","Korean","한국어",false], ["hi","Hindi","हिन्दी",false],
+  ["ur","Urdu","اردو",true], ["fa","Persian","فارسی",true], ["tr","Turkish","Türkçe",false],
+  ["nl","Dutch","Nederlands",false], ["sv","Swedish","Svenska",false], ["pl","Polish","Polski",false],
+  ["id","Indonesian","Bahasa Indonesia",false], ["ms","Malay","Bahasa Melayu",false], ["th","Thai","ไทย",false],
+  ["vi","Vietnamese","Tiếng Việt",false], ["he","Hebrew","עברית",true], ["el","Greek","Ελληνικά",false],
+  ["uk","Ukrainian","Українська",false], ["ro","Romanian","Română",false], ["cs","Czech","Čeština",false],
+  ["hu","Hungarian","Magyar",false], ["fil","Filipino","Filipino",false], ["bn","Bengali","বাংলা",false],
+  ["ta","Tamil","தமிழ்",false], ["sw","Swahili","Kiswahili",false], ["no","Norwegian","Norsk",false],
+  ["da","Danish","Dansk",false], ["fi","Finnish","Suomi",false], ["hy","Armenian","Հայերեն",false],
+];
+function langName(code){ const L = LANGUAGES.find(x => x[0] === code); return L ? L[2] : code; }
+function langIsRTL(code){ const L = LANGUAGES.find(x => x[0] === code); return !!(L && L[3]); }
+// Short directive appended to standalone AI prompts so their text fields
+// (names, notes, reasons, steps) come back in the user's chosen language.
+function replyLangNote(){
+  const code = S.settings.lang;
+  if (!code || code === "match" || code === "en") return "";
+  const L = LANGUAGES.find(x => x[0] === code);
+  return L ? ` Write all human-readable text you output (names, notes, reasons, steps) in ${L[2]} (${L[1]}); keep JSON keys and numbers unchanged.` : "";
+}
 
 const BLANK = () => ({
   version: 1,
@@ -2305,7 +2331,7 @@ function startVoice(cb){
   if (!SR){ toast("Voice input isn't supported on this browser."); return; }
   try {
     const r = new SR();
-    r.lang = (S.settings.lang === "ar") ? "ar-SA" : (navigator.language || "en-US");
+    r.lang = S.settings.lang === "ar" ? "ar-SA" : (S.settings.lang && S.settings.lang !== "match" ? S.settings.lang : (navigator.language || "en-US"));
     r.interimResults = false; r.maxAlternatives = 1;
     r.onresult = e => cb(e.results[0][0].transcript);
     r.onerror = ev => { if (ev.error !== "aborted") toast("Didn't catch that — try again."); };
@@ -2408,8 +2434,11 @@ function onbHTML(){
           <div class="seg">${segBtn("style", "direct", "Direct")}${segBtn("style", "balanced", "Balanced")}${segBtn("style", "encouraging", "Encouraging")}</div></div>
         <div class="field"><label>Answer depth</label>
           <div class="seg">${segBtn("depth", "short", "Short")}${segBtn("depth", "balanced", "Balanced")}${segBtn("depth", "detailed", "Detailed")}</div></div>
-        <div class="field"><label>Language</label>
-          <div class="seg">${segBtn("lang", "match", "Match me")}${segBtn("lang", "en", "English")}${segBtn("lang", "ar", "العربية")}</div></div>
+        <div class="field"><label>Language MIRA replies in</label>
+          <select onchange="M.onbSeg('lang',this.value)">
+            <option value="match" ${onb.lang === "match" ? "selected" : ""}>Match what I write</option>
+            ${LANGUAGES.map(([code, en, native]) => `<option value="${code}" ${onb.lang === code ? "selected" : ""}>${native}${native === en ? "" : " — " + en}</option>`).join("")}
+          </select></div>
       </div>`;
   } else if (step === 2){
     body = `${head("Your areas", "Pick the specialist modes you want — add custom ones now or later.")}
@@ -2576,9 +2605,16 @@ function systemPrompt(dom){
   const depthTxt = {short: "Short — lead with the answer; add detail only when essential.",
     balanced: "Balanced — the answer plus the reasoning that matters.",
     detailed: "Detailed — thorough treatment with the working shown."}[st.depth];
-  const langTxt = {match: "Reply in whatever language the user writes in — Arabic, English, or others — and switch mid-conversation with them.",
-    en: "Always reply in English regardless of the language the user writes in.",
-    ar: "Always reply in Arabic (Modern Standard, with Gulf phrasing where natural) regardless of the language the user writes in."}[st.lang];
+  const langTxt = (() => {
+    const code = st.lang || "match";
+    if (code === "match") return "Reply in whatever language the user writes in — switch mid-conversation with them.";
+    if (code === "ar") return "Always write your entire reply in Arabic (Modern Standard, with Gulf phrasing where natural) regardless of which language the user writes in, unless they explicitly ask you to switch.";
+    if (code === "en") return "Always reply in English regardless of which language the user writes in, unless they explicitly ask you to switch.";
+    const L = (typeof LANGUAGES !== "undefined") ? LANGUAGES.find(x => x[0] === code) : null;
+    return L
+      ? `Always write your entire reply in ${L[2]} (${L[1]}) regardless of which language the user writes in, unless they explicitly ask you to switch. Use natural, fluent, native-quality ${L[1]}.`
+      : "Reply in whatever language the user writes in.";
+  })();
 
   return `You are MIRA (My Integrated Reasoning Assistant), ${st.name ? `the personal assistant of ${st.name}` : "a personal assistant"} — one trustworthy assistant spanning the user's whole life. You are currently in ${dom.name} mode.
 ${st.profession ? `\nTHE USER'S PROFESSION / FIELD: ${st.profession}. In Work and anywhere relevant, bring the standards, terminology, frameworks, tools and deliverable formats of a ${st.profession}. Never assume a different field.\n` : ""}
@@ -3673,7 +3709,7 @@ async function findMacros(){
     const txt = await apiCall({
       model: S.settings.model, max_tokens: 1600,
       ...(S.settings.webSearch ? {tools: [{type: "web_search_20250305", name: "web_search", max_uses: 3}]} : {}),
-      system: `You are MIRA's nutrition lookup. Return realistic macro values for the food the user names — including restaurant/café items (Kuwait and GCC venues especially) and pan-Arab dishes in Arabic script or transliteration. Account for cooking method (مشوي grilled / مقلي fried / مسلوق boiled / roasted).${S.settings.webSearch ? ` You have web search: check the venue's or manufacturer's OFFICIALLY published nutrition first; only fall back to an estimate if nothing official exists.` : ""} Confidence rules: "official" ONLY if the venue or manufacturer actually publishes these values${S.settings.webSearch ? " (verified via search or known)" : " and you know them"}; "estimate" when reconstructed from standard composition data; "unavailable" when even an estimate would be irresponsible. Never invent official figures. After any research, end your reply with ONLY a JSON object: {"name":str,"amount":str,"kcal":num,"p":num,"c":num,"f":num,"conf":"official"|"estimate"|"unavailable","note":str(short, includes basis/source)}. Energy must be consistent: kcal ≈ 4p+4c+9f.`,
+      system: `You are MIRA's nutrition lookup. Return realistic macro values for the food the user names — including restaurant/café items (Kuwait and GCC venues especially) and pan-Arab dishes in Arabic script or transliteration. Account for cooking method (مشوي grilled / مقلي fried / مسلوق boiled / roasted).${S.settings.webSearch ? ` You have web search: check the venue's or manufacturer's OFFICIALLY published nutrition first; only fall back to an estimate if nothing official exists.` : ""} Confidence rules: "official" ONLY if the venue or manufacturer actually publishes these values${S.settings.webSearch ? " (verified via search or known)" : " and you know them"}; "estimate" when reconstructed from standard composition data; "unavailable" when even an estimate would be irresponsible. Never invent official figures. After any research, end your reply with ONLY a JSON object: {"name":str,"amount":str,"kcal":num,"p":num,"c":num,"f":num,"conf":"official"|"estimate"|"unavailable","note":str(short, includes basis/source)}. Energy must be consistent: kcal ≈ 4p+4c+9f.${replyLangNote()}`,
       messages: [{role: "user", content: `Food: ${name}${foodForm.amount.trim() ? ` — amount: ${foodForm.amount.trim()}` : ""}`}],
     });
     const j = tryParseJson(txt);
@@ -3737,7 +3773,7 @@ async function extractPhoto(){
         : {type: "image", source: {type: "base64", media_type: file.media_type, data: file.data}};
       const txt = await apiCall({
         model: S.settings.model, max_tokens: 1600,
-        system: `You are MIRA's nutrition-label and meal reader. Extract food items with macros from the attached photo or document. If it is a printed nutrition label, use its values EXACTLY (official). If it is a meal photo, estimate portions and macros (estimate) and say the assumed portion in the note. Reply with ONLY a JSON array: [{"name":str,"amount":str,"kcal":num,"p":num,"c":num,"f":num,"conf":"official"|"estimate","note":str,"basis":num,"unit":str,"pkg":num}]. The macros MUST correspond to "basis" of "unit": if the label gives values per a reference amount, set "basis" to that number and "unit" to g/ml/serving/piece and put the per-basis macros in kcal/p/c/f (e.g. per 100 ml → basis 100, unit "ml"). If the package's total net quantity is printed (e.g. a 320 ml can, a 200 g bag), set "pkg" to that number in the SAME unit. Omit basis/unit/pkg only when truly not shown. Never guess a printed value you cannot read.`,
+        system: `You are MIRA's nutrition-label and meal reader. Extract food items with macros from the attached photo or document. If it is a printed nutrition label, use its values EXACTLY (official). If it is a meal photo, estimate portions and macros (estimate) and say the assumed portion in the note. Reply with ONLY a JSON array: [{"name":str,"amount":str,"kcal":num,"p":num,"c":num,"f":num,"conf":"official"|"estimate","note":str,"basis":num,"unit":str,"pkg":num}]. The macros MUST correspond to "basis" of "unit": if the label gives values per a reference amount, set "basis" to that number and "unit" to g/ml/serving/piece and put the per-basis macros in kcal/p/c/f (e.g. per 100 ml → basis 100, unit "ml"). If the package's total net quantity is printed (e.g. a 320 ml can, a 200 g bag), set "pkg" to that number in the SAME unit. Omit basis/unit/pkg only when truly not shown. Never guess a printed value you cannot read.${replyLangNote()}`,
         messages: [{role: "user", content: [block, {type: "text", text: "Extract the food items and macros. Include the per-amount basis and the package total so the user can scale to what they actually had."}]}],
       });
       const arr = tryParseJson(txt);
@@ -5612,7 +5648,11 @@ function settingsHTML(){
     <div class="field"><label>Answer depth</label>
       <div class="seg">${["short","balanced","detailed"].map(v => `<button class="${st.depth === v ? "on" : ""}" onclick="M.set('depth','${v}')">${v[0].toUpperCase() + v.slice(1)}</button>`).join("")}</div></div>
     <div class="field" style="margin-bottom:0"><label>Language</label>
-      <div class="seg">${[["match","Match me"],["en","English"],["ar","العربية"]].map(([v,l]) => `<button class="${st.lang === v ? "on" : ""}" onclick="M.set('lang','${v}')">${l}</button>`).join("")}</div></div>
+      <select onchange="M.set('lang',this.value)">
+        <option value="match" ${(st.lang || "match") === "match" ? "selected" : ""}>Match what I write</option>
+        ${LANGUAGES.map(([code, en, native]) => `<option value="${code}" ${st.lang === code ? "selected" : ""}>${native}${native === en ? "" : " — " + en}</option>`).join("")}
+      </select>
+      <div class="tiny" style="margin-top:6px">MIRA writes all its replies, suggestions and reviews in this language. Menu labels stay in English for now.</div></div>
   </div>
 
   <div class="set-group-label">Appearance</div>
@@ -6086,7 +6126,7 @@ window.M = {
       const budget = remK != null
         ? `The user has about ${Math.round(remK)} kcal${remP != null ? ` and ${remP.toFixed(0)} g protein` : ""} remaining today. Keep each snack within roughly that calorie room (a snack is ~100–250 kcal).`
         : `The user hasn't set targets; suggest sensible ~100–250 kcal snacks.`;
-      const system = `You are MIRA's health & nutrition specialist. Suggest 5–6 genuinely healthy snacks tailored to the user, based on reputable nutrition guidance. ${budget} Favour whole foods, protein and fibre; include Kuwait/GCC-friendly options (labneh, dates, nuts, hummus, ful, laban). Reply with ONLY a JSON array (no prose, no code fence); each item: {"name":str,"amount":str(portion),"kcal":num,"p":num,"c":num,"f":num,"tag":str(one of: high-protein, fibre, healthy-fats, gcc, low-cal, treat),"why":str(one short honest sentence)}. Macros are estimates from standard composition — keep them realistic and consistent (kcal ≈ 4p+4c+9f).`;
+      const system = `You are MIRA's health & nutrition specialist. Suggest 5–6 genuinely healthy snacks tailored to the user, based on reputable nutrition guidance. ${budget} Favour whole foods, protein and fibre; include Kuwait/GCC-friendly options (labneh, dates, nuts, hummus, ful, laban). Reply with ONLY a JSON array (no prose, no code fence); each item: {"name":str,"amount":str(portion),"kcal":num,"p":num,"c":num,"f":num,"tag":str(one of: high-protein, fibre, healthy-fats, gcc, low-cal, treat),"why":str(one short honest sentence)}. Macros are estimates from standard composition — keep them realistic and consistent (kcal ≈ 4p+4c+9f).${replyLangNote()}`;
       const arr = (await llmJsonArray(system, `Suggest healthy snacks for me right now. I'm based in Kuwait (GCC).`, 1900)).filter(x => x && x.name);
       R.snackIdeas = arr.slice(0, 6);
       R.snackBusy = false; render();
@@ -6668,7 +6708,7 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
     R.finishBusy = true; render();
     try {
       const ctx = `Remaining today: ${Math.round(remK)} kcal${tg.protein ? `, ${remP.toFixed(0)} g protein` : ""}${tg.carbs ? `, ${remC.toFixed(0)} g carbs` : ""}${tg.fat ? `, ${remF.toFixed(0)} g fat` : ""}. It's ${nowHM()} now${last ? `; the last meal was logged at ${entryTime(last)}` : ""}.`;
-      const system = `You are MIRA's nutrition specialist helping the user finish their daily macro targets. ${ctx} Suggest 3–5 realistic foods or mini-meals (eaten individually or together) that would fill roughly the remaining macros — prioritise closing the biggest gap (often protein), keep it appropriate for the time of day, and do not blow past the remaining calories. Kuwait/GCC-friendly options welcome. Reply with ONLY a JSON array (no prose, no code fence); each item {"name":str,"amount":str(portion),"kcal":num,"p":num,"c":num,"f":num,"why":str(one short sentence, mention which gap it fills)}. Macros are realistic estimates and consistent (kcal ≈ 4p+4c+9f).`;
+      const system = `You are MIRA's nutrition specialist helping the user finish their daily macro targets. ${ctx} Suggest 3–5 realistic foods or mini-meals (eaten individually or together) that would fill roughly the remaining macros — prioritise closing the biggest gap (often protein), keep it appropriate for the time of day, and do not blow past the remaining calories. Kuwait/GCC-friendly options welcome. Reply with ONLY a JSON array (no prose, no code fence); each item {"name":str,"amount":str(portion),"kcal":num,"p":num,"c":num,"f":num,"why":str(one short sentence, mention which gap it fills)}. Macros are realistic estimates and consistent (kcal ≈ 4p+4c+9f).${replyLangNote()}`;
       const arr = (await llmJsonArray(system, `What should I eat to finish my macros for today? I'm based in Kuwait (GCC).`, 2000)).filter(x => x && x.name);
       R.finishIdeas = arr.slice(0, 5); R.finishBusy = false; render();
       toast(arr.length ? "Ideas ready ✓" : "No suggestions — try again.");
@@ -6827,7 +6867,7 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
       const reply = await apiCall({
         model: S.settings.model, max_tokens: 2200,
         tools: [{type: "web_search_20250305", name: "web_search", max_uses: 4}],
-        system: `You are MIRA's healthy-recipe importer. From the given recipe link or pasted text, produce ONE structured recipe as JSON. If given a URL you have web search — read it and pull the recipe's own photo URL into "image" when the page exposes one. Prefer reasonably healthy recipes; if the dish is indulgent, still import it but explain in healthNote and add a "treat" tag. Return ONLY a JSON object: {"name":str,"image":str(url or ""),"cuisine":str,"meal":str,"tags":[str],"servings":int,"per":{"kcal":num,"p":num,"c":num,"f":num} for ONE serving,"ingredients":[str],"steps":[str],"source":str(url or ""),"healthNote":str}. "meal" is the category and MUST be exactly one of: "breakfast", "main" (lunch/dinner), "salad", "snack", "sweet" (dessert), "drink". Estimate macros from standard composition when not published and say so in healthNote; never invent official numbers. Tags are short lowercase words (high-protein, low-carb, vegetarian, quick, arab). CRITICAL: You MUST ALWAYS return the JSON object and NOTHING else — never reply with prose, an apology, or an explanation. If you cannot open the link (Instagram, TikTok and some sites block reading), reconstruct a representative healthy version of the dish from its name and any visible text, set "source" to the given URL, and in "healthNote" clearly say this is a reconstructed version — not read from the original — and invite the user to paste the caption for accuracy. If you truly cannot identify any dish, still return a JSON object with an empty "name" and a "healthNote" explaining what you'd need.`,
+        system: `You are MIRA's healthy-recipe importer. From the given recipe link or pasted text, produce ONE structured recipe as JSON. If given a URL you have web search — read it and pull the recipe's own photo URL into "image" when the page exposes one. Prefer reasonably healthy recipes; if the dish is indulgent, still import it but explain in healthNote and add a "treat" tag. Return ONLY a JSON object: {"name":str,"image":str(url or ""),"cuisine":str,"meal":str,"tags":[str],"servings":int,"per":{"kcal":num,"p":num,"c":num,"f":num} for ONE serving,"ingredients":[str],"steps":[str],"source":str(url or ""),"healthNote":str}. "meal" is the category and MUST be exactly one of: "breakfast", "main" (lunch/dinner), "salad", "snack", "sweet" (dessert), "drink". Estimate macros from standard composition when not published and say so in healthNote; never invent official numbers. Tags are short lowercase words (high-protein, low-carb, vegetarian, quick, arab). CRITICAL: You MUST ALWAYS return the JSON object and NOTHING else — never reply with prose, an apology, or an explanation. If you cannot open the link (Instagram, TikTok and some sites block reading), reconstruct a representative healthy version of the dish from its name and any visible text, set "source" to the given URL, and in "healthNote" clearly say this is a reconstructed version — not read from the original — and invite the user to paste the caption for accuracy. If you truly cannot identify any dish, still return a JSON object with an empty "name" and a "healthNote" explaining what you'd need.${replyLangNote()}`,
         messages: [{role: "user", content: `Import this into a healthy recipe:\n\n${text}`}],
       });
       const j = tryParseJson(reply);
@@ -6850,7 +6890,7 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
           : {type: "image", source: {type: "base64", media_type: file.media_type, data: file.data}};
         const reply = await apiCall({
           model: S.settings.model, max_tokens: 2200,
-          system: `You are MIRA's recipe reader. Read the recipe shown in the attached image/screenshot or document and return it as JSON. Return ONLY a JSON object: {"name":str,"cuisine":str,"meal":str,"tags":[str],"servings":int,"per":{"kcal":num,"p":num,"c":num,"f":num} for ONE serving,"ingredients":[str],"steps":[str],"healthNote":str}. "meal" MUST be exactly one of: "breakfast","main","salad","snack","sweet","drink". Read the ingredient quantities and the method steps EXACTLY as written. If per-serving macros aren't printed, estimate them from the ingredients and say so in healthNote; never invent official figures. Tags are short lowercase words. Reply with ONLY the JSON object, no prose.`,
+          system: `You are MIRA's recipe reader. Read the recipe shown in the attached image/screenshot or document and return it as JSON. Return ONLY a JSON object: {"name":str,"cuisine":str,"meal":str,"tags":[str],"servings":int,"per":{"kcal":num,"p":num,"c":num,"f":num} for ONE serving,"ingredients":[str],"steps":[str],"healthNote":str}. "meal" MUST be exactly one of: "breakfast","main","salad","snack","sweet","drink". Read the ingredient quantities and the method steps EXACTLY as written. If per-serving macros aren't printed, estimate them from the ingredients and say so in healthNote; never invent official figures. Tags are short lowercase words. Reply with ONLY the JSON object, no prose.${replyLangNote()}`,
           messages: [{role: "user", content: [block, {type: "text", text: "Extract this recipe. Fill every field you can read from the image."}]}],
         });
         const j = tryParseJson(reply);
@@ -6883,7 +6923,7 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
       const reply = await apiCall({
         model: S.settings.model, max_tokens: 3600,
         tools: [{type: "web_search_20250305", name: "web_search", max_uses: 6}],
-        system: `You are MIRA's healthy-recipe finder. Find 3–5 genuinely healthy recipes matching the request, using trusted cooking sources. Return ONLY a JSON array; each item: {"name":str,"image":str(a photo URL from the source or ""),"cuisine":str,"meal":str,"tags":[str],"servings":int,"per":{"kcal":num,"p":num,"c":num,"f":num} for ONE serving,"ingredients":[str],"steps":[str],"source":str(url),"healthNote":str}. "meal" MUST be exactly one of: "breakfast", "main", "salad", "snack", "sweet", "drink". Every recipe must include a real source URL you actually used. Estimate macros from standard composition where not published and note it; never invent official figures. Favour balanced whole-food recipes; include Kuwait/GCC-friendly options where relevant.`,
+        system: `You are MIRA's healthy-recipe finder. Find 3–5 genuinely healthy recipes matching the request, using trusted cooking sources. Return ONLY a JSON array; each item: {"name":str,"image":str(a photo URL from the source or ""),"cuisine":str,"meal":str,"tags":[str],"servings":int,"per":{"kcal":num,"p":num,"c":num,"f":num} for ONE serving,"ingredients":[str],"steps":[str],"source":str(url),"healthNote":str}. "meal" MUST be exactly one of: "breakfast", "main", "salad", "snack", "sweet", "drink". Every recipe must include a real source URL you actually used. Estimate macros from standard composition where not published and note it; never invent official figures. Favour balanced whole-food recipes; include Kuwait/GCC-friendly options where relevant.${replyLangNote()}`,
         messages: [{role: "user", content: `Find healthy recipes: ${q}. I'm based in Kuwait (GCC).`}],
       });
       const j = tryParseJson(reply);

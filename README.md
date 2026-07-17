@@ -22,7 +22,7 @@ This repository contains the **standalone edition**: a single self-contained `in
 - **Specialist embodiment** — each domain answers as a senior professional of that field (the marketer, the engineer, the photographer, the student's tutor); new custom domains get an AI-generated specialist brief
 - **Deep Solve** — a two-stage engine for hard problems: problem map first, then systematic resolution with assumptions and trade-offs stated
 - Multiple saved conversations per mode, kept until you delete them
-- Multilingual — replies in whatever language you write in (Arabic ↔ English mid-conversation)
+- **Multilingual — pick your language** from 35+ (English, العربية, Español, Français, Deutsch, 中文, 日本語, हिन्दी, Русский, Português, Türkçe, فارسی, اردو, বাংলা, and more) and MIRA writes all its replies, suggestions, macro lookups and reviews in it — or leave it on **"Match what I write"** to switch language mid-conversation with you. (Menu labels stay in English for now; every AI-generated response is in your chosen language.)
 - Live data awareness — your food log, targets, hydration and InBody history are fed into every conversation automatically ("what should I eat tonight?" gets exact remaining amounts)
 - **Command-style search** — "Search everything" jumps to any screen (type "recipes", "sleep", "budget") and searches across tasks, notes, foods, recipes, workouts, bills, trips and chats on this device
 - **Grouped areas** — each domain's actions are organised under clear headers (Track · Plan · Tools · Ask MIRA) instead of one long list, so features are easy to find
