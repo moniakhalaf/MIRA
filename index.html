@@ -838,6 +838,28 @@ body.kb .chatbar{padding-bottom:6px}
 .set-row .desc{font-size:12px;color:var(--txt3)}
 .set-row .end{margin-inline-start:auto;display:flex;align-items:center;gap:8px}
 .dom-color{width:16px;height:16px;border-radius:50%}
+/* ---- Settings: sectioned, best-in-class layout ---- */
+.set-hero{display:flex;align-items:center;gap:15px;padding:18px;margin-bottom:6px;border:1px solid var(--line);border-radius:20px;
+  background:linear-gradient(135deg,var(--gold-soft),transparent 70%)}
+.set-avatar{width:56px;height:56px;border-radius:50%;flex:0 0 auto;display:grid;place-items:center;
+  font-size:24px;font-weight:800;color:var(--btn-ink);background:linear-gradient(150deg,var(--gold),color-mix(in srgb,var(--gold) 70%,#fff))}
+.set-hero-nm{font-size:19px;font-weight:750;line-height:1.15}
+.set-hero-sub{font-size:12.5px;color:var(--txt2);margin-top:3px}
+.set-nav{position:sticky;top:0;z-index:6;display:flex;gap:8px;overflow-x:auto;padding:11px 0;margin:2px 0 4px;
+  background:var(--bg);-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.set-nav::-webkit-scrollbar{display:none}
+.set-nav button{flex:0 0 auto;padding:7px 15px;border-radius:99px;border:1px solid var(--line2);background:var(--card);
+  color:var(--txt2);font-size:12.5px;font-weight:600;white-space:nowrap;display:inline-flex;align-items:center;gap:6px;transition:transform .12s,color .12s,border-color .12s}
+.set-nav button:active{transform:scale(.95)}
+.set-nav button.on{color:var(--gold);border-color:var(--gold);background:var(--gold-soft)}
+.set-group-label{font-size:11.5px;font-weight:750;letter-spacing:.09em;text-transform:uppercase;color:var(--txt3);margin:20px 6px 9px;display:flex;align-items:center;gap:7px}
+.set-status{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--txt2);
+  padding:4px 10px;border-radius:99px;background:var(--key)}
+.set-status .dot{width:8px;height:8px;border-radius:50%;background:var(--txt3);box-shadow:0 0 0 3px color-mix(in srgb,var(--txt3) 22%,transparent)}
+.set-status.on{color:var(--green)}
+.set-status.on .dot{background:var(--green);box-shadow:0 0 0 3px color-mix(in srgb,var(--green) 22%,transparent)}
+.card-h-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.card-h-row h3{margin:0}
 .sheet-mask{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:60;opacity:0;transition:opacity .25s}
 .sheet-mask.show{opacity:1}
 .sheet{
@@ -876,7 +898,7 @@ body.kb .chatbar{padding-bottom:6px}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.53";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.54";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -5167,8 +5189,23 @@ async function genPersona(d){
 let setDraft = null;
 function settingsHTML(){
   const st = S.settings;
+  const initial = (st.name || "M").trim().charAt(0).toUpperCase() || "M";
+  const heroSub = [st.profession, st.goal].filter(Boolean).join(" · ") || "Tap Profile to personalise MIRA";
+  const modelName = (MODELS.find(m => m.id === st.model) || {}).name || st.model || "—";
+  const themeName = (THEMES.find(t => t[0] === (st.theme || "dark")) || [,"Dark"])[1];
+  const nav = [["setProfile","Profile"],["setAppearance","Appearance"],["setNutrition","Nutrition"],["setDomains","Domains"],["setAI","Assistant"],["setSecurity","Privacy"]];
   return `
-  <div class="card">
+  <div class="set-hero">
+    <span class="set-avatar">${esc(initial)}</span>
+    <div style="min-width:0">
+      <div class="set-hero-nm" dir="auto">${esc(st.name || "Welcome")}</div>
+      <div class="set-hero-sub" dir="auto">${esc(heroSub)}</div>
+    </div>
+  </div>
+  <div class="set-nav">${nav.map(([id, l]) => `<button onclick="M.setJump('${id}')">${l}</button>`).join("")}</div>
+
+  <div class="set-group-label">You</div>
+  <div class="card" id="setProfile">
     <h3>${ic("user", 16)} Profile</h3>
     ${FEATURES.emailSignup && st.account && st.account.email ? `<div class="set-row" style="padding-top:0">
       <div><div class="k">${esc(st.account.email)}</div><div class="desc">Account on this device — sync arrives with the hosted backend</div></div>
@@ -5180,13 +5217,14 @@ function settingsHTML(){
       <div class="seg">${["direct","balanced","encouraging"].map(v => `<button class="${st.style === v ? "on" : ""}" onclick="M.set('style','${v}')">${v[0].toUpperCase() + v.slice(1)}</button>`).join("")}</div></div>
     <div class="field"><label>Answer depth</label>
       <div class="seg">${["short","balanced","detailed"].map(v => `<button class="${st.depth === v ? "on" : ""}" onclick="M.set('depth','${v}')">${v[0].toUpperCase() + v.slice(1)}</button>`).join("")}</div></div>
-    <div class="field"><label>Language</label>
+    <div class="field" style="margin-bottom:0"><label>Language</label>
       <div class="seg">${[["match","Match me"],["en","English"],["ar","العربية"]].map(([v,l]) => `<button class="${st.lang === v ? "on" : ""}" onclick="M.set('lang','${v}')">${l}</button>`).join("")}</div></div>
   </div>
 
-  <div class="card">
-    <h3>${ic("sun", 16)} Appearance</h3>
-    <div class="theme-grid">${THEMES.map(([v, l, c]) => `
+  <div class="set-group-label">Appearance</div>
+  <div class="card" id="setAppearance">
+    <div class="card-h-row"><h3>${ic("sun", 16)} Appearance</h3><span class="set-status">${esc(themeName)}</span></div>
+    <div class="theme-grid" style="margin-top:12px">${THEMES.map(([v, l, c]) => `
       <button class="theme-swatch ${(st.theme || "dark") === v ? "on" : ""}" onclick="M.theme('${v}')" aria-label="${l} theme">
         <span class="ts-prev" style="background:${c.bg}">
           <span class="ts-card" style="background:${c.card}"></span>
@@ -5197,7 +5235,32 @@ function settingsHTML(){
     <div class="tiny" style="margin-top:10px">Glass is frosted & aurora-lit · OLED is true black · Midnight is deep navy · Sepia is warm paper · Auto follows your device.</div>
   </div>
 
-  <div class="card">
+  <div class="set-group-label">Nutrition &amp; body</div>
+  <div class="card" id="setNutrition">
+    <h3>${ic("target", 16)} Daily targets</h3>
+    <div class="grid2" style="margin-bottom:10px">
+      <div class="field"><label>Calories kcal</label><input type="number" inputmode="numeric" value="${st.targets.kcal || ""}" oninput="S.settings.targets.kcal=num(this.value);save()"></div>
+      <div class="field"><label>Protein g</label><input type="number" inputmode="numeric" value="${st.targets.protein || ""}" oninput="S.settings.targets.protein=num(this.value);save()"></div>
+    </div>
+    <div class="grid2" style="margin-bottom:10px">
+      <div class="field"><label>Carbs g (optional)</label><input type="number" inputmode="numeric" value="${st.targets.carbs || ""}" oninput="S.settings.targets.carbs=num(this.value);save()"></div>
+      <div class="field"><label>Fat g (optional)</label><input type="number" inputmode="numeric" value="${st.targets.fat || ""}" oninput="S.settings.targets.fat=num(this.value);save()"></div>
+    </div>
+    <div class="field" style="margin-bottom:0"><label>Water goal ml</label><input type="number" inputmode="numeric" value="${st.waterGoal || ""}" oninput="S.settings.waterGoal=Math.max(250,num(this.value));save()"></div>
+  </div>
+
+  <div class="card fold" id="savedFoodsCard">
+    <h3 onclick="this.parentElement.classList.toggle('open')">${ic("bookmark", 16)} Saved foods (${S.savedFoods.length}) <span class="chev">▶</span></h3>
+    <div class="fold-body">
+      ${S.savedFoods.length ? S.savedFoods.map((f, i) => `<div class="set-row">
+        <div><div class="k" dir="auto">${esc(f.name)}</div><div class="desc">${f.amount ? esc(f.amount) + " · " : ""}${n0(f.kcal)} kcal · ${n1(f.p)}P · ${n1(f.c)}C · ${n1(f.f)}F</div></div>
+        <span class="end"><button class="btn sm danger" onclick="M.savedDel(${i})">Forget</button></span>
+      </div>`).join("") : `<div class="muted">Every food you log is remembered here for one-tap re-entry.</div>`}
+    </div>
+  </div>
+
+  <div class="set-group-label">Your domains</div>
+  <div class="card" id="setDomains">
     <h3>${ic("grid", 16)} Domains</h3>
     ${S.domains.map((d, i) => `<div class="set-row">
       <span class="dom-color" style="background:${d.color}"></span>
@@ -5211,27 +5274,16 @@ function settingsHTML(){
     <div class="tiny" style="margin-top:8px">MIRA builds a specialist mode around each domain you add, with the same evidence standard everywhere.</div>
   </div>
 
-  <div class="card">
-    <h3>${ic("target", 16)} Daily targets</h3>
-    <div class="grid2" style="margin-bottom:10px">
-      <div class="field"><label>Calories kcal</label><input type="number" inputmode="numeric" value="${st.targets.kcal || ""}" oninput="S.settings.targets.kcal=num(this.value);save()"></div>
-      <div class="field"><label>Protein g</label><input type="number" inputmode="numeric" value="${st.targets.protein || ""}" oninput="S.settings.targets.protein=num(this.value);save()"></div>
-    </div>
-    <div class="grid2" style="margin-bottom:10px">
-      <div class="field"><label>Carbs g (optional)</label><input type="number" inputmode="numeric" value="${st.targets.carbs || ""}" oninput="S.settings.targets.carbs=num(this.value);save()"></div>
-      <div class="field"><label>Fat g (optional)</label><input type="number" inputmode="numeric" value="${st.targets.fat || ""}" oninput="S.settings.targets.fat=num(this.value);save()"></div>
-    </div>
-    <div class="field"><label>Water goal ml</label><input type="number" inputmode="numeric" value="${st.waterGoal || ""}" oninput="S.settings.waterGoal=Math.max(250,num(this.value));save()"></div>
-  </div>
-
-  <div class="card">
-    <h3>${ic("key", 16)} API & model</h3>
-    <div class="field"><label>Anthropic API key</label>
+  <div class="set-group-label">Assistant</div>
+  <div class="card" id="setAI">
+    <div class="card-h-row"><h3>${ic("key", 16)} API &amp; model</h3>
+      <span class="set-status ${st.apiKey ? "on" : ""}"><span class="dot"></span>${st.apiKey ? "Connected" : "No key"}</span></div>
+    <div class="field" style="margin-top:12px"><label>Anthropic API key</label>
       <input type="password" value="${esc(st.apiKey)}" placeholder="sk-ant-…" autocomplete="off" oninput="S.settings.apiKey=this.value.trim();save()">
       <div class="tiny" style="margin-top:6px">Stored only in this browser; sent only to api.anthropic.com. Billed to your own account.</div></div>
     <div class="field"><label>Model</label>
       <select onchange="S.settings.model=this.value;save()">${MODELS.map(m => `<option value="${m.id}" ${st.model === m.id ? "selected" : ""}>${m.name}</option>`).join("")}</select></div>
-    <div class="field"><label>Live web search</label>
+    <div class="field" style="margin-bottom:0"><label>Live web search</label>
       <div class="seg">
         <button class="${st.webSearch ? "on" : ""}" onclick="M.set('webSearch',true)">On</button>
         <button class="${!st.webSearch ? "on" : ""}" onclick="M.set('webSearch',false)">Off</button>
@@ -5239,9 +5291,11 @@ function settingsHTML(){
       <div class="tiny" style="margin-top:6px">Lets MIRA research the live internet through your API key and cite real pages. Anthropic bills searches (~$10 per 1,000) on top of tokens. Also toggled with the globe button in chat.</div></div>
   </div>
 
-  <div class="card">
-    <h3>${ic("lock", 16)} Security</h3>
-    <div class="muted" style="margin-bottom:10px">${st.pinHash ? "PIN lock is on. The PIN is stored only as a hash, never as readable digits." : "No PIN set. Add a 4-digit PIN to gate entry to MIRA."}</div>
+  <div class="set-group-label">Privacy &amp; data</div>
+  <div class="card" id="setSecurity">
+    <div class="card-h-row"><h3>${ic("lock", 16)} Security</h3>
+      <span class="set-status ${st.pinHash ? "on" : ""}"><span class="dot"></span>${st.pinHash ? "PIN on" : "No PIN"}</span></div>
+    <div class="muted" style="margin:12px 0 10px">${st.pinHash ? "PIN lock is on. The PIN is stored only as a hash, never as readable digits." : "No PIN set. Add a 4-digit PIN to gate entry to MIRA."}</div>
     <div class="row">
       <button class="btn sm sec" onclick="M.pinSet()">${st.pinHash ? "Change PIN" : "Set PIN"}</button>
       ${st.pinHash ? `<button class="btn sm danger" onclick="M.pinOff()">Remove PIN</button>` : ""}
@@ -5249,18 +5303,8 @@ function settingsHTML(){
     <div class="tiny" style="margin-top:8px">A PIN in a local file is a casual lock, not hardened security — keep sensitive data backed up and private.</div>
   </div>
 
-  <div class="card fold" id="savedFoodsCard">
-    <h3 onclick="this.parentElement.classList.toggle('open')">${ic("bookmark", 16)} Saved foods (${S.savedFoods.length}) <span class="chev">▶</span></h3>
-    <div class="fold-body">
-      ${S.savedFoods.length ? S.savedFoods.map((f, i) => `<div class="set-row">
-        <div><div class="k" dir="auto">${esc(f.name)}</div><div class="desc">${f.amount ? esc(f.amount) + " · " : ""}${n0(f.kcal)} kcal · ${n1(f.p)}P · ${n1(f.c)}C · ${n1(f.f)}F</div></div>
-        <span class="end"><button class="btn sm danger" onclick="M.savedDel(${i})">Forget</button></span>
-      </div>`).join("") : `<div class="muted">Every food you log is remembered here for one-tap re-entry.</div>`}
-    </div>
-  </div>
-
   <div class="card">
-    <h3>${ic("database", 16)} Backup & data</h3>
+    <h3>${ic("database", 16)} Backup &amp; data</h3>
     <div class="muted" style="margin-bottom:10px">Logs, targets, saved foods, chats and settings live only in this browser. Export a backup so nothing is lost across reinstalls or devices.</div>
     <div class="row" style="margin-bottom:10px">
       <button class="btn sm sec" onclick="M.backup()">${ic("download", 15)} Export backup</button>
@@ -5271,7 +5315,7 @@ function settingsHTML(){
 
   <div class="tiny" style="text-align:center;padding:6px 0 14px">
     MIRA — My Integrated Reasoning Assistant · standalone edition<br>
-    Every fact checked against trusted sources, or honestly labelled an estimate.<br>
+    ${esc(modelName)} · Every fact checked against trusted sources, or honestly labelled an estimate.<br>
     <b>Build ${BUILD}</b>
   </div>`;
 }
@@ -5336,6 +5380,12 @@ window.M = {
   widgetsOpen(){ R.widgetsOpen = true; render(); },
   widgetsClose(){ R.widgetsOpen = false; render(); },
   widgetToggle(id){ const w = S.settings.widgets; const i = w.indexOf(id); if (i >= 0) w.splice(i, 1); else w.push(id); save(); render(); },
+  setJump(id){
+    const el = document.getElementById(id), c = $("#content");
+    if (!el || !c) return;
+    const top = el.getBoundingClientRect().top - c.getBoundingClientRect().top + c.scrollTop - 60;
+    c.scrollTo({top: Math.max(0, top), behavior: "smooth"});
+  },
   qa(a){
     R.quickOpen = false;
     if (a === "water"){ const t = todayStr(); S.water[t] = (S.water[t] || 0) + 1; save(); render(); toast(`Water +1 glass · ${(S.water[t] * 0.25).toFixed(2)} L today`); return; }
