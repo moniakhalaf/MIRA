@@ -908,7 +908,7 @@ body.kb .chatbar{padding-bottom:6px}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.55";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.56";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -2828,8 +2828,8 @@ function foodHTML(){
   </div>
 
   <div class="card fold open" id="addFoodCard">
-    <h3>${ic("plus", 16)} Log food</h3>
-    <div class="fold-body" style="display:block">
+    <h3 onclick="this.parentElement.classList.toggle('open')">${ic("plus", 16)} Log food <span class="chev">▶</span></h3>
+    <div class="fold-body">
       <div class="field ac-wrap"><label>Food name</label>
         <input id="ffName" value="${esc(foodForm.name)}" placeholder="Start typing — saved foods appear" dir="auto" autocomplete="off" style="padding-right:44px"
           oninput="M.ffName(this.value)" onfocus="M.ffName(this.value)" onblur="setTimeout(()=>M.acHide(),180)">
@@ -5465,7 +5465,7 @@ window.M = {
   qa(a){
     R.quickOpen = false;
     if (a === "water"){ const t = todayStr(); S.water[t] = (S.water[t] || 0) + 1; save(); render(); toast(`Water +1 glass · ${(S.water[t] * 0.25).toFixed(2)} L today`); return; }
-    if (a === "food"){ R.tab = "food"; R.homeCat = null; render(); const el = $("#ffName"); if (el) el.focus(); return; }
+    if (a === "food"){ R.tab = "food"; R.homeCat = null; render(); const c = $("#content"); if (c) c.scrollTop = 0; return; }
     if (a === "workout"){ M.goTrain("today"); return; }
     if (a === "weight"){ R.tab = "body"; R.homeCat = null; render(); const c = $("#content"); if (c) c.scrollTop = 0; return; }
     if (a === "task"){ M.goWork("tasks"); return; }
