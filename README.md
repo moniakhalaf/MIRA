@@ -65,8 +65,11 @@ This repository contains the **standalone edition**: a single self-contained `in
 - Continuous checks — a GitHub Action syntax-validates the app on every change
 
 **Privacy & data ownership**
-- PIN lock (stored only as a hash), auto-unlocks on the last digit, animated indicators
-- All data — logs, targets, saved foods, chats, API key — lives only in your browser
+- All data — logs, targets, saved foods, chats, API key — lives only in your browser; there is no server, account database or cloud copy
+- **On-device encryption (opt-in)** — turn it on in Settings → Encryption and everything is encrypted at rest with **AES-GCM 256**. A random data key encrypts your store and is itself wrapped by a key derived from your passphrase (**PBKDF2, 250k iterations**); without the passphrase the storage is unreadable ciphertext, even in dev tools, and **backups are exported already-encrypted**. Enabling verifies the round-trip before anything is removed, a wrong passphrase never destroys data, and the passphrase is unrecoverable by design (write it down — MIRA can't reset it)
+- **Face ID / fingerprint unlock** — after encrypting, register a device passkey (**WebAuthn PRF**) to unlock with biometrics; the passphrase always remains the master key, so a biometric hiccup can never lock you out
+- **Auto-lock** — clear the key from memory after 1/5/15/60 min idle (or lock on demand), so a walk-away can't expose an unlocked app
+- PIN lock (stored only as a hash) still available as a lightweight screen gate
 - Backup & restore to a JSON file so nothing is lost across devices or reinstalls
 - Own-key model: your Anthropic key never leaves your device except to reach `api.anthropic.com` directly
 
