@@ -599,6 +599,10 @@ body.kb .chatbar{padding-bottom:6px}
 .snack-card .sc-amt{color:var(--txt3);font-weight:400}
 .snack-card .sc-why{font-size:13px;color:var(--txt2);margin:7px 0 10px;line-height:1.45}
 .snack-card .btn{width:auto}
+.fd-chips{display:flex;flex-wrap:wrap;gap:8px}
+.fd-chip{padding:6px 12px;border-radius:99px;background:var(--key);font-size:12.5px;color:var(--txt2)}
+.fd-chip b{color:var(--txt);font-weight:700}
+.fi-time{color:var(--acc);font-weight:600}
 .rc-filters{display:flex;gap:7px;overflow-x:auto;padding-bottom:11px;scrollbar-width:none}
 .rc-filters::-webkit-scrollbar{display:none}
 .rc-chip{flex:0 0 auto;padding:7px 13px;border-radius:18px;background:var(--card2);border:1px solid var(--line2);color:var(--txt2);font-size:13px;font-weight:500}
@@ -908,7 +912,7 @@ body.kb .chatbar{padding-bottom:6px}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.56";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.57";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -2738,10 +2742,15 @@ function sanity(m){
 }
 
 /* ---------------- nutrition tab ---------------- */
-const foodForm = {name: "", amount: "", kcal: "", p: "", c: "", f: "", conf: "user",
+const foodForm = {name: "", amount: "", time: "", kcal: "", p: "", c: "", f: "", conf: "user",
   scOpen: false, scBase: "100", scBaseUnit: "g", scK: "", scP: "", scC: "", scF: "", scEat: ""};
 let reviewItems = null;   // [{name, amount, kcal, p, c, f, conf, note}] pending user review
 let findBusy = false, extractBusy = false, barcodeBusy = false;
+
+/* time helpers for food entries (each log records the time it was eaten) */
+function nowHM(){ const d = new Date(); return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); }
+function hmFromTs(ts){ const d = new Date(ts); return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); }
+function entryTime(f){ return f.time || (f.ts ? hmFromTs(f.ts) : ""); }
 
 /* ---------------- 7-day insights ---------------- */
 function insightsHTML(){
@@ -2820,6 +2829,8 @@ function foodHTML(){
     <div class="muted" style="margin-top:9px">Remaining: <b>${n0(Math.max(0, tg.kcal - tot.kcal))} kcal</b> · <b>${n1(Math.max(0, tg.protein - tot.p))} g protein</b>${tg.carbs ? ` · ${n1(Math.max(0, tg.carbs - tot.c))} g carbs` : ""}${tg.fat ? ` · ${n1(Math.max(0, tg.fat - tot.f))} g fat` : ""}</div>
   </div>
 
+  ${finishDayCardHTML()}
+
   <div class="card">
     <h3>${ic("droplet", 16)} Hydration <span class="tiny" style="margin-inline-start:auto;font-weight:400">${glasses} glasses · ${litres.toFixed(2)} L / ${(S.settings.waterGoal/1000).toFixed(2)} L</span></h3>
     <div class="glasses">${Array.from({length: goalGl}, (_, i) =>
@@ -2836,9 +2847,10 @@ function foodHTML(){
         <button class="in-mic" aria-label="Voice input" onmousedown="event.preventDefault()" onclick="M.voiceFood()">${ic("mic", 17)}</button>
         <div id="acList"></div>
       </div>
-      <div class="grid2" style="margin-bottom:12px">
-        <div class="field"><label>Amount eaten</label><input id="ffAmount" value="${esc(foodForm.amount)}" placeholder="e.g. 150 g / 1 piece" oninput="foodForm.amount=this.value"></div>
-        <div class="field"><label>Calories (kcal)</label><input id="ffK" type="number" inputmode="decimal" value="${esc(foodForm.kcal)}" oninput="foodForm.kcal=this.value"></div>
+      <div class="row" style="gap:10px;margin-bottom:12px">
+        <div class="field" style="flex:2"><label>Amount eaten</label><input id="ffAmount" value="${esc(foodForm.amount)}" placeholder="e.g. 150 g / 1 piece" oninput="foodForm.amount=this.value"></div>
+        <div class="field" style="flex:1.15"><label>Time</label><input id="ffTime" type="time" value="${esc(foodForm.time || nowHM())}" oninput="foodForm.time=this.value"></div>
+        <div class="field" style="flex:1.25"><label>Calories</label><input id="ffK" type="number" inputmode="decimal" value="${esc(foodForm.kcal)}" oninput="foodForm.kcal=this.value"></div>
       </div>
       <div class="grid4" style="margin-bottom:12px">
         <div class="field"><label>Protein g</label><input id="ffP" type="number" inputmode="decimal" value="${esc(foodForm.p)}" oninput="foodForm.p=this.value"></div>
@@ -2905,14 +2917,42 @@ function foodHTML(){
         <span class="chev">▶</span><span class="dt">${fmtDate(d)}</span>
         <span class="sum">${n0(dt.kcal)} kcal · ${n1(dt.p)}P · ${n1(dt.c)}C · ${n1(dt.f)}F</span>
       </button>
-      ${open ? `<div class="day-items">${items.length ? items.map(f => `
+      ${open ? `<div class="day-items">${items.length ? [...items].sort((a, b) => { const ta = entryTime(a), tb = entryTime(b); return ta < tb ? -1 : ta > tb ? 1 : (a.ts || 0) - (b.ts || 0); }).map(f => `
         <div class="food-it">
           <div><div class="nm" dir="auto">${esc(f.name)} ${f.conf && f.conf !== "user" ? `<span class="badge ${f.conf}">${f.conf}</span>` : ""}</div>
-          <div class="meta">${f.amount ? esc(f.amount) + " · " : ""}${n0(f.kcal)} kcal · ${n1(f.p)}P · ${n1(f.c)}C · ${n1(f.f)}F</div></div>
+          <div class="meta">${entryTime(f) ? `<span class="fi-time">${esc(entryTime(f))}</span> · ` : ""}${f.amount ? esc(f.amount) + " · " : ""}${n0(f.kcal)} kcal · ${n1(f.p)}P · ${n1(f.c)}C · ${n1(f.f)}F</div></div>
           <button class="del" aria-label="Delete ${esc(f.name)}" onclick="M.foodDel('${f.id}')">✕</button>
         </div>`).join("") : `<div class="food-it"><span class="muted">Nothing logged.</span></div>`}</div>` : ""}
     </div>`;
   }).join("")}`;
+}
+
+/* Suggest foods/mini-meals to finish the day's remaining macros, using the food log + last-meal time */
+function finishDayCardHTML(){
+  const t = todayStr();
+  const tot = dayTotals(t), tg = S.settings.targets || {};
+  if (!tg.kcal) return "";                              // needs a calorie target to be meaningful
+  const today = dayFoods(t);
+  if (!today.length) return "";                         // nothing eaten yet — nothing to "finish"
+  const remK = tg.kcal - tot.kcal;
+  if (remK <= 60) return "";                            // effectively at/over target — no nudge
+  const remP = (tg.protein || 0) - tot.p, remC = (tg.carbs || 0) - tot.c, remF = (tg.fat || 0) - tot.f;
+  const last = today.reduce((a, b) => (b.ts || 0) > (a.ts || 0) ? b : a, today[0]);
+  const ideas = R.finishIdeas || [];
+  const chip = (lbl, val, unit) => `<span class="fd-chip"><b>${n0(Math.max(0, val))}${unit}</b> ${lbl}</span>`;
+  return `<div class="card">
+    <div class="card-h-row"><h3>${ic("target", 16)} Finish your day</h3>${last ? `<span class="set-status"><span class="dot"></span>last meal ${esc(entryTime(last))}</span>` : ""}</div>
+    <div class="muted" style="margin:9px 0 10px">You still have room today — here's what's left to hit your targets:</div>
+    <div class="fd-chips">${chip("kcal", remK, "")}${tg.protein ? chip("protein", remP, "g") : ""}${tg.carbs ? chip("carbs", remC, "g") : ""}${tg.fat ? chip("fat", remF, "g") : ""}</div>
+    <button class="btn sm" style="margin-top:12px" onclick="M.finishSuggest()" ${R.finishBusy ? "disabled" : ""}>${R.finishBusy ? "Thinking…" : ic("search", 15) + " Suggest what to eat"}</button>
+    ${ideas.length ? `<div class="snack-grid" style="margin-top:14px">${ideas.map((s, i) => `<div class="snack-card ai">
+      <div class="sc-top"><div class="sc-nm" dir="auto">${esc(s.name)}</div></div>
+      <div class="sc-macros">${n0(s.kcal)} kcal · ${n0(s.p)}P · ${n0(s.c)}C · ${n0(s.f)}F${s.amount ? ` <span class="sc-amt">· ${esc(s.amount)}</span>` : ""}</div>
+      ${s.why ? `<div class="sc-why" dir="auto">${esc(s.why)}</div>` : ""}
+      <button class="btn sm sec" onclick="M.finishLog(${i})">${ic("plus", 14)} Log this</button>
+    </div>`).join("")}</div>
+    <div class="tiny" style="margin-top:8px;color:var(--txt2)">Ideas to fill the gap — macros are estimates, logged with the current time.</div>` : ""}
+  </div>`;
 }
 
 /* ---------------- food-log report (date range, multi-format) ---------------- */
@@ -3157,18 +3197,19 @@ function reviewHTML(){
 
 /* actions */
 function foodSaveDirect(){
-  const it = {name: foodForm.name.trim(), amount: foodForm.amount.trim(),
+  const it = {name: foodForm.name.trim(), amount: foodForm.amount.trim(), time: foodForm.time,
     kcal: foodForm.kcal, p: foodForm.p, c: foodForm.c, f: foodForm.f, conf: foodForm.conf || "user"};
   if (!it.name){ toast("Give the food a name."); return; }
   const s = sanity(it);
   if (s.errors.length){ toast(s.errors[0], 4200); return; }
   if (s.warnings.length) toast(s.warnings[0], 3600);
   logFood(it);
-  Object.assign(foodForm, {name: "", amount: "", kcal: "", p: "", c: "", f: "", conf: "user", scOpen: false});
+  Object.assign(foodForm, {name: "", amount: "", time: "", kcal: "", p: "", c: "", f: "", conf: "user", scOpen: false});
   render();
 }
 function logFood(it){
   S.foods.push({id: uid(), date: todayStr(), name: it.name.trim(), amount: (it.amount || "").trim(),
+    time: (it.time || "").trim() || nowHM(),
     kcal: num(it.kcal), p: num(it.p), c: num(it.c), f: num(it.f), conf: it.conf || "user", ts: Date.now()});
   const key = it.name.trim().toLowerCase();
   const ex = S.savedFoods.findIndex(f => f.name.toLowerCase() === key);
@@ -6216,6 +6257,34 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
   },
   dayToggle(d){ R.openDays.has(d) ? R.openDays.delete(d) : R.openDays.add(d); render(); },
   ffName(v){ foodForm.name = v; acRender(v); },
+  async finishSuggest(){
+    if (!S.settings.apiKey){ toast("Add your API key in Settings first."); R.tab = "set"; render(); return; }
+    const t = todayStr(); const tot = dayTotals(t); const tg = S.settings.targets || {};
+    const remK = Math.max(0, (tg.kcal || 0) - tot.kcal), remP = Math.max(0, (tg.protein || 0) - tot.p),
+          remC = Math.max(0, (tg.carbs || 0) - tot.c), remF = Math.max(0, (tg.fat || 0) - tot.f);
+    const today = dayFoods(t); const last = today.length ? today.reduce((a, b) => (b.ts || 0) > (a.ts || 0) ? b : a, today[0]) : null;
+    R.finishBusy = true; render();
+    try {
+      const ctx = `Remaining today: ${Math.round(remK)} kcal${tg.protein ? `, ${remP.toFixed(0)} g protein` : ""}${tg.carbs ? `, ${remC.toFixed(0)} g carbs` : ""}${tg.fat ? `, ${remF.toFixed(0)} g fat` : ""}. It's ${nowHM()} now${last ? `; the last meal was logged at ${entryTime(last)}` : ""}.`;
+      const reply = await apiCall({
+        model: S.settings.model, max_tokens: 1700,
+        system: `You are MIRA's nutrition specialist helping the user finish their daily macro targets. ${ctx} Suggest 3–5 realistic foods or mini-meals (eaten individually or together) that would fill roughly the remaining macros — prioritise closing the biggest gap (often protein), keep it appropriate for the time of day, and do not blow past the remaining calories. Kuwait/GCC-friendly options welcome. Return ONLY a JSON array; each item {"name":str,"amount":str(portion),"kcal":num,"p":num,"c":num,"f":num,"why":str(one short sentence, mention which gap it fills)}. Macros are realistic estimates and consistent (kcal ≈ 4p+4c+9f). Return ONLY the JSON array, no prose.`,
+        messages: [{role: "user", content: `What should I eat to finish my macros for today? I'm based in Kuwait (GCC).`}],
+      });
+      const j = tryParseJson(reply);
+      const arr = (Array.isArray(j) ? j : (Array.isArray(j.items) ? j.items : [j])).filter(x => x && x.name);
+      R.finishIdeas = arr.slice(0, 5); R.finishBusy = false; render();
+      toast(arr.length ? "Ideas ready ✓" : "No suggestions — try again.");
+    } catch (e) {
+      R.finishBusy = false; render();
+      toast(e.status ? e.message : "Couldn't get ideas — please try again.", 5000);
+    }
+  },
+  finishLog(i){
+    const s = (R.finishIdeas || [])[i]; if (!s) return;
+    logFood({name: s.name, amount: s.amount || "1 serving", kcal: num(s.kcal), p: num(s.p), c: num(s.c), f: num(s.f), conf: "estimate"});
+    toast(`Logged: ${s.name} ✓`);
+  },
   acHide(){ const el = $("#acList"); if (el) el.innerHTML = ""; },
   acPick(i){
     const f = S.savedFoods[i];
