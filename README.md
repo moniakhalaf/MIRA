@@ -34,6 +34,7 @@ This repository contains the **standalone edition**: a single self-contained `in
 
 **Nutrition tracker**
 - Daily food log grouped by day (today open, past days collapse to one line), each entry timestamped with the time you ate (editable) and **organised by meal — Breakfast · Lunch · Dinner · Snack** (auto-set from the time, changeable per entry) with per-meal subtotals
+- **Edit any entry** — tap the pencil to reopen a logged item and change its name, amount, time, meal or macros in place; **delete shows an "Undo"** so a mis-tap never loses data
 - **Finish your day** — once you've logged meals, if macros remain MIRA shows the exact kcal/protein/carbs/fat left plus your last-meal time, and **"Suggest what to eat"** proposes 3–5 realistic foods or mini-meals to close the gap (prioritising the biggest shortfall, sensible for the time of day), each one-tap loggable — honest macro estimates
 - Targets with goal-completion bars — green tick when reached, amber when exceeded
 - Hydration tracker: tap 250 ml glasses, totals shown in glasses and litres
@@ -60,6 +61,7 @@ This repository contains the **standalone edition**: a single self-contained `in
 - **Backup safety** — Settings shows how long since your last backup (amber when overdue/never) and an on-device storage meter (~5 MB budget), nudging you to export before the browser clears anything
 - **Gentle reminders** — contextual, dismissible nudges on Home when relevant (no check-in yet today, water short of goal, nothing logged, backup overdue) — derived from your own data, no background tracking
 - **Resilient API calls** — automatic retry with backoff on transient Anthropic overloads/rate-limits, with clear human messages
+- **Never white-screens** — if a display error ever occurs, a crash-guard shows a recovery screen ("your data is safe") with reload and backup, instead of a blank page
 - Continuous checks — a GitHub Action syntax-validates the app on every change
 
 **Privacy & data ownership**
