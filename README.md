@@ -34,7 +34,7 @@ This repository contains the **standalone edition**: a single self-contained `in
 
 **Nutrition tracker**
 - Daily food log grouped by day (today open, past days collapse to one line), each entry timestamped with the time you ate (editable) and **organised by meal — Breakfast · Lunch · Dinner · Snack** (auto-set from the time, changeable per entry) with per-meal subtotals
-- **Edit any entry** — tap the pencil to reopen a logged item and change its name, amount, time, meal or macros in place; **delete shows an "Undo"** so a mis-tap never loses data
+- **Edit any entry** — tap the pencil to reopen a logged item and change its name, amount, time, meal or macros in place; a one-tap **move-to-meal** button on each entry recategorises it (Breakfast/Lunch/Dinner/Snack) instantly if you picked the wrong one; **delete shows an "Undo"** so a mis-tap never loses data
 - **Finish your day** — once you've logged meals, if macros remain MIRA shows the exact kcal/protein/carbs/fat left plus your last-meal time, and **"Suggest what to eat"** proposes 3–5 realistic foods or mini-meals to close the gap (prioritising the biggest shortfall, sensible for the time of day), each one-tap loggable — honest macro estimates
 - Targets with goal-completion bars — green tick when reached, amber when exceeded
 - Hydration tracker: tap 250 ml glasses, totals shown in glasses and litres

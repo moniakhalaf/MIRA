@@ -859,8 +859,13 @@ body.kb .chatbar{padding-bottom:6px}
 .snackbar #snackBtn{flex:0 0 auto;font-size:13px;font-weight:700;color:var(--gold);background:none;padding:6px 10px;border-radius:8px}
 .snackbar #snackBtn:active{background:var(--gold-soft)}
 /* food entry edit button */
-.food-it .edit{flex:0 0 auto;color:var(--txt3);min-width:36px;min-height:36px;display:flex;align-items:center;justify-content:center;border-radius:9px;background:none}
-.food-it .edit:active{background:var(--key);color:var(--acc)}
+.food-it .edit,.food-it .mmove{flex:0 0 auto;color:var(--txt3);min-width:34px;min-height:36px;display:flex;align-items:center;justify-content:center;border-radius:9px;background:none}
+.food-it .edit:active,.food-it .mmove:active{background:var(--key);color:var(--acc)}
+.food-it .mmove.on{color:var(--acc);background:var(--acc-soft)}
+.meal-pick{display:flex;gap:6px;padding:8px 14px 11px;background:var(--bg2);border-top:1px solid var(--line)}
+.meal-pick button{flex:1 1 0;padding:8px 4px;border-radius:8px;border:1px solid var(--line2);background:var(--card);color:var(--txt2);font-size:12px;font-weight:600}
+.meal-pick button.on{color:var(--gold);border-color:var(--gold);background:var(--gold-soft)}
+.meal-pick button:active{transform:scale(.96)}
 .edit-banner{display:flex;align-items:center;gap:10px;padding:9px 12px;margin-bottom:10px;border-radius:10px;background:var(--acc-soft);border:1px solid var(--line2);font-size:13px;color:var(--txt2)}
 .edit-banner button{flex:0 0 auto;margin-inline-start:auto;width:auto}
 /* crash recovery screen */
@@ -958,7 +963,7 @@ body.kb .chatbar{padding-bottom:6px}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.61";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.62";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1341,6 +1346,7 @@ const R = {
   suppForm: {open: false, name: "", dose: "", timing: "Morning"},
   habitDraft: "",
   editFoodId: null,    // id of the food entry currently being edited (null = logging new)
+  mealMenuId: null,    // id of the food entry whose quick meal-move picker is open
   moodForm: {mood: 0, energy: 0, note: ""},
   bodyOpen: {meas: false, photo: false, lab: false},
   measForm: {date: "", waist: "", chest: "", arms: "", thigh: "", hips: "", neck: ""},
@@ -2927,12 +2933,14 @@ function mealFromTime(hm){ const h = parseInt(String(hm || nowHM()).slice(0, 2),
 function entryMeal(f){ return f.meal || mealFromTime(entryTime(f)); }
 function mealLabel(m){ const x = FOOD_MEALS.find(a => a[0] === m); return x ? x[1] : "Snack"; }
 function foodItemHTML(f){
+  const menu = R.mealMenuId === f.id;
   return `<div class="food-it">
     <div><div class="nm" dir="auto">${esc(f.name)} ${f.conf && f.conf !== "user" ? `<span class="badge ${f.conf}">${f.conf}</span>` : ""}</div>
     <div class="meta">${entryTime(f) ? `<span class="fi-time">${esc(entryTime(f))}</span> · ` : ""}${f.amount ? esc(f.amount) + " · " : ""}${n0(f.kcal)} kcal · ${n1(f.p)}P · ${n1(f.c)}C · ${n1(f.f)}F</div></div>
+    <button class="mmove ${menu ? "on" : ""}" aria-label="Change meal for ${esc(f.name)}" onclick="M.mealMenu('${f.id}')">${ic("refresh", 13)}</button>
     <button class="edit" aria-label="Edit ${esc(f.name)}" onclick="M.foodEdit('${f.id}')">${ic("edit", 14)}</button>
     <button class="del" aria-label="Delete ${esc(f.name)}" onclick="M.foodDel('${f.id}')">✕</button>
-  </div>`;
+  </div>${menu ? `<div class="meal-pick">${FOOD_MEALS.map(([v, l]) => `<button class="${entryMeal(f) === v ? "on" : ""}" onclick="M.setEntryMeal('${f.id}','${v}')">${l}</button>`).join("")}</div>` : ""}`;
 }
 
 /* ---------------- 7-day insights ---------------- */
@@ -6579,6 +6587,13 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
     R.editFoodId = null;
     Object.assign(foodForm, {name: "", amount: "", time: "", meal: "", kcal: "", p: "", c: "", f: "", conf: "user", scOpen: false});
     render();
+  },
+  mealMenu(id){ R.mealMenuId = R.mealMenuId === id ? null : id; render(); },
+  setEntryMeal(id, meal){
+    const f = S.foods.find(x => x.id === id);
+    if (f) f.meal = meal;
+    R.mealMenuId = null; save(); render();
+    if (f) toast("Moved to " + mealLabel(meal) + " ✓");
   },
   findMacros,
   extractPhoto,
