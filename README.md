@@ -28,6 +28,7 @@ This repository contains the **standalone edition**: a single self-contained `in
 - **Grouped areas** — each domain's actions are organised under clear headers (Track · Plan · Tools · Ask MIRA) instead of one long list, so features are easy to find
 - **One Home landing** — greeting and search on top, then chips for **Today · Health · Fitness · Work · Life**. "Today" is a **customizable widget board** — tap Customize to choose exactly which widgets you see from a catalog (progress rings for calories/protein/carbs/fat/water/wellness; tiles for sleep, mood, weight, weekly workouts, fasting, next task, open tasks, focus, next bill, habits, spending). Plus recent chats to pick up where you left off; each domain chip shows that area's live stats and quick actions. A floating **+ (quick add)** logs food, water, a workout, weight or a task from anywhere on Home. Four clean tabs: Home · Chat · Insights · Settings
 - **Insights** — charts your trends over time from logged data only: weight, calories and protein vs target, sleep, and weekly training volume, each with an honest "not enough data yet" state until there are at least two points
+- **Patterns & streaks** — Insights surfaces honest observations from your own logs once there's enough data: logging/check-in/training streaks, whether your wellness score is higher after 7 h+ sleep, and your average protein on training vs rest days — associations to notice, never medical advice
 - **Weekly review** — sits at the top of Insights: a cross-domain summary of your last 7 days (training, nutrition, hydration, sleep, tasks, focus, habits, mood, spending) as honest stat tiles — blank means nothing was logged, never faked progress — plus one-tap "Ask MIRA for my weekly review" for grounded wins, watch-outs and next-week priorities
 - Guided first-run setup captures your name, profession/field and current primary goal (all editable later in Settings) so answers and reviews stay oriented to what you're working toward
 
@@ -53,6 +54,13 @@ This repository contains the **standalone edition**: a single self-contained `in
 - Seven themes chosen from a visual swatch grid: Dark, Light, Glass (frosted aurora), OLED (true black), Midnight (deep navy + gold), Sepia (warm paper), and Auto (follows the device setting)
 - Monochrome line-icon system, mobile-first sizing, installs full-screen to the home screen
 - Email sign-up screen built in but feature-flagged off (`FEATURES.emailSignup` in `index.html`) until the hosted backend is published
+
+**Reliability & data safety**
+- **Works offline** — a service worker caches the app shell so MIRA launches on the home screen with no connection; it fetches fresh whenever you're online (network-first), so new versions land automatically
+- **Backup safety** — Settings shows how long since your last backup (amber when overdue/never) and an on-device storage meter (~5 MB budget), nudging you to export before the browser clears anything
+- **Gentle reminders** — contextual, dismissible nudges on Home when relevant (no check-in yet today, water short of goal, nothing logged, backup overdue) — derived from your own data, no background tracking
+- **Resilient API calls** — automatic retry with backoff on transient Anthropic overloads/rate-limits, with clear human messages
+- Continuous checks — a GitHub Action syntax-validates the app on every change
 
 **Privacy & data ownership**
 - PIN lock (stored only as a hash), auto-unlocks on the last digit, animated indicators

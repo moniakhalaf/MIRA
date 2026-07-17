@@ -603,6 +603,18 @@ body.kb .chatbar{padding-bottom:6px}
 .fd-chip{padding:6px 12px;border-radius:99px;background:var(--key);font-size:12.5px;color:var(--txt2)}
 .fd-chip b{color:var(--txt);font-weight:700}
 .fi-time{color:var(--acc);font-weight:600}
+/* storage meter (Settings › Backup) */
+.stor-meter{height:7px;border-radius:99px;background:var(--key);overflow:hidden}
+.stor-meter span{display:block;height:100%;background:var(--acc);border-radius:99px;transition:width .4s ease}
+/* keyboard focus ring for accessibility (doesn't show on mouse/touch) */
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px;border-radius:8px}
+/* in-app reminder nudges on Home */
+.nudge{display:flex;align-items:center;gap:10px;padding:12px 14px;margin-bottom:12px;border:1px solid var(--line2);border-radius:14px;
+  background:linear-gradient(135deg,var(--gold-soft),transparent 75%)}
+.nudge .nz-i{flex:0 0 auto;color:var(--gold)}
+.nudge .nz-t{font-size:13.5px;line-height:1.4;flex:1;min-width:0}
+.nudge .nz-go{flex:0 0 auto;font-size:12.5px;font-weight:700;color:var(--gold);background:none;padding:6px 4px}
+.nudge .nz-x{flex:0 0 auto;color:var(--txt3);background:none;padding:6px;min-width:30px;min-height:30px}
 .rc-filters{display:flex;gap:7px;overflow-x:auto;padding-bottom:11px;scrollbar-width:none}
 .rc-filters::-webkit-scrollbar{display:none}
 .rc-chip{flex:0 0 auto;padding:7px 13px;border-radius:18px;background:var(--card2);border:1px solid var(--line2);color:var(--txt2);font-size:13px;font-weight:500}
@@ -894,7 +906,7 @@ body.kb .chatbar{padding-bottom:6px}
 </head>
 <body>
 <div id="app"></div>
-<div id="toast" class="toast"></div>
+<div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 <input type="file" id="fileImg" accept="image/*,application/pdf" class="hidden">
 <input type="file" id="fileBackup" accept=".json,application/json" class="hidden">
 <script>
@@ -912,7 +924,7 @@ body.kb .chatbar{padding-bottom:6px}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.57";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.58";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1092,6 +1104,8 @@ const BLANK = () => ({
   meals: [],          // {id, name, items: [{name, amount, kcal, p, c, f}]}
   recipes: [],        // {id, name, image, cuisine, tags[], servings, per:{kcal,p,c,f}, ingredients[], steps[], source, healthNote, seed, ts}
   recipesSeedV: 0,    // version of the seeded starter recipe set (bump to refresh existing users)
+  lastBackup: 0,      // ms timestamp of the last exported backup (0 = never)
+  nudgeDismissed: null, // {date, ids[]} — Home reminder nudges dismissed for the day
   exercises: [],      // user-added exercises {id, n, m, e, c, source}
   workouts: [],       // {id, date, name, items:[{name, muscle, sets:[{reps, weight}], note}], ts}
   routines: [],       // {id, name, items:[{name, muscle}]}
@@ -1582,6 +1596,30 @@ function todayOverviewHTML(){
     ${recentChatsHTML()}
     <button class="btn sec" style="margin-top:14px" onclick="M.tab('chat')">${ic("chat", 16)} Open chat</button>`;
 }
+// Gentle, contextual in-app reminders on Home — derived from today's own data,
+// dismissible for the day. No background push; they simply appear when relevant.
+function homeNudgesHTML(){
+  const t = todayStr();
+  const dismissed = (S.nudgeDismissed && S.nudgeDismissed.date === t) ? S.nudgeDismissed.ids : [];
+  const hour = new Date().getHours();
+  const n = [];
+  const ci = (typeof todayCheckin === "function") ? todayCheckin() : null;
+  if (!ci && hour >= 8) n.push({id: "checkin", icon: "smile", t: "You haven't done today's wellness check-in.", go: "M.goWellness()"});
+  const glasses = S.water[t] || 0, goalGl = Math.max(1, Math.ceil((S.settings.waterGoal || 2500) / 250));
+  if (glasses < goalGl && hour >= 15){ const left = goalGl - glasses; n.push({id: "water", icon: "droplet", t: `${left} more glass${left === 1 ? "" : "es"} to reach your water goal today.`, go: "M.goTab('food')"}); }
+  const foods = (typeof dayFoods === "function") ? dayFoods(t) : [];
+  if (!foods.length && hour >= 12) n.push({id: "food", icon: "plus", t: "Nothing in your food diary yet today.", go: "M.qa('food')"});
+  const age = (typeof backupAgeDays === "function") ? backupAgeDays() : null;
+  const hasData = (S.foods.length + ((S.convs || []).length)) > 3;
+  if (hasData && (age === null || age >= 14)) n.push({id: "backup", icon: "database", t: age === null ? "Back up your data so nothing is lost." : `It's been ${age} days since your last backup.`, go: "M.goBackup()"});
+  const show = n.filter(x => !dismissed.includes(x.id)).slice(0, 2);
+  return show.map(x => `<div class="nudge">
+    <span class="nz-i">${ic(x.icon, 18)}</span>
+    <span class="nz-t">${esc(x.t)}</span>
+    <button class="nz-go" onclick="${x.go}">Open</button>
+    <button class="nz-x" aria-label="Dismiss" onclick="M.nudgeDismiss('${x.id}')">${ic("x", 16)}</button>
+  </div>`).join("");
+}
 function homeHTML(){
   const doms = dashDomains();
   const sections = ["today", ...doms.map(d => d.id)];
@@ -1594,6 +1632,7 @@ function homeHTML(){
       <div class="q">How can I help you today?</div>
     </div>
     <button class="home-search" onclick="M.searchOpen()">${ic("search", 16)} <span>Search everything…</span></button>
+    ${homeNudgesHTML()}
     <div class="dash-chips home-chips">
       ${chip("today", "Today", "var(--acc)", false)}
       ${doms.map(d => chip(d.id, d.name, d.color, true)).join("")}
@@ -1908,9 +1947,64 @@ function trendsHTML(){
 
   return `
     ${weekReviewCardHTML()}
+    ${patternsCardHTML()}
     <div class="wr-note">${ic("check", 13)} Trends are drawn only from what you logged. A chart appears once there are at least two data points; until then it says so.</div>
     ${cards.join("")}
     <div class="tiny" style="text-align:center;margin:4px 0 2px;color:var(--txt2)">More data, sharper trends. Keep logging and these fill in automatically.</div>`;
+}
+// Honest cross-signal observations + streaks — associations from the user's own
+// logs, each gated behind enough data so nothing is invented.
+function logStreak(getHas){
+  let streak = 0;
+  for (let i = 0; i < 400; i++){
+    const d = new Date(Date.now() - i * 864e5).toLocaleDateString("en-CA");
+    if (getHas(d)) streak++;
+    else if (i === 0) continue;   // "not done yet today" doesn't break a streak that ran through yesterday
+    else break;
+  }
+  return streak;
+}
+function patternsCardHTML(){
+  const tiles = [], notes = [];
+  const foodStreak = logStreak(d => S.foods.some(f => f.date === d));
+  if (foodStreak >= 2) tiles.push(["Food log streak", foodStreak + " day" + (foodStreak === 1 ? "" : "s")]);
+  const ciStreak = logStreak(d => (S.checkins || []).some(c => c.date === d));
+  if (ciStreak >= 2) tiles.push(["Check-in streak", ciStreak + " day" + (ciStreak === 1 ? "" : "s")]);
+  const wStreak = logStreak(d => (S.workouts || []).some(w => w.date === d));
+  if (wStreak >= 2) tiles.push(["Training streak", wStreak + " day" + (wStreak === 1 ? "" : "s")]);
+
+  // Sleep → next-day wellness (paired days only)
+  const paired = (S.checkins || []).map(c => {
+    const s = (S.sleep || []).find(x => x.date === c.date); const sc = (typeof checkinScore === "function") ? checkinScore(c) : null;
+    return (s && +s.hours && sc != null) ? {h: +s.hours, score: sc} : null;
+  }).filter(Boolean);
+  if (paired.length >= 4){
+    const good = paired.filter(p => p.h >= 7), poor = paired.filter(p => p.h < 7);
+    if (good.length >= 2 && poor.length >= 2){
+      const avg = a => Math.round(a.reduce((x, y) => x + y.score, 0) / a.length);
+      const g = avg(good), p = avg(poor);
+      if (Math.abs(g - p) >= 3) notes.push(`Your wellness score averages ${g}/100 on nights of 7 h+ sleep vs ${p}/100 after shorter nights.`);
+    }
+  }
+  // Protein on training vs rest days (last 30 days, days with food logged)
+  const since = new Date(Date.now() - 29 * 864e5).toLocaleDateString("en-CA");
+  const byDay = {};
+  S.foods.filter(f => f.date >= since).forEach(f => { (byDay[f.date] = byDay[f.date] || {p: 0}).p += num(f.p); });
+  const train = [], rest = [];
+  Object.keys(byDay).forEach(d => { const isW = (S.workouts || []).some(w => w.date === d); (isW ? train : rest).push(byDay[d].p); });
+  if (train.length >= 2 && rest.length >= 2){
+    const avg = a => Math.round(a.reduce((x, y) => x + y, 0) / a.length);
+    const tP = avg(train), rP = avg(rest);
+    if (Math.abs(tP - rP) >= 8) notes.push(`You average ${tP} g protein on training days vs ${rP} g on rest days.`);
+  }
+
+  if (!tiles.length && !notes.length) return "";
+  return `<div class="card">
+    <h3>${ic("chart", 16)} Patterns &amp; streaks</h3>
+    ${tiles.length ? `<div class="rev-grid" style="margin-bottom:${notes.length ? "10px" : "0"}">${tiles.map(([l, v]) => `<div class="rev-stat"><div class="rv">${esc(v)}</div><div class="rl">${esc(l)}</div></div>`).join("")}</div>` : ""}
+    ${notes.map(n => `<div class="wr-note" style="margin-top:8px">${ic("check", 13)} ${esc(n)}</div>`).join("")}
+    <div class="tiny" style="margin-top:9px;color:var(--txt2)">Associations from your own logs — patterns to notice, not medical advice. They appear only once there's enough data.</div>
+  </div>`;
 }
 
 /* ---------------- global search ---------------- */
@@ -5420,15 +5514,23 @@ function settingsHTML(){
     <div class="tiny" style="margin-top:8px">A PIN in a local file is a casual lock, not hardened security — keep sensitive data backed up and private.</div>
   </div>
 
-  <div class="card">
-    <h3>${ic("database", 16)} Backup &amp; data</h3>
-    <div class="muted" style="margin-bottom:10px">Logs, targets, saved foods, chats and settings live only in this browser. Export a backup so nothing is lost across reinstalls or devices.</div>
+  ${(() => {
+    const age = backupAgeDays(); const si = storageInfo();
+    const overdue = age === null || age >= 14;
+    const ageTxt = age === null ? "Never backed up" : age === 0 ? "Backed up today" : `Last backup ${age} day${age === 1 ? "" : "s"} ago`;
+    return `<div class="card" id="setBackup">
+    <div class="card-h-row"><h3>${ic("database", 16)} Backup &amp; data</h3>
+      <span class="set-status ${overdue ? "" : "on"}"><span class="dot" ${overdue ? `style="background:var(--amber);box-shadow:0 0 0 3px color-mix(in srgb,var(--amber) 22%,transparent)"` : ""}></span>${esc(ageTxt)}</span></div>
+    <div class="muted" style="margin:12px 0 10px">Logs, targets, saved foods, chats and settings live only in this browser${overdue ? " — and browsers can clear that storage. Export a backup so nothing is lost" : ""}. ${overdue ? "" : "Export a backup so nothing is lost across reinstalls or devices."}</div>
+    <div class="stor-meter"><span style="width:${si.pct}%;${si.pct >= 80 ? "background:var(--amber)" : ""}"></span></div>
+    <div class="tiny" style="margin:6px 0 12px;color:var(--txt2)">On-device data: <b>${si.kb < 1024 ? n0(si.kb) + " KB" : (si.kb / 1024).toFixed(1) + " MB"}</b> · about ${si.pct}% of the browser's ~5 MB budget${si.pct >= 80 ? " — consider clearing old chats" : ""}.</div>
     <div class="row" style="margin-bottom:10px">
-      <button class="btn sm sec" onclick="M.backup()">${ic("download", 15)} Export backup</button>
+      <button class="btn sm ${overdue ? "" : "sec"}" onclick="M.backup()">${ic("download", 15)} Export backup</button>
       <button class="btn sm sec" onclick="M.restore()">${ic("upload", 15)} Restore backup</button>
     </div>
     <button class="btn sm danger" onclick="M.wipe()">Erase everything on this device</button>
-  </div>
+  </div>`;
+  })()}
 
   <div class="tiny" style="text-align:center;padding:6px 0 14px">
     MIRA — My Integrated Reasoning Assistant · standalone edition<br>
@@ -5438,6 +5540,7 @@ function settingsHTML(){
 }
 
 function backup(){
+  S.lastBackup = Date.now(); save();
   const data = JSON.stringify(S, null, 2);
   const blob = new Blob([data], {type: "application/json"});
   const a = document.createElement("a");
@@ -5446,6 +5549,18 @@ function backup(){
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 4000);
   toast("Backup exported ✓ (includes your API key — keep it private)");
+  render();
+}
+// Rough on-device storage picture for the Settings meter.
+function storageInfo(){
+  let bytes = 0;
+  try { bytes = new Blob([localStorage.getItem("mira.data") || ""]).size; } catch (e) { bytes = (JSON.stringify(S) || "").length; }
+  const LIMIT = 5 * 1024 * 1024;                 // typical ~5 MB localStorage budget
+  return {bytes, kb: bytes / 1024, pct: Math.min(100, Math.round((bytes / LIMIT) * 100))};
+}
+function backupAgeDays(){
+  if (!S.lastBackup) return null;
+  return Math.floor((Date.now() - S.lastBackup) / 864e5);
 }
 function restore(){
   const inp = $("#fileBackup");
@@ -5503,6 +5618,13 @@ window.M = {
     const top = el.getBoundingClientRect().top - c.getBoundingClientRect().top + c.scrollTop - 60;
     c.scrollTo({top: Math.max(0, top), behavior: "smooth"});
   },
+  nudgeDismiss(id){
+    const t = todayStr();
+    if (!S.nudgeDismissed || S.nudgeDismissed.date !== t) S.nudgeDismissed = {date: t, ids: []};
+    if (!S.nudgeDismissed.ids.includes(id)) S.nudgeDismissed.ids.push(id);
+    save(); render();
+  },
+  goBackup(){ R.tab = "set"; render(); setTimeout(() => M.setJump("setBackup"), 70); },
   qa(a){
     R.quickOpen = false;
     if (a === "water"){ const t = todayStr(); S.water[t] = (S.water[t] || 0) + 1; save(); render(); toast(`Water +1 glass · ${(S.water[t] * 0.25).toFixed(2)} L today`); return; }
@@ -6645,6 +6767,11 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
 /* ---------------- boot ---------------- */
 applyTheme();
 bindViewport();
+/* Offline launch: register the service worker when served over http(s).
+   Skipped on file:// (opening the raw file), where SWs aren't allowed. */
+if ("serviceWorker" in navigator && location.protocol.startsWith("http")){
+  window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+}
 /* start on a fresh chat each launch — previous conversations stay in the log */
 R.convId = null;
 render();

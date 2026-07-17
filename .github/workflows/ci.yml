@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  pull_request:
+    paths:
+      - "index.html"
+      - "sw.js"
+  push:
+    branches: [main]
+    paths:
+      - "index.html"
+      - "sw.js"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Syntax-check the inline app JavaScript
+        run: |
+          node -e '
+            const fs = require("fs");
+            const html = fs.readFileSync("index.html", "utf8");
+            const blocks = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m => m[1]);
+            if (!blocks.length) { console.error("No <script> blocks found in index.html"); process.exit(1); }
+            fs.writeFileSync("mira.app.js", blocks.join("\n;\n"));
+            console.log("Extracted " + blocks.length + " script block(s).");
+          '
+          node --check mira.app.js
+          echo "index.html JavaScript is syntactically valid."
+
+      - name: Syntax-check the service worker
+        run: node --check sw.js
