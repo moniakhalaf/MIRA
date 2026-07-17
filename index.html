@@ -589,6 +589,16 @@ body.kb .chatbar{padding-bottom:6px}
 .rc-or:before{content:"";position:absolute;left:0;right:0;top:50%;height:1px;background:var(--line2)}
 .rc-rebuild-bar{height:6px;border-radius:99px;background:var(--key);overflow:hidden;margin-top:9px}
 .rc-rebuild-bar span{display:block;height:100%;background:var(--gold);border-radius:99px;transition:width .4s ease}
+/* ---- Healthy snack ideas ---- */
+.snack-grid{display:flex;flex-direction:column;gap:10px}
+.snack-card{border:1px solid var(--line);border-radius:14px;padding:13px 14px;background:var(--card)}
+.snack-card.ai{border-color:var(--gold-soft);background:linear-gradient(150deg,var(--gold-soft),transparent 80%)}
+.snack-card .sc-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:4px}
+.snack-card .sc-nm{font-size:15px;font-weight:650}
+.snack-card .sc-macros{font-size:12.5px;color:var(--txt2);font-weight:600}
+.snack-card .sc-amt{color:var(--txt3);font-weight:400}
+.snack-card .sc-why{font-size:13px;color:var(--txt2);margin:7px 0 10px;line-height:1.45}
+.snack-card .btn{width:auto}
 .rc-filters{display:flex;gap:7px;overflow-x:auto;padding-bottom:11px;scrollbar-width:none}
 .rc-filters::-webkit-scrollbar{display:none}
 .rc-chip{flex:0 0 auto;padding:7px 13px;border-radius:18px;background:var(--card2);border:1px solid var(--line2);color:var(--txt2);font-size:13px;font-weight:500}
@@ -898,7 +908,7 @@ body.kb .chatbar{padding-bottom:6px}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.54";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.55";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1429,6 +1439,7 @@ function domFeatures(d){
     {icon: "moon", label: "Sleep log", desc: "Hours, quality & trend", g: "Track", on: `M.goHealth('sleep')`},
     {icon: "pill", label: "Supplements", desc: "Daily checklist & adherence", g: "Track", on: `M.goHealth('supps')`},
     go("droplet", "Hydration", "Track your water", "food", "Track"),
+    {icon: "food", label: "Healthy snack ideas", desc: "Best snacks that fit your day", g: "Plan", on: `M.goHealth('snacks')`},
     {icon: "book", label: "Healthy recipes", desc: "Import from a link, discover & save", g: "Plan", on: `M.goRecipes()`},
     {icon: "chart", label: "Health review", desc: "Your week at a glance", g: "Plan", on: `M.goHealth('review')`},
     {icon: "sun", label: "Daily brief", desc: "What to eat, drink & do", g: "Plan", on: `M.dailyBrief('${id}')`},
@@ -3772,19 +3783,84 @@ function achievementsHTML(){
 
 /* ---- view ---- */
 function healthHTML(){
-  const tabs = [["supps","Supplements"],["sleep","Sleep"],["habits","Habits"],["fasting","Fasting"],["mood","Mood"],["review","Review"]];
+  const tabs = [["snacks","Snacks"],["supps","Supplements"],["sleep","Sleep"],["habits","Habits"],["fasting","Fasting"],["mood","Mood"],["review","Review"]];
   return `
     <button class="cat-back" onclick="M.healthBack()">${ic("back", 18)} Health</button>
-    <div class="cat-title"><div class="ch-nm">Health</div><div class="ch-ds">Supplements · sleep · review</div></div>
+    <div class="cat-title"><div class="ch-nm">Health</div><div class="ch-ds">Snacks · supplements · sleep · review</div></div>
     <div class="chip-row seg-tabs">${tabs.map(([k, l]) =>
       `<button class="chip ${R.healthTab === k ? "on" : ""}" onclick="M.healthGo('${k}')">${l}</button>`).join("")}</div>
     <div style="margin-top:12px">${
+      R.healthTab === "snacks" ? healthSnacksHTML() :
       R.healthTab === "supps" ? healthSuppHTML() :
       R.healthTab === "sleep" ? healthSleepHTML() :
       R.healthTab === "habits" ? healthHabitsHTML() :
       R.healthTab === "fasting" ? healthFastHTML() :
       R.healthTab === "mood" ? healthMoodHTML() : healthReviewHTML()
     }</div>`;
+}
+// Evidence-based go-to healthy snacks. Macros are per-serving estimates from
+// standard (USDA-style) composition and labelled as estimates — never lab values.
+const SNACK_IDEAS = [
+  {name: "Plain Greek yogurt", amount: "170 g tub, 2%", kcal: 120, p: 17, c: 7, f: 3, tag: "high-protein", why: "High protein, keeps you full; add berries for fibre."},
+  {name: "Two boiled eggs", amount: "2 eggs", kcal: 140, p: 12, c: 1, f: 10, tag: "high-protein", why: "Portable complete protein, almost no carbs."},
+  {name: "Cottage cheese & berries", amount: "150 g + ½ cup", kcal: 160, p: 18, c: 12, f: 4, tag: "high-protein", why: "Very high protein with a little natural sweetness."},
+  {name: "Apple + peanut butter", amount: "1 apple + 1 tbsp", kcal: 190, p: 4, c: 25, f: 8, tag: "fibre", why: "Fibre plus healthy fat — steady energy, not a sugar spike."},
+  {name: "Veg sticks + hummus", amount: "1 cup + 2 tbsp", kcal: 130, p: 4, c: 12, f: 8, tag: "fibre", why: "Crunchy, fibre-rich and satisfying; a GCC staple."},
+  {name: "Roasted chickpeas", amount: "30 g", kcal: 120, p: 6, c: 18, f: 2, tag: "fibre", why: "Crunchy crisp-swap with fibre and plant protein."},
+  {name: "Handful of almonds", amount: "23 nuts (28 g)", kcal: 165, p: 6, c: 6, f: 14, tag: "healthy-fats", why: "Good fats, vitamin E and magnesium — mind the portion."},
+  {name: "Labneh with za'atar", amount: "3 tbsp + cucumber", kcal: 130, p: 7, c: 5, f: 9, tag: "gcc", why: "Protein-rich Levantine dip; lighter than cream cheese."},
+  {name: "Two dates + walnuts", amount: "2 medjool + 4 halves", kcal: 180, p: 3, c: 28, f: 7, tag: "gcc", why: "Natural quick energy with fibre and healthy fat — great pre-workout."},
+  {name: "Edamame", amount: "1 cup, in pod", kcal: 130, p: 11, c: 10, f: 5, tag: "high-protein", why: "Complete plant protein you eat slowly."},
+  {name: "Dark chocolate & berries", amount: "20 g 85% + ½ cup", kcal: 170, p: 3, c: 15, f: 11, tag: "treat", why: "A portion-controlled sweet fix with antioxidants."},
+  {name: "Tuna on rye crackers", amount: "½ can + 2 crackers", kcal: 160, p: 22, c: 10, f: 3, tag: "high-protein", why: "Lean protein and wholegrain carbs to tide you over."},
+];
+const SNACK_FILTERS = [["all","All"],["high-protein","High-protein"],["low-cal","Low-calorie"],["fibre","Fibre"],["healthy-fats","Healthy fats"],["gcc","GCC"]];
+function snackMatch(s){
+  const f = R.snackFilter || "all";
+  if (f === "all") return true;
+  if (f === "low-cal") return s.kcal <= 140;
+  return s.tag === f;
+}
+function snackCardHTML(s, i){
+  return `<div class="snack-card">
+    <div class="sc-top">
+      <div class="sc-nm" dir="auto">${esc(s.name)}</div>
+      <span class="rc-tag">${esc(tagLabel(s.tag))}</span>
+    </div>
+    <div class="sc-macros">${n0(s.kcal)} kcal · ${n0(s.p)}P · ${n0(s.c)}C · ${n0(s.f)}F <span class="sc-amt">· ${esc(s.amount)}</span></div>
+    <div class="sc-why" dir="auto">${esc(s.why)}</div>
+    <button class="btn sm sec" onclick="M.snackLog(${i})">${ic("plus", 14)} Log this snack</button>
+  </div>`;
+}
+function healthSnacksHTML(){
+  const t = todayStr();
+  const tot = dayTotals(t), tg = S.settings.targets || {};
+  const remK = tg.kcal ? Math.max(0, tg.kcal - tot.kcal) : null;
+  const remP = tg.protein ? Math.max(0, tg.protein - tot.p) : null;
+  const ideas = R.snackIdeas || [];
+  const list = SNACK_IDEAS.filter(snackMatch);
+  const busy = R.snackBusy;
+  return `
+    <div class="card">
+      <h3>${ic("food", 16)} Snacks that fit your day</h3>
+      <div class="muted" style="margin:2px 0 12px">${remK != null
+        ? `You have about <b>${n0(remK)} kcal</b>${remP != null ? ` and <b>${n1(remP)} g protein</b>` : ""} left today. MIRA can suggest healthy snacks that fit — grounded in evidence, macros labelled as estimates.`
+        : `Set daily targets in Settings and MIRA will tailor snacks to what's left in your day. Meanwhile, here are solid go-to options below.`}</div>
+      <button class="btn sm" onclick="M.snackSuggest()" ${busy ? "disabled" : ""}>${busy ? "Thinking…" : ic("search", 15) + " Suggest snacks that fit my day"}</button>
+      ${ideas.length ? `<div class="snack-grid" style="margin-top:14px">${ideas.map((s, i) => `<div class="snack-card ai">
+        <div class="sc-top"><div class="sc-nm" dir="auto">${esc(s.name)}</div>${s.tag ? `<span class="rc-tag">${esc(tagLabel(s.tag))}</span>` : ""}</div>
+        <div class="sc-macros">${n0(s.kcal)} kcal · ${n0(s.p)}P · ${n0(s.c)}C · ${n0(s.f)}F${s.amount ? ` <span class="sc-amt">· ${esc(s.amount)}</span>` : ""}</div>
+        ${s.why ? `<div class="sc-why" dir="auto">${esc(s.why)}</div>` : ""}
+        <button class="btn sm sec" onclick="M.snackLogAI(${i})">${ic("plus", 14)} Log this snack</button>
+      </div>`).join("")}</div>
+      <div class="tiny" style="margin-top:8px;color:var(--txt2)">Personalised by MIRA on your API key. Macros are estimates from standard composition.</div>` : ""}
+    </div>
+
+    <div class="cat-title" style="margin:4px 2px 6px"><div class="ch-nm" style="font-size:16px">Great go-to snacks</div>
+      <div class="ch-ds">Evidence-based favourites — tap to log</div></div>
+    <div class="rc-filters">${SNACK_FILTERS.map(([v, l]) => `<button class="rc-chip ${(R.snackFilter || "all") === v ? "on" : ""}" onclick="M.snackFilter('${v}')">${l}</button>`).join("")}</div>
+    <div class="snack-grid">${list.length ? list.map(s => snackCardHTML(s, SNACK_IDEAS.indexOf(s))).join("") : `<div class="empty-state">No snacks match that filter.</div>`}</div>
+    <div class="tiny" style="margin-top:8px;text-align:center;color:var(--txt2)">Macros are per-serving estimates from standard composition — your own logged numbers always take precedence.</div>`;
 }
 function healthMoodHTML(){
   const rec = [...S.mood].sort((a, b) => a.date < b.date ? -1 : 1).slice(-14);
@@ -3966,7 +4042,7 @@ function healthReviewHTML(){
 }
 
 /* ================= Healthy recipes (recipe box) ================= */
-const RECIPE_TAG_LABELS = {"high-protein": "High-protein", "low-carb": "Low-carb", "vegetarian": "Vegetarian", "vegan": "Vegan", "quick": "Quick", "arab": "Arab/GCC", "breakfast": "Breakfast", "salad": "Salad", "treat": "Treat", "gluten-free": "Gluten-free", "high-fibre": "High-fibre"};
+const RECIPE_TAG_LABELS = {"high-protein": "High-protein", "low-carb": "Low-carb", "vegetarian": "Vegetarian", "vegan": "Vegan", "quick": "Quick", "arab": "Arab/GCC", "breakfast": "Breakfast", "salad": "Salad", "treat": "Treat", "gluten-free": "Gluten-free", "high-fibre": "High-fibre", "fibre": "Fibre", "healthy-fats": "Healthy fats", "gcc": "GCC", "low-cal": "Low-calorie"};
 function tagLabel(t){ return RECIPE_TAG_LABELS[t] || (t.charAt(0).toUpperCase() + t.slice(1)); }
 // Meal categories the recipe box is organised by
 const RECIPE_CATS = [["all", "All"], ["breakfast", "Breakfast"], ["main", "Lunch / Dinner"], ["salad", "Salads"], ["snack", "Snacks"], ["sweet", "Sweets"], ["drink", "Drinks"]];
@@ -5542,6 +5618,42 @@ window.M = {
   goHealth(sub){ R.tab = "health"; R.healthTab = sub || "supps"; R.homeCat = null; R.sheet = null; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
   healthBack(){ R.tab = "home"; R.homeSection = "health"; R.homeCat = null; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
   healthGo(t){ R.healthTab = t; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
+  snackFilter(v){ R.snackFilter = v; render(); },
+  snackLog(i){
+    const s = SNACK_IDEAS[i]; if (!s) return;
+    logFood({name: s.name, amount: s.amount, kcal: s.kcal, p: s.p, c: s.c, f: s.f, conf: "estimate"});
+    toast(`Logged: ${s.name} ✓`);
+  },
+  snackLogAI(i){
+    const s = (R.snackIdeas || [])[i]; if (!s) return;
+    logFood({name: s.name, amount: s.amount || "1 serving", kcal: num(s.kcal), p: num(s.p), c: num(s.c), f: num(s.f), conf: "estimate"});
+    toast(`Logged: ${s.name} ✓`);
+  },
+  async snackSuggest(){
+    if (!S.settings.apiKey){ toast("Add your API key in Settings first."); R.tab = "set"; render(); return; }
+    const t = todayStr(); const tot = dayTotals(t); const tg = S.settings.targets || {};
+    const remK = tg.kcal ? Math.max(0, tg.kcal - tot.kcal) : null;
+    const remP = tg.protein ? Math.max(0, tg.protein - tot.p) : null;
+    R.snackBusy = true; render();
+    try {
+      const budget = remK != null
+        ? `The user has about ${Math.round(remK)} kcal${remP != null ? ` and ${remP.toFixed(0)} g protein` : ""} remaining today. Keep each snack within roughly that calorie room (a snack is ~100–250 kcal).`
+        : `The user hasn't set targets; suggest sensible ~100–250 kcal snacks.`;
+      const reply = await apiCall({
+        model: S.settings.model, max_tokens: 1600,
+        system: `You are MIRA's health & nutrition specialist. Suggest 5–6 genuinely healthy snacks tailored to the user, based on reputable nutrition guidance. ${budget} Favour whole foods, protein and fibre; include Kuwait/GCC-friendly options (labneh, dates, nuts, hummus, ful, laban). Return ONLY a JSON array; each item: {"name":str,"amount":str(portion),"kcal":num,"p":num,"c":num,"f":num,"tag":str(one of: high-protein, fibre, healthy-fats, gcc, low-cal, treat),"why":str(one short honest sentence)}. Macros are estimates from standard composition — keep them realistic and consistent (kcal ≈ 4p+4c+9f). Return ONLY the JSON array, no prose.`,
+        messages: [{role: "user", content: `Suggest healthy snacks for me right now. I'm based in Kuwait (GCC).`}],
+      });
+      const j = tryParseJson(reply);
+      const arr = (Array.isArray(j) ? j : (Array.isArray(j.snacks) ? j.snacks : [j])).filter(x => x && x.name);
+      R.snackIdeas = arr.slice(0, 6);
+      R.snackBusy = false; render();
+      toast(arr.length ? "Snack ideas ready ✓" : "No suggestions came back — try again.");
+    } catch (e) {
+      R.snackBusy = false; render();
+      toast(e.status ? e.message : "Couldn't get snack ideas — please try again.", 5000);
+    }
+  },
   suppToggle(id){
     const t = todayStr();
     const arr = S.suppLog[t] = S.suppLog[t] || [];
