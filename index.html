@@ -818,6 +818,11 @@ body.kb .chatbar{padding-bottom:6px}
 .day-items{border:1px solid var(--line);border-top:none;border-radius:0 0 var(--radius) var(--radius);background:var(--bg2);overflow:hidden}
 .food-it{display:flex;align-items:center;gap:10px;padding:10px 14px;border-top:1px solid var(--line)}
 .food-it:first-child{border-top:none}
+.meal-h{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 14px;border-top:1px solid var(--line);
+  background:var(--key);font-size:11.5px;font-weight:750;letter-spacing:.05em;text-transform:uppercase;color:var(--txt2)}
+.meal-h:first-child{border-top:none}
+.meal-h .mh-sum{font-weight:600;letter-spacing:0;text-transform:none;color:var(--txt3);font-size:11.5px}
+.day-items .food-it + .meal-h{border-top:1px solid var(--line2)}
 .food-it .nm{font-size:14.5px;font-weight:500}
 .food-it .meta{font-size:12px;color:var(--txt2)}
 .food-it .del{margin-inline-start:auto;color:var(--txt3);font-size:17px;min-width:38px;min-height:38px;display:flex;align-items:center;justify-content:center;border-radius:9px}
@@ -924,7 +929,7 @@ body.kb .chatbar{padding-bottom:6px}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.58";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.59";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1339,6 +1344,9 @@ function render(){
   const ae = document.activeElement;
   const focusId = ae && ae.id ? ae.id : null;
   const selStart = ae ? ae.selectionStart : null, selEnd = ae ? ae.selectionEnd : null;
+  // preserve scroll on a same-screen data re-render (e.g. toggling a day, logging food)
+  const prevScroll = (() => { const c = $("#content"); return c ? c.scrollTop : 0; })();
+  const sameView = viewKey() === R._vk;
   if (S.settings.pinHash && !R.unlocked){ app.innerHTML = lockHTML(); return; }
   if (FEATURES.emailSignup && !S.settings.account && !S.onboarded){ app.innerHTML = signupHTML(); return; }
   if (!S.onboarded){ app.innerHTML = onbHTML(); return; }
@@ -1386,6 +1394,8 @@ function render(){
   // page transition: animate the content only when the screen actually changes (not on data re-renders)
   const vk = viewKey();
   if (vk !== R._vk){ const c = $("#content"); if (c) c.classList.add("view-enter"); R._vk = vk; }
+  // same screen + just a data change → keep the scroll position (don't jump to top)
+  else if (sameView && R.tab !== "home" && prevScroll){ const c = $("#content"); if (c) c.scrollTop = prevScroll; }
   if (typeof ensureFastTimer === "function") ensureFastTimer();
   if (typeof ensurePomo === "function") ensurePomo();
   // restore focus/caret for a state-bound input that survives re-render (e.g. library search)
@@ -2836,7 +2846,7 @@ function sanity(m){
 }
 
 /* ---------------- nutrition tab ---------------- */
-const foodForm = {name: "", amount: "", time: "", kcal: "", p: "", c: "", f: "", conf: "user",
+const foodForm = {name: "", amount: "", time: "", meal: "", kcal: "", p: "", c: "", f: "", conf: "user",
   scOpen: false, scBase: "100", scBaseUnit: "g", scK: "", scP: "", scC: "", scF: "", scEat: ""};
 let reviewItems = null;   // [{name, amount, kcal, p, c, f, conf, note}] pending user review
 let findBusy = false, extractBusy = false, barcodeBusy = false;
@@ -2845,6 +2855,18 @@ let findBusy = false, extractBusy = false, barcodeBusy = false;
 function nowHM(){ const d = new Date(); return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); }
 function hmFromTs(ts){ const d = new Date(ts); return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); }
 function entryTime(f){ return f.time || (f.ts ? hmFromTs(f.ts) : ""); }
+/* meal grouping — breakfast / lunch / dinner / snack, auto-derived from the time when unset */
+const FOOD_MEALS = [["breakfast", "Breakfast"], ["lunch", "Lunch"], ["dinner", "Dinner"], ["snack", "Snack"]];
+function mealFromTime(hm){ const h = parseInt(String(hm || nowHM()).slice(0, 2), 10) || 0; return h < 11 ? "breakfast" : h < 16 ? "lunch" : h < 21 ? "dinner" : "snack"; }
+function entryMeal(f){ return f.meal || mealFromTime(entryTime(f)); }
+function mealLabel(m){ const x = FOOD_MEALS.find(a => a[0] === m); return x ? x[1] : "Snack"; }
+function foodItemHTML(f){
+  return `<div class="food-it">
+    <div><div class="nm" dir="auto">${esc(f.name)} ${f.conf && f.conf !== "user" ? `<span class="badge ${f.conf}">${f.conf}</span>` : ""}</div>
+    <div class="meta">${entryTime(f) ? `<span class="fi-time">${esc(entryTime(f))}</span> · ` : ""}${f.amount ? esc(f.amount) + " · " : ""}${n0(f.kcal)} kcal · ${n1(f.p)}P · ${n1(f.c)}C · ${n1(f.f)}F</div></div>
+    <button class="del" aria-label="Delete ${esc(f.name)}" onclick="M.foodDel('${f.id}')">✕</button>
+  </div>`;
+}
 
 /* ---------------- 7-day insights ---------------- */
 function insightsHTML(){
@@ -2941,6 +2963,8 @@ function foodHTML(){
         <button class="in-mic" aria-label="Voice input" onmousedown="event.preventDefault()" onclick="M.voiceFood()">${ic("mic", 17)}</button>
         <div id="acList"></div>
       </div>
+      <div class="field"><label>Meal</label>
+        <div class="seg">${FOOD_MEALS.map(([v, l]) => `<button class="${(foodForm.meal || mealFromTime(foodForm.time || nowHM())) === v ? "on" : ""}" onclick="M.foodMeal('${v}')">${l}</button>`).join("")}</div></div>
       <div class="row" style="gap:10px;margin-bottom:12px">
         <div class="field" style="flex:2"><label>Amount eaten</label><input id="ffAmount" value="${esc(foodForm.amount)}" placeholder="e.g. 150 g / 1 piece" oninput="foodForm.amount=this.value"></div>
         <div class="field" style="flex:1.15"><label>Time</label><input id="ffTime" type="time" value="${esc(foodForm.time || nowHM())}" oninput="foodForm.time=this.value"></div>
@@ -3011,12 +3035,12 @@ function foodHTML(){
         <span class="chev">▶</span><span class="dt">${fmtDate(d)}</span>
         <span class="sum">${n0(dt.kcal)} kcal · ${n1(dt.p)}P · ${n1(dt.c)}C · ${n1(dt.f)}F</span>
       </button>
-      ${open ? `<div class="day-items">${items.length ? [...items].sort((a, b) => { const ta = entryTime(a), tb = entryTime(b); return ta < tb ? -1 : ta > tb ? 1 : (a.ts || 0) - (b.ts || 0); }).map(f => `
-        <div class="food-it">
-          <div><div class="nm" dir="auto">${esc(f.name)} ${f.conf && f.conf !== "user" ? `<span class="badge ${f.conf}">${f.conf}</span>` : ""}</div>
-          <div class="meta">${entryTime(f) ? `<span class="fi-time">${esc(entryTime(f))}</span> · ` : ""}${f.amount ? esc(f.amount) + " · " : ""}${n0(f.kcal)} kcal · ${n1(f.p)}P · ${n1(f.c)}C · ${n1(f.f)}F</div></div>
-          <button class="del" aria-label="Delete ${esc(f.name)}" onclick="M.foodDel('${f.id}')">✕</button>
-        </div>`).join("") : `<div class="food-it"><span class="muted">Nothing logged.</span></div>`}</div>` : ""}
+      ${open ? `<div class="day-items">${items.length ? FOOD_MEALS.map(([mk, ml]) => {
+        const mi = items.filter(f => entryMeal(f) === mk).sort((a, b) => { const ta = entryTime(a), tb = entryTime(b); return ta < tb ? -1 : ta > tb ? 1 : (a.ts || 0) - (b.ts || 0); });
+        if (!mi.length) return "";
+        const mt = mi.reduce((a, x) => ({k: a.k + num(x.kcal), p: a.p + num(x.p)}), {k: 0, p: 0});
+        return `<div class="meal-h"><span>${esc(ml)}</span><span class="mh-sum">${n0(mt.k)} kcal · ${n1(mt.p)}P</span></div>${mi.map(foodItemHTML).join("")}`;
+      }).join("") : `<div class="food-it"><span class="muted">Nothing logged.</span></div>`}</div>` : ""}
     </div>`;
   }).join("")}`;
 }
@@ -3291,19 +3315,20 @@ function reviewHTML(){
 
 /* actions */
 function foodSaveDirect(){
-  const it = {name: foodForm.name.trim(), amount: foodForm.amount.trim(), time: foodForm.time,
+  const it = {name: foodForm.name.trim(), amount: foodForm.amount.trim(), time: foodForm.time, meal: foodForm.meal,
     kcal: foodForm.kcal, p: foodForm.p, c: foodForm.c, f: foodForm.f, conf: foodForm.conf || "user"};
   if (!it.name){ toast("Give the food a name."); return; }
   const s = sanity(it);
   if (s.errors.length){ toast(s.errors[0], 4200); return; }
   if (s.warnings.length) toast(s.warnings[0], 3600);
   logFood(it);
-  Object.assign(foodForm, {name: "", amount: "", time: "", kcal: "", p: "", c: "", f: "", conf: "user", scOpen: false});
+  Object.assign(foodForm, {name: "", amount: "", time: "", meal: "", kcal: "", p: "", c: "", f: "", conf: "user", scOpen: false});
   render();
 }
 function logFood(it){
+  const time = (it.time || "").trim() || nowHM();
   S.foods.push({id: uid(), date: todayStr(), name: it.name.trim(), amount: (it.amount || "").trim(),
-    time: (it.time || "").trim() || nowHM(),
+    time, meal: it.meal || mealFromTime(time),
     kcal: num(it.kcal), p: num(it.p), c: num(it.c), f: num(it.f), conf: it.conf || "user", ts: Date.now()});
   const key = it.name.trim().toLowerCase();
   const ex = S.savedFoods.findIndex(f => f.name.toLowerCase() === key);
@@ -5803,11 +5828,14 @@ window.M = {
         ? `The user has about ${Math.round(remK)} kcal${remP != null ? ` and ${remP.toFixed(0)} g protein` : ""} remaining today. Keep each snack within roughly that calorie room (a snack is ~100–250 kcal).`
         : `The user hasn't set targets; suggest sensible ~100–250 kcal snacks.`;
       const reply = await apiCall({
-        model: S.settings.model, max_tokens: 1600,
-        system: `You are MIRA's health & nutrition specialist. Suggest 5–6 genuinely healthy snacks tailored to the user, based on reputable nutrition guidance. ${budget} Favour whole foods, protein and fibre; include Kuwait/GCC-friendly options (labneh, dates, nuts, hummus, ful, laban). Return ONLY a JSON array; each item: {"name":str,"amount":str(portion),"kcal":num,"p":num,"c":num,"f":num,"tag":str(one of: high-protein, fibre, healthy-fats, gcc, low-cal, treat),"why":str(one short honest sentence)}. Macros are estimates from standard composition — keep them realistic and consistent (kcal ≈ 4p+4c+9f). Return ONLY the JSON array, no prose.`,
-        messages: [{role: "user", content: `Suggest healthy snacks for me right now. I'm based in Kuwait (GCC).`}],
+        model: S.settings.model, max_tokens: 1900,
+        system: `You are MIRA's health & nutrition specialist. Suggest 5–6 genuinely healthy snacks tailored to the user, based on reputable nutrition guidance. ${budget} Favour whole foods, protein and fibre; include Kuwait/GCC-friendly options (labneh, dates, nuts, hummus, ful, laban). Reply with ONLY a JSON array (no prose, no code fence); each item: {"name":str,"amount":str(portion),"kcal":num,"p":num,"c":num,"f":num,"tag":str(one of: high-protein, fibre, healthy-fats, gcc, low-cal, treat),"why":str(one short honest sentence)}. Macros are estimates from standard composition — keep them realistic and consistent (kcal ≈ 4p+4c+9f).`,
+        messages: [
+          {role: "user", content: `Suggest healthy snacks for me right now. I'm based in Kuwait (GCC).`},
+          {role: "assistant", content: "["},
+        ],
       });
-      const j = tryParseJson(reply);
+      const j = tryParseJson("[" + reply);
       const arr = (Array.isArray(j) ? j : (Array.isArray(j.snacks) ? j.snacks : [j])).filter(x => x && x.name);
       R.snackIdeas = arr.slice(0, 6);
       R.snackBusy = false; render();
@@ -6379,6 +6407,7 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
   },
   dayToggle(d){ R.openDays.has(d) ? R.openDays.delete(d) : R.openDays.add(d); render(); },
   ffName(v){ foodForm.name = v; acRender(v); },
+  foodMeal(m){ foodForm.meal = m; render(); },
   async finishSuggest(){
     if (!S.settings.apiKey){ toast("Add your API key in Settings first."); R.tab = "set"; render(); return; }
     const t = todayStr(); const tot = dayTotals(t); const tg = S.settings.targets || {};
@@ -6389,11 +6418,14 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
     try {
       const ctx = `Remaining today: ${Math.round(remK)} kcal${tg.protein ? `, ${remP.toFixed(0)} g protein` : ""}${tg.carbs ? `, ${remC.toFixed(0)} g carbs` : ""}${tg.fat ? `, ${remF.toFixed(0)} g fat` : ""}. It's ${nowHM()} now${last ? `; the last meal was logged at ${entryTime(last)}` : ""}.`;
       const reply = await apiCall({
-        model: S.settings.model, max_tokens: 1700,
-        system: `You are MIRA's nutrition specialist helping the user finish their daily macro targets. ${ctx} Suggest 3–5 realistic foods or mini-meals (eaten individually or together) that would fill roughly the remaining macros — prioritise closing the biggest gap (often protein), keep it appropriate for the time of day, and do not blow past the remaining calories. Kuwait/GCC-friendly options welcome. Return ONLY a JSON array; each item {"name":str,"amount":str(portion),"kcal":num,"p":num,"c":num,"f":num,"why":str(one short sentence, mention which gap it fills)}. Macros are realistic estimates and consistent (kcal ≈ 4p+4c+9f). Return ONLY the JSON array, no prose.`,
-        messages: [{role: "user", content: `What should I eat to finish my macros for today? I'm based in Kuwait (GCC).`}],
+        model: S.settings.model, max_tokens: 2000,
+        system: `You are MIRA's nutrition specialist helping the user finish their daily macro targets. ${ctx} Suggest 3–5 realistic foods or mini-meals (eaten individually or together) that would fill roughly the remaining macros — prioritise closing the biggest gap (often protein), keep it appropriate for the time of day, and do not blow past the remaining calories. Kuwait/GCC-friendly options welcome. Reply with ONLY a JSON array (no prose, no code fence); each item {"name":str,"amount":str(portion),"kcal":num,"p":num,"c":num,"f":num,"why":str(one short sentence, mention which gap it fills)}. Macros are realistic estimates and consistent (kcal ≈ 4p+4c+9f).`,
+        messages: [
+          {role: "user", content: `What should I eat to finish my macros for today? I'm based in Kuwait (GCC).`},
+          {role: "assistant", content: "["},
+        ],
       });
-      const j = tryParseJson(reply);
+      const j = tryParseJson("[" + reply);
       const arr = (Array.isArray(j) ? j : (Array.isArray(j.items) ? j.items : [j])).filter(x => x && x.name);
       R.finishIdeas = arr.slice(0, 5); R.finishBusy = false; render();
       toast(arr.length ? "Ideas ready ✓" : "No suggestions — try again.");
