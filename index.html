@@ -958,6 +958,66 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
   .chatbar .inner{max-width:696px;margin:0 auto}
   .sheet{max-width:560px;margin:0 auto;left:0;right:0}
 }
+
+/* ---------- Insights time-range toggle ---------- */
+.ins-range-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.ins-range{flex-wrap:nowrap}
+.ins-range button{flex:0 0 auto;padding:6px 11px;font-size:12.5px}
+
+/* ---------- iOS install hint ---------- */
+.ios-hint{position:relative;padding:13px 40px 13px 14px;margin-bottom:12px;border:1px solid var(--line2);border-radius:14px;background:linear-gradient(135deg,var(--gold-soft),transparent 78%)}
+.ios-hint .ih-x{position:absolute;top:8px;right:8px;color:var(--txt3);background:none;padding:6px;min-width:30px;min-height:30px}
+.ios-hint .ih-h{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:700;color:var(--gold);margin-bottom:5px}
+.ios-hint .ih-b{font-size:12.5px;line-height:1.5;color:var(--txt2)}
+
+/* ---------- weekly meal planner ---------- */
+.plan-weeknav{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.plan-wk{font-size:15px;font-weight:700;flex:1;text-align:center}
+.plan-day{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;margin-bottom:10px;box-shadow:var(--cardshadow)}
+.plan-day.today{border-color:var(--acc)}
+.plan-day-h{display:flex;align-items:baseline;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+.pd-dow{font-size:14px;font-weight:750}
+.pd-date{font-size:12px;color:var(--txt3)}
+.pd-tot{margin-inline-start:auto;font-size:12px;font-weight:600;color:var(--acc)}
+.pd-tg{color:var(--txt3);font-weight:400}
+.plan-slot{border-top:1px solid var(--line2);padding:7px 0}
+.plan-slot:first-of-type{border-top:none}
+.ps-h{display:flex;align-items:center;justify-content:space-between}
+.ps-nm{font-size:12px;font-weight:650;color:var(--txt2);text-transform:uppercase;letter-spacing:.05em}
+.ps-add{background:var(--bg2);color:var(--acc);border-radius:8px;width:28px;height:28px;display:flex;align-items:center;justify-content:center}
+.ps-items{margin-top:6px;display:flex;flex-direction:column;gap:5px}
+.ps-it{display:flex;align-items:center;gap:8px;background:var(--bg2);border-radius:9px;padding:7px 9px}
+.pi-nm{flex:1;min-width:0;font-size:13px;line-height:1.35}
+.pi-mac{color:var(--txt3);font-size:11.5px;white-space:nowrap}
+.pi-act{display:flex;gap:2px;flex:0 0 auto}
+.pi-act button{background:none;color:var(--txt3);width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:7px}
+.pi-act button:first-child{color:var(--green)}
+.plan-pick .plan-pick-list{display:flex;flex-direction:column;gap:6px;max-height:38vh;overflow-y:auto}
+.ppl-it{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--bg2);border-radius:10px;padding:11px 12px;text-align:start;width:100%}
+.ppl-nm{font-size:13.5px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ppl-mac{color:var(--txt3);font-size:11.5px;white-space:nowrap;flex:0 0 auto}
+
+/* ---------- grocery list ---------- */
+.grocery{display:flex;flex-direction:column}
+.groc-it{display:flex;align-items:center;gap:11px;padding:11px 4px;border-bottom:1px solid var(--line2);text-align:start;width:100%;background:none}
+.groc-it:last-child{border-bottom:none}
+.groc-it .gk{flex:0 0 auto;width:20px;height:20px;border:1.6px solid var(--line2);border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--acc)}
+.groc-it.on .gk{border-color:var(--acc);background:var(--acc-soft)}
+.groc-it.on .gl{color:var(--txt3);text-decoration:line-through}
+.groc-it .gl{font-size:14px;line-height:1.35}
+.groc-it .gc{color:var(--txt3);font-size:12px}
+
+/* ---------- right-to-left layout (Arabic, Urdu, Persian, Hebrew) ----------
+   Flexbox and normal text flow mirror automatically under dir="rtl"; these
+   rules fix the few pieces pinned with physical left/right or fixed padding. */
+[dir="rtl"] .fab{right:auto;left:18px}
+[dir="rtl"] .in-mic{right:auto;left:6px}
+[dir="rtl"] .badge{right:auto;left:0}
+[dir="rtl"] .ts-dot{right:auto;left:15%}
+[dir="rtl"] .chatbar textarea,[dir="rtl"] input,[dir="rtl"] textarea{text-align:right}
+[dir="rtl"] .home-hero,[dir="rtl"] .cat-title,[dir="rtl"] .set-hero-nm,[dir="rtl"] .set-hero-sub{text-align:right}
+[dir="rtl"] .cat-back .i,[dir="rtl"] .cat-back svg{transform:scaleX(-1)}
+[dir="rtl"] .fc-ar svg,[dir="rtl"] .chevR,[dir="rtl"] .food-it .edit svg{transform:scaleX(-1)}
 </style>
 </head>
 <body>
@@ -981,7 +1041,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.70";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.71";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1156,6 +1216,50 @@ const LANGUAGES = [
 ];
 function langName(code){ const L = LANGUAGES.find(x => x[0] === code); return L ? L[2] : code; }
 function langIsRTL(code){ const L = LANGUAGES.find(x => x[0] === code); return !!(L && L[3]); }
+
+/* ---------------- UI translation (core chrome) ----------------
+   MIRA translates its AI replies into any of the 35+ languages; the menu
+   *chrome* (tabs, chips, headers, primary buttons) is translated for the
+   languages below, English otherwise. uiLang() is null in "Match what I
+   write" mode, so the interface stays English until a language is picked. */
+const TR = {
+  ar: {
+    "Home":"الرئيسية","Chat":"محادثة","Insights":"تحليلات","Settings":"الإعدادات",
+    "Today":"اليوم","Work":"العمل","Health":"الصحة","Fitness":"اللياقة","Life":"الحياة","Training":"التدريب",
+    "Late night":"ليلاً متأخر","Good morning":"صباح الخير","Good afternoon":"مساء الخير","Good evening":"مساء الخير",
+    "How can I help you today?":"كيف يمكنني مساعدتك اليوم؟","Search everything…":"ابحث في كل شيء…",
+    "Open chat":"فتح المحادثة","Meal planner":"مخطط الوجبات","Grocery list":"قائمة التسوق",
+    "This week":"هذا الأسبوع","Weight projection":"توقّع الوزن","estimate":"تقدير",
+  },
+  es: {
+    "Home":"Inicio","Chat":"Chat","Insights":"Análisis","Settings":"Ajustes",
+    "Today":"Hoy","Work":"Trabajo","Health":"Salud","Fitness":"Fitness","Life":"Vida","Training":"Entrenamiento",
+    "Late night":"Noche","Good morning":"Buenos días","Good afternoon":"Buenas tardes","Good evening":"Buenas noches",
+    "How can I help you today?":"¿En qué puedo ayudarte hoy?","Search everything…":"Buscar en todo…",
+    "Open chat":"Abrir chat","Meal planner":"Planificador de comidas","Grocery list":"Lista de compras",
+    "This week":"Esta semana","Weight projection":"Proyección de peso","estimate":"estimación",
+  },
+  fr: {
+    "Home":"Accueil","Chat":"Chat","Insights":"Analyses","Settings":"Réglages",
+    "Today":"Aujourd'hui","Work":"Travail","Health":"Santé","Fitness":"Forme","Life":"Vie","Training":"Entraînement",
+    "Late night":"Nuit","Good morning":"Bonjour","Good afternoon":"Bon après-midi","Good evening":"Bonsoir",
+    "How can I help you today?":"Comment puis-je vous aider aujourd'hui ?","Search everything…":"Tout rechercher…",
+    "Open chat":"Ouvrir le chat","Meal planner":"Planificateur de repas","Grocery list":"Liste de courses",
+    "This week":"Cette semaine","Weight projection":"Projection du poids","estimate":"estimation",
+  },
+};
+// Interface language: null in "Match what I write" mode (chrome stays English).
+function uiLang(){ const l = S.settings.lang; return (!l || l === "match") ? null : l; }
+// Translate a core-chrome string; falls back to the English source for any
+// language/string we don't ship a translation for.
+function t(s){ const l = uiLang(); const d = l && TR[l]; return (d && d[s]) || s; }
+// Flip the whole layout to right-to-left when an RTL language is chosen.
+function applyDir(){
+  const l = uiLang();
+  const rtl = !!(l && langIsRTL(l));
+  document.documentElement.dir = rtl ? "rtl" : "ltr";
+  document.documentElement.lang = l || "en";
+}
 // Short directive appended to standalone AI prompts so their text fields
 // (names, notes, reasons, steps) come back in the user's chosen language.
 function replyLangNote(){
@@ -1175,6 +1279,8 @@ const BLANK = () => ({
     encOn: false, faceAuto: true, autoLockMin: 0,   // on-device encryption + auto-lock
     targets: {kcal: 2000, protein: 120, carbs: 0, fat: 0},
     waterGoal: 2500,
+    goalWeight: 0,
+    iosHintDismissed: false,
     coach: {name: "", email: ""},
     restLen: 90,
     profession: "",
@@ -1187,6 +1293,7 @@ const BLANK = () => ({
   savedFoods: [],     // {name, amount, kcal, p, c, f}
   meals: [],          // {id, name, items: [{name, amount, kcal, p, c, f}]}
   recipes: [],        // {id, name, image, cuisine, tags[], servings, per:{kcal,p,c,f}, ingredients[], steps[], source, healthNote, seed, ts}
+  mealPlan: {},       // dateStr -> {breakfast:[item], lunch:[], dinner:[], snack:[]}; item {name, kcal, p, c, f, rid?, ing:[]}
   recipesSeedV: 0,    // version of the seeded starter recipe set (bump to refresh existing users)
   lastBackup: 0,      // ms timestamp of the last exported backup (0 = never)
   nudgeDismissed: null, // {date, ids[]} — Home reminder nudges dismissed for the day
@@ -1291,6 +1398,7 @@ function migrateChats(){
   if (!Array.isArray(S.labs)) S.labs = [];
   if (!Array.isArray(S.mood)) S.mood = [];
   if (!Array.isArray(S.recipes)) S.recipes = [];
+  if (!S.mealPlan || typeof S.mealPlan !== "object") S.mealPlan = {};
   if (!Array.isArray(S.checkins)) S.checkins = [];
   if (!Array.isArray(S.focusLog)) S.focusLog = [];
   if (!S.budget || typeof S.budget !== "object") S.budget = {income: 0};
@@ -1332,6 +1440,7 @@ function applyTheme(){
   const meta = document.querySelector('meta[name="theme-color"]');
   const bar = {light: "#F4F3EF", glass: "#0A0C16", oled: "#000000", midnight: "#0A0F1F", sepia: "#F1E9DA", dark: "#0A0D13"};
   if (meta) meta.content = bar[actual] || "#0A0D13";
+  applyDir();
 }
 matchMedia("(prefers-color-scheme: light)").addEventListener("change", () => {
   if (S.settings.theme === "auto") applyTheme();
@@ -1516,6 +1625,11 @@ const R = {
   habitDraft: "",
   editFoodId: null,    // id of the food entry currently being edited (null = logging new)
   mealMenuId: null,    // id of the food entry whose quick meal-move picker is open
+  insRange: 14,        // Insights time window in days (7 | 14 | 30 | 90 | 0=all)
+  planWeek: 0,         // meal-planner week offset (0 = this week)
+  planPick: null,      // {date, meal} while the "add to plan" picker sheet is open
+  groceryOpen: false,  // grocery-list view open
+  groceryChecked: new Set(), // ephemeral ticked grocery items
   _dek: null, _enc: null, _encBusy: false, _encErr: "", _faceTried: false, encSetup: null,  // encryption runtime
   moodForm: {mood: 0, energy: 0, note: ""},
   bodyOpen: {meas: false, photo: false, lab: false},
@@ -1582,6 +1696,7 @@ function undoDo(){
 }
 function renderMain(){
   const app = $("#app");
+  applyDir();
   const keepInput = $("#chatIn") ? $("#chatIn").value : "";
   const ae = document.activeElement;
   const focusId = ae && ae.id ? ae.id : null;
@@ -1603,8 +1718,8 @@ function renderMain(){
   document.documentElement.style.setProperty("--acc", accClr || "var(--gold)");
   document.documentElement.style.setProperty("--acc-soft", accClr ? hexSoft(accClr) : "var(--gold-soft)");
   const sub = R.tab === "chat" ? `<span class="mode-dot"></span>${esc(dom.name)}`
-    : R.tab === "home" ? esc(catDom ? catDom.name : "Home")
-    : R.tab === "train" ? "Training" : R.tab === "health" ? "Health" : R.tab === "work" ? "Work" : R.tab === "life" ? "Life" : esc(tabTitle());
+    : R.tab === "home" ? esc(catDom ? catDom.name : t("Home"))
+    : R.tab === "train" ? t("Training") : R.tab === "health" ? t("Health") : R.tab === "work" ? t("Work") : R.tab === "life" ? t("Life") : esc(tabTitle());
   app.innerHTML = `
     <div class="topbar" id="topbar">
       <div class="brand">MIRA</div>
@@ -1620,6 +1735,7 @@ function renderMain(){
       R.tab === "chat" ? chatHTML() :
       R.tab === "insights" ? trendsHTML() :
       R.tab === "recipes" ? recipesHTML() :
+      R.tab === "plan" ? plannerHTML() :
       R.tab === "wellness" ? wellnessHTML() :
       R.tab === "food" ? foodHTML() :
       R.tab === "body" ? bodyHTML() : settingsHTML()
@@ -1631,7 +1747,7 @@ function renderMain(){
     ${R.sheet === "chats" ? chatSheetHTML() : ""}
     ${R.searchOpen ? searchHTML() : ""}
     <div class="tabbar">
-      ${tabBtn("home", "home", "Home")}${tabBtn("chat", "chat", "Chat")}${tabBtn("insights", "trend", "Insights")}${tabBtn("set", "gear", "Settings")}
+      ${tabBtn("home", "home", t("Home"))}${tabBtn("chat", "chat", t("Chat"))}${tabBtn("insights", "trend", t("Insights"))}${tabBtn("set", "gear", t("Settings"))}
     </div>`;
   if (R.tab === "home"){ const c = $("#content"); if (c) c.scrollTop = 0; }
   // page transition: animate the content only when the screen actually changes (not on data re-renders)
@@ -1687,8 +1803,9 @@ function catTagline(d){
 }
 function greeting(){
   const h = new Date().getHours();
-  const g = h < 5 ? "Late night" : h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
-  return S.settings.name ? `${g}, ${esc(S.settings.name)}` : g;
+  const g = t(h < 5 ? "Late night" : h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening");
+  const comma = uiLang() === "ar" ? "،" : ",";
+  return S.settings.name ? `${g}${comma} ${esc(S.settings.name)}` : g;
 }
 function domFeatures(d){
   const id = d.id;
@@ -1713,6 +1830,7 @@ function domFeatures(d){
     go("droplet", "Hydration", "Track your water", "food", "Track"),
     {icon: "food", label: "Healthy snack ideas", desc: "Best snacks that fit your day", g: "Plan", on: `M.goHealth('snacks')`},
     {icon: "book", label: "Healthy recipes", desc: "Import from a link, discover & save", g: "Plan", on: `M.goRecipes()`},
+    {icon: "calendar", label: "Meal planner", desc: "Plan your week + grocery list", g: "Plan", on: `M.goPlanner()`},
     {icon: "chart", label: "Health review", desc: "Your week at a glance", g: "Plan", on: `M.goHealth('review')`},
     {icon: "sun", label: "Daily brief", desc: "What to eat, drink & do", g: "Plan", on: `M.dailyBrief('${id}')`},
     {icon: "share", label: "Share food log", desc: "Export a date range (PDF/CSV)", g: "Tools", on: `M.openFoodReport()`},
@@ -1848,7 +1966,7 @@ function todayOverviewHTML(){
     ${dash || `<div class="today-empty">${ic("target", 18)}<div><b>Your day starts here.</b><div class="muted" style="margin-top:3px">Log something with the + button, pick an area above, or ask MIRA anything.</div></div></div>`}
     ${(typeof achievementsHTML === "function") ? achievementsHTML() : ""}
     ${recentChatsHTML()}
-    <button class="btn sec" style="margin-top:14px" onclick="M.tab('chat')">${ic("chat", 16)} Open chat</button>`;
+    <button class="btn sec" style="margin-top:14px" onclick="M.tab('chat')">${ic("chat", 16)} ${t("Open chat")}</button>`;
 }
 // Gentle, contextual in-app reminders on Home — derived from today's own data,
 // dismissible for the day. No background push; they simply appear when relevant.
@@ -1874,6 +1992,17 @@ function homeNudgesHTML(){
     <button class="nz-x" aria-label="Dismiss" onclick="M.nudgeDismiss('${x.id}')">${ic("x", 16)}</button>
   </div>`).join("");
 }
+// iOS has no install prompt, so a one-time tip explains Add to Home Screen.
+function isIOSDevice(){ return /iPad|iPhone|iPod/.test(navigator.userAgent || "") || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1); }
+function isStandaloneApp(){ try { return window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true; } catch (e) { return false; } }
+function iosInstallHintHTML(){
+  if (!isIOSDevice() || isStandaloneApp() || S.settings.iosHintDismissed) return "";
+  return `<div class="ios-hint">
+    <button class="ih-x" aria-label="Dismiss" onclick="M.iosHintDismiss()">${ic("x", 15)}</button>
+    <div class="ih-h">${ic("download", 16)} Install MIRA on your iPhone</div>
+    <div class="ih-b">Tap the Share icon <b>⎋</b> in Safari, then <b>Add to Home Screen</b> — MIRA opens full-screen like a native app and works offline.</div>
+  </div>`;
+}
 function homeHTML(){
   const doms = dashDomains();
   const sections = ["today", ...doms.map(d => d.id)];
@@ -1883,13 +2012,14 @@ function homeHTML(){
     <div class="home-hero">
       <div class="hdate">${new Date().toLocaleDateString("en-GB", {weekday: "long", day: "numeric", month: "long"})}</div>
       <div class="hi">${greeting()}</div>
-      <div class="q">How can I help you today?</div>
+      <div class="q">${t("How can I help you today?")}</div>
     </div>
-    <button class="home-search" onclick="M.searchOpen()">${ic("search", 16)} <span>Search everything…</span></button>
+    <button class="home-search" onclick="M.searchOpen()">${ic("search", 16)} <span>${t("Search everything…")}</span></button>
+    ${iosInstallHintHTML()}
     ${homeNudgesHTML()}
     <div class="dash-chips home-chips">
-      ${chip("today", "Today", "var(--acc)", false)}
-      ${doms.map(d => chip(d.id, d.name, d.color, true)).join("")}
+      ${chip("today", t("Today"), "var(--acc)", false)}
+      ${doms.map(d => chip(d.id, t(d.name), d.color, true)).join("")}
     </div>
     ${R.homeSection === "today" ? todayOverviewHTML() : domainDashHTML(R.homeSection)}`;
 }
@@ -2124,6 +2254,16 @@ function quickAddHTML(){
 
 /* ---------------- Insights tab (trends over time) ---------------- */
 function last14Dates(){ const o = []; for (let k = 13; k >= 0; k--) o.push(new Date(Date.now() - k * 864e5).toLocaleDateString("en-CA")); return o; }
+// Insights window: N most-recent calendar days (oldest first). insRange 0 = all
+// time, anchored to the earliest logged date across food/sleep/check-ins.
+function insDates(n){
+  if (!n){
+    const all = [...(S.foods || []).map(f => f.date), ...(S.sleep || []).map(s => s.date), ...(S.checkins || []).map(c => c.date), ...(S.inbody || []).map(e => e.date)].filter(Boolean).sort();
+    if (all.length){ const first = new Date(all[0]); n = Math.min(365, Math.max(14, Math.round((Date.now() - first.getTime()) / 864e5) + 1)); }
+    else n = 14;
+  }
+  const o = []; for (let k = n - 1; k >= 0; k--) o.push(new Date(Date.now() - k * 864e5).toLocaleDateString("en-CA")); return o;
+}
 // Bars for a per-day series; honest empty state handled by caller.
 function barsSVG(vals, opt){
   opt = opt || {};
@@ -2157,54 +2297,106 @@ function trendCard(title, sub, body){
   return `<div class="card trend-card"><div class="tc-h"><span class="tc-t">${title}</span>${sub ? `<span class="tc-s">${sub}</span>` : ""}</div>${body}</div>`;
 }
 function trendEmpty(msg){ return `<div class="tc-empty">${msg}</div>`; }
+const INS_RANGES = [[7, "7d"], [14, "14d"], [30, "30d"], [90, "90d"], [0, "All"]];
+function insRangeBarHTML(){
+  const cur = R.insRange == null ? 14 : R.insRange;
+  return `<div class="seg ins-range">${INS_RANGES.map(([v, l]) =>
+    `<button class="${cur === v ? "on" : ""}" onclick="M.insRange(${v})">${l}</button>`).join("")}</div>`;
+}
 function trendsHTML(){
   if (R.reviewOpen) return weeklyReviewHTML();
-  const days = last14Dates();
+  const range = R.insRange == null ? 14 : R.insRange;
+  const days = insDates(range);
+  const dn = days.length;
+  const lab = range === 0 ? "all time" : dn + " days";
   const tg = S.settings.targets || {};
   const cards = [];
 
-  // Weight (line, from InBody)
-  const wl = [...(S.inbody || [])].filter(e => e.weight).sort((a, b) => a.date < b.date ? -1 : 1).slice(-16).map(e => ({d: e.date, v: +e.weight}));
+  // Weight (line, from InBody), windowed to the range
+  const from = days[0];
+  const wl = [...(S.inbody || [])].filter(e => e.weight && (range === 0 || e.date >= from)).sort((a, b) => a.date < b.date ? -1 : 1).slice(-40).map(e => ({d: e.date, v: +e.weight}));
   cards.push(trendCard("Weight", wl.length ? `${wl[0].v} → ${wl[wl.length - 1].v} kg` : "kg",
-    wl.length >= 2 ? lineSVG(wl, {color: "#e8863d"}) : trendEmpty("Log at least 2 InBody entries to see your weight trend.")));
+    wl.length >= 2 ? lineSVG(wl, {color: "#e8863d"}) : trendEmpty("Log at least 2 weight entries to see your trend.")));
 
-  // Calories/day (bars, 14d, with target)
+  // Calories/day
   const kcals = days.map(d => Math.round(dayTotals(d).kcal));
   const kcalDays = kcals.filter(v => v > 0).length;
-  cards.push(trendCard("Calories · 14 days", tg.kcal ? `target ${n0(tg.kcal)}` : "per day",
+  cards.push(trendCard("Calories · " + lab, tg.kcal ? `target ${n0(tg.kcal)}` : "per day",
     kcalDays >= 2 ? barsSVG(kcals, {color: "#3bb273", target: tg.kcal}) : trendEmpty("Log food on at least 2 days to see your calorie trend.")));
 
-  // Protein/day (bars, 14d, with target)
+  // Protein/day
   const prot = days.map(d => Math.round(dayTotals(d).p));
   const protDays = prot.filter(v => v > 0).length;
-  cards.push(trendCard("Protein · 14 days", tg.protein ? `target ${n0(tg.protein)} g` : "g per day",
+  cards.push(trendCard("Protein · " + lab, tg.protein ? `target ${n0(tg.protein)} g` : "g per day",
     protDays >= 2 ? barsSVG(prot, {color: "#4c7fe0", target: tg.protein}) : trendEmpty("Log food on at least 2 days to see your protein trend.")));
 
-  // Sleep hours (bars, 14d)
+  // Sleep hours
   const sleepMap = {}; (S.sleep || []).forEach(e => { sleepMap[e.date] = +e.hours || 0; });
   const sleeps = days.map(d => sleepMap[d] || 0);
   const sleepDays = sleeps.filter(v => v > 0).length;
-  cards.push(trendCard("Sleep · 14 days", "hours per night",
+  cards.push(trendCard("Sleep · " + lab, "hours per night",
     sleepDays >= 2 ? barsSVG(sleeps, {color: "#b57edc"}) : trendEmpty("Log at least 2 nights of sleep to see your trend.")));
 
   // Wellness score (line, from check-ins)
   const ciPts = days.map(d => { const c = (S.checkins || []).find(x => x.date === d); return c ? {d, v: checkinScore(c)} : null; }).filter(p => p && p.v != null);
-  cards.push(trendCard("Wellness · 14 days", "daily score /100",
+  cards.push(trendCard("Wellness · " + lab, "daily score /100",
     ciPts.length >= 2 ? lineSVG(ciPts, {color: "#3bb273"}) : trendEmpty("Do at least 2 wellness check-ins to see your mood trend.")));
 
-  // Training sets per week (bars, last 6 weeks)
-  const weeks = []; for (let w = 5; w >= 0; w--){ const start = new Date(Date.now() - (w * 7 + 6) * 864e5).toLocaleDateString("en-CA"); const end = new Date(Date.now() - (w * 7) * 864e5).toLocaleDateString("en-CA"); weeks.push({start, end}); }
+  // Training sets per week — scale week count to the range
+  const nWeeks = Math.min(26, Math.max(6, Math.ceil((range || dn) / 7)));
+  const weeks = []; for (let w = nWeeks - 1; w >= 0; w--){ const start = new Date(Date.now() - (w * 7 + 6) * 864e5).toLocaleDateString("en-CA"); const end = new Date(Date.now() - (w * 7) * 864e5).toLocaleDateString("en-CA"); weeks.push({start, end}); }
   const setSeries = weeks.map(wk => { let s = 0; (S.workouts || []).filter(x => x.date >= wk.start && x.date <= wk.end).forEach(x => (x.items || []).forEach(it => s += (it.sets || []).length)); return s; });
   const setWeeks = setSeries.filter(v => v > 0).length;
-  cards.push(trendCard("Training volume · 6 weeks", "sets per week",
+  cards.push(trendCard(`Training volume · ${nWeeks} weeks`, "sets per week",
     setWeeks >= 2 ? barsSVG(setSeries, {color: "#e8863d"}) : trendEmpty("Log workouts across at least 2 weeks to see your volume trend.")));
 
   return `
     ${weekReviewCardHTML()}
+    ${weightProjectionHTML()}
     ${patternsCardHTML()}
+    <div class="ins-range-row"><span class="tiny" style="color:var(--txt2)">Time range</span>${insRangeBarHTML()}</div>
     <div class="wr-note">${ic("check", 13)} Trends are drawn only from what you logged. A chart appears once there are at least two data points; until then it says so.</div>
     ${cards.join("")}
     <div class="tiny" style="text-align:center;margin:4px 0 2px;color:var(--txt2)">More data, sharper trends. Keep logging and these fill in automatically.</div>`;
+}
+// Honest weight-goal projection: measures the real rate from the user's own
+// weight log (least-squares slope) and extrapolates to their goal weight.
+// Never a promise — always labelled an estimate; refuses when the trend is
+// flat, moving away, or the data is too thin/short to be meaningful.
+function weightProjectionHTML(){
+  const goal = +(S.settings.goalWeight || 0);
+  const pts = [...(S.inbody || [])].filter(e => e.weight).map(e => ({t: new Date(e.date).getTime() / 864e5, v: +e.weight})).sort((a, b) => a.t - b.t);
+  if (!goal || pts.length < 2) return "";
+  const w0 = pts[pts.length - 1].v;
+  // least-squares slope (kg per day) over logged points
+  const nP = pts.length, mt = pts.reduce((a, p) => a + p.t, 0) / nP, mv = pts.reduce((a, p) => a + p.v, 0) / nP;
+  let num = 0, den = 0; pts.forEach(p => { num += (p.t - mt) * (p.v - mv); den += (p.t - mt) * (p.t - mt); });
+  const spanDays = pts[nP - 1].t - pts[0].t;
+  const slope = den ? num / den : 0;           // kg/day
+  const perWk = slope * 7;
+  if (Math.abs(w0 - goal) < 0.3) return projCard(`You're essentially at your goal of ${goal} kg. Nice.`, goal, w0, perWk);
+  if (spanDays < 7 || Math.abs(perWk) < 0.05) return projCard(`Your weight is holding steady, so there's no reliable ETA yet. Keep logging — a trend needs a couple of weeks of movement.`, goal, w0, perWk);
+  const towardGoal = (goal < w0 && slope < 0) || (goal > w0 && slope > 0);
+  if (!towardGoal) return projCard(`Your recent trend is moving away from ${goal} kg, so no ETA — worth a look at intake vs output.`, goal, w0, perWk);
+  const weeks = Math.abs((goal - w0) / perWk);
+  const eta = new Date(Date.now() + weeks * 7 * 864e5);
+  const etaStr = eta.toLocaleDateString("en-GB", {day: "numeric", month: "long", year: "numeric"});
+  const wkTxt = weeks < 1.5 ? "about a week" : `~${Math.round(weeks)} weeks`;
+  return projCard(`At your recent rate of ${perWk > 0 ? "+" : ""}${perWk.toFixed(2)} kg/week, reaching ${goal} kg would take ${wkTxt} — around ${etaStr}.`, goal, w0, perWk, weeks);
+}
+function projCard(msg, goal, w0, perWk, weeks){
+  const gap = goal - w0;
+  return `<div class="card">
+    <h3>${ic("trend", 16)} Weight projection <span class="badge" style="margin-inline-start:auto">estimate</span></h3>
+    <div class="rev-grid" style="margin-bottom:10px">
+      <div class="rev-stat"><div class="rv">${w0} kg</div><div class="rl">Now</div></div>
+      <div class="rev-stat"><div class="rv">${goal} kg</div><div class="rl">Goal</div></div>
+      <div class="rev-stat"><div class="rv">${gap > 0 ? "+" : ""}${gap.toFixed(1)}</div><div class="rl">To go (kg)</div></div>
+      ${weeks ? `<div class="rev-stat"><div class="rv">${weeks < 1.5 ? "~1" : "~" + Math.round(weeks)}</div><div class="rl">Weeks</div></div>` : ""}
+    </div>
+    <div class="wr-note">${ic("check", 13)} ${esc(msg)}</div>
+    <div class="tiny" style="margin-top:9px;color:var(--txt2)">Projected from your own logged weight trend, not a guarantee — real progress varies with training, sleep, water and adherence. Set your goal weight in Settings → Daily targets.</div>
+  </div>`;
 }
 // Honest cross-signal observations + streaks — associations from the user's own
 // logs, each gated behind enough data so nothing is invented.
@@ -2264,6 +2456,7 @@ function patternsCardHTML(){
 /* ---------------- global search ---------------- */
 const SEARCH_NAV = [
   {kw: "recipe recipes healthy cook meal import", icon: "book", label: "Healthy recipes", sub: "Open recipe box", go: "M.goRecipes()"},
+  {kw: "meal plan planner weekly grocery shopping list groceries menu", icon: "calendar", label: "Meal planner", sub: "Plan the week + grocery list", go: "M.goPlanner()"},
   {kw: "wellness mood check-in journal gratitude feeling", icon: "smile", label: "Wellness check-in", sub: "Mood & journal", go: "M.goWellness()"},
   {kw: "sleep rest", icon: "moon", label: "Sleep log", sub: "Hours & quality", go: "M.goHealth('sleep')"},
   {kw: "supplement supplements vitamin", icon: "pill", label: "Supplements", sub: "Daily checklist", go: "M.goHealth('supps')"},
@@ -4627,7 +4820,10 @@ function recipeDetailHTML(){
     <div class="tiny" style="text-align:center;color:var(--txt2);margin-top:4px">per serving${r.per.kcal ? "" : " — macros not set"}</div>
     ${r.healthNote ? `<div class="rc-note">${ic("check", 13)} ${esc(r.healthNote)}</div>` : ""}
     ${(r.tags || []).length ? `<div class="rc-tags" style="margin:12px 2px">${r.tags.map(t => `<span class="rc-tag">${esc(tagLabel(t))}</span>`).join("")}</div>` : ""}
-    <button class="btn" style="margin:6px 0 4px" onclick="M.recipeLog('${r.id}')">${ic("plus", 16)} Log a serving to today's food</button>
+    <div class="row" style="margin:6px 0 4px;gap:8px">
+      <button class="btn" style="flex:1" onclick="M.recipeLog('${r.id}')">${ic("plus", 16)} Log a serving</button>
+      <button class="btn sec" style="flex:1" onclick="M.planAddRecipe('${r.id}')">${ic("calendar", 15)} Add to plan</button>
+    </div>
     <div class="card"><h3>${ic("list", 16)} Ingredients</h3>
       <ul class="rc-list">${(r.ingredients || []).length ? r.ingredients.map(i => `<li dir="auto">${esc(i)}</li>`).join("") : `<li class="muted">Not listed.</li>`}</ul></div>
     <div class="card"><h3>${ic("book", 16)} Method</h3>
@@ -4793,6 +4989,135 @@ function wellnessHTML(){
         <span class="ci-h-tx"><span class="ci-h-d">${fmtDate(c.date)}</span>${c.gratitude ? `<span class="ci-h-g" dir="auto">${esc(c.gratitude)}</span>` : c.journal ? `<span class="ci-h-g" dir="auto">${esc(c.journal.slice(0, 60))}${c.journal.length > 60 ? "…" : ""}</span>` : ""}</span>
         ${checkinScore(c) != null ? `<span class="ci-h-s">${checkinScore(c)}</span>` : ""}
       </div>`; }).join("")}</div>` : ""}`;
+}
+
+/* ---------------- weekly meal planner + grocery list ----------------
+   Plan meals across a week from the recipe box and saved meals, see per-day
+   macro totals against targets, log any planned item into the food log, and
+   roll every planned recipe's ingredients into one consolidated grocery list. */
+function planWeekDates(off){
+  const base = new Date(); base.setHours(0, 0, 0, 0);
+  const dow = (base.getDay() + 6) % 7;                 // 0 = Monday
+  const mon = new Date(base.getTime() - (dow - (off || 0) * 7) * 864e5);
+  const o = []; for (let k = 0; k < 7; k++) o.push(new Date(mon.getTime() + k * 864e5).toLocaleDateString("en-CA"));
+  return o;
+}
+function planItems(date, meal){ const d = S.mealPlan[date]; return (d && d[meal]) || []; }
+function planDayTotals(date){ const d = S.mealPlan[date] || {}; let k = 0, p = 0, n = 0; FOOD_MEALS.forEach(([m]) => (d[m] || []).forEach(it => { k += num(it.kcal); p += num(it.p); n++; })); return {k, p, n}; }
+function planWeekLabel(off){ return off === 0 ? "This week" : off === 1 ? "Next week" : off === -1 ? "Last week" : (off > 0 ? `In ${off} weeks` : `${-off} weeks ago`); }
+
+function plannerHTML(){
+  if (R.groceryOpen) return groceryHTML();
+  const off = R.planWeek || 0;
+  const week = planWeekDates(off);
+  const tg = S.settings.targets || {};
+  const today = todayStr();
+  const anyPlanned = week.some(d => planDayTotals(d).n > 0);
+  return `
+    <button class="cat-back" onclick="M.backToHome('health')">${ic("back", 18)} Home</button>
+    <div class="cat-title"><div class="ch-nm">${t("Meal planner")}</div>
+      <div class="ch-ds">Plan your week from recipes & saved meals, then build a grocery list</div></div>
+    <div class="plan-weeknav">
+      <button class="btn sm sec" aria-label="Previous week" onclick="M.planWeek(-1)">${ic("back", 15)}</button>
+      <span class="plan-wk">${t(planWeekLabel(off))}</span>
+      <button class="btn sm sec" aria-label="Next week" onclick="M.planWeek(1)">${ic("chevR", 15)}</button>
+    </div>
+    <div class="row" style="gap:8px;margin-bottom:12px">
+      <button class="btn sec" style="flex:1" onclick="M.groceryShow()">${ic("list", 15)} ${t("Grocery list")}</button>
+      ${anyPlanned ? `<button class="btn sm sec" onclick="M.planClearWeek()">${ic("trash", 14)} Clear week</button>` : ""}
+    </div>
+    ${week.map(date => {
+      const dt = new Date(date + "T00:00:00");
+      const tot = planDayTotals(date);
+      const isToday = date === today;
+      return `<div class="plan-day ${isToday ? "today" : ""}">
+        <div class="plan-day-h">
+          <span class="pd-dow">${dt.toLocaleDateString("en-GB", {weekday: "short"})}${isToday ? " · today" : ""}</span>
+          <span class="pd-date">${dt.toLocaleDateString("en-GB", {day: "numeric", month: "short"})}</span>
+          ${tot.n ? `<span class="pd-tot">${n0(tot.k)} kcal · ${n1(tot.p)}P${tg.kcal ? ` <span class="pd-tg">/ ${n0(tg.kcal)}</span>` : ""}</span>` : ""}
+        </div>
+        ${FOOD_MEALS.map(([m, ml]) => {
+          const items = planItems(date, m);
+          return `<div class="plan-slot">
+            <div class="ps-h"><span class="ps-nm">${ml}</span><button class="ps-add" aria-label="Add ${ml}" onclick="M.planPick('${date}','${m}')">${ic("plus", 14)}</button></div>
+            ${items.length ? `<div class="ps-items">${items.map((it, i) => `<div class="ps-it">
+                <span class="pi-nm" dir="auto">${esc(it.name)}${it.kcal ? ` <span class="pi-mac">${n0(it.kcal)} kcal · ${n1(it.p)}P</span>` : ""}</span>
+                <span class="pi-act">
+                  <button aria-label="Log" title="Log to today" onclick="M.planLog('${date}','${m}',${i})">${ic("check", 13)}</button>
+                  <button aria-label="Remove" onclick="M.planRemove('${date}','${m}',${i})">${ic("x", 13)}</button>
+                </span></div>`).join("")}</div>` : ""}
+          </div>`;
+        }).join("")}
+      </div>`;
+    }).join("")}
+    <div class="tiny" style="text-align:center;color:var(--txt2);margin:6px 0 2px">Macros shown are per planned serving from your recipes & saved meals — estimates where the source didn't publish exact values.</div>
+    ${R.planPick ? planPickSheetHTML() : ""}`;
+}
+
+function planPickSheetHTML(){
+  const {date, meal} = R.planPick;
+  const ml = mealLabel(meal);
+  const dt = new Date(date + "T00:00:00").toLocaleDateString("en-GB", {weekday: "long", day: "numeric", month: "short"});
+  const recipes = S.recipes || [];
+  const meals = S.meals || [];
+  return `<div class="sheet-mask show" onclick="M.planPickClose()"></div>
+    <div class="sheet show plan-pick" onclick="event.stopPropagation()">
+      <div class="grab"></div>
+      <h3 style="margin:0 0 4px">Add to ${ml} <span class="tiny" style="font-weight:400">· ${dt}</span></h3>
+      <div class="field" style="margin:10px 0"><label>Quick add (name)</label>
+        <input id="planFree" placeholder="e.g. Grilled chicken salad" dir="auto" onkeydown="if(event.key==='Enter')M.planAddFree()">
+        <button class="btn sm" style="margin-top:8px;width:100%" onclick="M.planAddFree()">${ic("plus", 14)} Add name only</button></div>
+      ${recipes.length ? `<div class="set-group-label" style="margin:6px 0 4px">From your recipes</div>
+        <div class="plan-pick-list">${recipes.slice(0, 40).map(r => `<button class="ppl-it" onclick="M.planPickRecipe('${r.id}')">
+          <span class="ppl-nm" dir="auto">${esc(r.name)}</span><span class="ppl-mac">${n0(r.per.kcal)} kcal · ${n1(r.per.p)}P</span></button>`).join("")}</div>` : ""}
+      ${meals.length ? `<div class="set-group-label" style="margin:12px 0 4px">From saved meals</div>
+        <div class="plan-pick-list">${meals.map((ml2, i) => { const tt = ml2.items.reduce((a, x) => ({k: a.k + num(x.kcal), p: a.p + num(x.p)}), {k: 0, p: 0}); return `<button class="ppl-it" onclick="M.planPickMeal(${i})">
+          <span class="ppl-nm" dir="auto">${esc(ml2.name)}</span><span class="ppl-mac">${n0(tt.k)} kcal · ${n1(tt.p)}P</span></button>`; }).join("")}</div>` : ""}
+      ${!recipes.length && !meals.length ? `<div class="muted" style="margin:8px 0">No recipes or saved meals yet — add a name above, or build your recipe box first.</div>` : ""}
+      <button class="btn sec" style="width:100%;margin-top:12px" onclick="M.planPickClose()">Done</button>
+    </div>`;
+}
+
+// Consolidate every planned recipe / saved-meal ingredient across the week into
+// one de-duplicated checklist. Free-text items (no ingredients) are listed by name.
+function groceryBuild(){
+  const week = planWeekDates(R.planWeek || 0);
+  const map = new Map();                       // key -> {label, count}
+  week.forEach(date => FOOD_MEALS.forEach(([m]) => planItems(date, m).forEach(it => {
+    const lines = (it.ing && it.ing.length) ? it.ing : [it.name];
+    lines.forEach(raw => {
+      const line = String(raw || "").trim(); if (!line) return;
+      const key = line.toLowerCase();
+      if (map.has(key)) map.get(key).count++;
+      else map.set(key, {label: line, count: 1});
+    });
+  })));
+  return [...map.values()].sort((a, b) => a.label.localeCompare(b.label));
+}
+function groceryHTML(){
+  const items = groceryBuild();
+  return `
+    <button class="cat-back" onclick="M.groceryHide()">${ic("back", 18)} ${t("Meal planner")}</button>
+    <div class="cat-title"><div class="ch-nm">${t("Grocery list")}</div>
+      <div class="ch-ds">${t(planWeekLabel(R.planWeek || 0))} · ${items.length} item${items.length === 1 ? "" : "s"} from your plan</div></div>
+    ${items.length ? `
+      <div class="row" style="gap:8px;margin-bottom:12px">
+        <button class="btn sec" style="flex:1" onclick="M.groceryShare()">${ic("share", 15)} Share</button>
+        <button class="btn sec" style="flex:1" onclick="M.groceryCopy()">${ic("copy", 15)} Copy</button>
+      </div>
+      <div class="card"><div class="grocery">${items.map((g, i) => {
+        const on = R.groceryChecked.has(g.label.toLowerCase());
+        return `<button class="groc-it ${on ? "on" : ""}" onclick="M.groceryTick('${esc(g.label.toLowerCase()).replace(/'/g, "\\'")}')">
+          <span class="gk">${on ? ic("check", 14) : ""}</span>
+          <span class="gl" dir="auto">${esc(g.label)}${g.count > 1 ? ` <span class="gc">×${g.count}</span>` : ""}</span></button>`;
+      }).join("")}</div></div>
+      <div class="tiny" style="text-align:center;color:var(--txt2);margin-top:4px">Rolled up from the recipes & meals you planned this week. Ticks are just for shopping — they reset when you leave.</div>`
+      : `<div class="empty-state"><b>Nothing planned yet</b>Add recipes or meals to your week and their ingredients gather here as one shopping list.</div>`}`;
+}
+function groceryText(){
+  const items = groceryBuild();
+  const head = `Grocery list — ${planWeekLabel(R.planWeek || 0)} (MIRA)`;
+  return head + "\n\n" + items.map(g => `• ${g.label}${g.count > 1 ? ` ×${g.count}` : ""}`).join("\n");
 }
 </script>
 <script>
@@ -5687,7 +6012,11 @@ function settingsHTML(){
       <div class="field"><label>Carbs g (optional)</label><input type="number" inputmode="numeric" value="${st.targets.carbs || ""}" oninput="S.settings.targets.carbs=num(this.value);save()"></div>
       <div class="field"><label>Fat g (optional)</label><input type="number" inputmode="numeric" value="${st.targets.fat || ""}" oninput="S.settings.targets.fat=num(this.value);save()"></div>
     </div>
-    <div class="field" style="margin-bottom:0"><label>Water goal ml</label><input type="number" inputmode="numeric" value="${st.waterGoal || ""}" oninput="S.settings.waterGoal=Math.max(250,num(this.value));save()"></div>
+    <div class="grid2">
+      <div class="field" style="margin-bottom:0"><label>Water goal ml</label><input type="number" inputmode="numeric" value="${st.waterGoal || ""}" oninput="S.settings.waterGoal=Math.max(250,num(this.value));save()"></div>
+      <div class="field" style="margin-bottom:0"><label>Goal weight kg</label><input type="number" inputmode="decimal" value="${st.goalWeight || ""}" placeholder="optional" oninput="S.settings.goalWeight=num(this.value);save()"></div>
+    </div>
+    <div class="tiny" style="margin-top:8px">Set a goal weight and Insights shows an honest projection of when you'd reach it, based on your own logged weight trend.</div>
   </div>
 
   <div class="card fold" id="savedFoodsCard">
@@ -5904,6 +6233,7 @@ window.M = {
     if (!S.nudgeDismissed.ids.includes(id)) S.nudgeDismissed.ids.push(id);
     save(); render();
   },
+  iosHintDismiss(){ S.settings.iosHintDismissed = true; save(); render(); },
   goBackup(){ R.tab = "set"; render(); setTimeout(() => M.setJump("setBackup"), 70); },
   /* ---- on-device encryption ---- */
   encStart(){ if (!window.crypto || !crypto.subtle){ toast("This browser can't encrypt (needs HTTPS)."); return; } R.encSetup = "on"; render(); },
@@ -6962,6 +7292,78 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
     logFood({name: r.name, amount: "1 serving", kcal: r.per.kcal, p: r.per.p, c: r.per.c, f: r.per.f, conf: "estimate"});
   },
   recipeDel(id){ S.recipes = S.recipes.filter(x => x.id !== id); R.recipeId = null; save(); render(); toast("Recipe removed."); },
+  /* ---- weekly meal planner + grocery list ---- */
+  goPlanner(){ R.tab = "plan"; R.homeCat = null; R.reviewOpen = false; R.quickOpen = false; R.groceryOpen = false; R.planPick = null; save(); render(); const c = $("#content"); if (c) c.scrollTop = 0; },
+  insRange(v){ R.insRange = v; save(); render(); },
+  planWeek(delta){ R.planWeek = (R.planWeek || 0) + delta; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
+  planClearWeek(){
+    const week = planWeekDates(R.planWeek || 0);
+    week.forEach(d => delete S.mealPlan[d]);
+    save(); render(); toast("Week cleared.");
+  },
+  planPick(date, meal){ R.planPick = {date, meal}; render(); setTimeout(() => { const el = $("#planFree"); if (el) el.focus(); }, 60); },
+  planPickClose(){ R.planPick = null; render(); },
+  _planPush(date, meal, item){
+    if (!S.mealPlan[date]) S.mealPlan[date] = {};
+    if (!S.mealPlan[date][meal]) S.mealPlan[date][meal] = [];
+    S.mealPlan[date][meal].push(item);
+    save();
+  },
+  planAddFree(){
+    const el = $("#planFree"); const name = el ? el.value.trim() : "";
+    if (!name){ if (el) el.focus(); return; }
+    const {date, meal} = R.planPick || {};
+    if (!date) return;
+    M._planPush(date, meal, {name, kcal: 0, p: 0, c: 0, f: 0, ing: []});
+    if (el) el.value = "";
+    render(); const e2 = $("#planFree"); if (e2) e2.focus();
+    toast("Added to plan.");
+  },
+  planPickRecipe(id){
+    const r = S.recipes.find(x => x.id === id); if (!r) return;
+    const {date, meal} = R.planPick || {}; if (!date) return;
+    M._planPush(date, meal, {name: r.name, kcal: r.per.kcal, p: r.per.p, c: r.per.c, f: r.per.f, rid: r.id, ing: (r.ingredients || []).slice()});
+    R.planPick = null; render(); toast(`Added ${r.name} to plan.`);
+  },
+  planPickMeal(i){
+    const ml = (S.meals || [])[i]; if (!ml) return;
+    const {date, meal} = R.planPick || {}; if (!date) return;
+    const tt = ml.items.reduce((a, x) => ({k: a.k + num(x.kcal), p: a.p + num(x.p), c: a.c + num(x.c), f: a.f + num(x.f)}), {k: 0, p: 0, c: 0, f: 0});
+    const ing = ml.items.map(x => [x.amount, x.name].filter(Boolean).join(" ").trim()).filter(Boolean);
+    M._planPush(date, meal, {name: ml.name, kcal: tt.k, p: tt.p, c: tt.c, f: tt.f, ing});
+    R.planPick = null; render(); toast(`Added ${ml.name} to plan.`);
+  },
+  planAddRecipe(id){
+    // From the recipe detail: default to today's dinner slot, then jump to the planner.
+    const r = S.recipes.find(x => x.id === id); if (!r) return;
+    const date = todayStr(), meal = mealFromTime(nowHM());
+    M._planPush(date, meal, {name: r.name, kcal: r.per.kcal, p: r.per.p, c: r.per.c, f: r.per.f, rid: r.id, ing: (r.ingredients || []).slice()});
+    R.tab = "plan"; R.groceryOpen = false; R.planPick = null; R.recipeId = null; R.planWeek = 0;
+    render(); toast(`Added ${r.name} to ${mealLabel(meal)}.`);
+  },
+  planRemove(date, meal, i){
+    const arr = (S.mealPlan[date] || {})[meal]; if (!arr) return;
+    arr.splice(i, 1);
+    if (!arr.length) delete S.mealPlan[date][meal];
+    if (S.mealPlan[date] && !Object.keys(S.mealPlan[date]).length) delete S.mealPlan[date];
+    save(); render();
+  },
+  planLog(date, meal, i){
+    const it = ((S.mealPlan[date] || {})[meal] || [])[i]; if (!it) return;
+    logFood({name: it.name, amount: "1 serving", kcal: it.kcal, p: it.p, c: it.c, f: it.f, meal, conf: it.kcal ? "estimate" : "user"});
+  },
+  groceryShow(){ R.groceryOpen = true; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
+  groceryHide(){ R.groceryOpen = false; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
+  groceryTick(key){ if (R.groceryChecked.has(key)) R.groceryChecked.delete(key); else R.groceryChecked.add(key); render(); },
+  async groceryShare(){
+    const text = groceryText();
+    if (navigator.share){ try { await navigator.share({title: "Grocery list", text}); return; } catch (e) { if (e.name === "AbortError") return; } }
+    try { await navigator.clipboard.writeText(text); toast("Grocery list copied."); } catch (e) { toast("Could not share."); }
+  },
+  async groceryCopy(){
+    try { await navigator.clipboard.writeText(groceryText()); buzz(); toast("Grocery list copied."); }
+    catch (e) { toast("Could not copy."); }
+  },
   /* ---- wellness check-in ---- */
   goWellness(){ R.tab = "wellness"; R.homeCat = null; R.reviewOpen = false; R.quickOpen = false; R.ciDraft = null; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
   ciMood(n){ if (!R.ciDraft) R.ciDraft = {mood: 0, factors: [], gratitude: "", journal: ""}; R.ciDraft.mood = n; R.ciQuote = n <= 3 ? pickLift(n) : null; M.ciPersist(); render(); },
