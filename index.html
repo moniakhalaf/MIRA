@@ -1503,6 +1503,10 @@ function bindViewport(){
   const vv = window.visualViewport;
   if (!vv) return;
   let t = null;
+  const isTyping = () => {
+    const a = document.activeElement;
+    return !!a && (a.tagName === "INPUT" || a.tagName === "TEXTAREA" || a.isContentEditable);
+  };
   const apply = () => {
     const app = $("#app");
     if (!app) return;
@@ -1511,15 +1515,26 @@ function bindViewport(){
     app.style.height = vv.height + "px";
     app.style.bottom = "auto";
     document.body.classList.toggle("kb", kbOpen);
-    window.scrollTo(0, 0);
+    // All scrolling lives inside .content, so the layout viewport should stay
+    // at 0 — but only nudge it back when it has ACTUALLY drifted. Calling
+    // scrollTo on every event was itself a jump.
+    if (window.pageYOffset || window.pageXOffset) window.scrollTo(0, 0);
     if (kbOpen && R.tab === "chat"){
       const c = $("#content");
       if (c) c.scrollTop = c.scrollHeight;
     }
   };
   const queue = () => { clearTimeout(t); t = setTimeout(apply, 30); };
+  // A visualViewport "scroll" while a field is focused is iOS panning to keep
+  // the caret above the keyboard. Re-pinning the shell and resetting the scroll
+  // there fights that pan, so the focused field flickers/jumps upward on every
+  // keystroke. Ignore scroll events while typing — the keyboard height itself
+  // only changes via "resize", which we still honour. This is the fix for the
+  // "field flickers up while I type" report; it applies everywhere, not just
+  // the cooked-dish form.
+  const queueScroll = () => { if (isTyping()) return; queue(); };
   vv.addEventListener("resize", queue);
-  vv.addEventListener("scroll", queue);
+  vv.addEventListener("scroll", queueScroll);
   window.addEventListener("focusin", queue);
   window.addEventListener("focusout", queue);
   apply();
