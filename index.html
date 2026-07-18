@@ -1041,7 +1041,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.71";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.72";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -3430,7 +3430,7 @@ function foodHTML(){
       </div>
       <div class="field"><label>Meal</label>
         <div class="seg">${FOOD_MEALS.map(([v, l]) => `<button class="${(foodForm.meal || mealFromTime(foodForm.time || nowHM())) === v ? "on" : ""}" onclick="M.foodMeal('${v}')">${l}</button>`).join("")}</div></div>
-      <div class="field"><label>Amount eaten</label><input id="ffAmount" value="${esc(foodForm.amount)}" placeholder="e.g. 150 g / 1 piece" oninput="foodForm.amount=this.value"></div>
+      <div class="field"><label>Amount eaten</label><input id="ffAmount" value="${esc(foodForm.amount)}" placeholder="e.g. 3 pieces · 150 g · 250 ml" oninput="foodForm.amount=this.value"></div>
       <div class="grid2" style="margin-bottom:12px">
         <div class="field"><label>Time</label><input id="ffTime" type="time" value="${esc(foodForm.time || nowHM())}" oninput="foodForm.time=this.value"></div>
         <div class="field"><label>Calories (kcal)</label><input id="ffK" type="number" inputmode="decimal" value="${esc(foodForm.kcal)}" oninput="foodForm.kcal=this.value"></div>
@@ -3788,7 +3788,10 @@ function reviewHTML(){
 
 /* actions */
 function foodSaveDirect(){
-  const it = {name: foodForm.name.trim(), amount: foodForm.amount.trim(), time: foodForm.time, meal: foodForm.meal,
+  // If the food name is empty but the user put it in "Amount eaten", recover it as the name.
+  let nm = foodForm.name.trim(), amt = foodForm.amount.trim();
+  if (!nm && amt){ nm = amt; amt = ""; }
+  const it = {name: nm, amount: amt, time: foodForm.time, meal: foodForm.meal,
     kcal: foodForm.kcal, p: foodForm.p, c: foodForm.c, f: foodForm.f, conf: foodForm.conf || "user"};
   if (!it.name){ toast("Give the food a name."); return; }
   const s = sanity(it);
@@ -3894,8 +3897,14 @@ async function llmJsonArray(system, userMsg, maxTokens){
 }
 
 async function findMacros(){
-  const name = foodForm.name.trim();
-  if (!name){ toast("Type the food name first."); return; }
+  // Be forgiving about which field the food went in: if "Food name" is empty
+  // but the user typed something in "Amount eaten", treat that as the food.
+  const nameField = foodForm.name.trim();
+  const amtField = foodForm.amount.trim();
+  const name = nameField || amtField;
+  if (!name){ toast("Type what you ate first."); return; }
+  // Only treat the amount field as a quantity when it's separate from the food name.
+  const userAmount = nameField ? amtField : "";
   if (!S.settings.apiKey){ toast("Add your API key in Settings first."); return; }
   findBusy = true; render();
   try {
@@ -3903,14 +3912,16 @@ async function findMacros(){
       model: S.settings.model, max_tokens: 1600,
       ...(S.settings.webSearch ? {tools: [{type: "web_search_20250305", name: "web_search", max_uses: 3}]} : {}),
       system: `You are MIRA's nutrition lookup. Return realistic macro values for the food the user names — including restaurant/café items (Kuwait and GCC venues especially) and pan-Arab dishes in Arabic script or transliteration. Account for cooking method (مشوي grilled / مقلي fried / مسلوق boiled / roasted).${S.settings.webSearch ? ` You have web search: check the venue's or manufacturer's OFFICIALLY published nutrition first; only fall back to an estimate if nothing official exists.` : ""} Confidence rules: "official" ONLY if the venue or manufacturer actually publishes these values${S.settings.webSearch ? " (verified via search or known)" : " and you know them"}; "estimate" when reconstructed from standard composition data; "unavailable" when even an estimate would be irresponsible. Never invent official figures. After any research, end your reply with ONLY a JSON object: {"name":str,"amount":str,"kcal":num,"p":num,"c":num,"f":num,"conf":"official"|"estimate"|"unavailable","note":str(short, includes basis/source)}. Energy must be consistent: kcal ≈ 4p+4c+9f.${replyLangNote()}`,
-      messages: [{role: "user", content: `Food: ${name}${foodForm.amount.trim() ? ` — amount: ${foodForm.amount.trim()}` : ""}`}],
+      messages: [{role: "user", content: `Food: ${name}${userAmount ? ` — amount: ${userAmount} (return macros for THIS amount, and echo it back in "amount")` : ""}`}],
     });
     const j = tryParseJson(txt);
     if (j.conf === "unavailable"){
       reviewItems = null;
       toast(`Not available: ${j.note || "no responsible estimate exists for this item."}`, 5000);
     } else {
-      reviewItems = [{name: j.name || name, amount: j.amount || foodForm.amount, kcal: j.kcal, p: j.p, c: j.c, f: j.f,
+      // Keep the amount the user actually entered (pieces / grams / ml) so it never
+      // gets replaced by the model's default serving; fall back to the model's only if empty.
+      reviewItems = [{name: j.name || name, amount: userAmount || j.amount || "", kcal: j.kcal, p: j.p, c: j.c, f: j.f,
         conf: j.conf === "official" ? "official" : "estimate", note: j.note || ""}];
     }
   } catch (e) {
