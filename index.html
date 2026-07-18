@@ -875,6 +875,13 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
 .rv-scale .rv-pack{flex:0 0 auto;font-size:12px;font-weight:700;color:var(--gold);background:var(--card);border:1px solid var(--line2);padding:6px 11px;border-radius:99px}
 .rv-scale .rv-pack:active{transform:scale(.96)}
 .rv-scale .rv-note{flex-basis:100%;font-size:11.5px;color:var(--txt2);margin-top:1px}
+/* "I cooked this" ingredient breakdown */
+.dish-break{margin-top:12px;border-top:1px solid var(--line2);padding-top:4px}
+.dish-line{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:4.5px 0;border-bottom:1px dashed var(--line);font-size:12.5px;color:var(--txt2)}
+.dish-line i{font-style:normal;color:var(--txt3);font-size:11.5px}
+.dish-line span:last-child{white-space:nowrap;unicode-bidi:plaintext}
+.dish-line.tot{color:var(--txt);font-weight:600;border-bottom:none;padding:6px 0 0}
+.dish-line.tot span:first-child{font-weight:500;color:var(--txt2)}
 /* undo snackbar */
 .snackbar{position:fixed;left:50%;transform:translateX(-50%) translateY(20px);bottom:calc(72px + env(safe-area-inset-bottom));z-index:70;
   display:flex;align-items:center;gap:14px;padding:11px 12px 11px 16px;border-radius:12px;background:var(--card2);border:1px solid var(--line2);
@@ -1066,7 +1073,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.81";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.82";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -3373,6 +3380,13 @@ const foodForm = {name: "", amount: "", time: "", meal: "", kcal: "", p: "", c: 
 let reviewItems = null;   // [{name, amount, kcal, p, c, f, conf, note}] pending user review
 let findBusy = false, extractBusy = false, barcodeBusy = false;
 
+/* "I cooked this" — build a home-cooked dish from its ingredients: the AI
+   prices each ingredient from composition tables, MIRA sums the dish locally
+   and splits it into servings. */
+const dishForm = {open: false, name: "", makes: "1", ate: "1",
+  ings: [{n: "", a: ""}, {n: "", a: ""}, {n: "", a: ""}], res: null};
+let dishBusy = false;
+
 /* time helpers for food entries (each log records the time it was eaten) */
 function nowHM(){ const d = new Date(); return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); }
 function hmFromTs(ts){ const d = new Date(ts); return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); }
@@ -3508,6 +3522,7 @@ function foodHTML(){
         <button class="btn sm sec" style="width:100%" onclick="M.extractPhoto()" ${extractBusy ? "disabled" : ""}>${extractBusy ? "Reading…" : ic("camera", 15) + " Snap food / label"}</button>
         <button class="btn sm sec" style="width:100%" onclick="M.barcode()" ${barcodeBusy ? "disabled" : ""}>${barcodeBusy ? "Looking up…" : ic("barcode", 15) + " Barcode"}</button>
       </div>
+      <button class="btn sm sec" style="width:100%;margin-top:8px" aria-expanded="${dishForm.open}" onclick="M.dishToggle()">${ic("flame", 15)} I cooked this — build the dish from ingredients</button>
       ${foodForm.scOpen ? `
       <div class="review-item" style="margin-top:12px">
         <b style="font-size:14px">Portion scaler</b>
@@ -3524,6 +3539,7 @@ function foodHTML(){
         </div>
         <button class="btn sm" onclick="M.scApply()">Apply to form</button>
       </div>` : ""}
+      ${dishForm.open ? dishHTML() : ""}
       <div id="reviewZone">${reviewItems ? reviewHTML() : ""}</div>
     </div>
   </div>
@@ -3900,8 +3916,13 @@ function tryParseJson(t){
     try { return JSON.parse(block.replace(/^```(?:json)?\s*/, "").replace(/```$/, "")); } catch (e) {}
   }
   // 2) balanced-brace forward scan: walk every {/[ and find its matching close,
-  //    honouring strings and escapes so braces inside quotes don't derail it
-  for (const open of ["{", "["]){
+  //    honouring strings and escapes so braces inside quotes don't derail it.
+  //    Try whichever opener appears FIRST in the text — otherwise a bare array
+  //    reply like [{...},{...}] matches its first inner object and every other
+  //    item is silently dropped.
+  const oi = t.indexOf("{"), ai = t.indexOf("[");
+  const openers = ai >= 0 && (oi < 0 || ai < oi) ? ["[", "{"] : ["{", "["];
+  for (const open of openers){
     const close = open === "{" ? "}" : "]";
     for (let start = t.indexOf(open); start >= 0; start = t.indexOf(open, start + 1)){
       let depth = 0, inStr = false, esc = false;
@@ -3923,8 +3944,9 @@ function tryParseJson(t){
       }
     }
   }
-  // 3) backward last-open scan (handles truncated / nested prose)
-  for (const [open, close] of [["{", "}"], ["[", "]"]]){
+  // 3) backward last-open scan (handles truncated / nested prose) — same
+  //    first-opener preference as above
+  for (const [open, close] of (openers[0] === "[" ? [["[", "]"], ["{", "}"]] : [["{", "}"], ["[", "]"]])){
     const end = t.lastIndexOf(close);
     let i = t.length;
     for (let n = 0; n < 16 && (i = t.lastIndexOf(open, i - 1)) >= 0; n++){
@@ -4057,6 +4079,116 @@ IMPORTANT — coverage: almost every real, identifiable food HAS a reasonable, u
     toast(e.status ? e.message : "Couldn't read the macros back — please try again.", 5000);
   }
   findBusy = false; render();
+}
+
+/* ---------------- "I cooked this": dish built from ingredients ---------------- */
+function dishTotals(){
+  const t = {kcal: 0, p: 0, c: 0, f: 0};
+  ((dishForm.res && dishForm.res.items) || []).forEach(x => { t.kcal += num(x.kcal); t.p += num(x.p); t.c += num(x.c); t.f += num(x.f); });
+  return t;
+}
+function dishMakes(){ return Math.max(1, num(dishForm.makes) || 1); }
+function dishAte(){ return num(dishForm.ate) > 0 ? num(dishForm.ate) : 1; }
+function dishPerText(){
+  const t = dishTotals(), mk = dishMakes();
+  return `${n0(t.kcal / mk)} kcal · ${n1(t.p / mk)}P · ${n1(t.c / mk)}C · ${n1(t.f / mk)}F`;
+}
+function dishMineText(){
+  const t = dishTotals(), mk = dishMakes(), k = dishAte() / mk;
+  return `${n1(dishAte())} of ${n0(mk)} — ${n0(t.kcal * k)} kcal · ${n1(t.p * k)}P · ${n1(t.c * k)}C · ${n1(t.f * k)}F`;
+}
+
+function dishHTML(){
+  const res = dishForm.res;
+  const t = res ? dishTotals() : null;
+  return `
+  <div class="review-item" style="margin-top:12px">
+    <b style="font-size:14px">${ic("flame", 14)} I cooked this</b>
+    <div class="tiny" style="margin-bottom:8px">List what went into the pot — MIRA estimates each ingredient's macros from standard food-composition data, sums the dish, and splits it into servings.</div>
+    <div class="field"><label>Dish name</label><input value="${esc(dishForm.name)}" dir="auto" placeholder="e.g. Chicken machboos" oninput="dishForm.name=this.value"></div>
+    <div class="grid2" style="margin-bottom:8px">
+      <div class="field"><label>Servings it makes</label><input type="number" inputmode="decimal" min="1" step="0.5" value="${esc(dishForm.makes)}" oninput="dishForm.makes=this.value;M.dishScale()"></div>
+      <div class="field"><label>Servings I ate</label><input type="number" inputmode="decimal" min="0" step="0.25" value="${esc(dishForm.ate)}" oninput="dishForm.ate=this.value;M.dishScale()"></div>
+    </div>
+    <label class="tiny" style="display:block;margin-bottom:5px">Ingredients & amounts, raw as they went in — include cooking oil, butter or ghee.</label>
+    ${dishForm.ings.map((g, i) => `
+    <div class="row" style="margin-bottom:6px">
+      <input value="${esc(g.n)}" dir="auto" placeholder="Ingredient — e.g. basmati rice" oninput="dishForm.ings[${i}].n=this.value">
+      <input value="${esc(g.a)}" placeholder="200 g · 2 tbsp" style="flex:0 0 104px" oninput="dishForm.ings[${i}].a=this.value">
+      <button class="btn sm sec" style="flex:0 0 auto" aria-label="Remove ingredient" onclick="M.dishRow(${i},-1)">✕</button>
+    </div>`).join("")}
+    <div class="row" style="margin-top:2px">
+      <button class="btn sm sec" style="flex:0 0 auto" onclick="M.dishRow(-1,1)">${ic("plus", 14)} Ingredient</button>
+      <button class="btn sm" style="flex:1" onclick="M.dishMacros()" ${dishBusy ? "disabled" : ""}>${dishBusy ? "Working out macros…" : ic("search", 14) + " Get macros from ingredients"}</button>
+    </div>
+    ${res ? `
+    <div class="dish-break">
+      ${res.items.map(x => `<div class="dish-line"><span dir="auto">${esc(x.name)}${x.amount ? ` <i>${esc(x.amount)}</i>` : ""}</span><span>${n0(x.kcal)} kcal · ${n1(x.p)}P · ${n1(x.c)}C · ${n1(x.f)}F</span></div>`).join("")}
+      <div class="dish-line tot"><span>Whole dish</span><span>${n0(t.kcal)} kcal · ${n1(t.p)}P · ${n1(t.c)}C · ${n1(t.f)}F</span></div>
+      <div class="dish-line tot"><span>Per serving</span><span id="dishPer">${dishPerText()}</span></div>
+      <div class="dish-line tot"><span>Your portion</span><span id="dishMine">${dishMineText()}</span></div>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <button class="btn sm" style="flex:1" onclick="M.dishLog()">Log my portion</button>
+      <button class="btn sm sec" style="flex:0 0 auto" onclick="M.dishRecipe()">${ic("book", 14)} Save as recipe</button>
+    </div>
+    <div class="tiny" style="margin-top:7px"><span class="badge estimate">estimate</span> From standard composition tables (USDA & regional) — review each line, and you can still edit before saving.</div>
+    ` : ""}
+  </div>`;
+}
+
+async function dishMacros(){
+  const ings = dishForm.ings.map(g => ({n: (g.n || "").trim(), a: (g.a || "").trim()})).filter(g => g.n);
+  if (!ings.length){ toast("Add at least one ingredient first."); return; }
+  if (!S.settings.apiKey){ toast("Add your API key in Settings first."); return; }
+  dishBusy = true; render();
+  try {
+    const arr = await llmJsonArray(
+      `You are MIRA's home-cooking nutrition analyst. The user cooked a dish and lists the ingredients that went into it. For EACH ingredient, give the macros for the STATED amount using standard food-composition data (USDA, McCance & Widdowson, regional Middle-East tables). You know worldwide and Arab/Gulf cuisines and understand Arabic script, transliteration and kitchen units (tbsp, tsp, cup, حبة, ملعقة, كوب). Rules: amounts are raw/as-purchased unless stated cooked; ALL cooking fat added to the pot counts (for deep-frying, count the typically-absorbed amount and say so in the note); water and cooking losses do not change macros; if an amount is missing, assume a typical amount for this dish and put the assumption in "amount". Reply with ONLY a JSON array, one object per ingredient in the SAME order as given: [{"name":str,"amount":str(amount actually counted),"kcal":num,"p":num,"c":num,"f":num,"note":str(short basis or assumption, may be "")}]. Per item kcal ≈ 4p+4c+9f.${replyLangNote()}`,
+      `Dish: ${dishForm.name.trim() || "(unnamed home-cooked dish)"}\nIngredients as they went into the pot:\n${ings.map(g => `- ${g.n}${g.a ? ` — ${g.a}` : ""}`).join("\n")}`,
+      Math.min(3000, 500 + ings.length * 140));
+    const items = arr.filter(o => o && o.name).map(o => ({name: String(o.name), amount: String(o.amount || ""),
+      kcal: num(o.kcal), p: num(o.p), c: num(o.c), f: num(o.f), note: String(o.note || "")}));
+    if (!items.length) throw new Error("no items");
+    dishForm.res = {items};
+  } catch (e) {
+    toast(e.status ? e.message : "Couldn't work out the ingredient macros — try again, or simplify the amounts.", 4500);
+  }
+  dishBusy = false; render();
+}
+
+function dishLogPortion(){
+  if (!dishForm.res) return;
+  const t = dishTotals(), mk = dishMakes(), ate = dishAte(), k = ate / mk;
+  reviewItems = [{
+    name: dishForm.name.trim() || "Home-cooked dish",
+    amount: mk > 1 || ate !== 1 ? `${n1(ate)} of ${n0(mk)} servings` : "whole dish",
+    kcal: Math.round(t.kcal * k), p: +(t.p * k).toFixed(1), c: +(t.c * k).toFixed(1), f: +(t.f * k).toFixed(1),
+    conf: "estimate",
+    note: `Built from ${dishForm.res.items.length} ingredients — whole dish ≈ ${n0(t.kcal)} kcal · ${n1(t.p)}P · ${n1(t.c)}C · ${n1(t.f)}F.`,
+  }];
+  dishForm.open = false;
+  render();
+  const z = $("#reviewZone"); if (z) z.scrollIntoView({behavior: "smooth", block: "nearest"});
+}
+
+function dishSaveToRecipes(){
+  if (!dishForm.res) return;
+  const t = dishTotals(), mk = dishMakes();
+  saveRecipe({name: dishForm.name.trim() || "Home-cooked dish", servings: mk, tags: ["home-cooked"],
+    per: {kcal: Math.round(t.kcal / mk), p: +(t.p / mk).toFixed(1), c: +(t.c / mk).toFixed(1), f: +(t.f / mk).toFixed(1)},
+    ingredients: dishForm.res.items.map(x => x.name + (x.amount ? ` — ${x.amount}` : ""))});
+  save(); render();
+  toast("Saved to your recipe box ✓");
+}
+
+// Patch the serving/portion lines in place — a full render() mid-keystroke
+// would drop keyboard focus and make the page jump on iOS.
+function dishScalePatch(){
+  if (!dishForm.res) return;
+  const per = $("#dishPer"), mine = $("#dishMine");
+  if (per) per.textContent = dishPerText();
+  if (mine) mine.textContent = dishMineText();
 }
 
 async function scanBarcode(){
@@ -7487,6 +7619,22 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
   },
   findMacros,
   extractPhoto,
+  /* ---- "I cooked this": dish built from ingredients ---- */
+  dishToggle(){
+    dishForm.open = !dishForm.open;
+    if (dishForm.open && !dishForm.name && foodForm.name.trim()) dishForm.name = foodForm.name.trim();
+    render();
+  },
+  dishRow(i, d){
+    if (d > 0) dishForm.ings.push({n: "", a: ""});
+    else if (dishForm.ings.length > 1) dishForm.ings.splice(i, 1);
+    else dishForm.ings[0] = {n: "", a: ""};
+    render();
+  },
+  dishMacros,
+  dishLog: dishLogPortion,
+  dishRecipe: dishSaveToRecipes,
+  dishScale: dishScalePatch,
   /* ---- food-log report (date range, multi-format) ---- */
   reportToggle(){ R.reportOpen = !R.reportOpen; render(); },
   openFoodReport(){
