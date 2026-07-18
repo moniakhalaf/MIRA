@@ -857,7 +857,8 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
 .ac-list .m{color:var(--txt2);font-size:12px;white-space:nowrap}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-.grid4 .field,.grid2 .field{margin-bottom:0}
+.grid3m{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.grid4 .field,.grid2 .field,.grid3m .field{margin-bottom:0}
 .review-item{background:var(--bg2);border:1px solid var(--line2);border-radius:12px;padding:12px;margin-bottom:10px}
 .review-item .warn{color:var(--amber);font-size:12.5px;margin-top:6px}
 .review-item .err{color:var(--red);font-size:12.5px;margin-top:6px}
@@ -1041,7 +1042,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.72";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.73";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -3435,12 +3436,12 @@ function foodHTML(){
         <div class="field"><label>Time</label><input id="ffTime" type="time" value="${esc(foodForm.time || nowHM())}" oninput="foodForm.time=this.value"></div>
         <div class="field"><label>Calories (kcal)</label><input id="ffK" type="number" inputmode="decimal" value="${esc(foodForm.kcal)}" oninput="foodForm.kcal=this.value"></div>
       </div>
-      <div class="grid4" style="margin-bottom:12px">
+      <div class="grid3m" style="margin-bottom:12px">
         <div class="field"><label>Protein g</label><input id="ffP" type="number" inputmode="decimal" value="${esc(foodForm.p)}" oninput="foodForm.p=this.value"></div>
         <div class="field"><label>Carbs g</label><input id="ffC" type="number" inputmode="decimal" value="${esc(foodForm.c)}" oninput="foodForm.c=this.value"></div>
         <div class="field"><label>Fat g</label><input id="ffF" type="number" inputmode="decimal" value="${esc(foodForm.f)}" oninput="foodForm.f=this.value"></div>
-        <div class="field"><label>&nbsp;</label><button class="btn sm" style="width:100%;min-height:44px" onclick="M.foodSave()">${R.editFoodId ? "Update" : "Save"}</button></div>
       </div>
+      <button class="btn" style="width:100%;margin-bottom:12px" onclick="M.foodSave()">${R.editFoodId ? "Update entry" : "Save to log"}</button>
       <div class="grid2" style="gap:8px">
         <button class="btn sm sec" style="width:100%" onclick="M.scToggle()">${ic("sliders", 15)} Portion scaler</button>
         <button class="btn sm sec" style="width:100%" onclick="M.findMacros()" ${findBusy ? "disabled" : ""}>${findBusy ? "Searching…" : ic("search", 15) + " Find macros"}</button>
@@ -3911,13 +3912,27 @@ async function findMacros(){
     const txt = await apiCall({
       model: S.settings.model, max_tokens: 1600,
       ...(S.settings.webSearch ? {tools: [{type: "web_search_20250305", name: "web_search", max_uses: 3}]} : {}),
-      system: `You are MIRA's nutrition lookup. Return realistic macro values for the food the user names — including restaurant/café items (Kuwait and GCC venues especially) and pan-Arab dishes in Arabic script or transliteration. Account for cooking method (مشوي grilled / مقلي fried / مسلوق boiled / roasted).${S.settings.webSearch ? ` You have web search: check the venue's or manufacturer's OFFICIALLY published nutrition first; only fall back to an estimate if nothing official exists.` : ""} Confidence rules: "official" ONLY if the venue or manufacturer actually publishes these values${S.settings.webSearch ? " (verified via search or known)" : " and you know them"}; "estimate" when reconstructed from standard composition data; "unavailable" when even an estimate would be irresponsible. Never invent official figures. After any research, end your reply with ONLY a JSON object: {"name":str,"amount":str,"kcal":num,"p":num,"c":num,"f":num,"conf":"official"|"estimate"|"unavailable","note":str(short, includes basis/source)}. Energy must be consistent: kcal ≈ 4p+4c+9f.${replyLangNote()}`,
+      system: `You are MIRA's nutrition lookup with broad food knowledge across cuisines: Gulf/Khaleeji (machboos/majboos, harees, jireesh, balaleet, luqaimat, thareed, madhrooba, gabout, khubz), Levantine (mansaf, mujadara, tabbouleh, fattoush, kibbeh, shawarma, manakish, labneh), Egyptian (koshari, ful medames, ta'meya, molokhia), Iraqi/Yemeni/North-African, and the full range of international foods — Western, Indian/South-Asian, East & Southeast Asian, Mediterranean, Latin, fast food and packaged products. Understand Arabic script AND transliteration, and account for cooking method (مشوي grilled / مقلي fried / مسلوق boiled / محشي stuffed / roasted). For a dish, reconstruct from its typical ingredients; for a combination the user names (e.g. "dates + walnuts"), sum the components.
+IMPORTANT — coverage: almost every real, identifiable food HAS a reasonable, useful macro estimate from standard food-composition data (USDA, McCance & Widdowson, regional tables). Default to giving a clearly-labelled **"estimate"** for any recognizable food or dish, at a sensible standard serving if no amount is given. Reserve **"unavailable"** ONLY for input that is genuinely unidentifiable (gibberish, not a food) — never refuse a real food just because exact figures aren't published.${S.settings.webSearch ? ` You have web search: for a specific branded/restaurant item, check the venue's or manufacturer's OFFICIALLY published nutrition first, then fall back to an estimate.` : ""} Confidence: "official" ONLY if the venue or manufacturer actually publishes these values${S.settings.webSearch ? " (verified via search or known)" : " and you know them"}; otherwise "estimate". Never invent official figures, but a good estimate is expected and welcome. After any research, end your reply with ONLY a JSON object: {"name":str,"amount":str,"kcal":num,"p":num,"c":num,"f":num,"conf":"official"|"estimate"|"unavailable","note":str(short, includes the basis/serving assumed)}. Energy must be consistent: kcal ≈ 4p+4c+9f.${replyLangNote()}`,
       messages: [{role: "user", content: `Food: ${name}${userAmount ? ` — amount: ${userAmount} (return macros for THIS amount, and echo it back in "amount")` : ""}`}],
     });
-    const j = tryParseJson(txt);
+    let j = tryParseJson(txt);
+    // If it refuses a real food, ask once more for an explicit best-effort estimate
+    // before giving up — most identifiable foods have a usable composition estimate.
+    if (j.conf === "unavailable"){
+      try {
+        const txt2 = await apiCall({
+          model: S.settings.model, max_tokens: 800,
+          system: `Give your best clearly-labelled ESTIMATE of the macros for the food below from standard food-composition data, at a sensible standard serving. Only answer "unavailable" if this is truly not an identifiable food (gibberish). Reply with ONLY JSON: {"name":str,"amount":str,"kcal":num,"p":num,"c":num,"f":num,"conf":"estimate"|"unavailable","note":str(basis/serving)}. kcal ≈ 4p+4c+9f.${replyLangNote()}`,
+          messages: [{role: "user", content: `Food: ${name}${userAmount ? ` — amount: ${userAmount}` : ""}`}],
+        });
+        const j2 = tryParseJson(txt2);
+        if (j2 && j2.conf !== "unavailable") j = j2;
+      } catch (e) {}
+    }
     if (j.conf === "unavailable"){
       reviewItems = null;
-      toast(`Not available: ${j.note || "no responsible estimate exists for this item."}`, 5000);
+      toast(`Couldn't identify "${name.slice(0, 40)}" as a food — check the spelling, or enter the macros yourself.`, 5000);
     } else {
       // Keep the amount the user actually entered (pieces / grams / ml) so it never
       // gets replaced by the model's default serving; fall back to the model's only if empty.
