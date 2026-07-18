@@ -3,7 +3,7 @@
    moment you're online), falling back to the last cached copy offline.
    Cross-origin requests (api.anthropic.com, Wikimedia photos, OpenFoodFacts)
    are never intercepted — they go straight to the network. */
-const CACHE = "mira-shell-v2";
+const CACHE = "mira-shell-v3";
 const SHELL = ["./", "./index.html", "./manifest.webmanifest", "./apple-touch-icon.png", "./icon-512.png"];
 
 self.addEventListener("install", e => {
