@@ -201,7 +201,7 @@ body.kb .chatbar{padding-bottom:6px}
 .topbar .sub{font-size:12px;color:var(--txt2);margin-inline-start:auto;display:flex;align-items:center;gap:6px}
 .mode-dot{width:8px;height:8px;border-radius:50%;background:var(--acc)}
 .content{
-  flex:1 1 0;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  flex:1 1 0;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;
   padding:12px 14px 24px;
 }
 .content.view-enter{animation:viewIn .24s cubic-bezier(.2,.7,.3,1)}
@@ -1049,6 +1049,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
 <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 <div id="snackbar" class="snackbar" role="status"><span id="snackMsg"></span><button id="snackBtn" onclick="undoDo()">Undo</button></div>
 <input type="file" id="fileImg" accept="image/*,application/pdf" class="hidden">
+<input type="file" id="fileFit" accept=".tcx,.gpx,.xml,application/gpx+xml,application/vnd.garmin.tcx+xml" class="hidden">
 <input type="file" id="fileBackup" accept=".json,application/json" class="hidden">
 <script>
 "use strict";
@@ -1065,7 +1066,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.77";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.78";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1663,6 +1664,7 @@ const R = {
   habitDraft: "",
   editFoodId: null,    // id of the food entry currently being edited (null = logging new)
   mealMenuId: null,    // id of the food entry whose quick meal-move picker is open
+  woShotBusy: false,   // fitness-app screenshot import in progress
   insRange: 14,        // Insights time window in days (7 | 14 | 30 | 90 | 0=all)
   planWeek: 0,         // meal-planner week offset (0 = this week)
   planPick: null,      // {date, meal} while the "add to plan" picker sheet is open
@@ -4164,7 +4166,58 @@ function libAll(){
 
 /* ---- progress math ---- */
 const e1rm = s => num(s.weight) * (1 + num(s.reps) / 30);          // Epley estimate
-const woVolume = w => w.items.reduce((a, it) => a + it.sets.reduce((b, s) => b + num(s.reps) * num(s.weight), 0), 0);
+const woVolume = w => (w.items || []).reduce((a, it) => a + (it.sets || []).reduce((b, s) => b + num(s.reps) * num(s.weight), 0), 0);
+
+/* ---- fitness-app activity import (Garmin / Strava / Polar / Suunto…) ----
+   Exported TCX/GPX files are parsed exactly on-device — nothing uploaded.
+   Direct account OAuth sync needs a server for API secrets, so it arrives
+   with the hosted cloud version; files and screenshots work today. */
+function parseTCX(xml){
+  const doc = new DOMParser().parseFromString(xml, "text/xml");
+  if (doc.querySelector("parsererror")) return null;
+  const act = doc.querySelector("Activity"); if (!act) return null;
+  const laps = [...act.querySelectorAll("Lap")];
+  if (!laps.length) return null;
+  const numTxt = (el, sel) => { const n = el.querySelector(sel); return n ? parseFloat(n.textContent) || 0 : 0; };
+  let sec = 0, m = 0, kcal = 0, hrSum = 0, hrN = 0;
+  laps.forEach(l => {
+    sec += numTxt(l, "TotalTimeSeconds"); m += numTxt(l, "DistanceMeters"); kcal += numTxt(l, "Calories");
+    const hr = numTxt(l, "AverageHeartRateBpm > Value"); if (hr){ hrSum += hr; hrN++; }
+  });
+  const start = laps[0].getAttribute("StartTime") || (act.querySelector("Id") || {}).textContent || "";
+  return {sport: act.getAttribute("Sport") || "Workout", date: start ? new Date(start).toLocaleDateString("en-CA") : todayStr(),
+    min: Math.round(sec / 60), km: +(m / 1000).toFixed(2), kcal: Math.round(kcal), hr: hrN ? Math.round(hrSum / hrN) : 0};
+}
+function parseGPX(xml){
+  const doc = new DOMParser().parseFromString(xml, "text/xml");
+  if (doc.querySelector("parsererror")) return null;
+  const pts = [...doc.querySelectorAll("trkpt")];
+  if (pts.length < 2) return null;
+  const times = [...doc.querySelectorAll("trkpt > time")].map(t => new Date(t.textContent).getTime()).filter(t => !isNaN(t));
+  const sec = times.length >= 2 ? (Math.max(...times) - Math.min(...times)) / 1000 : 0;
+  let m = 0;
+  const rad = x => x * Math.PI / 180;
+  for (let i = 1; i < pts.length; i++){
+    const a = pts[i - 1], b = pts[i];
+    const la1 = rad(+a.getAttribute("lat")), lo1 = rad(+a.getAttribute("lon")), la2 = rad(+b.getAttribute("lat")), lo2 = rad(+b.getAttribute("lon"));
+    if ([la1, lo1, la2, lo2].some(isNaN)) continue;
+    const h = Math.sin((la2 - la1) / 2) ** 2 + Math.cos(la1) * Math.cos(la2) * Math.sin((lo2 - lo1) / 2) ** 2;
+    m += 2 * 6371000 * Math.asin(Math.sqrt(h));
+  }
+  const typeEl = doc.querySelector("trk > type"), nameEl = doc.querySelector("trk > name");
+  const kcalEl = doc.querySelector("calories");
+  return {sport: (typeEl && typeEl.textContent) || (nameEl && nameEl.textContent) || "Workout",
+    date: times.length ? new Date(Math.min(...times)).toLocaleDateString("en-CA") : todayStr(),
+    min: Math.round(sec / 60), km: +(m / 1000).toFixed(2), kcal: kcalEl ? Math.round(parseFloat(kcalEl.textContent) || 0) : 0, hr: 0};
+}
+const sportLabel = s => { s = String(s || "Workout").replace(/_/g, " ").trim(); return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase(); };
+function saveCardio(c, source){
+  const w = {id: uid(), date: c.date || todayStr(), name: sportLabel(c.sport), items: [], ts: Date.now(),
+    cardio: {sport: sportLabel(c.sport), min: num(c.min), km: num(c.km), kcal: num(c.kcal), hr: num(c.hr), source}};
+  S.workouts.push(w); save();
+  return w;
+}
+const cardioLine = c => [c.min ? `${n0(c.min)} min` : "", c.km ? `${c.km} km` : "", c.kcal ? `${n0(c.kcal)} kcal` : "", c.hr ? `avg HR ${n0(c.hr)}` : ""].filter(Boolean).join(" · ");
 function bestE1RM(name, filter){
   let best = 0;
   for (const w of S.workouts){
@@ -4265,13 +4318,23 @@ function trainHTML(){
 function trainTodayHTML(){
   const wo = R.trainWO;
   if (!wo){
-    // most recent distinct sessions, newest first, for one-tap repeats
-    const recent = [...(S.workouts || [])].sort((a, b) => a.date < b.date ? 1 : -1).slice(0, 3);
+    // most recent strength sessions, newest first, for one-tap repeats (a
+    // cardio import has no sets to repeat)
+    const recent = [...(S.workouts || [])].filter(w => (w.items || []).length).sort((a, b) => a.date < b.date ? 1 : -1).slice(0, 3);
     return `
     <div class="card">
       <h3>${ic("barbell", 16)} Start a workout</h3>
       <div class="muted" style="margin-bottom:12px">Log your session set by set. Add exercises from the library, or anything custom.</div>
       <button class="btn" onclick="M.woStart()">${ic("play", 15)} Start blank workout</button>
+    </div>
+    <div class="card">
+      <h3>${ic("download", 16)} Import from a fitness app</h3>
+      <div class="tiny" style="margin:2px 0 10px;color:var(--txt2)">Garmin, Strava, Apple Watch, Polar, Suunto — bring a workout in without retyping it:</div>
+      <div class="grid2" style="gap:8px;margin-bottom:8px">
+        <button class="btn sm sec" style="width:100%" onclick="M.woImportFile()">${ic("upload", 14)} Activity file</button>
+        <button class="btn sm sec" style="width:100%" onclick="M.woImportShot()" ${R.woShotBusy ? "disabled" : ""}>${R.woShotBusy ? "Reading…" : ic("camera", 14) + " Screenshot"}</button>
+      </div>
+      <div class="tiny" style="color:var(--txt2)">Export the activity as <b>TCX or GPX</b> (Garmin Connect / Strava → activity → Export) for exact numbers, or upload a <b>screenshot of the summary</b> and MIRA reads it. Everything stays on this device. Direct account sync needs a server, so it arrives with the hosted cloud version.</div>
     </div>
     ${recent.length ? `<div class="card">
       <h3>${ic("refresh", 16)} Repeat a recent session</h3>
@@ -4303,8 +4366,8 @@ function trainTodayHTML(){
     ${wo.items.map((it, i) => exItemHTML(it, i)).join("")}
     <button class="btn sec" style="margin-bottom:12px" onclick="M.trainGo('library')">${ic("plus", 15)} Add exercise</button>
     <div class="row" style="margin-bottom:10px">
-      <button class="btn" onclick="M.woFinish()">${ic("check", 16)} Finish & save</button>
-      <button class="btn sec danger" style="flex:0 0 auto" onclick="M.woDiscard()">Discard</button>
+      <button class="btn" style="flex:1.6" onclick="M.woFinish()">${ic("check", 16)} Finish & save</button>
+      <button class="btn sec danger" onclick="M.woDiscard()">Discard</button>
     </div>
     ${wo.items.length ? `<button class="btn sec" onclick="M.routineSave()">${ic("bookmark", 15)} Save as routine</button>` : ""}`;
 }
@@ -4381,12 +4444,14 @@ function trainHistHTML(){
     </div>` : ""}
     ${ws.length ? ws.map(w => {
       const vol = woVolume(w);
+      const sub = w.cardio ? `${fmtDate(w.date)} · ${cardioLine(w.cardio)}${w.cardio.source ? ` · from ${esc(w.cardio.source)}` : ""}`
+        : `${fmtDate(w.date)} · ${w.items.length} exercise${w.items.length > 1 ? "s" : ""} · ${n0(vol)} kg volume`;
       return `<div class="card">
         <div class="wo-hd" style="margin-bottom:6px">
-          <div><div style="font-weight:600" dir="auto">${esc(w.name)}</div><div class="tiny">${fmtDate(w.date)} · ${w.items.length} exercise${w.items.length > 1 ? "s" : ""} · ${n0(vol)} kg volume</div></div>
+          <div><div style="font-weight:600" dir="auto">${esc(w.name)}</div><div class="tiny">${sub}</div></div>
           <button class="del" style="flex:0 0 auto;color:var(--txt3)" aria-label="Delete workout" onclick="M.woHistDel('${w.id}')">✕</button>
         </div>
-        ${w.items.map(it => `<div class="tiny" style="margin:3px 0" dir="auto"><b>${esc(it.name)}</b> — ${it.sets.map(s => `${n1(s.weight)}×${s.reps}`).join(", ") || "no sets"}</div>`).join("")}
+        ${(w.items || []).map(it => `<div class="tiny" style="margin:3px 0" dir="auto"><b>${esc(it.name)}</b> — ${it.sets.map(s => `${n1(s.weight)}×${s.reps}`).join(", ") || "no sets"}</div>`).join("")}
       </div>`;
     }).join("") : `<div class="card" style="text-align:center;padding:26px 16px">
       <div style="color:var(--txt3);margin-bottom:8px">${ic("barbell", 28)}</div>
@@ -6449,6 +6514,53 @@ window.M = {
   trainBack(){ R.tab = "home"; R.homeSection = "fitness"; R.homeCat = null; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
   trainGo(t){ R.trainTab = t; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
   woStart(){ R.trainWO = {id: uid(), date: todayStr(), name: "Workout", items: []}; R.trainTab = "today"; render(); },
+  /* ---- fitness-app import ---- */
+  woImportFile(){
+    const inp = $("#fileFit");
+    inp.value = "";
+    inp.onchange = () => {
+      const f = inp.files[0]; if (!f) return;
+      if (f.size > 25 * 1024 * 1024){ toast("File too large (max ~25 MB)."); return; }
+      const r = new FileReader();
+      r.onload = () => {
+        try {
+          const txt = String(r.result || "");
+          const isTcx = /\.tcx$/i.test(f.name) || txt.includes("TrainingCenterDatabase");
+          const c = isTcx ? parseTCX(txt) : parseGPX(txt);
+          if (!c || (!c.min && !c.km)){ toast("Couldn't read an activity from that file — export it as TCX or GPX and try again.", 5000); return; }
+          const w = saveCardio(c, "file");
+          R.trainTab = "history"; render();
+          toast(`Imported: ${w.name} · ${cardioLine(w.cardio)} ✓`, 4200);
+        } catch (e) { toast("Couldn't read that file — export the activity as TCX or GPX.", 5000); }
+      };
+      r.readAsText(f);
+    };
+    inp.click();
+  },
+  woImportShot(){
+    if (!S.settings.apiKey){ toast("Add your API key in Settings first."); return; }
+    pickFile(async file => {
+      if (file.kind === "pdf"){ toast("Upload a screenshot image of the workout summary."); return; }
+      R.woShotBusy = true; render();
+      try {
+        const txt = await apiCall({
+          model: S.settings.model, max_tokens: 500,
+          system: `Read the fitness-app workout summary in the screenshot (Garmin, Strava, Apple Fitness, Whoop, Polar, any app). Extract only what is actually shown — never invent values; use 0 for anything not visible. Reply with ONLY JSON: {"sport":str,"date":"YYYY-MM-DD"|"","min":num(duration minutes),"km":num(distance),"kcal":num,"hr":num(avg heart rate)}.${replyLangNote()}`,
+          messages: [{role: "user", content: [
+            {type: "image", source: {type: "base64", media_type: file.media_type, data: file.data}},
+            {type: "text", text: "Extract this workout."}]}],
+        });
+        const j = tryParseJson(txt);
+        if (!j || (!num(j.min) && !num(j.km))){ toast("Couldn't read a workout from that screenshot — try a clearer one of the summary.", 5000); }
+        else {
+          const w = saveCardio({sport: j.sport, date: /^\d{4}-\d{2}-\d{2}$/.test(j.date || "") ? j.date : todayStr(), min: j.min, km: j.km, kcal: j.kcal, hr: j.hr}, "screenshot");
+          R.trainTab = "history";
+          toast(`Imported: ${w.name} · ${cardioLine(w.cardio)} ✓`, 4200);
+        }
+      } catch (e) { toast(e.status ? e.message : "Couldn't read the screenshot — please try again.", 5000); }
+      R.woShotBusy = false; render();
+    });
+  },
   // Start today's session from a past one: same exercises, previous numbers
   // pre-filled so progressing is "beat last time", editable set by set.
   woRepeat(id){
