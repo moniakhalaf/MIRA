@@ -1065,7 +1065,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.76";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.77";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -3929,9 +3929,27 @@ function tryParseJson(t){
   throw new Error("could not read structured data from the reply");
 }
 
+// Pull every complete {...} object out of text, even when the surrounding
+// array was cut off mid-stream (max_tokens truncation). The last, partial
+// object is simply dropped — complete suggestions are never lost with it.
+function salvageObjects(t){
+  const out = [];
+  for (let start = t.indexOf("{"); start >= 0; start = t.indexOf("{", start + 1)){
+    let depth = 0, inStr = false, escp = false;
+    for (let j = start; j < t.length; j++){
+      const c = t[j];
+      if (inStr){ if (escp) escp = false; else if (c === "\\") escp = true; else if (c === '"') inStr = false; continue; }
+      if (c === '"') inStr = true;
+      else if (c === "{") depth++;
+      else if (c === "}"){ depth--; if (!depth){ try { const o = JSON.parse(t.slice(start, j + 1)); if (o && typeof o === "object") out.push(o); } catch (e) {} start = j; break; } }
+    }
+  }
+  return out;
+}
 // Ask the model for a JSON array, robustly and WITHOUT assistant prefill
-// (some models reject prefill). Firm instruction + the tolerant parser, with
-// one retry that reminds the model to return only JSON.
+// (some models reject prefill). Firm instruction + tolerant parser + salvage
+// of complete items from a truncated reply, with one retry only if that
+// still yields nothing.
 async function llmJsonArray(system, userMsg, maxTokens){
   let lastErr;
   for (let attempt = 0; attempt < 2; attempt++){
@@ -3947,6 +3965,10 @@ async function llmJsonArray(system, userMsg, maxTokens){
       if (Array.isArray(arr) && arr.length) return arr;
       lastErr = new Error("no items");
     } catch (e){ lastErr = e; }
+    // Full parse failed (usually truncation) — salvage the complete objects
+    // instead of paying for a whole second call.
+    const sal = salvageObjects(reply).filter(o => o.name);
+    if (sal.length) return sal;
   }
   throw lastErr || new Error("no items");
 }
@@ -6564,8 +6586,8 @@ window.M = {
       const budget = remK != null
         ? `The user has about ${Math.round(remK)} kcal${remP != null ? ` and ${remP.toFixed(0)} g protein` : ""} remaining today. Keep each snack within roughly that calorie room (a snack is ~100–250 kcal).`
         : `The user hasn't set targets; suggest sensible ~100–250 kcal snacks.`;
-      const system = `You are MIRA's health & nutrition specialist. Suggest 5–6 genuinely healthy snacks tailored to the user, based on reputable nutrition guidance. ${budget} Favour whole foods, protein and fibre; include Kuwait/GCC-friendly options (labneh, dates, nuts, hummus, ful, laban). Reply with ONLY a JSON array (no prose, no code fence); each item: {"name":str,"amount":str(portion),"kcal":num,"p":num,"c":num,"f":num,"tag":str(one of: high-protein, fibre, healthy-fats, gcc, low-cal, treat),"why":str(one short honest sentence)}. Macros are estimates from standard composition — keep them realistic and consistent (kcal ≈ 4p+4c+9f).${replyLangNote()}`;
-      const arr = (await llmJsonArray(system, `Suggest healthy snacks for me right now. I'm based in Kuwait (GCC).`, 1900)).filter(x => x && x.name);
+      const system = `You are MIRA's health & nutrition specialist. Suggest exactly 5 genuinely healthy snacks tailored to the user, based on reputable nutrition guidance. ${budget} Favour whole foods, protein and fibre; include Kuwait/GCC-friendly options (labneh, dates, nuts, hummus, ful, laban). Start your reply IMMEDIATELY with "[" — ONLY a JSON array, no prose, no code fence; each item: {"name":str,"amount":str(portion),"kcal":num,"p":num,"c":num,"f":num,"tag":str(one of: high-protein, fibre, healthy-fats, gcc, low-cal, treat),"why":str(max 8 words)}. Keep every string short. Macros are estimates from standard composition — keep them realistic and consistent (kcal ≈ 4p+4c+9f).${replyLangNote()}`;
+      const arr = (await llmJsonArray(system, `Suggest healthy snacks for me right now. I'm based in Kuwait (GCC).`, 1200)).filter(x => x && x.name);
       R.snackIdeas = arr.slice(0, 6);
       R.snackBusy = false; render();
       toast(arr.length ? "Snack ideas ready ✓" : "No suggestions came back — try again.");
@@ -7146,8 +7168,8 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
     R.finishBusy = true; render();
     try {
       const ctx = `Remaining today: ${Math.round(remK)} kcal${tg.protein ? `, ${remP.toFixed(0)} g protein` : ""}${tg.carbs ? `, ${remC.toFixed(0)} g carbs` : ""}${tg.fat ? `, ${remF.toFixed(0)} g fat` : ""}. It's ${nowHM()} now${last ? `; the last meal was logged at ${entryTime(last)}` : ""}.`;
-      const system = `You are MIRA's nutrition specialist helping the user finish their daily macro targets. ${ctx} Suggest 3–5 realistic foods or mini-meals (eaten individually or together) that would fill roughly the remaining macros — prioritise closing the biggest gap (often protein), keep it appropriate for the time of day, and do not blow past the remaining calories. Kuwait/GCC-friendly options welcome. Reply with ONLY a JSON array (no prose, no code fence); each item {"name":str,"amount":str(portion),"kcal":num,"p":num,"c":num,"f":num,"why":str(one short sentence, mention which gap it fills)}. Macros are realistic estimates and consistent (kcal ≈ 4p+4c+9f).${replyLangNote()}`;
-      const arr = (await llmJsonArray(system, `What should I eat to finish my macros for today? I'm based in Kuwait (GCC).`, 2000)).filter(x => x && x.name);
+      const system = `You are MIRA's nutrition specialist helping the user finish their daily macro targets. ${ctx} Suggest exactly 4 realistic foods or mini-meals that would fill roughly the remaining macros — prioritise closing the biggest gap (often protein), keep it appropriate for the time of day, and do not blow past the remaining calories. Kuwait/GCC-friendly options welcome. Start your reply IMMEDIATELY with "[" — ONLY a JSON array, no prose, no code fence; each item {"name":str,"amount":str(portion),"kcal":num,"p":num,"c":num,"f":num,"why":str(max 8 words: which gap it fills)}. Keep every string short. Macros are realistic estimates and consistent (kcal ≈ 4p+4c+9f).${replyLangNote()}`;
+      const arr = (await llmJsonArray(system, `What should I eat to finish my macros for today? I'm based in Kuwait (GCC).`, 1200)).filter(x => x && x.name);
       R.finishIdeas = arr.slice(0, 5); R.finishBusy = false; render();
       toast(arr.length ? "Ideas ready ✓" : "No suggestions — try again.");
     } catch (e) {
