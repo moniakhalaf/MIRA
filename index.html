@@ -1066,7 +1066,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.79";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.80";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1306,6 +1306,8 @@ const BLANK = () => ({
     waterGoal: 2500,
     goalWeight: 0,
     iosHintDismissed: false,
+    strava: null,       // {cid, secret, access, refresh, exp, athlete, lastSync} when connected
+
     coach: {name: "", email: ""},
     restLen: 90,
     profession: "",
@@ -1665,6 +1667,8 @@ const R = {
   editFoodId: null,    // id of the food entry currently being edited (null = logging new)
   mealMenuId: null,    // id of the food entry whose quick meal-move picker is open
   woShotBusy: false,   // fitness-app screenshot import in progress
+  stravaBusy: false,   // Strava sync in progress
+  stravaFormOpen: false, // Strava connect form expanded
   insRange: 14,        // Insights time window in days (7 | 14 | 30 | 90 | 0=all)
   planWeek: 0,         // meal-planner week offset (0 = this week)
   planPick: null,      // {date, meal} while the "add to plan" picker sheet is open
@@ -3971,8 +3975,32 @@ async function llmJsonArray(system, userMsg, maxTokens){
     // instead of paying for a whole second call.
     const sal = salvageObjects(reply).filter(o => o.name);
     if (sal.length) return sal;
+    console.log("MIRA suggest: unusable reply (attempt " + (attempt + 1) + "):", String(reply).slice(0, 300));
   }
   throw lastErr || new Error("no items");
+}
+
+// Offline fallback for the suggesters: picks that actually fit the remaining
+// macros, drawn from the user's own saved foods, recipe box and the curated
+// snack list. Instant, deterministic, honest about its source — used whenever
+// the AI call fails so the button never comes back empty-handed.
+function localFinishIdeas(remK, remP){
+  const cands = [];
+  (S.savedFoods || []).forEach(f => { if (num(f.kcal) > 0) cands.push({name: f.name, amount: f.amount || "", kcal: num(f.kcal), p: num(f.p), c: num(f.c), f: num(f.f), src: "your saved foods"}); });
+  (S.recipes || []).forEach(r => { if (r.per && num(r.per.kcal) > 0) cands.push({name: r.name, amount: "1 serving", kcal: num(r.per.kcal), p: num(r.per.p), c: num(r.per.c), f: num(r.per.f), src: "your recipes"}); });
+  (typeof SNACK_IDEAS !== "undefined" ? SNACK_IDEAS : []).forEach(s => cands.push({name: s.name, amount: s.amount, kcal: s.kcal, p: s.p, c: s.c, f: s.f, src: "curated snacks"}));
+  const roomK = remK > 0 ? remK + 60 : 400;
+  const fit = cands.filter(x => x.kcal <= roomK);
+  const wantProtein = remP >= 15;
+  fit.sort((a, b) => wantProtein ? (b.p - a.p) : (Math.abs(a.kcal - roomK / 2) - Math.abs(b.kcal - roomK / 2)));
+  const seen = new Set(), out = [];
+  for (const x of fit){
+    const k = x.name.toLowerCase(); if (seen.has(k)) continue; seen.add(k);
+    out.push({name: x.name, amount: x.amount, kcal: x.kcal, p: x.p, c: x.c, f: x.f,
+      why: `Fits your remaining room — offline pick from ${x.src}.`});
+    if (out.length >= 4) break;
+  }
+  return out;
 }
 
 async function findMacros(){
@@ -4224,6 +4252,62 @@ function saveCardio(c, source){
   return w;
 }
 const cardioLine = c => [c.min ? `${n0(c.min)} min` : "", c.km ? `${c.km} km` : "", c.kcal ? `${n0(c.kcal)} kcal` : "", c.hr ? `avg HR ${n0(c.hr)}` : ""].filter(Boolean).join(" · ");
+
+/* ---- Strava account sync (bring-your-own API app, like the Anthropic key) ----
+   Every Strava user can create a free personal API application (client id +
+   secret) at strava.com/settings/api — same own-credentials model as the rest
+   of MIRA, so no MIRA server is involved and tokens stay on this device.
+   Garmin, Apple Watch, Polar, Coros etc. can auto-forward activities to
+   Strava, so one connection covers most watches. */
+function stravaRedirectUri(){ return location.origin + location.pathname; }
+function stravaConnected(){ const s = S.settings.strava; return !!(s && s.refresh); }
+async function stravaToken(params){
+  const s = S.settings.strava || {};
+  const body = new URLSearchParams({client_id: s.cid, client_secret: s.secret, ...params});
+  const res = await fetch("https://www.strava.com/api/v3/oauth/token", {method: "POST", body});
+  if (!res.ok){ let m = "Strava auth failed (" + res.status + ")"; try { const j = await res.json(); if (j.message) m = "Strava: " + j.message; } catch (e) {} throw new Error(m); }
+  return res.json();
+}
+async function stravaAccess(){
+  const s = S.settings.strava;
+  if (!s || !s.refresh) throw new Error("Strava is not connected.");
+  if (s.access && s.exp && s.exp * 1000 > Date.now() + 60000) return s.access;
+  const j = await stravaToken({grant_type: "refresh_token", refresh_token: s.refresh});
+  s.access = j.access_token; s.refresh = j.refresh_token || s.refresh; s.exp = j.expires_at; save();
+  return s.access;
+}
+// Exchange the OAuth code Strava redirected back with, then run a first sync.
+async function stravaExchange(code){
+  const j = await stravaToken({grant_type: "authorization_code", code});
+  const s = S.settings.strava;
+  s.access = j.access_token; s.refresh = j.refresh_token; s.exp = j.expires_at;
+  s.athlete = j.athlete ? [j.athlete.firstname, j.athlete.lastname].filter(Boolean).join(" ") : "";
+  s.lastSync = 0; save();
+}
+async function stravaSyncNow(){
+  const token = await stravaAccess();
+  const s = S.settings.strava;
+  const after = s.lastSync ? Math.floor(s.lastSync / 1000) - 86400 : Math.floor(Date.now() / 1000) - 30 * 86400;
+  const res = await fetch(`https://www.strava.com/api/v3/athlete/activities?per_page=50&after=${after}`, {headers: {Authorization: "Bearer " + token}});
+  if (!res.ok) throw new Error("Strava sync failed (" + res.status + ")");
+  const acts = await res.json();
+  let added = 0;
+  (Array.isArray(acts) ? acts : []).forEach(a => {
+    if (!a || !a.id) return;
+    if (S.workouts.some(w => w.cardio && w.cardio.stravaId === a.id)) return;
+    const c = {sport: a.sport_type || a.type || "Workout",
+      date: String(a.start_date_local || a.start_date || "").slice(0, 10) || todayStr(),
+      min: Math.round(num(a.moving_time) / 60), km: +(num(a.distance) / 1000).toFixed(2),
+      kcal: Math.round(num(a.calories) || (num(a.kilojoules) ? a.kilojoules * 1.05 : 0)),
+      hr: Math.round(num(a.average_heartrate))};
+    const w = saveCardio(c, "Strava");
+    w.cardio.stravaId = a.id;
+    if (a.name) w.name = a.name;
+    added++;
+  });
+  s.lastSync = Date.now(); save();
+  return added;
+}
 function bestE1RM(name, filter){
   let best = 0;
   for (const w of S.workouts){
@@ -4334,13 +4418,36 @@ function trainTodayHTML(){
       <button class="btn" onclick="M.woStart()">${ic("play", 15)} Start blank workout</button>
     </div>
     <div class="card">
-      <h3>${ic("download", 16)} Import from a fitness app</h3>
-      <div class="tiny" style="margin:2px 0 10px;color:var(--txt2)">Garmin, Strava, Apple Watch, Polar, Suunto — bring a workout in without retyping it:</div>
+      <h3>${ic("download", 16)} Sync & import from fitness apps</h3>
+      ${stravaConnected() ? `
+      <div class="set-row" style="padding-top:4px">
+        <div><div class="k">${ic("check", 14)} Strava connected${S.settings.strava.athlete ? ` — ${esc(S.settings.strava.athlete)}` : ""}</div>
+        <div class="desc">${S.settings.strava.lastSync ? `Last sync ${new Date(S.settings.strava.lastSync).toLocaleString("en-GB", {day: "numeric", month: "short", hour: "2-digit", minute: "2-digit"})}` : "Not synced yet"} · auto-syncs when you open MIRA</div></div>
+        <span class="end">
+          <button class="btn sm" onclick="M.stravaSync(true)" ${R.stravaBusy ? "disabled" : ""}>${R.stravaBusy ? "Syncing…" : "Sync now"}</button>
+          <button class="btn sm sec danger" onclick="M.stravaDisconnect()">✕</button>
+        </span>
+      </div>
+      <div class="tiny" style="margin-top:6px;color:var(--txt2)">Garmin, Apple Watch, Polar, Coros and most watches can auto-send every activity to Strava — link them once in their own app and everything lands here.</div>`
+      : `
+      <button class="btn" style="margin:6px 0 8px" onclick="M.stravaFormToggle()">${ic("refresh", 15)} Connect Strava — automatic sync</button>
+      ${R.stravaFormOpen ? `
+      <div class="review-item" style="margin-bottom:10px">
+        <div class="tiny" style="margin-bottom:8px">Like your Anthropic key, MIRA uses <b>your own free Strava API app</b> — no MIRA server, tokens stay on this device. One-time setup:<br>
+        1. Open <b>strava.com/settings/api</b> and create an app (any name).<br>
+        2. Set its <b>Authorization Callback Domain</b> to exactly: <b>${esc(location.hostname || "your-host")}</b><br>
+        3. Paste the Client ID and Client Secret here and tap Authorize.</div>
+        <div class="field"><label>Client ID</label><input id="stravaCid" inputmode="numeric" placeholder="e.g. 123456" value="${esc((S.settings.strava || {}).cid || "")}"></div>
+        <div class="field"><label>Client Secret</label><input id="stravaSecret" placeholder="paste from strava.com/settings/api" value="${esc((S.settings.strava || {}).secret || "")}"></div>
+        <button class="btn sm" style="width:100%" onclick="M.stravaAuthorize()">Authorize with Strava</button>
+        <div class="tiny" style="margin-top:8px;color:var(--txt2)">Garmin & most watches: link them to Strava once (in Garmin Connect: Settings → Connected apps → Strava) and every workout flows into MIRA automatically.</div>
+      </div>` : ""}`}
+      <div class="tiny" style="margin:2px 0 10px;color:var(--txt2)">Or bring in a single workout without an account:</div>
       <div class="grid2" style="gap:8px;margin-bottom:8px">
         <button class="btn sm sec" style="width:100%" onclick="M.woImportFile()">${ic("upload", 14)} Activity file</button>
         <button class="btn sm sec" style="width:100%" onclick="M.woImportShot()" ${R.woShotBusy ? "disabled" : ""}>${R.woShotBusy ? "Reading…" : ic("camera", 14) + " Screenshot"}</button>
       </div>
-      <div class="tiny" style="color:var(--txt2)">Export the activity as <b>TCX or GPX</b> (Garmin Connect / Strava → activity → Export) for exact numbers, or upload a <b>screenshot of the summary</b> and MIRA reads it. Everything stays on this device. Direct account sync needs a server, so it arrives with the hosted cloud version.</div>
+      <div class="tiny" style="color:var(--txt2)">Export the activity as <b>TCX or GPX</b> for exact numbers, or upload a <b>screenshot of the summary</b> and MIRA reads it. Everything stays on this device.</div>
     </div>
     ${recent.length ? `<div class="card">
       <h3>${ic("refresh", 16)} Repeat a recent session</h3>
@@ -6520,6 +6627,33 @@ window.M = {
   trainBack(){ R.tab = "home"; R.homeSection = "fitness"; R.homeCat = null; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
   trainGo(t){ R.trainTab = t; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
   woStart(){ R.trainWO = {id: uid(), date: todayStr(), name: "Workout", items: []}; R.trainTab = "today"; render(); },
+  /* ---- Strava sync ---- */
+  stravaFormToggle(){ R.stravaFormOpen = !R.stravaFormOpen; render(); },
+  stravaAuthorize(){
+    const cid = ($("#stravaCid") || {}).value?.trim(), secret = ($("#stravaSecret") || {}).value?.trim();
+    if (!cid || !secret){ toast("Enter both the Client ID and Client Secret from strava.com/settings/api."); return; }
+    S.settings.strava = {cid, secret, access: "", refresh: "", exp: 0, athlete: "", lastSync: 0}; save();
+    const u = new URL("https://www.strava.com/oauth/authorize");
+    u.search = new URLSearchParams({client_id: cid, redirect_uri: stravaRedirectUri(), response_type: "code",
+      scope: "activity:read_all", approval_prompt: "auto", state: "mira-strava"}).toString();
+    location.href = u.toString();
+  },
+  async stravaSync(manual){
+    if (R.stravaBusy) return;
+    R.stravaBusy = true; if (manual) render();
+    try {
+      const added = await stravaSyncNow();
+      R.stravaBusy = false; render();
+      if (manual || added) toast(added ? `Synced ${added} new workout${added === 1 ? "" : "s"} from Strava ✓` : "Strava: nothing new to sync.");
+    } catch (e) {
+      R.stravaBusy = false; if (manual) render();
+      if (manual) toast((e && e.message) || "Couldn't reach Strava — the file & screenshot import always works.", 5600);
+    }
+  },
+  stravaDisconnect(){
+    if (!confirm("Disconnect Strava? Already-imported workouts stay.")) return;
+    S.settings.strava = null; R.stravaFormOpen = false; save(); render(); toast("Strava disconnected.");
+  },
   /* ---- fitness-app import ---- */
   woImportFile(){
     const inp = $("#fileFit");
@@ -6710,8 +6844,11 @@ window.M = {
       R.snackBusy = false; render();
       toast(arr.length ? "Snack ideas ready ✓" : "No suggestions came back — try again.");
     } catch (e) {
-      R.snackBusy = false; render();
-      toast(e.status ? e.message : "Couldn't get snack ideas — please try again.", 5000);
+      const local = localFinishIdeas(remK != null ? remK : 300, 15).map(x => ({...x, tag: "high-protein"}));
+      R.snackIdeas = local; R.snackBusy = false; render();
+      toast(local.length
+        ? `AI unavailable (${e.message || "no reply"}) — showing offline picks that fit.`
+        : (e.message || "Couldn't get snack ideas — please try again."), 5600);
     }
   },
   suppToggle(id){
@@ -7291,8 +7428,13 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
       R.finishIdeas = arr.slice(0, 5); R.finishBusy = false; render();
       toast(arr.length ? "Ideas ready ✓" : "No suggestions — try again.");
     } catch (e) {
-      R.finishBusy = false; render();
-      toast(e.status ? e.message : "Couldn't get ideas — please try again.", 5000);
+      // AI failed — fall back to instant offline picks that fit the room,
+      // so the button always delivers something useful.
+      const local = localFinishIdeas(remK, remP);
+      R.finishIdeas = local; R.finishBusy = false; render();
+      toast(local.length
+        ? `AI unavailable (${e.message || "no reply"}) — showing offline picks that fit from your foods & snack list.`
+        : (e.message || "Couldn't get ideas — please try again."), 5600);
     }
   },
   finishLog(i){
@@ -7793,6 +7935,29 @@ if ("serviceWorker" in navigator && location.protocol.startsWith("http")){
 /* start on a fresh chat each launch — previous conversations stay in the log */
 R.convId = null;
 render();
+/* Strava OAuth return: exchange the code, clean the URL, run the first sync. */
+(function(){
+  const q = new URLSearchParams(location.search);
+  if (q.get("state") === "mira-strava" && q.get("code") && S.settings.strava && S.settings.strava.cid){
+    const code = q.get("code");
+    history.replaceState(null, "", location.pathname);
+    (async () => {
+      try {
+        await stravaExchange(code);
+        R.tab = "train"; R.trainTab = "today"; render();
+        toast(`Strava connected${S.settings.strava.athlete ? " — " + S.settings.strava.athlete : ""} ✓ Syncing…`);
+        await M.stravaSync(true);
+      } catch (e) { toast((e && e.message) || "Strava connection failed — check the Client ID/Secret and callback domain.", 6000); }
+    })();
+  } else if (q.get("state") === "mira-strava" && q.get("error")){
+    history.replaceState(null, "", location.pathname);
+    toast("Strava authorization was declined.", 5000);
+  }
+  /* quiet background sync at most every 6 h while connected */
+  if (stravaConnected() && Date.now() - (S.settings.strava.lastSync || 0) > 6 * 3600e3){
+    setTimeout(() => M.stravaSync(false), 2500);
+  }
+})();
 </script>
 </body>
 </html>
