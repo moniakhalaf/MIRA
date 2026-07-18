@@ -9,9 +9,10 @@
 <meta name="apple-mobile-web-app-title" content="MIRA">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0A0D13">
-<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230A0D13'/><text x='50' y='67' font-size='52' text-anchor='middle' fill='%23D2AC64' font-family='sans-serif' font-weight='bold'>M</text></svg>">
+<!-- iOS requires a real PNG for the home-screen tile (data-URI SVGs are ignored) -->
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230A0D13'/><text x='50' y='67' font-size='52' text-anchor='middle' fill='%23D2AC64' font-family='sans-serif' font-weight='bold'>M</text></svg>">
-<link rel="manifest" href='data:application/manifest+json,{"name":"MIRA","short_name":"MIRA","display":"standalone","start_url":".","background_color":"%230A0D13","theme_color":"%230A0D13","icons":[{"src":"data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27><rect width=%27100%27 height=%27100%27 rx=%2722%27 fill=%27%230A0D13%27/><text x=%2750%27 y=%2767%27 font-size=%2752%27 text-anchor=%27middle%27 fill=%27%23D2AC64%27 font-family=%27sans-serif%27 font-weight=%27bold%27>M</text></svg>","sizes":"any","type":"image/svg+xml"}]}'>
+<link rel="manifest" href="manifest.webmanifest">
 <style>
 :root{
   color-scheme:dark;
@@ -965,6 +966,13 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
   .sheet{max-width:560px;margin:0 auto;left:0;right:0}
 }
 
+/* the floating + must never sit on top of the last card — give Home scroll clearance */
+.fab-clear{height:84px;flex:0 0 auto}
+
+/* scale row under trend charts (peak / avg / points) */
+.tc-meta{display:flex;gap:14px;margin-top:7px;font-size:11.5px;color:var(--txt3)}
+.tc-meta b{color:var(--txt2);font-weight:650}
+
 /* ---------- Insights time-range toggle ---------- */
 .ins-range-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
 .ins-range{flex-wrap:nowrap}
@@ -1047,7 +1055,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.74";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.75";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1424,6 +1432,20 @@ function migrateChats(){
   if (S.settings.webSearch === undefined) S.settings.webSearch = true;
   if (!S.settings.theme) S.settings.theme = "dark";
   (S.domains || []).forEach(d => { if (COLOR_MIGRATE[d.color]) d.color = COLOR_MIGRATE[d.color]; });
+  // Record-level hygiene: one malformed record (an old or hand-edited backup)
+  // must never crash a screen — drop non-objects and coerce required fields.
+  if (!Array.isArray(S.foods)) S.foods = [];
+  if (!Array.isArray(S.savedFoods)) S.savedFoods = [];
+  if (!Array.isArray(S.inbody)) S.inbody = [];
+  const rec = a => a.filter(x => x && typeof x === "object");
+  const str = (v, d) => (typeof v === "string" && v) ? v : (v == null ? d : String(v));
+  S.tasks = rec(S.tasks).map(x => ({...x, title: str(x.title, "Untitled task")}));
+  S.bills = rec(S.bills).map(x => ({...x, name: str(x.name, "Bill")}));
+  S.foods = rec(S.foods).map(x => ({...x, name: str(x.name, "Food")}));
+  S.notes = rec(S.notes); S.trips = rec(S.trips); S.sleep = rec(S.sleep); S.inbody = rec(S.inbody); S.checkins = rec(S.checkins); S.expenses = rec(S.expenses);
+  S.recipes = rec(S.recipes).map(r => ({...r, name: str(r.name, "Recipe"), per: (r.per && typeof r.per === "object") ? r.per : {kcal: 0, p: 0, c: 0, f: 0}}));
+  S.workouts = rec(S.workouts).map(w => ({...w, items: Array.isArray(w.items) ? w.items : []}));
+  S.meals = rec(S.meals).map(m => ({...m, name: str(m.name, "Meal"), items: Array.isArray(m.items) ? m.items : []}));
 }
 migrateChats();
 
@@ -1918,10 +1940,10 @@ function widgetData(id){
   if (id === "weight"){ const wl = [...(S.inbody || [])].filter(e => e.weight).sort((a, b) => a.date < b.date ? -1 : 1); const l = wl[wl.length - 1]; return {kind: "tile", icon: "trend", label: "Weight", val: l ? l.weight + " kg" : "—", sub: l ? fmtDate(l.date) : "no entry", onclick: "M.homeSection('fitness')"}; }
   if (id === "workouts"){ const s = weekStats(); return {kind: "tile", icon: "barbell", label: "Workouts · 7d", val: "" + s.ws, sub: `${s.trainDays} active day${s.trainDays === 1 ? "" : "s"}`, onclick: "M.homeSection('fitness')"}; }
   if (id === "fasting"){ if (S.fasting && S.fasting.activeStart){ const h = Math.round((Date.now() - S.fasting.activeStart) / 36000) / 100; return {kind: "tile", icon: "flame", label: "Fasting now", val: h + " h", sub: `goal ${S.fasting.goalH} h`, onclick: "M.goHealth('supps')"}; } const last = S.fasting && (S.fasting.log || []).slice(-1)[0]; return {kind: "tile", icon: "flame", label: "Last fast", val: last ? last.hours + " h" : "—", sub: last ? "completed" : "not started", onclick: "M.homeSection('fitness')"}; }
-  if (id === "task"){ const nx = ((typeof openTasks === "function") ? openTasks() : (S.tasks || []).filter(x => !x.done))[0]; return {kind: "tile", icon: "checkSquare", label: "Next task", val: nx ? esc(nx.title.length > 18 ? nx.title.slice(0, 17) + "…" : nx.title) : "—", sub: nx ? (nx.due ? "due " + fmtDate(nx.due) : (PRIOS[nx.priority] || {}).label || "") : "all clear", onclick: "M.goWork('tasks')"}; }
+  if (id === "task"){ const nx = ((typeof openTasks === "function") ? openTasks() : (S.tasks || []).filter(x => !x.done))[0]; const tt = nx ? String(nx.title || "Untitled task") : ""; return {kind: "tile", icon: "checkSquare", label: "Next task", val: nx ? esc(tt.length > 18 ? tt.slice(0, 17) + "…" : tt) : "—", sub: nx ? (nx.due ? "due " + fmtDate(nx.due) : (PRIOS[nx.priority] || {}).label || "") : "all clear", onclick: "M.goWork('tasks')"}; }
   if (id === "tasksopen"){ const open = (S.tasks || []).filter(x => !x.done); const od = open.filter(x => x.due && x.due < t).length; return {kind: "tile", icon: "list", label: "Open tasks", val: "" + open.length, sub: od ? od + " overdue" : "none overdue", onclick: "M.goWork('tasks')"}; }
   if (id === "focus"){ const n = (S.focusLog || []).filter(f => f.date === t).length; return {kind: "tile", icon: "timer", label: "Focus today", val: "" + n, sub: "pomodoros", onclick: "M.goWork('focus')"}; }
-  if (id === "bill"){ const b = [...(S.bills || [])].filter(x => x.next && x.next >= t).sort((a, b) => a.next < b.next ? -1 : 1)[0]; return {kind: "tile", icon: "creditCard", label: "Next bill", val: b ? esc(b.name.length > 16 ? b.name.slice(0, 15) + "…" : b.name) : "—", sub: b ? fmtDate(b.next) : "none due", onclick: "M.goLife('bills')"}; }
+  if (id === "bill"){ const b = [...(S.bills || [])].filter(x => x.next && x.next >= t).sort((a, b) => a.next < b.next ? -1 : 1)[0]; const bn = b ? String(b.name || "Bill") : ""; return {kind: "tile", icon: "creditCard", label: "Next bill", val: b ? esc(bn.length > 16 ? bn.slice(0, 15) + "…" : bn) : "—", sub: b ? fmtDate(b.next) : "none due", onclick: "M.goLife('bills')"}; }
   if (id === "habits"){ const set = new Set(S.habitLog[t] || []); const tot = (S.habits || []).length; const done = (S.habits || []).filter(h => set.has(h.id)).length; return {kind: "tile", icon: "check", label: "Habits today", val: tot ? `${done}/${tot}` : "—", sub: tot ? (done === tot ? "all done" : "keep going") : "none set", onclick: "M.goHealth('supps')"}; }
   if (id === "budget"){ const ym = t.slice(0, 7); const spent = (S.expenses || []).filter(e => e.date && e.date.slice(0, 7) === ym).reduce((a, e) => a + (+e.amount || 0), 0); const inc = (S.budget || {}).income || 0; return {kind: "tile", icon: "wallet", label: "Spent · month", val: (inc || spent) ? n0(spent) : "—", sub: inc ? `of ${n0(inc)}` : "this month", onclick: "M.goLife('budget')"}; }
   return null;
@@ -1931,7 +1953,9 @@ function homeDashHTML(){
   const rings = [], tiles = [];
   sel.forEach(id => {
     const meta = WIDGET_META.find(m => m.id === id); if (!meta) return;
-    const d = widgetData(id); if (!d) return;
+    // one widget failing on odd data must not take the whole board down
+    let d; try { d = widgetData(id); } catch (e) { console.error("MIRA widget error", id, e); return; }
+    if (!d) return;
     if (d.kind === "ring") rings.push(ringCard(d.pct, d.color, d.center, d.label, d.sub, d.onclick));
     else tiles.push(`<button class="mini-tile" onclick="${d.onclick}"><span class="mt-ic">${ic(d.icon, 16)}</span><span class="mt-tx"><span class="mt-l">${d.label}</span><span class="mt-v">${d.val}</span>${d.sub ? `<span class="mt-s">${d.sub}</span>` : ""}</span></button>`);
   });
@@ -2027,7 +2051,8 @@ function homeHTML(){
       ${chip("today", t("Today"), "var(--acc)", false)}
       ${doms.map(d => chip(d.id, t(d.name), d.color, true)).join("")}
     </div>
-    ${R.homeSection === "today" ? todayOverviewHTML() : domainDashHTML(R.homeSection)}`;
+    ${R.homeSection === "today" ? todayOverviewHTML() : domainDashHTML(R.homeSection)}
+    <div class="fab-clear" aria-hidden="true"></div>`;
 }
 function catPageHTML(){
   const d = S.domains.find(x => x.id === R.homeCat) || S.domains[0];
@@ -2303,6 +2328,20 @@ function trendCard(title, sub, body){
   return `<div class="card trend-card"><div class="tc-h"><span class="tc-t">${title}</span>${sub ? `<span class="tc-s">${sub}</span>` : ""}</div>${body}</div>`;
 }
 function trendEmpty(msg){ return `<div class="tc-empty">${msg}</div>`; }
+// Scale row under a bar chart: peak / average (logged points only) so the
+// unlabeled bars read against real numbers. Charts stretch (preserveAspectRatio
+// none), so labels live in HTML rather than distorted SVG text.
+function barsMeta(vals, unit){
+  const nz = vals.filter(v => v > 0);
+  if (nz.length < 2) return "";
+  const peak = Math.max(...nz), avg = nz.reduce((a, b) => a + b, 0) / nz.length;
+  return `<div class="tc-meta"><span>peak <b>${n0(peak)}${unit}</b></span><span>avg <b>${n0(avg)}${unit}</b></span><span>${nz.length} logged</span></div>`;
+}
+function lineMeta(pts, unit){
+  if (pts.length < 2) return "";
+  const vals = pts.map(p => p.v), lo = Math.min(...vals), hi = Math.max(...vals);
+  return `<div class="tc-meta"><span>low <b>${n1(lo)}${unit}</b></span><span>high <b>${n1(hi)}${unit}</b></span><span>${pts.length} points</span></div>`;
+}
 const INS_RANGES = [[7, "7d"], [14, "14d"], [30, "30d"], [90, "90d"], [0, "All"]];
 function insRangeBarHTML(){
   const cur = R.insRange == null ? 14 : R.insRange;
@@ -2322,31 +2361,31 @@ function trendsHTML(){
   const from = days[0];
   const wl = [...(S.inbody || [])].filter(e => e.weight && (range === 0 || e.date >= from)).sort((a, b) => a.date < b.date ? -1 : 1).slice(-40).map(e => ({d: e.date, v: +e.weight}));
   cards.push(trendCard("Weight", wl.length ? `${wl[0].v} → ${wl[wl.length - 1].v} kg` : "kg",
-    wl.length >= 2 ? lineSVG(wl, {color: "#e8863d"}) : trendEmpty("Log at least 2 weight entries to see your trend.")));
+    wl.length >= 2 ? lineSVG(wl, {color: "#e8863d"}) + lineMeta(wl, " kg") : trendEmpty("Log at least 2 weight entries to see your trend.")));
 
   // Calories/day
   const kcals = days.map(d => Math.round(dayTotals(d).kcal));
   const kcalDays = kcals.filter(v => v > 0).length;
   cards.push(trendCard("Calories · " + lab, tg.kcal ? `target ${n0(tg.kcal)}` : "per day",
-    kcalDays >= 2 ? barsSVG(kcals, {color: "#3bb273", target: tg.kcal}) : trendEmpty("Log food on at least 2 days to see your calorie trend.")));
+    kcalDays >= 2 ? barsSVG(kcals, {color: "#3bb273", target: tg.kcal}) + barsMeta(kcals, "") : trendEmpty("Log food on at least 2 days to see your calorie trend.")));
 
   // Protein/day
   const prot = days.map(d => Math.round(dayTotals(d).p));
   const protDays = prot.filter(v => v > 0).length;
   cards.push(trendCard("Protein · " + lab, tg.protein ? `target ${n0(tg.protein)} g` : "g per day",
-    protDays >= 2 ? barsSVG(prot, {color: "#4c7fe0", target: tg.protein}) : trendEmpty("Log food on at least 2 days to see your protein trend.")));
+    protDays >= 2 ? barsSVG(prot, {color: "#4c7fe0", target: tg.protein}) + barsMeta(prot, " g") : trendEmpty("Log food on at least 2 days to see your protein trend.")));
 
   // Sleep hours
   const sleepMap = {}; (S.sleep || []).forEach(e => { sleepMap[e.date] = +e.hours || 0; });
   const sleeps = days.map(d => sleepMap[d] || 0);
   const sleepDays = sleeps.filter(v => v > 0).length;
   cards.push(trendCard("Sleep · " + lab, "hours per night",
-    sleepDays >= 2 ? barsSVG(sleeps, {color: "#b57edc"}) : trendEmpty("Log at least 2 nights of sleep to see your trend.")));
+    sleepDays >= 2 ? barsSVG(sleeps, {color: "#b57edc"}) + barsMeta(sleeps, " h") : trendEmpty("Log at least 2 nights of sleep to see your trend.")));
 
   // Wellness score (line, from check-ins)
   const ciPts = days.map(d => { const c = (S.checkins || []).find(x => x.date === d); return c ? {d, v: checkinScore(c)} : null; }).filter(p => p && p.v != null);
   cards.push(trendCard("Wellness · " + lab, "daily score /100",
-    ciPts.length >= 2 ? lineSVG(ciPts, {color: "#3bb273"}) : trendEmpty("Do at least 2 wellness check-ins to see your mood trend.")));
+    ciPts.length >= 2 ? lineSVG(ciPts, {color: "#3bb273"}) + lineMeta(ciPts, "") : trendEmpty("Do at least 2 wellness check-ins to see your mood trend.")));
 
   // Training sets per week — scale week count to the range
   const nWeeks = Math.min(26, Math.max(6, Math.ceil((range || dn) / 7)));
@@ -2354,7 +2393,7 @@ function trendsHTML(){
   const setSeries = weeks.map(wk => { let s = 0; (S.workouts || []).filter(x => x.date >= wk.start && x.date <= wk.end).forEach(x => (x.items || []).forEach(it => s += (it.sets || []).length)); return s; });
   const setWeeks = setSeries.filter(v => v > 0).length;
   cards.push(trendCard(`Training volume · ${nWeeks} weeks`, "sets per week",
-    setWeeks >= 2 ? barsSVG(setSeries, {color: "#e8863d"}) : trendEmpty("Log workouts across at least 2 weeks to see your volume trend.")));
+    setWeeks >= 2 ? barsSVG(setSeries, {color: "#e8863d"}) + barsMeta(setSeries, " sets") : trendEmpty("Log workouts across at least 2 weeks to see your volume trend.")));
 
   return `
     ${weekReviewCardHTML()}
@@ -4193,12 +4232,23 @@ function trainHTML(){
 
 function trainTodayHTML(){
   const wo = R.trainWO;
-  if (!wo) return `
+  if (!wo){
+    // most recent distinct sessions, newest first, for one-tap repeats
+    const recent = [...(S.workouts || [])].sort((a, b) => a.date < b.date ? 1 : -1).slice(0, 3);
+    return `
     <div class="card">
       <h3>${ic("barbell", 16)} Start a workout</h3>
       <div class="muted" style="margin-bottom:12px">Log your session set by set. Add exercises from the library, or anything custom.</div>
       <button class="btn" onclick="M.woStart()">${ic("play", 15)} Start blank workout</button>
     </div>
+    ${recent.length ? `<div class="card">
+      <h3>${ic("refresh", 16)} Repeat a recent session</h3>
+      <div class="tiny" style="margin:2px 0 8px;color:var(--txt2)">Starts today's workout with the same exercises and last time's numbers pre-filled — beat them.</div>
+      ${recent.map(w => { const sets = (w.items || []).reduce((a, it) => a + (it.sets || []).length, 0); return `<div class="set-row">
+        <div><div class="k" dir="auto">${esc(w.name || "Workout")}</div><div class="desc">${fmtDate(w.date)} · ${(w.items || []).length} exercise${(w.items || []).length === 1 ? "" : "s"} · ${sets} sets</div></div>
+        <span class="end"><button class="btn sm" onclick="M.woRepeat('${w.id}')">Repeat</button></span>
+      </div>`; }).join("")}
+    </div>` : ""}
     ${S.routines.length ? `<div class="card">
       <h3>${ic("list", 16)} Your routines</h3>
       ${S.routines.map((r, i) => `<div class="set-row">
@@ -4208,6 +4258,7 @@ function trainTodayHTML(){
       </div>`).join("")}
     </div>` : ""}
     ${S.workouts.length ? `<div class="muted" style="text-align:center;padding:4px">Past sessions and progress are in <b>History</b>.</div>` : ""}`;
+  }
   return `
     <div class="card">
       <div class="wo-hd">
@@ -6366,6 +6417,15 @@ window.M = {
   trainBack(){ R.tab = "home"; R.homeSection = "fitness"; R.homeCat = null; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
   trainGo(t){ R.trainTab = t; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
   woStart(){ R.trainWO = {id: uid(), date: todayStr(), name: "Workout", items: []}; R.trainTab = "today"; render(); },
+  // Start today's session from a past one: same exercises, previous numbers
+  // pre-filled so progressing is "beat last time", editable set by set.
+  woRepeat(id){
+    const past = (S.workouts || []).find(w => w.id === id); if (!past) return;
+    R.trainWO = {id: uid(), date: todayStr(), name: past.name || "Workout",
+      items: (past.items || []).map(x => ({name: x.name, muscle: x.muscle, sets: (x.sets || []).map(s => ({reps: s.reps, weight: s.weight})), note: ""}))};
+    R.trainTab = "today"; render();
+    toast(`Repeating ${past.name || "last session"} — beat your last numbers.`);
+  },
   woAddExercise(x){
     if (!R.trainWO) R.trainWO = {id: uid(), date: todayStr(), name: "Workout", items: []};
     R.trainWO.items.push({name: x.n, muscle: x.m, sets: [], note: ""});
