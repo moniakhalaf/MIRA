@@ -615,8 +615,13 @@ body.kb .chatbar{padding-bottom:6px}
 /* native date/time pickers have a large intrinsic width — force them to shrink
    to their column so they never overflow into an adjacent field */
 .field{min-width:0}
+/* iOS Safari's native date/time controls have an intrinsic min width that can
+   overflow a grid cell and overlap the neighbour. -webkit-appearance:none makes
+   them render as a normal box that respects the cell; the picker still opens. */
 input[type="time"],input[type="date"],input[type="datetime-local"],input[type="month"]{
-  width:100%;min-width:0;max-width:100%;box-sizing:border-box}
+  -webkit-appearance:none;appearance:none;
+  width:100%;min-width:0;max-width:100%;box-sizing:border-box;overflow:hidden}
+.grid2 .field,.grid3m .field,.grid4 .field{overflow:hidden}
 .fd-chips{display:flex;flex-wrap:wrap;gap:8px}
 .fd-chip{padding:6px 12px;border-radius:99px;background:var(--key);font-size:12.5px;color:var(--txt2)}
 .fd-chip b{color:var(--txt);font-weight:700}
@@ -1042,7 +1047,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.73";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.74";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -3434,7 +3439,7 @@ function foodHTML(){
       <div class="field"><label>Amount eaten</label><input id="ffAmount" value="${esc(foodForm.amount)}" placeholder="e.g. 3 pieces · 150 g · 250 ml" oninput="foodForm.amount=this.value"></div>
       <div class="grid2" style="margin-bottom:12px">
         <div class="field"><label>Time</label><input id="ffTime" type="time" value="${esc(foodForm.time || nowHM())}" oninput="foodForm.time=this.value"></div>
-        <div class="field"><label>Calories (kcal)</label><input id="ffK" type="number" inputmode="decimal" value="${esc(foodForm.kcal)}" oninput="foodForm.kcal=this.value"></div>
+        <div class="field"><label>Calories (kcal)</label><input id="ffK" type="number" inputmode="decimal" value="${esc(foodForm.kcal)}" oninput="foodForm.kcal=this.value" placeholder="kcal"></div>
       </div>
       <div class="grid3m" style="margin-bottom:12px">
         <div class="field"><label>Protein g</label><input id="ffP" type="number" inputmode="decimal" value="${esc(foodForm.p)}" oninput="foodForm.p=this.value"></div>
@@ -3759,7 +3764,7 @@ function reviewHTML(){
       return `<div class="review-item">
         <div class="row" style="margin-bottom:8px">
           <input value="${esc(it.name)}" dir="auto" oninput="reviewItems[${i}].name=this.value">
-          <input value="${esc(it.amount || "")}" placeholder="amount" style="flex:0 0 96px" oninput="reviewItems[${i}].amount=this.value">
+          <input id="rvAmt${i}" value="${esc(it.amount || "")}" placeholder="amount" style="flex:0 0 96px" oninput="reviewItems[${i}].amount=this.value">
         </div>
         ${it.basis && it.unit ? `<div class="rv-scale">
           <label>How much did you have?</label>
@@ -3769,10 +3774,10 @@ function reviewHTML(){
           <div class="rv-note">Label shows values per <b>${n0(it.basis)} ${esc(it.unit)}</b> — the macros below scale to your amount.</div>
         </div>` : ""}
         <div class="grid4" style="margin-bottom:8px">
-          <div class="field"><label>kcal</label><input type="number" inputmode="decimal" value="${esc(it.kcal)}" oninput="reviewItems[${i}].kcal=this.value"></div>
-          <div class="field"><label>P</label><input type="number" inputmode="decimal" value="${esc(it.p)}" oninput="reviewItems[${i}].p=this.value"></div>
-          <div class="field"><label>C</label><input type="number" inputmode="decimal" value="${esc(it.c)}" oninput="reviewItems[${i}].c=this.value"></div>
-          <div class="field"><label>F</label><input type="number" inputmode="decimal" value="${esc(it.f)}" oninput="reviewItems[${i}].f=this.value"></div>
+          <div class="field"><label>kcal</label><input id="rvK${i}" type="number" inputmode="decimal" value="${esc(it.kcal)}" oninput="reviewItems[${i}].kcal=this.value"></div>
+          <div class="field"><label>P</label><input id="rvP${i}" type="number" inputmode="decimal" value="${esc(it.p)}" oninput="reviewItems[${i}].p=this.value"></div>
+          <div class="field"><label>C</label><input id="rvC${i}" type="number" inputmode="decimal" value="${esc(it.c)}" oninput="reviewItems[${i}].c=this.value"></div>
+          <div class="field"><label>F</label><input id="rvF${i}" type="number" inputmode="decimal" value="${esc(it.f)}" oninput="reviewItems[${i}].f=this.value"></div>
         </div>
         <div class="row">
           <span class="badge ${it.conf}">${it.conf}</span>
@@ -7212,7 +7217,13 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
     it.c = +(it.baseMacros.c * k).toFixed(1);
     it.f = +(it.baseMacros.f * k).toFixed(1);
     it.amount = (had ? n0(had) : "0") + " " + it.unit;
-    render();
+    // Patch the affected fields in place — a full render() here would rebuild the
+    // DOM mid-keystroke, drop keyboard focus and make the page jump on iOS.
+    const set = (id, v) => { const el = document.getElementById(id + i); if (el && document.activeElement !== el) el.value = v; };
+    set("rvK", it.kcal); set("rvP", it.p); set("rvC", it.c); set("rvF", it.f); set("rvAmt", it.amount);
+    // "Whole pack" is a button, not the focused input — reflect it on the had field too.
+    const had2 = document.getElementById("rvHad" + i);
+    if (had2 && document.activeElement !== had2) had2.value = it.had;
   },
   /* ---- healthy recipes (recipe box) ---- */
   goRecipes(){ R.tab = "recipes"; R.homeCat = null; R.reviewOpen = false; R.quickOpen = false; R.recipeId = null; R.recipeForm = null; seedStarterRecipes(); save(); render(); const c = $("#content"); if (c) c.scrollTop = 0; },
