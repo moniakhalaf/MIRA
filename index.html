@@ -1066,7 +1066,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.80";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.81";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -3952,6 +3952,17 @@ function salvageObjects(t){
   }
   return out;
 }
+// Structured JSON calls don't need chain-of-thought. On thinking-enabled
+// models (Claude 5 family) the hidden reasoning silently eats the whole
+// max_tokens budget and the reply comes back as EMPTY text — which is what
+// made lookups slow and "could not read structured data" frequent. Disable
+// thinking explicitly; if a model rejects the parameter, retry once without.
+async function llmJsonCall(system, content, maxTokens, extra){
+  const base = {model: S.settings.model, max_tokens: maxTokens, system,
+    messages: [{role: "user", content}], ...(extra || {})};
+  try { return await apiCall({...base, thinking: {type: "disabled"}}); }
+  catch (e){ if (e.status === 400) return apiCall(base); throw e; }
+}
 // Ask the model for a JSON array, robustly and WITHOUT assistant prefill
 // (some models reject prefill). Firm instruction + tolerant parser + salvage
 // of complete items from a truncated reply, with one retry only if that
@@ -3961,7 +3972,8 @@ async function llmJsonArray(system, userMsg, maxTokens){
   for (let attempt = 0; attempt < 2; attempt++){
     const content = attempt === 0 ? userMsg
       : userMsg + "\n\nIMPORTANT: reply with ONLY a JSON array — no preamble, no explanation, no code fence.";
-    const reply = await apiCall({model: S.settings.model, max_tokens: maxTokens, system, messages: [{role: "user", content}]});
+    // the retry also gets a much bigger budget in case the first reply was truncated
+    const reply = await llmJsonCall(system, content, attempt === 0 ? maxTokens : Math.round(maxTokens * 2.5));
     try {
       const j = tryParseJson(reply);
       const arr = Array.isArray(j) ? j
@@ -4015,23 +4027,19 @@ async function findMacros(){
   if (!S.settings.apiKey){ toast("Add your API key in Settings first."); return; }
   findBusy = true; render();
   try {
-    const txt = await apiCall({
-      model: S.settings.model, max_tokens: 1600,
-      ...(S.settings.webSearch ? {tools: [{type: "web_search_20250305", name: "web_search", max_uses: 3}]} : {}),
-      system: `You are MIRA's nutrition lookup with broad food knowledge across cuisines: Gulf/Khaleeji (machboos/majboos, harees, jireesh, balaleet, luqaimat, thareed, madhrooba, gabout, khubz), Levantine (mansaf, mujadara, tabbouleh, fattoush, kibbeh, shawarma, manakish, labneh), Egyptian (koshari, ful medames, ta'meya, molokhia), Iraqi/Yemeni/North-African, and the full range of international foods — Western, Indian/South-Asian, East & Southeast Asian, Mediterranean, Latin, fast food and packaged products. Understand Arabic script AND transliteration, and account for cooking method (مشوي grilled / مقلي fried / مسلوق boiled / محشي stuffed / roasted). For a dish, reconstruct from its typical ingredients; for a combination the user names (e.g. "dates + walnuts"), sum the components.
+    const txt = await llmJsonCall(`You are MIRA's nutrition lookup with broad food knowledge across cuisines: Gulf/Khaleeji (machboos/majboos, harees, jireesh, balaleet, luqaimat, thareed, madhrooba, gabout, khubz), Levantine (mansaf, mujadara, tabbouleh, fattoush, kibbeh, shawarma, manakish, labneh), Egyptian (koshari, ful medames, ta'meya, molokhia), Iraqi/Yemeni/North-African, and the full range of international foods — Western, Indian/South-Asian, East & Southeast Asian, Mediterranean, Latin, fast food and packaged products. Understand Arabic script AND transliteration, and account for cooking method (مشوي grilled / مقلي fried / مسلوق boiled / محشي stuffed / roasted). For a dish, reconstruct from its typical ingredients; for a combination the user names (e.g. "dates + walnuts"), sum the components.
 IMPORTANT — coverage: almost every real, identifiable food HAS a reasonable, useful macro estimate from standard food-composition data (USDA, McCance & Widdowson, regional tables). Default to giving a clearly-labelled **"estimate"** for any recognizable food or dish, at a sensible standard serving if no amount is given. Reserve **"unavailable"** ONLY for input that is genuinely unidentifiable (gibberish, not a food) — never refuse a real food just because exact figures aren't published.${S.settings.webSearch ? ` You have web search: for a specific branded/restaurant item, check the venue's or manufacturer's OFFICIALLY published nutrition first, then fall back to an estimate.` : ""} Confidence: "official" ONLY if the venue or manufacturer actually publishes these values${S.settings.webSearch ? " (verified via search or known)" : " and you know them"}; otherwise "estimate". Never invent official figures, but a good estimate is expected and welcome. After any research, end your reply with ONLY a JSON object: {"name":str,"amount":str,"kcal":num,"p":num,"c":num,"f":num,"conf":"official"|"estimate"|"unavailable","note":str(short, includes the basis/serving assumed)}. Energy must be consistent: kcal ≈ 4p+4c+9f.${replyLangNote()}`,
-      messages: [{role: "user", content: `Food: ${name}${userAmount ? ` — amount: ${userAmount} (return macros for THIS amount, and echo it back in "amount")` : ""}`}],
-    });
+      `Food: ${name}${userAmount ? ` — amount: ${userAmount} (return macros for THIS amount, and echo it back in "amount")` : ""}`,
+      1600,
+      S.settings.webSearch ? {tools: [{type: "web_search_20250305", name: "web_search", max_uses: 3}]} : undefined);
     let j = tryParseJson(txt);
     // If it refuses a real food, ask once more for an explicit best-effort estimate
     // before giving up — most identifiable foods have a usable composition estimate.
     if (j.conf === "unavailable"){
       try {
-        const txt2 = await apiCall({
-          model: S.settings.model, max_tokens: 800,
-          system: `Give your best clearly-labelled ESTIMATE of the macros for the food below from standard food-composition data, at a sensible standard serving. Only answer "unavailable" if this is truly not an identifiable food (gibberish). Reply with ONLY JSON: {"name":str,"amount":str,"kcal":num,"p":num,"c":num,"f":num,"conf":"estimate"|"unavailable","note":str(basis/serving)}. kcal ≈ 4p+4c+9f.${replyLangNote()}`,
-          messages: [{role: "user", content: `Food: ${name}${userAmount ? ` — amount: ${userAmount}` : ""}`}],
-        });
+        const txt2 = await llmJsonCall(
+          `Give your best clearly-labelled ESTIMATE of the macros for the food below from standard food-composition data, at a sensible standard serving. Only answer "unavailable" if this is truly not an identifiable food (gibberish). Reply with ONLY JSON: {"name":str,"amount":str,"kcal":num,"p":num,"c":num,"f":num,"conf":"estimate"|"unavailable","note":str(basis/serving)}. kcal ≈ 4p+4c+9f.${replyLangNote()}`,
+          `Food: ${name}${userAmount ? ` — amount: ${userAmount}` : ""}`, 800);
         const j2 = tryParseJson(txt2);
         if (j2 && j2.conf !== "unavailable") j = j2;
       } catch (e) {}
@@ -4057,13 +4065,11 @@ async function scanBarcode(){
     if (file.kind === "pdf"){ toast("Photograph the barcode itself."); return; }
     barcodeBusy = true; render();
     try {
-      const txt = await apiCall({
-        model: S.settings.model, max_tokens: 200,
-        system: `Read the retail barcode (EAN-13 / EAN-8 / UPC) in the photo. Reply with ONLY JSON: {"code":"digits"} — or {"code":null} if no barcode is clearly readable. Never guess digits.`,
-        messages: [{role: "user", content: [
-          {type: "image", source: {type: "base64", media_type: file.media_type, data: file.data}},
-          {type: "text", text: "What are the barcode digits?"}]}],
-      });
+      const txt = await llmJsonCall(
+        `Read the retail barcode (EAN-13 / EAN-8 / UPC) in the photo. Reply with ONLY JSON: {"code":"digits"} — or {"code":null} if no barcode is clearly readable. Never guess digits.`,
+        [{type: "image", source: {type: "base64", media_type: file.media_type, data: file.data}},
+         {type: "text", text: "What are the barcode digits?"}],
+        200);
       const code = String(tryParseJson(txt).code || "").replace(/\D/g, "");
       if (!code){ toast("Could not read a barcode in that photo — try a closer, sharper shot."); }
       else {
@@ -4096,15 +4102,13 @@ async function extractPhoto(){
       const block = file.kind === "pdf"
         ? {type: "document", source: {type: "base64", media_type: "application/pdf", data: file.data}}
         : {type: "image", source: {type: "base64", media_type: file.media_type, data: file.data}};
-      const txt = await apiCall({
-        model: S.settings.model, max_tokens: 1600,
-        system: `You are MIRA's food photo analyst. The image is ONE of these — detect which and act accordingly:
+      const txt = await llmJsonCall(`You are MIRA's food photo analyst. The image is ONE of these — detect which and act accordingly:
 1) A PRINTED NUTRITION LABEL: use its values EXACTLY (conf "official"). The macros MUST correspond to "basis" of "unit": if the label gives values per reference amount, set "basis" to that number and "unit" to g/ml/serving/piece and put the per-basis macros in kcal/p/c/f (per 100 ml → basis 100, unit "ml"). If the package's total net quantity is printed (a 320 ml can, a 200 g bag), set "pkg" to that number in the SAME unit. Never guess a printed value you cannot read.
 2) A PHOTO OF ACTUAL FOOD (a plate, dish, snack, drink, meal): identify each food you can see — you know cuisines worldwide, including Gulf/Khaleeji (machboos, harees, luqaimat…), Levantine, Egyptian, pan-Arab and all international foods. Estimate the visible portion size from visual cues (plate/bowl size, cutlery, hand, packaging). For a mixed plate, list each component as its own item (e.g. rice, grilled chicken, salad) so the user can adjust or drop parts. Base macros on standard food-composition data (USDA and regional tables) for the estimated portion — conf "estimate", and state the identified dish and assumed portion in "note". Cooking method matters (grilled vs fried). Estimating from a photo is expected and welcome — do it for any recognizable food; only skip an item you genuinely cannot identify.
 3) A MENU, RECEIPT OR APP SCREENSHOT listing foods: extract the items with estimated macros per typical serving (conf "estimate").
 Reply with ONLY a JSON array: [{"name":str,"amount":str,"kcal":num,"p":num,"c":num,"f":num,"conf":"official"|"estimate","note":str,"basis":num,"unit":str,"pkg":num}]. Omit basis/unit/pkg for estimated food photos (they are for labels). Energy consistent: kcal ≈ 4p+4c+9f.${replyLangNote()}`,
-        messages: [{role: "user", content: [block, {type: "text", text: "Read this image. If it's a nutrition label, extract it exactly with the per-amount basis and package total. If it's a photo of actual food, identify the dishes and estimate portions and macros."}]}],
-      });
+        [block, {type: "text", text: "Read this image. If it's a nutrition label, extract it exactly with the per-amount basis and package total. If it's a photo of actual food, identify the dishes and estimate portions and macros."}],
+        1600);
       let arr;
       try { arr = tryParseJson(txt); }
       catch (e) { arr = salvageObjects(txt).filter(o => o.name); if (!arr.length) throw e; }
@@ -6204,11 +6208,8 @@ async function ibPhoto(){
       const block = file.kind === "pdf"
         ? {type: "document", source: {type: "base64", media_type: "application/pdf", data: file.data}}
         : {type: "image", source: {type: "base64", media_type: file.media_type, data: file.data}};
-      const txt = await apiCall({
-        model: S.settings.model, max_tokens: 700,
-        system: `You read InBody body-composition result sheets. Extract ONLY values you can actually read — never guess. Reply with ONLY JSON: {"date":"YYYY-MM-DD"|null,"weight":num|null,"score":num|null,"bfm":num|null(body fat mass kg),"smm":num|null(skeletal muscle mass kg),"vfa":num|null(visceral fat area cm²),"pa":num|null(phase angle degrees)}. Use null for anything unreadable or absent.`,
-        messages: [{role: "user", content: [block, {type: "text", text: "Extract the InBody values."}]}],
-      });
+      const txt = await llmJsonCall(`You read InBody body-composition result sheets. Extract ONLY values you can actually read — never guess. Reply with ONLY JSON: {"date":"YYYY-MM-DD"|null,"weight":num|null,"score":num|null,"bfm":num|null(body fat mass kg),"smm":num|null(skeletal muscle mass kg),"vfa":num|null(visceral fat area cm²),"pa":num|null(phase angle degrees)}. Use null for anything unreadable or absent.`,
+        [block, {type: "text", text: "Extract the InBody values."}], 700);
       const j = tryParseJson(txt);
       ibReview = {date: j.date || todayStr(), weight: j.weight ?? "", score: j.score ?? "", bfm: j.bfm ?? "", smm: j.smm ?? "", vfa: j.vfa ?? "", pa: j.pa ?? ""};
     } catch (e) { toast("Could not read the sheet: " + e.message, 4000); }
@@ -6220,11 +6221,8 @@ async function ibPhoto(){
 async function genPersona(d){
   if (!S.settings.apiKey) return;
   try {
-    const txt = await apiCall({
-      model: S.settings.model, max_tokens: 320,
-      system: `You write specialist-mode briefs for MIRA, a personal AI assistant with a strict source-verification standard. Reply with ONLY the brief: 60–90 words, no preamble, written like "Senior [profession] work: ...". It must name the specialist persona to embody (e.g. senior marketer / photographer / engineer / student's tutor), the core expertise areas of the domain, the field's most trusted sources, and the typical deliverables, ending with: facts verified against those sources, estimates labelled honestly.`,
-      messages: [{role: "user", content: `Domain: ${d.name}`}],
-    });
+    const txt = await llmJsonCall(`You write specialist-mode briefs for MIRA, a personal AI assistant with a strict source-verification standard. Reply with ONLY the brief: 60–90 words, no preamble, written like "Senior [profession] work: ...". It must name the specialist persona to embody (e.g. senior marketer / photographer / engineer / student's tutor), the core expertise areas of the domain, the field's most trusted sources, and the typical deliverables, ending with: facts verified against those sources, estimates labelled honestly.`,
+        `Domain: ${d.name}`, 320);
     if (txt && txt.trim().length > 40){
       const live = S.domains.find(x => x.id === d.id);
       if (live){ live.desc = txt.trim(); save(); }
@@ -6683,13 +6681,10 @@ window.M = {
       if (file.kind === "pdf"){ toast("Upload a screenshot image of the workout summary."); return; }
       R.woShotBusy = true; render();
       try {
-        const txt = await apiCall({
-          model: S.settings.model, max_tokens: 500,
-          system: `Read the fitness-app workout summary in the screenshot (Garmin, Strava, Apple Fitness, Whoop, Polar, any app). Extract only what is actually shown — never invent values; use 0 for anything not visible. Reply with ONLY JSON: {"sport":str,"date":"YYYY-MM-DD"|"","min":num(duration minutes),"km":num(distance),"kcal":num,"hr":num(avg heart rate)}.${replyLangNote()}`,
-          messages: [{role: "user", content: [
+        const txt = await llmJsonCall(`Read the fitness-app workout summary in the screenshot (Garmin, Strava, Apple Fitness, Whoop, Polar, any app). Extract only what is actually shown — never invent values; use 0 for anything not visible. Reply with ONLY JSON: {"sport":str,"date":"YYYY-MM-DD"|"","min":num(duration minutes),"km":num(distance),"kcal":num,"hr":num(avg heart rate)}.${replyLangNote()}`,
+        [
             {type: "image", source: {type: "base64", media_type: file.media_type, data: file.data}},
-            {type: "text", text: "Extract this workout."}]}],
-        });
+            {type: "text", text: "Extract this workout."}], 500);
         const j = tryParseJson(txt);
         if (!j || (!num(j.min) && !num(j.km))){ toast("Couldn't read a workout from that screenshot — try a clearer one of the summary.", 5000); }
         else {
@@ -6793,12 +6788,8 @@ window.M = {
     if (!S.settings.apiKey){ toast("Add your API key in Settings first."); return; }
     R.aiExBusy = true; render();
     try {
-      const txt = await apiCall({
-        model: S.settings.model, max_tokens: 500,
-        ...(S.settings.webSearch ? {tools: [{type: "web_search_20250305", name: "web_search", max_uses: 2}]} : {}),
-        system: `You are MIRA's exercise reference. Give accurate, safe technique for the named resistance/cardio exercise, following standard strength-and-conditioning guidance (NSCA/ACE). Reply with ONLY JSON: {"n":str(clean name),"m":one of ${JSON.stringify(MUSCLES)},"e":str(primary equipment),"c":str(2-3 sentence how-to cue),"source":str(short, e.g. "NSCA technique guidance")}. If it is not a real exercise, set "n":"".`,
-        messages: [{role: "user", content: `Exercise: ${name}`}],
-      });
+      const txt = await llmJsonCall(`You are MIRA's exercise reference. Give accurate, safe technique for the named resistance/cardio exercise, following standard strength-and-conditioning guidance (NSCA/ACE). Reply with ONLY JSON: {"n":str(clean name),"m":one of ${JSON.stringify(MUSCLES)},"e":str(primary equipment),"c":str(2-3 sentence how-to cue),"source":str(short, e.g. "NSCA technique guidance")}. If it is not a real exercise, set "n":"".`,
+        `Exercise: ${name}`, 500, S.settings.webSearch ? {tools: [{type: "web_search_20250305", name: "web_search", max_uses: 2}]} : undefined);
       const j = tryParseJson(txt);
       if (!j.n){ toast(`Couldn't find a real exercise called "${name}". Add it manually instead.`, 4200); }
       else {
@@ -7012,11 +7003,8 @@ window.M = {
     if (!S.settings.apiKey){ toast("Add your API key in Settings first."); return; }
     R.kitBusy = true; render();
     try {
-      const txt = await apiCall({
-        model: S.settings.model, max_tokens: 400,
-        system: `List the 6 most useful reference topics or tools a ${p} relies on day to day — the things they'd want an expert assistant ready to help with. Reply with ONLY a JSON array of 6 short strings (3-6 words each), no numbering, no extra text.`,
-        messages: [{role: "user", content: `Profession: ${p}`}],
-      });
+      const txt = await llmJsonCall(`List the 6 most useful reference topics or tools a ${p} relies on day to day — the things they'd want an expert assistant ready to help with. Reply with ONLY a JSON array of 6 short strings (3-6 words each), no numbering, no extra text.`,
+        `Profession: ${p}`, 400);
       const arr = tryParseJson(txt);
       if (Array.isArray(arr) && arr.length){ S.workTopics = arr.map(x => String(x)).filter(Boolean).slice(0, 8); save(); toast("Toolkit ready ✓"); }
       else toast("Couldn't build the toolkit — try again.");
@@ -7590,12 +7578,9 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
     if (!S.settings.apiKey){ toast("Add your API key in Settings first."); R.tab = "set"; render(); return; }
     R.recipeBusy = true; render();
     try {
-      const reply = await apiCall({
-        model: S.settings.model, max_tokens: 2200,
-        tools: [{type: "web_search_20250305", name: "web_search", max_uses: 4}],
-        system: `You are MIRA's healthy-recipe importer. From the given recipe link or pasted text, produce ONE structured recipe as JSON. If given a URL you have web search — read it and pull the recipe's own photo URL into "image" when the page exposes one. Prefer reasonably healthy recipes; if the dish is indulgent, still import it but explain in healthNote and add a "treat" tag. Return ONLY a JSON object: {"name":str,"image":str(url or ""),"cuisine":str,"meal":str,"tags":[str],"servings":int,"per":{"kcal":num,"p":num,"c":num,"f":num} for ONE serving,"ingredients":[str],"steps":[str],"source":str(url or ""),"healthNote":str}. "meal" is the category and MUST be exactly one of: "breakfast", "main" (lunch/dinner), "salad", "snack", "sweet" (dessert), "drink". Estimate macros from standard composition when not published and say so in healthNote; never invent official numbers. Tags are short lowercase words (high-protein, low-carb, vegetarian, quick, arab). CRITICAL: You MUST ALWAYS return the JSON object and NOTHING else — never reply with prose, an apology, or an explanation. If you cannot open the link (Instagram, TikTok and some sites block reading), reconstruct a representative healthy version of the dish from its name and any visible text, set "source" to the given URL, and in "healthNote" clearly say this is a reconstructed version — not read from the original — and invite the user to paste the caption for accuracy. If you truly cannot identify any dish, still return a JSON object with an empty "name" and a "healthNote" explaining what you'd need.${replyLangNote()}`,
-        messages: [{role: "user", content: `Import this into a healthy recipe:\n\n${text}`}],
-      });
+      const reply = await llmJsonCall(`You are MIRA's healthy-recipe importer. From the given recipe link or pasted text, produce ONE structured recipe as JSON. If given a URL you have web search — read it and pull the recipe's own photo URL into "image" when the page exposes one. Prefer reasonably healthy recipes; if the dish is indulgent, still import it but explain in healthNote and add a "treat" tag. Return ONLY a JSON object: {"name":str,"image":str(url or ""),"cuisine":str,"meal":str,"tags":[str],"servings":int,"per":{"kcal":num,"p":num,"c":num,"f":num} for ONE serving,"ingredients":[str],"steps":[str],"source":str(url or ""),"healthNote":str}. "meal" is the category and MUST be exactly one of: "breakfast", "main" (lunch/dinner), "salad", "snack", "sweet" (dessert), "drink". Estimate macros from standard composition when not published and say so in healthNote; never invent official numbers. Tags are short lowercase words (high-protein, low-carb, vegetarian, quick, arab). CRITICAL: You MUST ALWAYS return the JSON object and NOTHING else — never reply with prose, an apology, or an explanation. If you cannot open the link (Instagram, TikTok and some sites block reading), reconstruct a representative healthy version of the dish from its name and any visible text, set "source" to the given URL, and in "healthNote" clearly say this is a reconstructed version — not read from the original — and invite the user to paste the caption for accuracy. If you truly cannot identify any dish, still return a JSON object with an empty "name" and a "healthNote" explaining what you'd need.${replyLangNote()}`,
+        `Import this into a healthy recipe:\n\n${text}`, 2200,
+        {tools: [{type: "web_search_20250305", name: "web_search", max_uses: 4}]});
       const j = tryParseJson(reply);
       if (!j || !j.name || !String(j.name).trim()) throw new Error("no dish identified");
       const r = saveRecipe(j);
@@ -7614,11 +7599,8 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
         const block = file.kind === "pdf"
           ? {type: "document", source: {type: "base64", media_type: "application/pdf", data: file.data}}
           : {type: "image", source: {type: "base64", media_type: file.media_type, data: file.data}};
-        const reply = await apiCall({
-          model: S.settings.model, max_tokens: 2200,
-          system: `You are MIRA's recipe reader. Read the recipe shown in the attached image/screenshot or document and return it as JSON. Return ONLY a JSON object: {"name":str,"cuisine":str,"meal":str,"tags":[str],"servings":int,"per":{"kcal":num,"p":num,"c":num,"f":num} for ONE serving,"ingredients":[str],"steps":[str],"healthNote":str}. "meal" MUST be exactly one of: "breakfast","main","salad","snack","sweet","drink". Read the ingredient quantities and the method steps EXACTLY as written. If per-serving macros aren't printed, estimate them from the ingredients and say so in healthNote; never invent official figures. Tags are short lowercase words. Reply with ONLY the JSON object, no prose.${replyLangNote()}`,
-          messages: [{role: "user", content: [block, {type: "text", text: "Extract this recipe. Fill every field you can read from the image."}]}],
-        });
+        const reply = await llmJsonCall(`You are MIRA's recipe reader. Read the recipe shown in the attached image/screenshot or document and return it as JSON. Return ONLY a JSON object: {"name":str,"cuisine":str,"meal":str,"tags":[str],"servings":int,"per":{"kcal":num,"p":num,"c":num,"f":num} for ONE serving,"ingredients":[str],"steps":[str],"healthNote":str}. "meal" MUST be exactly one of: "breakfast","main","salad","snack","sweet","drink". Read the ingredient quantities and the method steps EXACTLY as written. If per-serving macros aren't printed, estimate them from the ingredients and say so in healthNote; never invent official figures. Tags are short lowercase words. Reply with ONLY the JSON object, no prose.${replyLangNote()}`,
+        [block, {type: "text", text: "Extract this recipe. Fill every field you can read from the image."}], 2200);
         const j = tryParseJson(reply);
         if (!j || !j.name || !String(j.name).trim()) throw new Error("no recipe");
         const per = j.per || {};
@@ -7646,12 +7628,9 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
     if (!S.settings.apiKey){ toast("Add your API key in Settings first."); R.tab = "set"; render(); return; }
     R.recipeBusy = true; render();
     try {
-      const reply = await apiCall({
-        model: S.settings.model, max_tokens: 3600,
-        tools: [{type: "web_search_20250305", name: "web_search", max_uses: 6}],
-        system: `You are MIRA's healthy-recipe finder. Find 3–5 genuinely healthy recipes matching the request, using trusted cooking sources. Return ONLY a JSON array; each item: {"name":str,"image":str(a photo URL from the source or ""),"cuisine":str,"meal":str,"tags":[str],"servings":int,"per":{"kcal":num,"p":num,"c":num,"f":num} for ONE serving,"ingredients":[str],"steps":[str],"source":str(url),"healthNote":str}. "meal" MUST be exactly one of: "breakfast", "main", "salad", "snack", "sweet", "drink". Every recipe must include a real source URL you actually used. Estimate macros from standard composition where not published and note it; never invent official figures. Favour balanced whole-food recipes; include Kuwait/GCC-friendly options where relevant.${replyLangNote()}`,
-        messages: [{role: "user", content: `Find healthy recipes: ${q}. I'm based in Kuwait (GCC).`}],
-      });
+      const reply = await llmJsonCall(`You are MIRA's healthy-recipe finder. Find 3–5 genuinely healthy recipes matching the request, using trusted cooking sources. Return ONLY a JSON array; each item: {"name":str,"image":str(a photo URL from the source or ""),"cuisine":str,"meal":str,"tags":[str],"servings":int,"per":{"kcal":num,"p":num,"c":num,"f":num} for ONE serving,"ingredients":[str],"steps":[str],"source":str(url),"healthNote":str}. "meal" MUST be exactly one of: "breakfast", "main", "salad", "snack", "sweet", "drink". Every recipe must include a real source URL you actually used. Estimate macros from standard composition where not published and note it; never invent official figures. Favour balanced whole-food recipes; include Kuwait/GCC-friendly options where relevant.${replyLangNote()}`,
+        `Find healthy recipes: ${q}. I'm based in Kuwait (GCC).`, 3600,
+        {tools: [{type: "web_search_20250305", name: "web_search", max_uses: 6}]});
       const j = tryParseJson(reply);
       const arr = Array.isArray(j) ? j : (Array.isArray(j.recipes) ? j.recipes : [j]);
       let n = 0; arr.forEach(x => { if (x && x.name){ saveRecipe(x); n++; } });
