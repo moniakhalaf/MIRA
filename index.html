@@ -1032,6 +1032,16 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
 [dir="rtl"] .home-hero,[dir="rtl"] .cat-title,[dir="rtl"] .set-hero-nm,[dir="rtl"] .set-hero-sub{text-align:right}
 [dir="rtl"] .cat-back .i,[dir="rtl"] .cat-back svg{transform:scaleX(-1)}
 [dir="rtl"] .fc-ar svg,[dir="rtl"] .chevR,[dir="rtl"] .food-it .edit svg{transform:scaleX(-1)}
+/* Numeric stat slots ("0 / 2,000", "1.50 L / 2.50 L") get visually reordered by
+   the bidi algorithm under RTL — plaintext isolates each so digits read LTR
+   while genuinely Arabic text in the same slot still flows correctly. */
+[dir="rtl"] .ring-mid,[dir="rtl"] .ring-sb,[dir="rtl"] .mt-v,[dir="rtl"] .mt-s,
+[dir="rtl"] .bar-top .val,[dir="rtl"] .rev-stat .rv,[dir="rtl"] .wr-v,[dir="rtl"] .wr-s,
+[dir="rtl"] .tc-meta,[dir="rtl"] .tc-s,[dir="rtl"] .pd-tot,[dir="rtl"] .rcm,
+[dir="rtl"] .sc-macros,[dir="rtl"] .food-it .meta,[dir="rtl"] .pi-mac,[dir="rtl"] .ppl-mac{unicode-bidi:plaintext}
+/* Untranslated English sentences/labels keep their own direction under RTL,
+   so punctuation and counts ("4 earned", trailing periods) stay in order. */
+[dir="rtl"] .nudge .nz-t,[dir="rtl"] .card h3 .tiny,[dir="rtl"] .tiny,[dir="rtl"] .muted,[dir="rtl"] .desc,[dir="rtl"] .empty-state{unicode-bidi:plaintext}
 </style>
 </head>
 <body>
@@ -1055,7 +1065,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.75";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.76";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
