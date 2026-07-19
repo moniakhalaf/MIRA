@@ -1082,7 +1082,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.85";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.86";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1302,6 +1302,15 @@ const TR = {
     "Export backup":"تصدير نسخة احتياطية","Restore backup":"استعادة نسخة احتياطية","Erase everything on this device":"محو كل شيء على هذا الجهاز",
     "Weight":"الوزن","Sleep":"النوم","Wellness":"العافية","Training volume":"حجم التدريب","weeks":"أسابيع","Time range":"النطاق الزمني",
     "Now":"الآن","Goal":"الهدف","To go (kg)":"المتبقّي (كغ)","Weeks":"أسابيع",
+    "Customize":"تخصيص","Customize Today":"تخصيص اليوم","Done":"تم","Pick up where you left off":"تابِع من حيث توقفت","Open":"فتح","Ask":"اسأل",
+    "No widgets selected. Tap Customize to choose what you see here.":"لا توجد أدوات مختارة. اضغط تخصيص لاختيار ما يظهر هنا.",
+    "Your day starts here.":"يومك يبدأ من هنا.",
+    "Log something with the + button, pick an area above, or ask MIRA anything.":"سجّل شيئًا بزر +، أو اختر مجالًا بالأعلى، أو اسأل ميرا أي شيء.",
+    "Library · tracking · coach":"مكتبة · تتبّع · مدرّب","Workout":"تمرين","Library":"المكتبة","History":"السجل","Coach":"المدرّب",
+    "Start a workout":"ابدأ تمرينًا","Start blank workout":"ابدأ تمرينًا فارغًا",
+    "Log your session set by set. Add exercises from the library, or anything custom.":"سجّل جلستك مجموعة بمجموعة. أضِف تمارين من المكتبة أو أي شيء مخصص.",
+    "Sync & import from fitness apps":"المزامنة والاستيراد من تطبيقات اللياقة","Sync now":"مزامنة الآن","Connect Strava — automatic sync":"اربط سترافا — مزامنة تلقائية",
+    "Activity file":"ملف النشاط","Screenshot":"لقطة شاشة","Repeat a recent session":"كرّر جلسة سابقة","Repeat":"تكرار","Your routines":"روتيناتك",
   },
   es: {
     "Home":"Inicio","Chat":"Chat","Insights":"Análisis","Settings":"Ajustes",
@@ -1341,6 +1350,15 @@ const TR = {
     "Export backup":"Exportar copia","Restore backup":"Restaurar copia","Erase everything on this device":"Borrar todo en este dispositivo",
     "Weight":"Peso","Sleep":"Sueño","Wellness":"Bienestar","Training volume":"Volumen de entrenamiento","weeks":"semanas","Time range":"Rango de tiempo",
     "Now":"Ahora","Goal":"Meta","To go (kg)":"Faltan (kg)","Weeks":"Semanas",
+    "Customize":"Personalizar","Customize Today":"Personalizar Hoy","Done":"Listo","Pick up where you left off":"Continúa donde lo dejaste","Open":"Abrir","Ask":"Preguntar a",
+    "No widgets selected. Tap Customize to choose what you see here.":"No hay widgets seleccionados. Toca Personalizar para elegir qué ver aquí.",
+    "Your day starts here.":"Tu día empieza aquí.",
+    "Log something with the + button, pick an area above, or ask MIRA anything.":"Registra algo con el botón +, elige un área arriba o pregúntale cualquier cosa a MIRA.",
+    "Library · tracking · coach":"Biblioteca · seguimiento · entrenador","Workout":"Entreno","Library":"Biblioteca","History":"Historial","Coach":"Entrenador",
+    "Start a workout":"Empezar un entreno","Start blank workout":"Empezar entreno en blanco",
+    "Log your session set by set. Add exercises from the library, or anything custom.":"Registra tu sesión serie a serie. Añade ejercicios de la biblioteca o los que quieras.",
+    "Sync & import from fitness apps":"Sincronizar e importar desde apps de fitness","Sync now":"Sincronizar ahora","Connect Strava — automatic sync":"Conectar Strava — sincronización automática",
+    "Activity file":"Archivo de actividad","Screenshot":"Captura","Repeat a recent session":"Repetir una sesión reciente","Repeat":"Repetir","Your routines":"Tus rutinas",
   },
   fr: {
     "Home":"Accueil","Chat":"Chat","Insights":"Analyses","Settings":"Réglages",
@@ -1380,6 +1398,15 @@ const TR = {
     "Export backup":"Exporter la sauvegarde","Restore backup":"Restaurer la sauvegarde","Erase everything on this device":"Tout effacer sur cet appareil",
     "Weight":"Poids","Sleep":"Sommeil","Wellness":"Bien-être","Training volume":"Volume d'entraînement","weeks":"semaines","Time range":"Période",
     "Now":"Maintenant","Goal":"Objectif","To go (kg)":"Restant (kg)","Weeks":"Semaines",
+    "Customize":"Personnaliser","Customize Today":"Personnaliser Aujourd'hui","Done":"Terminé","Pick up where you left off":"Reprenez où vous en étiez","Open":"Ouvrir","Ask":"Demander à",
+    "No widgets selected. Tap Customize to choose what you see here.":"Aucun widget sélectionné. Touchez Personnaliser pour choisir ce qui s'affiche ici.",
+    "Your day starts here.":"Votre journée commence ici.",
+    "Log something with the + button, pick an area above, or ask MIRA anything.":"Enregistrez quelque chose avec le bouton +, choisissez un domaine ci-dessus, ou demandez à MIRA.",
+    "Library · tracking · coach":"Bibliothèque · suivi · coach","Workout":"Séance","Library":"Bibliothèque","History":"Historique","Coach":"Coach",
+    "Start a workout":"Démarrer une séance","Start blank workout":"Démarrer une séance vierge",
+    "Log your session set by set. Add exercises from the library, or anything custom.":"Enregistrez votre séance série par série. Ajoutez des exercices de la bibliothèque ou personnalisés.",
+    "Sync & import from fitness apps":"Synchroniser et importer depuis les apps de fitness","Sync now":"Synchroniser maintenant","Connect Strava — automatic sync":"Connecter Strava — synchro automatique",
+    "Activity file":"Fichier d'activité","Screenshot":"Capture d'écran","Repeat a recent session":"Répéter une séance récente","Repeat":"Répéter","Your routines":"Vos routines",
   },
 };
 // Interface language: null in "Match what I write" mode (chrome stays English).
@@ -2102,9 +2129,9 @@ function homeDashHTML(){
     if (d.kind === "ring") rings.push(ringCard(d.pct, d.color, d.center, d.label, d.sub, d.onclick));
     else tiles.push(`<button class="mini-tile" onclick="${d.onclick}"><span class="mt-ic">${ic(d.icon, 16)}</span><span class="mt-tx"><span class="mt-l">${d.label}</span><span class="mt-v">${d.val}</span>${d.sub ? `<span class="mt-s">${d.sub}</span>` : ""}</span></button>`);
   });
-  const custom = `<button class="today-customize" onclick="M.widgetsOpen()">${ic("sliders", 14)} Customize</button>`;
+  const custom = `<button class="today-customize" onclick="M.widgetsOpen()">${ic("sliders", 14)} ${tr("Customize")}</button>`;
   const body = `${rings.length ? `<div class="ring-row">${rings.join("")}</div>` : ""}${tiles.length ? `<div class="mini-row">${tiles.join("")}</div>` : ""}`;
-  return `<div class="today-custrow">${custom}</div>${body || `<div class="today-empty2">No widgets selected. Tap Customize to choose what you see here.</div>`}`;
+  return `<div class="today-custrow">${custom}</div>${body || `<div class="today-empty2">${tr("No widgets selected. Tap Customize to choose what you see here.")}</div>`}`;
 }
 function widgetSheetHTML(){
   const on = new Set(S.settings.widgets || []);
@@ -2113,7 +2140,7 @@ function widgetSheetHTML(){
   return `<div class="qa-scrim" onclick="M.widgetsClose()"></div>
     <div class="qa-sheet widget-sheet">
       <div class="qa-grip"></div>
-      <div class="ws-head"><div class="qa-h" style="margin:0">Customize Today</div><button class="ws-done" onclick="M.widgetsClose()">Done</button></div>
+      <div class="ws-head"><div class="qa-h" style="margin:0">${tr("Customize Today")}</div><button class="ws-done" onclick="M.widgetsClose()">${tr("Done")}</button></div>
       <div class="ws-body">
         ${Object.entries(cats).map(([cat, items]) => `<div class="ws-cat">${cat}</div>
           ${items.map(m => `<button class="ws-row ${on.has(m.id) ? "on" : ""}" onclick="M.widgetToggle('${m.id}')">
@@ -2125,18 +2152,18 @@ function widgetSheetHTML(){
 function recentChatsHTML(){
   const convs = [...(S.convs || [])].sort((a, b) => (b.ts || 0) - (a.ts || 0)).slice(0, 3);
   if (!convs.length) return "";
-  return `<div class="dash-sec-h">Pick up where you left off</div>
+  return `<div class="dash-sec-h">${tr("Pick up where you left off")}</div>
     <div class="recent-chats">
       ${convs.map(c => { const dom = S.domains.find(d => d.id === c.dom) || {}; return `<button class="recent-chat" onclick="M.openConv('${c.id}')">
         <span class="rch-dot" style="background:${dom.color || "var(--acc)"}"></span>
-        <span class="rch-tx"><span class="rch-nm">${esc(c.title || "Chat")}</span><span class="rch-ds">${esc(dom.name || "")}</span></span>
+        <span class="rch-tx"><span class="rch-nm">${esc(c.title || tr("Chat"))}</span><span class="rch-ds">${esc(dom.name || "")}</span></span>
         <span class="rch-ar">${ic("chevR", 15)}</span></button>`; }).join("")}
     </div>`;
 }
 function todayOverviewHTML(){
   const dash = homeDashHTML();
   return `
-    ${dash || `<div class="today-empty">${ic("target", 18)}<div><b>Your day starts here.</b><div class="muted" style="margin-top:3px">Log something with the + button, pick an area above, or ask MIRA anything.</div></div></div>`}
+    ${dash || `<div class="today-empty">${ic("target", 18)}<div><b>${t("Your day starts here.")}</b><div class="muted" style="margin-top:3px">${t("Log something with the + button, pick an area above, or ask MIRA anything.")}</div></div></div>`}
     ${(typeof achievementsHTML === "function") ? achievementsHTML() : ""}
     ${recentChatsHTML()}
     <button class="btn sec" style="margin-top:14px" onclick="M.tab('chat')">${ic("chat", 16)} ${t("Open chat")}</button>`;
@@ -2161,7 +2188,7 @@ function homeNudgesHTML(){
   return show.map(x => `<div class="nudge">
     <span class="nz-i">${ic(x.icon, 18)}</span>
     <span class="nz-t">${esc(x.t)}</span>
-    <button class="nz-go" onclick="${x.go}">Open</button>
+    <button class="nz-go" onclick="${x.go}">${tr("Open")}</button>
     <button class="nz-x" aria-label="Dismiss" onclick="M.nudgeDismiss('${x.id}')">${ic("x", 16)}</button>
   </div>`).join("");
 }
@@ -2201,12 +2228,12 @@ function catPageHTML(){
   const d = S.domains.find(x => x.id === R.homeCat) || S.domains[0];
   const feats = domFeatures(d);
   return `
-    <button class="cat-back" aria-label="Back to Home" onclick="M.homeBack()">${ic("back", 18)} Home</button>
+    <button class="cat-back" aria-label="Back to Home" onclick="M.homeBack()">${ic("back", 18)} ${t("Home")}</button>
     <div class="cat-title">
       <div class="ch-nm">${esc(d.name)}</div>
       <div class="ch-ds">${esc(catTagline(d))}</div>
     </div>
-    <button class="btn cat-ask" onclick="M.enterMode('${d.id}')">${ic("chat", 17)} Ask ${esc(d.name)}</button>
+    <button class="btn cat-ask" onclick="M.enterMode('${d.id}')">${ic("chat", 17)} ${t("Ask")} ${esc(d.name)}</button>
     <div class="feat-list">
       ${feats.map(f => `<button class="feat-card" onclick="${f.on}">
         <span class="fc-ic">${ic(f.icon, 20)}</span>
@@ -4650,10 +4677,10 @@ function plateHTML(){
 function trainHTML(){
   const tabs = [["today","Workout"],["library","Library"],["history","History"],["coach","Coach"]];
   return `
-    <button class="cat-back" onclick="M.trainBack()">${ic("back", 18)} Fitness</button>
-    <div class="cat-title"><div class="ch-nm">Training</div><div class="ch-ds">Library · tracking · coach</div></div>
+    <button class="cat-back" onclick="M.trainBack()">${ic("back", 18)} ${tr("Fitness")}</button>
+    <div class="cat-title"><div class="ch-nm">${tr("Training")}</div><div class="ch-ds">${tr("Library · tracking · coach")}</div></div>
     <div class="chip-row seg-tabs">${tabs.map(([k, l]) =>
-      `<button class="chip ${R.trainTab === k ? "on" : ""}" onclick="M.trainGo('${k}')">${l}</button>`).join("")}</div>
+      `<button class="chip ${R.trainTab === k ? "on" : ""}" onclick="M.trainGo('${k}')">${tr(l)}</button>`).join("")}</div>
     <div style="margin-top:12px">${
       R.trainTab === "today" ? trainTodayHTML() :
       R.trainTab === "library" ? trainLibHTML() :
@@ -4669,24 +4696,24 @@ function trainTodayHTML(){
     const recent = [...(S.workouts || [])].filter(w => (w.items || []).length).sort((a, b) => a.date < b.date ? 1 : -1).slice(0, 3);
     return `
     <div class="card">
-      <h3>${ic("barbell", 16)} Start a workout</h3>
-      <div class="muted" style="margin-bottom:12px">Log your session set by set. Add exercises from the library, or anything custom.</div>
-      <button class="btn" onclick="M.woStart()">${ic("play", 15)} Start blank workout</button>
+      <h3>${ic("barbell", 16)} ${tr("Start a workout")}</h3>
+      <div class="muted" style="margin-bottom:12px">${tr("Log your session set by set. Add exercises from the library, or anything custom.")}</div>
+      <button class="btn" onclick="M.woStart()">${ic("play", 15)} ${tr("Start blank workout")}</button>
     </div>
     <div class="card">
-      <h3>${ic("download", 16)} Sync & import from fitness apps</h3>
+      <h3>${ic("download", 16)} ${tr("Sync & import from fitness apps")}</h3>
       ${stravaConnected() ? `
       <div class="set-row" style="padding-top:4px">
         <div><div class="k">${ic("check", 14)} Strava connected${S.settings.strava.athlete ? ` — ${esc(S.settings.strava.athlete)}` : ""}</div>
         <div class="desc">${S.settings.strava.lastSync ? `Last sync ${new Date(S.settings.strava.lastSync).toLocaleString("en-GB", {day: "numeric", month: "short", hour: "2-digit", minute: "2-digit"})}` : "Not synced yet"} · auto-syncs when you open MIRA</div></div>
         <span class="end">
-          <button class="btn sm" onclick="M.stravaSync(true)" ${R.stravaBusy ? "disabled" : ""}>${R.stravaBusy ? "Syncing…" : "Sync now"}</button>
+          <button class="btn sm" onclick="M.stravaSync(true)" ${R.stravaBusy ? "disabled" : ""}>${R.stravaBusy ? "Syncing…" : tr("Sync now")}</button>
           <button class="btn sm sec danger" onclick="M.stravaDisconnect()">✕</button>
         </span>
       </div>
       <div class="tiny" style="margin-top:6px;color:var(--txt2)">Garmin, Apple Watch, Polar, Coros and most watches can auto-send every activity to Strava — link them once in their own app and everything lands here.</div>`
       : `
-      <button class="btn" style="margin:6px 0 8px" onclick="M.stravaFormToggle()">${ic("refresh", 15)} Connect Strava — automatic sync</button>
+      <button class="btn" style="margin:6px 0 8px" onclick="M.stravaFormToggle()">${ic("refresh", 15)} ${tr("Connect Strava — automatic sync")}</button>
       ${R.stravaFormOpen ? `
       <div class="review-item" style="margin-bottom:10px">
         <div class="tiny" style="margin-bottom:8px">Like your Anthropic key, MIRA uses <b>your own free Strava API app</b> — no MIRA server, tokens stay on this device. One-time setup:<br>
@@ -4700,21 +4727,21 @@ function trainTodayHTML(){
       </div>` : ""}`}
       <div class="tiny" style="margin:2px 0 10px;color:var(--txt2)">Or bring in a single workout without an account:</div>
       <div class="grid2" style="gap:8px;margin-bottom:8px">
-        <button class="btn sm sec" style="width:100%" onclick="M.woImportFile()">${ic("upload", 14)} Activity file</button>
-        <button class="btn sm sec" style="width:100%" onclick="M.woImportShot()" ${R.woShotBusy ? "disabled" : ""}>${R.woShotBusy ? "Reading…" : ic("camera", 14) + " Screenshot"}</button>
+        <button class="btn sm sec" style="width:100%" onclick="M.woImportFile()">${ic("upload", 14)} ${tr("Activity file")}</button>
+        <button class="btn sm sec" style="width:100%" onclick="M.woImportShot()" ${R.woShotBusy ? "disabled" : ""}>${R.woShotBusy ? "Reading…" : ic("camera", 14) + " " + tr("Screenshot")}</button>
       </div>
       <div class="tiny" style="color:var(--txt2)">Export the activity as <b>TCX or GPX</b> for exact numbers, or upload a <b>screenshot of the summary</b> and MIRA reads it. Everything stays on this device.</div>
     </div>
     ${recent.length ? `<div class="card">
-      <h3>${ic("refresh", 16)} Repeat a recent session</h3>
+      <h3>${ic("refresh", 16)} ${tr("Repeat a recent session")}</h3>
       <div class="tiny" style="margin:2px 0 8px;color:var(--txt2)">Starts today's workout with the same exercises and last time's numbers pre-filled — beat them.</div>
       ${recent.map(w => { const sets = (w.items || []).reduce((a, it) => a + (it.sets || []).length, 0); return `<div class="set-row">
-        <div><div class="k" dir="auto">${esc(w.name || "Workout")}</div><div class="desc">${fmtDate(w.date)} · ${(w.items || []).length} exercise${(w.items || []).length === 1 ? "" : "s"} · ${sets} sets</div></div>
-        <span class="end"><button class="btn sm" onclick="M.woRepeat('${w.id}')">Repeat</button></span>
+        <div><div class="k" dir="auto">${esc(w.name || tr("Workout"))}</div><div class="desc">${fmtDate(w.date)} · ${(w.items || []).length} exercise${(w.items || []).length === 1 ? "" : "s"} · ${sets} sets</div></div>
+        <span class="end"><button class="btn sm" onclick="M.woRepeat('${w.id}')">${tr("Repeat")}</button></span>
       </div>`; }).join("")}
     </div>` : ""}
     ${S.routines.length ? `<div class="card">
-      <h3>${ic("list", 16)} Your routines</h3>
+      <h3>${ic("list", 16)} ${tr("Your routines")}</h3>
       ${S.routines.map((r, i) => `<div class="set-row">
         <div><div class="k" dir="auto">${esc(r.name)}</div><div class="desc">${r.items.length} exercise${r.items.length > 1 ? "s" : ""} · ${esc(r.items.slice(0, 3).map(x => x.name).join(", "))}${r.items.length > 3 ? "…" : ""}</div></div>
         <span class="end"><button class="btn sm" onclick="M.routineStart(${i})">Start</button>
