@@ -1082,7 +1082,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.84";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.85";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1288,6 +1288,20 @@ const TR = {
     "Finish your day":"أكمل يومك","last meal":"آخر وجبة","Log this":"سجّل هذا","Ideas to fill the gap":"أفكار لسدّ الفجوة",
     "Suggest what to eat":"اقترح ماذا آكل","Suggest again":"اقترح مجددًا",
     "You still have room today — here's what's left to hit your targets:":"ما زال لديك مجال اليوم — إليك ما تبقّى للوصول إلى أهدافك:",
+    "Welcome":"مرحبًا","You":"أنت","Profile":"الملف الشخصي","Language":"اللغة","Name":"الاسم",
+    "Profession / field":"المهنة / المجال","Primary goal":"الهدف الأساسي","Coaching style":"أسلوب التوجيه",
+    "Direct":"مباشر","Balanced":"متوازن","Encouraging":"مُشجِّع","Answer depth":"عمق الإجابة","Short":"مختصر","Detailed":"مفصّل",
+    "MIRA replies in":"تردّ ميرا بـ","Match what I write":"طابِق ما أكتبه","Appearance":"المظهر","Nutrition & body":"التغذية والجسم",
+    "Daily targets":"الأهداف اليومية","Calories kcal":"السعرات كيلوكالوري","Carbs g (optional)":"كربوهيدرات غ (اختياري)","Fat g (optional)":"دهون غ (اختياري)",
+    "Water goal ml":"هدف الماء مل","Goal weight kg":"الوزن المستهدف كغ","Saved foods":"الأطعمة المحفوظة","Forget":"نسيان",
+    "Your domains":"مجالاتك","Domains":"المجالات","Remove":"إزالة","New domain (any subject)":"مجال جديد (أي موضوع)","Add":"إضافة",
+    "Assistant":"المساعد","API & model":"مفتاح API والنموذج","Connected":"متصل","No key":"لا يوجد مفتاح","Anthropic API key":"مفتاح Anthropic API",
+    "Model":"النموذج","Live web search":"البحث المباشر على الويب","On":"تشغيل","Off":"إيقاف","Privacy & data":"الخصوصية والبيانات",
+    "Security":"الأمان","PIN on":"الرمز مفعّل","No PIN":"لا يوجد رمز","Change PIN":"تغيير الرمز","Set PIN":"تعيين رمز","Remove PIN":"إزالة الرمز",
+    "Encryption":"التشفير","Encrypted":"مشفّر","Encrypt my data":"تشفير بياناتي","Cancel":"إلغاء","Backup & data":"النسخ الاحتياطي والبيانات",
+    "Export backup":"تصدير نسخة احتياطية","Restore backup":"استعادة نسخة احتياطية","Erase everything on this device":"محو كل شيء على هذا الجهاز",
+    "Weight":"الوزن","Sleep":"النوم","Wellness":"العافية","Training volume":"حجم التدريب","weeks":"أسابيع","Time range":"النطاق الزمني",
+    "Now":"الآن","Goal":"الهدف","To go (kg)":"المتبقّي (كغ)","Weeks":"أسابيع",
   },
   es: {
     "Home":"Inicio","Chat":"Chat","Insights":"Análisis","Settings":"Ajustes",
@@ -1313,6 +1327,20 @@ const TR = {
     "Finish your day":"Completa tu día","last meal":"última comida","Log this":"Registrar esto","Ideas to fill the gap":"Ideas para llenar el hueco",
     "Suggest what to eat":"Sugerir qué comer","Suggest again":"Sugerir de nuevo",
     "You still have room today — here's what's left to hit your targets:":"Aún tienes margen hoy: esto es lo que falta para alcanzar tus objetivos:",
+    "Welcome":"Bienvenida","You":"Tú","Profile":"Perfil","Language":"Idioma","Name":"Nombre",
+    "Profession / field":"Profesión / campo","Primary goal":"Objetivo principal","Coaching style":"Estilo de coaching",
+    "Direct":"Directo","Balanced":"Equilibrado","Encouraging":"Alentador","Answer depth":"Nivel de detalle","Short":"Corto","Detailed":"Detallado",
+    "MIRA replies in":"MIRA responde en","Match what I write":"Igualar lo que escribo","Appearance":"Apariencia","Nutrition & body":"Nutrición y cuerpo",
+    "Daily targets":"Objetivos diarios","Calories kcal":"Calorías kcal","Carbs g (optional)":"Carbohidratos g (opcional)","Fat g (optional)":"Grasa g (opcional)",
+    "Water goal ml":"Meta de agua ml","Goal weight kg":"Peso objetivo kg","Saved foods":"Alimentos guardados","Forget":"Olvidar",
+    "Your domains":"Tus áreas","Domains":"Áreas","Remove":"Quitar","New domain (any subject)":"Nueva área (cualquier tema)","Add":"Añadir",
+    "Assistant":"Asistente","API & model":"API y modelo","Connected":"Conectado","No key":"Sin clave","Anthropic API key":"Clave API de Anthropic",
+    "Model":"Modelo","Live web search":"Búsqueda web en vivo","On":"Sí","Off":"No","Privacy & data":"Privacidad y datos",
+    "Security":"Seguridad","PIN on":"PIN activado","No PIN":"Sin PIN","Change PIN":"Cambiar PIN","Set PIN":"Establecer PIN","Remove PIN":"Quitar PIN",
+    "Encryption":"Cifrado","Encrypted":"Cifrado","Encrypt my data":"Cifrar mis datos","Cancel":"Cancelar","Backup & data":"Copia de seguridad y datos",
+    "Export backup":"Exportar copia","Restore backup":"Restaurar copia","Erase everything on this device":"Borrar todo en este dispositivo",
+    "Weight":"Peso","Sleep":"Sueño","Wellness":"Bienestar","Training volume":"Volumen de entrenamiento","weeks":"semanas","Time range":"Rango de tiempo",
+    "Now":"Ahora","Goal":"Meta","To go (kg)":"Faltan (kg)","Weeks":"Semanas",
   },
   fr: {
     "Home":"Accueil","Chat":"Chat","Insights":"Analyses","Settings":"Réglages",
@@ -1338,6 +1366,20 @@ const TR = {
     "Finish your day":"Terminez votre journée","last meal":"dernier repas","Log this":"Enregistrer","Ideas to fill the gap":"Idées pour combler l'écart",
     "Suggest what to eat":"Suggérer quoi manger","Suggest again":"Suggérer à nouveau",
     "You still have room today — here's what's left to hit your targets:":"Il vous reste de la marge aujourd'hui — voici ce qu'il reste pour atteindre vos objectifs :",
+    "Welcome":"Bienvenue","You":"Vous","Profile":"Profil","Language":"Langue","Name":"Nom",
+    "Profession / field":"Profession / domaine","Primary goal":"Objectif principal","Coaching style":"Style de coaching",
+    "Direct":"Direct","Balanced":"Équilibré","Encouraging":"Encourageant","Answer depth":"Niveau de détail","Short":"Court","Detailed":"Détaillé",
+    "MIRA replies in":"MIRA répond en","Match what I write":"Suivre ce que j'écris","Appearance":"Apparence","Nutrition & body":"Nutrition et corps",
+    "Daily targets":"Objectifs quotidiens","Calories kcal":"Calories kcal","Carbs g (optional)":"Glucides g (facultatif)","Fat g (optional)":"Lipides g (facultatif)",
+    "Water goal ml":"Objectif d'eau ml","Goal weight kg":"Poids cible kg","Saved foods":"Aliments enregistrés","Forget":"Oublier",
+    "Your domains":"Vos domaines","Domains":"Domaines","Remove":"Retirer","New domain (any subject)":"Nouveau domaine (tout sujet)","Add":"Ajouter",
+    "Assistant":"Assistant","API & model":"API et modèle","Connected":"Connecté","No key":"Aucune clé","Anthropic API key":"Clé API Anthropic",
+    "Model":"Modèle","Live web search":"Recherche web en direct","On":"Activé","Off":"Désactivé","Privacy & data":"Confidentialité et données",
+    "Security":"Sécurité","PIN on":"PIN activé","No PIN":"Aucun PIN","Change PIN":"Modifier le PIN","Set PIN":"Définir un PIN","Remove PIN":"Supprimer le PIN",
+    "Encryption":"Chiffrement","Encrypted":"Chiffré","Encrypt my data":"Chiffrer mes données","Cancel":"Annuler","Backup & data":"Sauvegarde et données",
+    "Export backup":"Exporter la sauvegarde","Restore backup":"Restaurer la sauvegarde","Erase everything on this device":"Tout effacer sur cet appareil",
+    "Weight":"Poids","Sleep":"Sommeil","Wellness":"Bien-être","Training volume":"Volume d'entraînement","weeks":"semaines","Time range":"Période",
+    "Now":"Maintenant","Goal":"Objectif","To go (kg)":"Restant (kg)","Weeks":"Semaines",
   },
 };
 // Interface language: null in "Match what I write" mode (chrome stays English).
@@ -1345,6 +1387,9 @@ function uiLang(){ const l = S.settings.lang; return (!l || l === "match") ? nul
 // Translate a core-chrome string; falls back to the English source for any
 // language/string we don't ship a translation for.
 function t(s){ const l = uiLang(); const d = l && TR[l]; return (d && d[s]) || s; }
+// Collision-proof alias: many render functions declare `const t = todayStr()`,
+// which shadows the translator. Use tr() inside those to translate safely.
+const tr = s => t(s);
 // Flip the whole layout to right-to-left when an RTL language is chosen.
 function applyDir(){
   const l = uiLang();
@@ -2458,31 +2503,31 @@ function trendsHTML(){
   // Weight (line, from InBody), windowed to the range
   const from = days[0];
   const wl = [...(S.inbody || [])].filter(e => e.weight && (range === 0 || e.date >= from)).sort((a, b) => a.date < b.date ? -1 : 1).slice(-40).map(e => ({d: e.date, v: +e.weight}));
-  cards.push(trendCard("Weight", wl.length ? `${wl[0].v} → ${wl[wl.length - 1].v} kg` : "kg",
+  cards.push(trendCard(tr("Weight"), wl.length ? `${wl[0].v} → ${wl[wl.length - 1].v} kg` : "kg",
     wl.length >= 2 ? lineSVG(wl, {color: "#e8863d"}) + lineMeta(wl, " kg") : trendEmpty("Log at least 2 weight entries to see your trend.")));
 
   // Calories/day
   const kcals = days.map(d => Math.round(dayTotals(d).kcal));
   const kcalDays = kcals.filter(v => v > 0).length;
-  cards.push(trendCard("Calories · " + lab, tg.kcal ? `target ${n0(tg.kcal)}` : "per day",
+  cards.push(trendCard(tr("Calories") + " · " + lab, tg.kcal ? `target ${n0(tg.kcal)}` : "per day",
     kcalDays >= 2 ? barsSVG(kcals, {color: "#3bb273", target: tg.kcal}) + barsMeta(kcals, "") : trendEmpty("Log food on at least 2 days to see your calorie trend.")));
 
   // Protein/day
   const prot = days.map(d => Math.round(dayTotals(d).p));
   const protDays = prot.filter(v => v > 0).length;
-  cards.push(trendCard("Protein · " + lab, tg.protein ? `target ${n0(tg.protein)} g` : "g per day",
+  cards.push(trendCard(tr("Protein") + " · " + lab, tg.protein ? `target ${n0(tg.protein)} g` : "g per day",
     protDays >= 2 ? barsSVG(prot, {color: "#4c7fe0", target: tg.protein}) + barsMeta(prot, " g") : trendEmpty("Log food on at least 2 days to see your protein trend.")));
 
   // Sleep hours
   const sleepMap = {}; (S.sleep || []).forEach(e => { sleepMap[e.date] = +e.hours || 0; });
   const sleeps = days.map(d => sleepMap[d] || 0);
   const sleepDays = sleeps.filter(v => v > 0).length;
-  cards.push(trendCard("Sleep · " + lab, "hours per night",
+  cards.push(trendCard(tr("Sleep") + " · " + lab, "hours per night",
     sleepDays >= 2 ? barsSVG(sleeps, {color: "#b57edc"}) + barsMeta(sleeps, " h") : trendEmpty("Log at least 2 nights of sleep to see your trend.")));
 
   // Wellness score (line, from check-ins)
   const ciPts = days.map(d => { const c = (S.checkins || []).find(x => x.date === d); return c ? {d, v: checkinScore(c)} : null; }).filter(p => p && p.v != null);
-  cards.push(trendCard("Wellness · " + lab, "daily score /100",
+  cards.push(trendCard(tr("Wellness") + " · " + lab, "daily score /100",
     ciPts.length >= 2 ? lineSVG(ciPts, {color: "#3bb273"}) + lineMeta(ciPts, "") : trendEmpty("Do at least 2 wellness check-ins to see your mood trend.")));
 
   // Training sets per week — scale week count to the range
@@ -2490,14 +2535,14 @@ function trendsHTML(){
   const weeks = []; for (let w = nWeeks - 1; w >= 0; w--){ const start = new Date(Date.now() - (w * 7 + 6) * 864e5).toLocaleDateString("en-CA"); const end = new Date(Date.now() - (w * 7) * 864e5).toLocaleDateString("en-CA"); weeks.push({start, end}); }
   const setSeries = weeks.map(wk => { let s = 0; (S.workouts || []).filter(x => x.date >= wk.start && x.date <= wk.end).forEach(x => (x.items || []).forEach(it => s += (it.sets || []).length)); return s; });
   const setWeeks = setSeries.filter(v => v > 0).length;
-  cards.push(trendCard(`Training volume · ${nWeeks} weeks`, "sets per week",
+  cards.push(trendCard(`${tr("Training volume")} · ${nWeeks} ${tr("weeks")}`, "sets per week",
     setWeeks >= 2 ? barsSVG(setSeries, {color: "#e8863d"}) + barsMeta(setSeries, " sets") : trendEmpty("Log workouts across at least 2 weeks to see your volume trend.")));
 
   return `
     ${weekReviewCardHTML()}
     ${weightProjectionHTML()}
     ${patternsCardHTML()}
-    <div class="ins-range-row"><span class="tiny" style="color:var(--txt2)">Time range</span>${insRangeBarHTML()}</div>
+    <div class="ins-range-row"><span class="tiny" style="color:var(--txt2)">${tr("Time range")}</span>${insRangeBarHTML()}</div>
     <div class="wr-note">${ic("check", 13)} Trends are drawn only from what you logged. A chart appears once there are at least two data points; until then it says so.</div>
     ${cards.join("")}
     <div class="tiny" style="text-align:center;margin:4px 0 2px;color:var(--txt2)">More data, sharper trends. Keep logging and these fill in automatically.</div>`;
@@ -2530,12 +2575,12 @@ function weightProjectionHTML(){
 function projCard(msg, goal, w0, perWk, weeks){
   const gap = goal - w0;
   return `<div class="card">
-    <h3>${ic("trend", 16)} Weight projection <span class="badge" style="margin-inline-start:auto">estimate</span></h3>
+    <h3>${ic("trend", 16)} ${tr("Weight projection")} <span class="badge" style="margin-inline-start:auto">${tr("estimate")}</span></h3>
     <div class="rev-grid" style="margin-bottom:10px">
-      <div class="rev-stat"><div class="rv">${w0} kg</div><div class="rl">Now</div></div>
-      <div class="rev-stat"><div class="rv">${goal} kg</div><div class="rl">Goal</div></div>
-      <div class="rev-stat"><div class="rv">${gap > 0 ? "+" : ""}${gap.toFixed(1)}</div><div class="rl">To go (kg)</div></div>
-      ${weeks ? `<div class="rev-stat"><div class="rv">${weeks < 1.5 ? "~1" : "~" + Math.round(weeks)}</div><div class="rl">Weeks</div></div>` : ""}
+      <div class="rev-stat"><div class="rv">${w0} kg</div><div class="rl">${tr("Now")}</div></div>
+      <div class="rev-stat"><div class="rv">${goal} kg</div><div class="rl">${tr("Goal")}</div></div>
+      <div class="rev-stat"><div class="rv">${gap > 0 ? "+" : ""}${gap.toFixed(1)}</div><div class="rl">${tr("To go (kg)")}</div></div>
+      ${weeks ? `<div class="rev-stat"><div class="rv">${weeks < 1.5 ? "~1" : "~" + Math.round(weeks)}</div><div class="rl">${tr("Weeks")}</div></div>` : ""}
     </div>
     <div class="wr-note">${ic("check", 13)} ${esc(msg)}</div>
     <div class="tiny" style="margin-top:9px;color:var(--txt2)">Projected from your own logged weight trend, not a guarantee — real progress varies with training, sleep, water and adherence. Set your goal weight in Settings → Daily targets.</div>
@@ -6447,47 +6492,47 @@ function settingsHTML(){
   const modelName = (MODELS.find(m => m.id === st.model) || {}).name || st.model || "—";
   const themeName = (THEMES.find(t => t[0] === (st.theme || "dark")) || [,"Dark"])[1];
   const langRow = LANGUAGES.find(l => l[0] === st.lang);
-  const langLabel = (!st.lang || st.lang === "match") ? "Match what I write" : (langRow ? langRow[2] : st.lang);
+  const langLabel = (!st.lang || st.lang === "match") ? tr("Match what I write") : (langRow ? langRow[2] : st.lang);
   const nav = [["setProfile","Profile"],["setLanguage","Language"],["setAppearance","Appearance"],["setNutrition","Nutrition"],["setDomains","Domains"],["setAI","Assistant"],["setSecurity","Privacy"]];
   return `
   <div class="set-hero">
     <span class="set-avatar">${esc(initial)}</span>
     <div style="min-width:0">
-      <div class="set-hero-nm" dir="auto">${esc(st.name || "Welcome")}</div>
+      <div class="set-hero-nm" dir="auto">${esc(st.name || tr("Welcome"))}</div>
       <div class="set-hero-sub" dir="auto">${esc(heroSub)}</div>
     </div>
   </div>
-  <div class="set-nav">${nav.map(([id, l]) => `<button onclick="M.setJump('${id}')">${l}</button>`).join("")}</div>
+  <div class="set-nav">${nav.map(([id, l]) => `<button onclick="M.setJump('${id}')">${tr(l)}</button>`).join("")}</div>
 
-  <div class="set-group-label">You</div>
+  <div class="set-group-label">${tr("You")}</div>
   <div class="card" id="setProfile">
-    <h3>${ic("user", 16)} Profile</h3>
+    <h3>${ic("user", 16)} ${tr("Profile")}</h3>
     ${FEATURES.emailSignup && st.account && st.account.email ? `<div class="set-row" style="padding-top:0">
       <div><div class="k">${esc(st.account.email)}</div><div class="desc">Account on this device — sync arrives with the hosted backend</div></div>
     </div>` : ""}
-    <div class="field"><label>Name</label><input value="${esc(st.name)}" oninput="S.settings.name=this.value;save()"></div>
-    <div class="field"><label>Profession / field</label><input value="${esc(st.profession || "")}" oninput="S.settings.profession=this.value;save()" placeholder="e.g. Lawyer, Chef, Engineer" dir="auto"></div>
-    <div class="field"><label>Primary goal</label><input value="${esc(st.goal || "")}" oninput="S.settings.goal=this.value;save()" placeholder="e.g. Lose 4 kg, ship my thesis" dir="auto"></div>
-    <div class="field"><label>Coaching style</label>
-      <div class="seg">${["direct","balanced","encouraging"].map(v => `<button class="${st.style === v ? "on" : ""}" onclick="M.set('style','${v}')">${v[0].toUpperCase() + v.slice(1)}</button>`).join("")}</div></div>
-    <div class="field" style="margin-bottom:0"><label>Answer depth</label>
-      <div class="seg">${["short","balanced","detailed"].map(v => `<button class="${st.depth === v ? "on" : ""}" onclick="M.set('depth','${v}')">${v[0].toUpperCase() + v.slice(1)}</button>`).join("")}</div></div>
+    <div class="field"><label>${tr("Name")}</label><input value="${esc(st.name)}" oninput="S.settings.name=this.value;save()"></div>
+    <div class="field"><label>${tr("Profession / field")}</label><input value="${esc(st.profession || "")}" oninput="S.settings.profession=this.value;save()" placeholder="e.g. Lawyer, Chef, Engineer" dir="auto"></div>
+    <div class="field"><label>${tr("Primary goal")}</label><input value="${esc(st.goal || "")}" oninput="S.settings.goal=this.value;save()" placeholder="e.g. Lose 4 kg, ship my thesis" dir="auto"></div>
+    <div class="field"><label>${tr("Coaching style")}</label>
+      <div class="seg">${[["direct","Direct"],["balanced","Balanced"],["encouraging","Encouraging"]].map(([v, l]) => `<button class="${st.style === v ? "on" : ""}" onclick="M.set('style','${v}')">${tr(l)}</button>`).join("")}</div></div>
+    <div class="field" style="margin-bottom:0"><label>${tr("Answer depth")}</label>
+      <div class="seg">${[["short","Short"],["balanced","Balanced"],["detailed","Detailed"]].map(([v, l]) => `<button class="${st.depth === v ? "on" : ""}" onclick="M.set('depth','${v}')">${tr(l)}</button>`).join("")}</div></div>
   </div>
 
-  <div class="set-group-label">Language</div>
+  <div class="set-group-label">${tr("Language")}</div>
   <div class="card" id="setLanguage">
-    <div class="card-h-row"><h3>${ic("globe", 16)} Language</h3><span class="set-status">${esc(langLabel)}</span></div>
-    <div class="field" style="margin:10px 0 0"><label>MIRA replies in</label>
+    <div class="card-h-row"><h3>${ic("globe", 16)} ${tr("Language")}</h3><span class="set-status">${esc(langLabel)}</span></div>
+    <div class="field" style="margin:10px 0 0"><label>${tr("MIRA replies in")}</label>
       <select onchange="M.set('lang',this.value)">
-        <option value="match" ${(st.lang || "match") === "match" ? "selected" : ""}>Match what I write</option>
+        <option value="match" ${(st.lang || "match") === "match" ? "selected" : ""}>${tr("Match what I write")}</option>
         ${LANGUAGES.map(([code, en, native]) => `<option value="${code}" ${st.lang === code ? "selected" : ""}>${native}${native === en ? "" : " — " + en}</option>`).join("")}
       </select>
       <div class="tiny" style="margin-top:8px">MIRA writes all its replies, suggestions, macro lookups and reviews in this language. Choose <b>Match what I write</b> to switch language mid-conversation. Menu labels stay in English for now.</div></div>
   </div>
 
-  <div class="set-group-label">Appearance</div>
+  <div class="set-group-label">${tr("Appearance")}</div>
   <div class="card" id="setAppearance">
-    <div class="card-h-row"><h3>${ic("sun", 16)} Appearance</h3><span class="set-status">${esc(themeName)}</span></div>
+    <div class="card-h-row"><h3>${ic("sun", 16)} ${tr("Appearance")}</h3><span class="set-status">${esc(themeName)}</span></div>
     <div class="theme-grid" style="margin-top:12px">${THEMES.map(([v, l, c]) => `
       <button class="theme-swatch ${(st.theme || "dark") === v ? "on" : ""}" onclick="M.theme('${v}')" aria-label="${l} theme">
         <span class="ts-prev" style="background:${c.bg}">
@@ -6499,81 +6544,81 @@ function settingsHTML(){
     <div class="tiny" style="margin-top:10px">Glass is frosted & aurora-lit · OLED is true black · Midnight is deep navy · Sepia is warm paper · Auto follows your device.</div>
   </div>
 
-  <div class="set-group-label">Nutrition &amp; body</div>
+  <div class="set-group-label">${tr("Nutrition & body")}</div>
   <div class="card" id="setNutrition">
-    <h3>${ic("target", 16)} Daily targets</h3>
+    <h3>${ic("target", 16)} ${tr("Daily targets")}</h3>
     <div class="grid2" style="margin-bottom:10px">
-      <div class="field"><label>Calories kcal</label><input type="number" inputmode="numeric" value="${st.targets.kcal || ""}" oninput="S.settings.targets.kcal=num(this.value);save()"></div>
-      <div class="field"><label>Protein g</label><input type="number" inputmode="numeric" value="${st.targets.protein || ""}" oninput="S.settings.targets.protein=num(this.value);save()"></div>
+      <div class="field"><label>${tr("Calories kcal")}</label><input type="number" inputmode="numeric" value="${st.targets.kcal || ""}" oninput="S.settings.targets.kcal=num(this.value);save()"></div>
+      <div class="field"><label>${tr("Protein g")}</label><input type="number" inputmode="numeric" value="${st.targets.protein || ""}" oninput="S.settings.targets.protein=num(this.value);save()"></div>
     </div>
     <div class="grid2" style="margin-bottom:10px">
-      <div class="field"><label>Carbs g (optional)</label><input type="number" inputmode="numeric" value="${st.targets.carbs || ""}" oninput="S.settings.targets.carbs=num(this.value);save()"></div>
-      <div class="field"><label>Fat g (optional)</label><input type="number" inputmode="numeric" value="${st.targets.fat || ""}" oninput="S.settings.targets.fat=num(this.value);save()"></div>
+      <div class="field"><label>${tr("Carbs g (optional)")}</label><input type="number" inputmode="numeric" value="${st.targets.carbs || ""}" oninput="S.settings.targets.carbs=num(this.value);save()"></div>
+      <div class="field"><label>${tr("Fat g (optional)")}</label><input type="number" inputmode="numeric" value="${st.targets.fat || ""}" oninput="S.settings.targets.fat=num(this.value);save()"></div>
     </div>
     <div class="grid2">
-      <div class="field" style="margin-bottom:0"><label>Water goal ml</label><input type="number" inputmode="numeric" value="${st.waterGoal || ""}" oninput="S.settings.waterGoal=Math.max(250,num(this.value));save()"></div>
-      <div class="field" style="margin-bottom:0"><label>Goal weight kg</label><input type="number" inputmode="decimal" value="${st.goalWeight || ""}" placeholder="optional" oninput="S.settings.goalWeight=num(this.value);save()"></div>
+      <div class="field" style="margin-bottom:0"><label>${tr("Water goal ml")}</label><input type="number" inputmode="numeric" value="${st.waterGoal || ""}" oninput="S.settings.waterGoal=Math.max(250,num(this.value));save()"></div>
+      <div class="field" style="margin-bottom:0"><label>${tr("Goal weight kg")}</label><input type="number" inputmode="decimal" value="${st.goalWeight || ""}" placeholder="optional" oninput="S.settings.goalWeight=num(this.value);save()"></div>
     </div>
     <div class="tiny" style="margin-top:8px">Set a goal weight and Insights shows an honest projection of when you'd reach it, based on your own logged weight trend.</div>
   </div>
 
   <div class="card fold" id="savedFoodsCard">
-    <h3 onclick="this.parentElement.classList.toggle('open')">${ic("bookmark", 16)} Saved foods (${S.savedFoods.length}) <span class="chev">▶</span></h3>
+    <h3 onclick="this.parentElement.classList.toggle('open')">${ic("bookmark", 16)} ${tr("Saved foods")} (${S.savedFoods.length}) <span class="chev">▶</span></h3>
     <div class="fold-body">
       ${S.savedFoods.length ? S.savedFoods.map((f, i) => `<div class="set-row">
         <div><div class="k" dir="auto">${esc(f.name)}</div><div class="desc">${f.amount ? esc(f.amount) + " · " : ""}${n0(f.kcal)} kcal · ${n1(f.p)}P · ${n1(f.c)}C · ${n1(f.f)}F</div></div>
-        <span class="end"><button class="btn sm danger" onclick="M.savedDel(${i})">Forget</button></span>
+        <span class="end"><button class="btn sm danger" onclick="M.savedDel(${i})">${tr("Forget")}</button></span>
       </div>`).join("") : `<div class="muted">Every food you log is remembered here for one-tap re-entry.</div>`}
     </div>
   </div>
 
-  <div class="set-group-label">Your domains</div>
+  <div class="set-group-label">${tr("Your domains")}</div>
   <div class="card" id="setDomains">
-    <h3>${ic("grid", 16)} Domains</h3>
+    <h3>${ic("grid", 16)} ${tr("Domains")}</h3>
     ${S.domains.map((d, i) => `<div class="set-row">
       <span class="dom-color" style="background:${d.color}"></span>
       <span class="k">${esc(d.name)}</span>
-      <span class="end">${S.domains.length > 1 ? `<button class="btn sm danger" onclick="M.domDel(${i})">Remove</button>` : ""}</span>
+      <span class="end">${S.domains.length > 1 ? `<button class="btn sm danger" onclick="M.domDel(${i})">${tr("Remove")}</button>` : ""}</span>
     </div>`).join("")}
     <div class="row" style="margin-top:10px">
-      <input id="newDom" placeholder="New domain (any subject)" dir="auto">
-      <button class="btn sm" style="flex:0 0 auto" onclick="M.domAdd()">Add</button>
+      <input id="newDom" placeholder="${tr("New domain (any subject)")}" dir="auto">
+      <button class="btn sm" style="flex:0 0 auto" onclick="M.domAdd()">${tr("Add")}</button>
     </div>
     <div class="tiny" style="margin-top:8px">MIRA builds a specialist mode around each domain you add, with the same evidence standard everywhere.</div>
   </div>
 
-  <div class="set-group-label">Assistant</div>
+  <div class="set-group-label">${tr("Assistant")}</div>
   <div class="card" id="setAI">
-    <div class="card-h-row"><h3>${ic("key", 16)} API &amp; model</h3>
-      <span class="set-status ${st.apiKey ? "on" : ""}"><span class="dot"></span>${st.apiKey ? "Connected" : "No key"}</span></div>
-    <div class="field" style="margin-top:12px"><label>Anthropic API key</label>
+    <div class="card-h-row"><h3>${ic("key", 16)} ${tr("API & model")}</h3>
+      <span class="set-status ${st.apiKey ? "on" : ""}"><span class="dot"></span>${st.apiKey ? tr("Connected") : tr("No key")}</span></div>
+    <div class="field" style="margin-top:12px"><label>${tr("Anthropic API key")}</label>
       <input type="password" value="${esc(st.apiKey)}" placeholder="sk-ant-…" autocomplete="off" oninput="S.settings.apiKey=this.value.trim();save()">
       <div class="tiny" style="margin-top:6px">Stored only in this browser; sent only to api.anthropic.com. Billed to your own account.</div></div>
-    <div class="field"><label>Model</label>
+    <div class="field"><label>${tr("Model")}</label>
       <select onchange="S.settings.model=this.value;save()">${MODELS.map(m => `<option value="${m.id}" ${st.model === m.id ? "selected" : ""}>${m.name}</option>`).join("")}</select></div>
-    <div class="field" style="margin-bottom:0"><label>Live web search</label>
+    <div class="field" style="margin-bottom:0"><label>${tr("Live web search")}</label>
       <div class="seg">
-        <button class="${st.webSearch ? "on" : ""}" onclick="M.set('webSearch',true)">On</button>
-        <button class="${!st.webSearch ? "on" : ""}" onclick="M.set('webSearch',false)">Off</button>
+        <button class="${st.webSearch ? "on" : ""}" onclick="M.set('webSearch',true)">${tr("On")}</button>
+        <button class="${!st.webSearch ? "on" : ""}" onclick="M.set('webSearch',false)">${tr("Off")}</button>
       </div>
       <div class="tiny" style="margin-top:6px">Lets MIRA research the live internet through your API key and cite real pages. Anthropic bills searches (~$10 per 1,000) on top of tokens. Also toggled with the globe button in chat.</div></div>
   </div>
 
-  <div class="set-group-label">Privacy &amp; data</div>
+  <div class="set-group-label">${tr("Privacy & data")}</div>
   <div class="card" id="setSecurity">
-    <div class="card-h-row"><h3>${ic("lock", 16)} Security</h3>
-      <span class="set-status ${st.pinHash ? "on" : ""}"><span class="dot"></span>${st.pinHash ? "PIN on" : "No PIN"}</span></div>
+    <div class="card-h-row"><h3>${ic("lock", 16)} ${tr("Security")}</h3>
+      <span class="set-status ${st.pinHash ? "on" : ""}"><span class="dot"></span>${st.pinHash ? tr("PIN on") : tr("No PIN")}</span></div>
     <div class="muted" style="margin:12px 0 10px">${st.pinHash ? "PIN lock is on. The PIN is stored only as a hash, never as readable digits." : "No PIN set. Add a 4-digit PIN to gate entry to MIRA."}</div>
     <div class="row">
-      <button class="btn sm sec" onclick="M.pinSet()">${st.pinHash ? "Change PIN" : "Set PIN"}</button>
-      ${st.pinHash ? `<button class="btn sm danger" onclick="M.pinOff()">Remove PIN</button>` : ""}
+      <button class="btn sm sec" onclick="M.pinSet()">${st.pinHash ? tr("Change PIN") : tr("Set PIN")}</button>
+      ${st.pinHash ? `<button class="btn sm danger" onclick="M.pinOff()">${tr("Remove PIN")}</button>` : ""}
     </div>
     <div class="tiny" style="margin-top:8px">A PIN is a casual screen lock — for real protection use encryption below.</div>
   </div>
 
   <div class="card" id="setEncrypt">
-    <div class="card-h-row"><h3>${ic("key", 16)} Encryption</h3>
-      <span class="set-status ${st.encOn ? "on" : ""}"><span class="dot"></span>${st.encOn ? "Encrypted" : "Off"}</span></div>
+    <div class="card-h-row"><h3>${ic("key", 16)} ${tr("Encryption")}</h3>
+      <span class="set-status ${st.encOn ? "on" : ""}"><span class="dot"></span>${st.encOn ? tr("Encrypted") : tr("Off")}</span></div>
     ${st.encOn ? `
       <div class="muted" style="margin:12px 0 10px">Your data is <b>encrypted at rest</b> on this device (AES-GCM). It can only be read with your passphrase${R._enc && R._enc.prf ? " or Face ID" : ""}.</div>
       <div class="row" style="flex-wrap:wrap">
@@ -6592,12 +6637,12 @@ function settingsHTML(){
       <div class="field"><label>New passphrase (min 8 characters)</label><input id="encP1" type="password" autocomplete="new-password" placeholder="Passphrase"></div>
       <div class="field"><label>Confirm passphrase</label><input id="encP2" type="password" autocomplete="new-password" placeholder="Repeat it" onkeydown="if(event.key==='Enter')M.encConfirm()"></div>
       <div class="row">
-        <button class="btn sm" onclick="M.encConfirm()" ${R._encBusy ? "disabled" : ""}>${R._encBusy ? "Encrypting…" : "Encrypt my data"}</button>
-        <button class="btn sm sec" onclick="M.encCancel()">Cancel</button>
+        <button class="btn sm" onclick="M.encConfirm()" ${R._encBusy ? "disabled" : ""}>${R._encBusy ? "Encrypting…" : tr("Encrypt my data")}</button>
+        <button class="btn sm sec" onclick="M.encCancel()">${tr("Cancel")}</button>
       </div>
     ` : `
       <div class="muted" style="margin:12px 0 10px">Lock your logs, chats and API key behind a passphrase. Everything is encrypted on this device (AES-GCM); nothing readable is left in storage or backups. Add Face ID after setup for quick unlock.</div>
-      <button class="btn sm" onclick="M.encStart()">${ic("lock", 15)} Encrypt my data</button>
+      <button class="btn sm" onclick="M.encStart()">${ic("lock", 15)} ${tr("Encrypt my data")}</button>
     `}
   </div>
 
@@ -6606,16 +6651,16 @@ function settingsHTML(){
     const overdue = age === null || age >= 14;
     const ageTxt = age === null ? "Never backed up" : age === 0 ? "Backed up today" : `Last backup ${age} day${age === 1 ? "" : "s"} ago`;
     return `<div class="card" id="setBackup">
-    <div class="card-h-row"><h3>${ic("database", 16)} Backup &amp; data</h3>
+    <div class="card-h-row"><h3>${ic("database", 16)} ${tr("Backup & data")}</h3>
       <span class="set-status ${overdue ? "" : "on"}"><span class="dot" ${overdue ? `style="background:var(--amber);box-shadow:0 0 0 3px color-mix(in srgb,var(--amber) 22%,transparent)"` : ""}></span>${esc(ageTxt)}</span></div>
     <div class="muted" style="margin:12px 0 10px">Logs, targets, saved foods, chats and settings live only in this browser${overdue ? " — and browsers can clear that storage. Export a backup so nothing is lost" : ""}. ${overdue ? "" : "Export a backup so nothing is lost across reinstalls or devices."}</div>
     <div class="stor-meter"><span style="width:${si.pct}%;${si.pct >= 80 ? "background:var(--amber)" : ""}"></span></div>
     <div class="tiny" style="margin:6px 0 12px;color:var(--txt2)">On-device data: <b>${si.kb < 1024 ? n0(si.kb) + " KB" : (si.kb / 1024).toFixed(1) + " MB"}</b> · about ${si.pct}% of the browser's ~5 MB budget${si.pct >= 80 ? " — consider clearing old chats" : ""}.</div>
     <div class="row" style="margin-bottom:10px">
-      <button class="btn sm ${overdue ? "" : "sec"}" onclick="M.backup()">${ic("download", 15)} Export backup</button>
-      <button class="btn sm sec" onclick="M.restore()">${ic("upload", 15)} Restore backup</button>
+      <button class="btn sm ${overdue ? "" : "sec"}" onclick="M.backup()">${ic("download", 15)} ${tr("Export backup")}</button>
+      <button class="btn sm sec" onclick="M.restore()">${ic("upload", 15)} ${tr("Restore backup")}</button>
     </div>
-    <button class="btn sm danger" onclick="M.wipe()">Erase everything on this device</button>
+    <button class="btn sm danger" onclick="M.wipe()">${tr("Erase everything on this device")}</button>
   </div>`;
   })()}
 
