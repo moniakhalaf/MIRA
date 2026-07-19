@@ -890,6 +890,15 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
 .snackbar #snackMsg{font-size:13.5px;color:var(--txt)}
 .snackbar #snackBtn{flex:0 0 auto;font-size:13px;font-weight:700;color:var(--gold);background:none;padding:6px 10px;border-radius:8px}
 .snackbar #snackBtn:active{background:var(--gold-soft)}
+/* "new version available" banner — pinned above the tab bar */
+.upd-bar{position:fixed;left:50%;transform:translateX(-50%) translateY(-16px);top:calc(var(--safe-top) + 8px);z-index:80;
+  display:flex;align-items:center;gap:12px;padding:9px 10px 9px 15px;border-radius:12px;background:var(--card2);border:1px solid var(--gold);
+  box-shadow:0 10px 30px rgba(0,0,0,.4);opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;max-width:calc(100% - 24px)}
+.upd-bar.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
+.upd-bar .um{font-size:13px;color:var(--txt);font-weight:600}
+.upd-bar .ub{flex:0 0 auto;font-size:13px;font-weight:700;color:var(--gold);background:var(--gold-soft);padding:7px 13px;border-radius:8px}
+.upd-bar .ub:active{transform:scale(.96)}
+.upd-bar .ux{flex:0 0 auto;color:var(--txt3);background:none;padding:6px 8px;font-size:15px;line-height:1}
 /* food entry edit button */
 .food-it .edit,.food-it .mmove{flex:0 0 auto;color:var(--txt3);min-width:34px;min-height:36px;display:flex;align-items:center;justify-content:center;border-radius:9px;background:none}
 .food-it .edit:active,.food-it .mmove:active{background:var(--key);color:var(--acc)}
@@ -1073,7 +1082,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.83";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.84";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1262,6 +1271,23 @@ const TR = {
     "How can I help you today?":"كيف يمكنني مساعدتك اليوم؟","Search everything…":"ابحث في كل شيء…",
     "Open chat":"فتح المحادثة","Meal planner":"مخطط الوجبات","Grocery list":"قائمة التسوق",
     "This week":"هذا الأسبوع","Weight projection":"توقّع الوزن","estimate":"تقدير",
+    "A new version is ready":"يتوفّر إصدار جديد","Reload":"إعادة التحميل","Dismiss":"إغلاق",
+    "Remaining":"المتبقّي","Hydration":"الترطيب","Log food":"تسجيل الطعام","Edit entry":"تعديل الإدخال",
+    "Food name":"اسم الطعام","Meal":"الوجبة","Amount eaten":"الكمية المتناولة","Time":"الوقت",
+    "Calories (kcal)":"السعرات (كيلوكالوري)","Protein g":"بروتين غ","Carbs g":"كربوهيدرات غ","Fat g":"دهون غ",
+    "Save to log":"حفظ في السجل","Update entry":"تحديث الإدخال","Portion scaler":"محوّل الكمية",
+    "Find macros":"إيجاد الماكروز","Snap food / label":"صوّر الطعام / الملصق","Barcode":"الباركود",
+    "I cooked this — build the dish from ingredients":"طبختُ هذا — احسب الطبق من المكوّنات",
+    "Breakfast":"فطور","Lunch":"غداء","Dinner":"عشاء","Snack":"وجبة خفيفة",
+    "Meals & shortcuts":"الوجبات والاختصارات","Copy yesterday":"نسخ الأمس","Save today as meal":"حفظ اليوم كوجبة",
+    "I cooked this":"طبختُ هذا","Dish name":"اسم الطبق","Servings it makes":"عدد الحصص الناتجة",
+    "Servings I ate":"الحصص التي أكلتُها","Get macros from ingredients":"احسب الماكروز من المكوّنات",
+    "Whole dish":"الطبق كامل","Per serving":"لكل حصة","Your portion":"حصّتك","Log my portion":"سجّل حصّتي",
+    "Save as recipe":"حفظ كوصفة","Ingredient":"مكوّن","Cook & log from these ingredients":"اطبخ وسجّل من هذه المكوّنات",
+    "Calories":"السعرات","Protein":"بروتين","Carbs":"كربوهيدرات","Fat":"دهون","Nutrition":"التغذية","Body composition":"تكوين الجسم",
+    "Finish your day":"أكمل يومك","last meal":"آخر وجبة","Log this":"سجّل هذا","Ideas to fill the gap":"أفكار لسدّ الفجوة",
+    "Suggest what to eat":"اقترح ماذا آكل","Suggest again":"اقترح مجددًا",
+    "You still have room today — here's what's left to hit your targets:":"ما زال لديك مجال اليوم — إليك ما تبقّى للوصول إلى أهدافك:",
   },
   es: {
     "Home":"Inicio","Chat":"Chat","Insights":"Análisis","Settings":"Ajustes",
@@ -1270,6 +1296,23 @@ const TR = {
     "How can I help you today?":"¿En qué puedo ayudarte hoy?","Search everything…":"Buscar en todo…",
     "Open chat":"Abrir chat","Meal planner":"Planificador de comidas","Grocery list":"Lista de compras",
     "This week":"Esta semana","Weight projection":"Proyección de peso","estimate":"estimación",
+    "A new version is ready":"Hay una nueva versión","Reload":"Recargar","Dismiss":"Descartar",
+    "Remaining":"Restante","Hydration":"Hidratación","Log food":"Registrar comida","Edit entry":"Editar entrada",
+    "Food name":"Nombre del alimento","Meal":"Comida","Amount eaten":"Cantidad consumida","Time":"Hora",
+    "Calories (kcal)":"Calorías (kcal)","Protein g":"Proteína g","Carbs g":"Carbohidratos g","Fat g":"Grasa g",
+    "Save to log":"Guardar en registro","Update entry":"Actualizar entrada","Portion scaler":"Ajustar porción",
+    "Find macros":"Buscar macros","Snap food / label":"Foto comida / etiqueta","Barcode":"Código de barras",
+    "I cooked this — build the dish from ingredients":"Cociné esto — calcula el plato con los ingredientes",
+    "Breakfast":"Desayuno","Lunch":"Almuerzo","Dinner":"Cena","Snack":"Tentempié",
+    "Meals & shortcuts":"Comidas y atajos","Copy yesterday":"Copiar ayer","Save today as meal":"Guardar hoy como comida",
+    "I cooked this":"Cociné esto","Dish name":"Nombre del plato","Servings it makes":"Porciones que rinde",
+    "Servings I ate":"Porciones que comí","Get macros from ingredients":"Calcular macros de ingredientes",
+    "Whole dish":"Plato entero","Per serving":"Por porción","Your portion":"Tu porción","Log my portion":"Registrar mi porción",
+    "Save as recipe":"Guardar como receta","Ingredient":"Ingrediente","Cook & log from these ingredients":"Cocinar y registrar con estos ingredientes",
+    "Calories":"Calorías","Protein":"Proteína","Carbs":"Carbohidratos","Fat":"Grasa","Nutrition":"Nutrición","Body composition":"Composición corporal",
+    "Finish your day":"Completa tu día","last meal":"última comida","Log this":"Registrar esto","Ideas to fill the gap":"Ideas para llenar el hueco",
+    "Suggest what to eat":"Sugerir qué comer","Suggest again":"Sugerir de nuevo",
+    "You still have room today — here's what's left to hit your targets:":"Aún tienes margen hoy: esto es lo que falta para alcanzar tus objetivos:",
   },
   fr: {
     "Home":"Accueil","Chat":"Chat","Insights":"Analyses","Settings":"Réglages",
@@ -1278,6 +1321,23 @@ const TR = {
     "How can I help you today?":"Comment puis-je vous aider aujourd'hui ?","Search everything…":"Tout rechercher…",
     "Open chat":"Ouvrir le chat","Meal planner":"Planificateur de repas","Grocery list":"Liste de courses",
     "This week":"Cette semaine","Weight projection":"Projection du poids","estimate":"estimation",
+    "A new version is ready":"Une nouvelle version est prête","Reload":"Recharger","Dismiss":"Ignorer",
+    "Remaining":"Restant","Hydration":"Hydratation","Log food":"Enregistrer un aliment","Edit entry":"Modifier l'entrée",
+    "Food name":"Nom de l'aliment","Meal":"Repas","Amount eaten":"Quantité mangée","Time":"Heure",
+    "Calories (kcal)":"Calories (kcal)","Protein g":"Protéines g","Carbs g":"Glucides g","Fat g":"Lipides g",
+    "Save to log":"Enregistrer au journal","Update entry":"Mettre à jour","Portion scaler":"Ajuster la portion",
+    "Find macros":"Trouver les macros","Snap food / label":"Photo plat / étiquette","Barcode":"Code-barres",
+    "I cooked this — build the dish from ingredients":"J'ai cuisiné ça — calcule le plat à partir des ingrédients",
+    "Breakfast":"Petit-déjeuner","Lunch":"Déjeuner","Dinner":"Dîner","Snack":"Collation",
+    "Meals & shortcuts":"Repas et raccourcis","Copy yesterday":"Copier hier","Save today as meal":"Enregistrer aujourd'hui comme repas",
+    "I cooked this":"J'ai cuisiné ça","Dish name":"Nom du plat","Servings it makes":"Portions obtenues",
+    "Servings I ate":"Portions mangées","Get macros from ingredients":"Calculer les macros des ingrédients",
+    "Whole dish":"Plat entier","Per serving":"Par portion","Your portion":"Votre portion","Log my portion":"Enregistrer ma portion",
+    "Save as recipe":"Enregistrer comme recette","Ingredient":"Ingrédient","Cook & log from these ingredients":"Cuisiner et enregistrer avec ces ingrédients",
+    "Calories":"Calories","Protein":"Protéines","Carbs":"Glucides","Fat":"Lipides","Nutrition":"Nutrition","Body composition":"Composition corporelle",
+    "Finish your day":"Terminez votre journée","last meal":"dernier repas","Log this":"Enregistrer","Ideas to fill the gap":"Idées pour combler l'écart",
+    "Suggest what to eat":"Suggérer quoi manger","Suggest again":"Suggérer à nouveau",
+    "You still have room today — here's what's left to hit your targets:":"Il vous reste de la marge aujourd'hui — voici ce qu'il reste pour atteindre vos objectifs :",
   },
 };
 // Interface language: null in "Match what I write" mode (chrome stays English).
@@ -1785,7 +1845,7 @@ function renderMain(){
   document.documentElement.style.setProperty("--acc-soft", accClr ? hexSoft(accClr) : "var(--gold-soft)");
   const sub = R.tab === "chat" ? `<span class="mode-dot"></span>${esc(dom.name)}`
     : R.tab === "home" ? esc(catDom ? catDom.name : t("Home"))
-    : R.tab === "train" ? t("Training") : R.tab === "health" ? t("Health") : R.tab === "work" ? t("Work") : R.tab === "life" ? t("Life") : esc(tabTitle());
+    : R.tab === "train" ? t("Training") : R.tab === "health" ? t("Health") : R.tab === "work" ? t("Work") : R.tab === "life" ? t("Life") : esc(t(tabTitle()));
   app.innerHTML = `
     <div class="topbar" id="topbar">
       <div class="brand">MIRA</div>
@@ -3475,69 +3535,69 @@ function macroBar(label, val, target, unit){
 }
 
 function foodHTML(){
-  const t = todayStr();
-  const tot = dayTotals(t);
+  const today = todayStr();   // NB: keep this named `today` — the global t() is the translator
+  const tot = dayTotals(today);
   const tg = S.settings.targets;
-  const glasses = S.water[t] || 0;
+  const glasses = S.water[today] || 0;
   const goalGl = Math.max(1, Math.ceil(S.settings.waterGoal / 250));
   const litres = glasses * 0.25;
   const wPct = Math.min(100, (glasses * 250 / S.settings.waterGoal) * 100);
 
   const dates = [...new Set(S.foods.map(f => f.date))].sort().reverse();
-  if (!dates.includes(t)) dates.unshift(t);
+  if (!dates.includes(today)) dates.unshift(today);
 
   return `
-  <button class="cat-back" aria-label="Back to Home" onclick="M.backToHome('health')">${ic("back", 18)} Home</button>
+  <button class="cat-back" aria-label="Back to Home" onclick="M.backToHome('health')">${ic("back", 18)} ${t("Home")}</button>
   <div class="card">
-    <h3>${ic("target", 16)} Today <span class="tiny" style="margin-inline-start:auto;font-weight:400">${new Date().toLocaleDateString("en-GB",{day:"numeric",month:"long"})}</span></h3>
+    <h3>${ic("target", 16)} ${t("Today")} <span class="tiny" style="margin-inline-start:auto;font-weight:400">${new Date().toLocaleDateString("en-GB",{day:"numeric",month:"long"})}</span></h3>
     <div class="bars">
-      ${macroBar("Calories", tot.kcal, tg.kcal, "kcal")}
-      ${macroBar("Protein", tot.p, tg.protein, "g")}
-      ${macroBar("Carbs", tot.c, tg.carbs, "g")}
-      ${macroBar("Fat", tot.f, tg.fat, "g")}
+      ${macroBar(t("Calories"), tot.kcal, tg.kcal, "kcal")}
+      ${macroBar(t("Protein"), tot.p, tg.protein, "g")}
+      ${macroBar(t("Carbs"), tot.c, tg.carbs, "g")}
+      ${macroBar(t("Fat"), tot.f, tg.fat, "g")}
     </div>
-    <div class="muted" style="margin-top:9px">Remaining: <b>${n0(Math.max(0, tg.kcal - tot.kcal))} kcal</b> · <b>${n1(Math.max(0, tg.protein - tot.p))} g protein</b>${tg.carbs ? ` · ${n1(Math.max(0, tg.carbs - tot.c))} g carbs` : ""}${tg.fat ? ` · ${n1(Math.max(0, tg.fat - tot.f))} g fat` : ""}</div>
+    <div class="muted" style="margin-top:9px">${t("Remaining")}: <b>${n0(Math.max(0, tg.kcal - tot.kcal))} kcal</b> · <b>${n1(Math.max(0, tg.protein - tot.p))} g protein</b>${tg.carbs ? ` · ${n1(Math.max(0, tg.carbs - tot.c))} g carbs` : ""}${tg.fat ? ` · ${n1(Math.max(0, tg.fat - tot.f))} g fat` : ""}</div>
   </div>
 
   ${finishDayCardHTML()}
 
   <div class="card">
-    <h3>${ic("droplet", 16)} Hydration <span class="tiny" style="margin-inline-start:auto;font-weight:400">${glasses} glasses · ${litres.toFixed(2)} L / ${(S.settings.waterGoal/1000).toFixed(2)} L</span></h3>
+    <h3>${ic("droplet", 16)} ${t("Hydration")} <span class="tiny" style="margin-inline-start:auto;font-weight:400">${glasses} glasses · ${litres.toFixed(2)} L / ${(S.settings.waterGoal/1000).toFixed(2)} L</span></h3>
     <div class="glasses">${Array.from({length: goalGl}, (_, i) =>
       `<button class="glass ${i < glasses ? "f" : ""}" aria-label="Glass ${i + 1} of ${goalGl}" aria-pressed="${i < glasses}" onclick="M.water(${i})">${glassSvg(i < glasses)}</button>`).join("")}</div>
     <div class="bar"><i style="width:${wPct}%;background:var(--water)"></i></div>
   </div>
 
   <div class="card fold open" id="addFoodCard">
-    <h3 onclick="this.parentElement.classList.toggle('open')">${ic(R.editFoodId ? "edit" : "plus", 16)} ${R.editFoodId ? "Edit entry" : "Log food"} <span class="chev">▶</span></h3>
+    <h3 onclick="this.parentElement.classList.toggle('open')">${ic(R.editFoodId ? "edit" : "plus", 16)} ${R.editFoodId ? t("Edit entry") : t("Log food")} <span class="chev">▶</span></h3>
     <div class="fold-body">
       ${R.editFoodId ? `<div class="edit-banner">${ic("edit", 14)} Editing a logged entry <button class="btn sm sec" onclick="M.foodEditCancel()">Cancel</button></div>` : ""}
-      <div class="field ac-wrap"><label>Food name</label>
+      <div class="field ac-wrap"><label>${t("Food name")}</label>
         <input id="ffName" value="${esc(foodForm.name)}" placeholder="Start typing — saved foods appear" dir="auto" autocomplete="off" style="padding-right:44px"
           oninput="M.ffName(this.value)" onfocus="M.ffName(this.value)" onblur="setTimeout(()=>M.acHide(),180)">
         <button class="in-mic" aria-label="Voice input" onmousedown="event.preventDefault()" onclick="M.voiceFood()">${ic("mic", 17)}</button>
         <div id="acList"></div>
       </div>
-      <div class="field"><label>Meal</label>
-        <div class="seg">${FOOD_MEALS.map(([v, l]) => `<button class="${(foodForm.meal || mealFromTime(foodForm.time || nowHM())) === v ? "on" : ""}" onclick="M.foodMeal('${v}')">${l}</button>`).join("")}</div></div>
-      <div class="field"><label>Amount eaten</label><input id="ffAmount" value="${esc(foodForm.amount)}" placeholder="e.g. 3 pieces · 150 g · 250 ml" oninput="foodForm.amount=this.value"></div>
+      <div class="field"><label>${t("Meal")}</label>
+        <div class="seg">${FOOD_MEALS.map(([v, l]) => `<button class="${(foodForm.meal || mealFromTime(foodForm.time || nowHM())) === v ? "on" : ""}" onclick="M.foodMeal('${v}')">${t(l)}</button>`).join("")}</div></div>
+      <div class="field"><label>${t("Amount eaten")}</label><input id="ffAmount" value="${esc(foodForm.amount)}" placeholder="e.g. 3 pieces · 150 g · 250 ml" oninput="foodForm.amount=this.value"></div>
       <div class="grid2" style="margin-bottom:12px">
-        <div class="field"><label>Time</label><input id="ffTime" type="time" value="${esc(foodForm.time || nowHM())}" oninput="foodForm.time=this.value"></div>
-        <div class="field"><label>Calories (kcal)</label><input id="ffK" type="number" inputmode="decimal" value="${esc(foodForm.kcal)}" oninput="foodForm.kcal=this.value" placeholder="kcal"></div>
+        <div class="field"><label>${t("Time")}</label><input id="ffTime" type="time" value="${esc(foodForm.time || nowHM())}" oninput="foodForm.time=this.value"></div>
+        <div class="field"><label>${t("Calories (kcal)")}</label><input id="ffK" type="number" inputmode="decimal" value="${esc(foodForm.kcal)}" oninput="foodForm.kcal=this.value" placeholder="kcal"></div>
       </div>
       <div class="grid3m" style="margin-bottom:12px">
-        <div class="field"><label>Protein g</label><input id="ffP" type="number" inputmode="decimal" value="${esc(foodForm.p)}" oninput="foodForm.p=this.value"></div>
-        <div class="field"><label>Carbs g</label><input id="ffC" type="number" inputmode="decimal" value="${esc(foodForm.c)}" oninput="foodForm.c=this.value"></div>
-        <div class="field"><label>Fat g</label><input id="ffF" type="number" inputmode="decimal" value="${esc(foodForm.f)}" oninput="foodForm.f=this.value"></div>
+        <div class="field"><label>${t("Protein g")}</label><input id="ffP" type="number" inputmode="decimal" value="${esc(foodForm.p)}" oninput="foodForm.p=this.value"></div>
+        <div class="field"><label>${t("Carbs g")}</label><input id="ffC" type="number" inputmode="decimal" value="${esc(foodForm.c)}" oninput="foodForm.c=this.value"></div>
+        <div class="field"><label>${t("Fat g")}</label><input id="ffF" type="number" inputmode="decimal" value="${esc(foodForm.f)}" oninput="foodForm.f=this.value"></div>
       </div>
-      <button class="btn" style="width:100%;margin-bottom:12px" onclick="M.foodSave()">${R.editFoodId ? "Update entry" : "Save to log"}</button>
+      <button class="btn" style="width:100%;margin-bottom:12px" onclick="M.foodSave()">${R.editFoodId ? t("Update entry") : t("Save to log")}</button>
       <div class="grid2" style="gap:8px">
-        <button class="btn sm sec" style="width:100%" onclick="M.scToggle()">${ic("sliders", 15)} Portion scaler</button>
-        <button class="btn sm sec" style="width:100%" onclick="M.findMacros()" ${findBusy ? "disabled" : ""}>${findBusy ? "Searching…" : ic("search", 15) + " Find macros"}</button>
-        <button class="btn sm sec" style="width:100%" onclick="M.extractPhoto()" ${extractBusy ? "disabled" : ""}>${extractBusy ? "Reading…" : ic("camera", 15) + " Snap food / label"}</button>
-        <button class="btn sm sec" style="width:100%" onclick="M.barcode()" ${barcodeBusy ? "disabled" : ""}>${barcodeBusy ? "Looking up…" : ic("barcode", 15) + " Barcode"}</button>
+        <button class="btn sm sec" style="width:100%" onclick="M.scToggle()">${ic("sliders", 15)} ${t("Portion scaler")}</button>
+        <button class="btn sm sec" style="width:100%" onclick="M.findMacros()" ${findBusy ? "disabled" : ""}>${findBusy ? "Searching…" : ic("search", 15) + " " + t("Find macros")}</button>
+        <button class="btn sm sec" style="width:100%" onclick="M.extractPhoto()" ${extractBusy ? "disabled" : ""}>${extractBusy ? "Reading…" : ic("camera", 15) + " " + t("Snap food / label")}</button>
+        <button class="btn sm sec" style="width:100%" onclick="M.barcode()" ${barcodeBusy ? "disabled" : ""}>${barcodeBusy ? "Looking up…" : ic("barcode", 15) + " " + t("Barcode")}</button>
       </div>
-      <button class="btn sm sec" style="width:100%;margin-top:8px" aria-expanded="${dishForm.open}" onclick="M.dishToggle()">${ic("flame", 15)} I cooked this — build the dish from ingredients</button>
+      <button class="btn sm sec" style="width:100%;margin-top:8px" aria-expanded="${dishForm.open}" onclick="M.dishToggle()">${ic("flame", 15)} ${t("I cooked this — build the dish from ingredients")}</button>
       ${foodForm.scOpen ? `
       <div class="review-item" style="margin-top:12px">
         <b style="font-size:14px">Portion scaler</b>
@@ -3560,11 +3620,11 @@ function foodHTML(){
   </div>
 
   <div class="card fold ${R.mealsOpen ? "open" : ""}" id="mealsCard">
-    <h3 onclick="M.mealsToggle()">${ic("bookmark", 16)} Meals & shortcuts${S.meals.length ? ` (${S.meals.length})` : ""} <span class="chev">▶</span></h3>
+    <h3 onclick="M.mealsToggle()">${ic("bookmark", 16)} ${t("Meals & shortcuts")}${S.meals.length ? ` (${S.meals.length})` : ""} <span class="chev">▶</span></h3>
     <div class="fold-body">
       <div class="row" style="margin-bottom:10px">
-        <button class="btn sm sec" onclick="M.copyYesterday()">${ic("copy", 14)} Copy yesterday</button>
-        <button class="btn sm sec" onclick="M.mealSaveToday()">${ic("plus", 14)} Save today as meal</button>
+        <button class="btn sm sec" onclick="M.copyYesterday()">${ic("copy", 14)} ${t("Copy yesterday")}</button>
+        <button class="btn sm sec" onclick="M.mealSaveToday()">${ic("plus", 14)} ${t("Save today as meal")}</button>
       </div>
       ${S.meals.length ? S.meals.map((ml, i) => {
         const t = ml.items.reduce((a, x) => ({k: a.k + num(x.kcal), p: a.p + num(x.p)}), {k: 0, p: 0});
@@ -3596,7 +3656,7 @@ function foodHTML(){
         const mi = items.filter(f => entryMeal(f) === mk).sort((a, b) => { const ta = entryTime(a), tb = entryTime(b); return ta < tb ? -1 : ta > tb ? 1 : (a.ts || 0) - (b.ts || 0); });
         if (!mi.length) return "";
         const mt = mi.reduce((a, x) => ({k: a.k + num(x.kcal), p: a.p + num(x.p)}), {k: 0, p: 0});
-        return `<div class="meal-h"><span>${esc(ml)}</span><span class="mh-sum">${n0(mt.k)} kcal · ${n1(mt.p)}P</span></div>${mi.map(foodItemHTML).join("")}`;
+        return `<div class="meal-h"><span>${esc(t(ml))}</span><span class="mh-sum">${n0(mt.k)} kcal · ${n1(mt.p)}P</span></div>${mi.map(foodItemHTML).join("")}`;
       }).join("") : `<div class="food-it"><span class="muted">Nothing logged.</span></div>`}</div>` : ""}
     </div>`;
   }).join("")}`;
@@ -3604,10 +3664,10 @@ function foodHTML(){
 
 /* Suggest foods/mini-meals to finish the day's remaining macros, using the food log + last-meal time */
 function finishDayCardHTML(){
-  const t = todayStr();
-  const tot = dayTotals(t), tg = S.settings.targets || {};
+  const ds = todayStr();
+  const tot = dayTotals(ds), tg = S.settings.targets || {};
   if (!tg.kcal) return "";                              // needs a calorie target to be meaningful
-  const today = dayFoods(t);
+  const today = dayFoods(ds);
   if (!today.length) return "";                         // nothing eaten yet — nothing to "finish"
   const remK = tg.kcal - tot.kcal;
   if (remK <= 60) return "";                            // effectively at/over target — no nudge
@@ -3616,16 +3676,16 @@ function finishDayCardHTML(){
   const ideas = R.finishIdeas || [];
   const chip = (lbl, val, unit) => `<span class="fd-chip"><b>${n0(Math.max(0, val))}${unit}</b> ${lbl}</span>`;
   return `<div class="card">
-    <div class="card-h-row"><h3>${ic("target", 16)} Finish your day</h3>${last ? `<span class="set-status"><span class="dot"></span>last meal ${esc(entryTime(last))}</span>` : ""}</div>
-    <div class="muted" style="margin:9px 0 10px">You still have room today — here's what's left to hit your targets:</div>
-    <div class="fd-chips">${chip("kcal", remK, "")}${tg.protein ? chip("protein", remP, "g") : ""}${tg.carbs ? chip("carbs", remC, "g") : ""}${tg.fat ? chip("fat", remF, "g") : ""}</div>
-    <button class="btn sm" style="margin-top:12px" onclick="M.finishSuggest()" ${R.finishBusy ? "disabled" : ""}>${R.finishBusy ? "Thinking…" : ic("search", 15) + (ideas.length ? " Suggest again" : " Suggest what to eat")}</button>
-    ${ideas.length ? `<div class="ideas-head"><span>Ideas to fill the gap</span><button class="ideas-x" onclick="M.finishClear()">${ic("x", 15)} Dismiss</button></div>
+    <div class="card-h-row"><h3>${ic("target", 16)} ${t("Finish your day")}</h3>${last ? `<span class="set-status"><span class="dot"></span>${t("last meal")} ${esc(entryTime(last))}</span>` : ""}</div>
+    <div class="muted" style="margin:9px 0 10px">${t("You still have room today — here's what's left to hit your targets:")}</div>
+    <div class="fd-chips">${chip("kcal", remK, "")}${tg.protein ? chip(t("Protein"), remP, "g") : ""}${tg.carbs ? chip(t("Carbs"), remC, "g") : ""}${tg.fat ? chip(t("Fat"), remF, "g") : ""}</div>
+    <button class="btn sm" style="margin-top:12px" onclick="M.finishSuggest()" ${R.finishBusy ? "disabled" : ""}>${R.finishBusy ? "Thinking…" : ic("search", 15) + (ideas.length ? " " + t("Suggest again") : " " + t("Suggest what to eat"))}</button>
+    ${ideas.length ? `<div class="ideas-head"><span>${t("Ideas to fill the gap")}</span><button class="ideas-x" onclick="M.finishClear()">${ic("x", 15)} ${t("Dismiss")}</button></div>
     <div class="snack-grid">${ideas.map((s, i) => `<div class="snack-card ai">
       <div class="sc-top"><div class="sc-nm" dir="auto">${esc(s.name)}</div></div>
       <div class="sc-macros">${n0(s.kcal)} kcal · ${n0(s.p)}P · ${n0(s.c)}C · ${n0(s.f)}F${s.amount ? ` <span class="sc-amt">· ${esc(s.amount)}</span>` : ""}</div>
       ${s.why ? `<div class="sc-why" dir="auto">${esc(s.why)}</div>` : ""}
-      <button class="btn sm sec" onclick="M.finishLog(${i})">${ic("plus", 14)} Log this</button>
+      <button class="btn sm sec" onclick="M.finishLog(${i})">${ic("plus", 14)} ${t("Log this")}</button>
     </div>`).join("")}</div>
     <div class="tiny" style="margin-top:8px;color:var(--txt2)">Macros are estimates, logged with the current time. These clear when you leave the page.</div>` : ""}
   </div>`;
@@ -4115,39 +4175,39 @@ function dishMineText(){
 
 function dishHTML(){
   const res = dishForm.res;
-  const t = res ? dishTotals() : null;
+  const dt = res ? dishTotals() : null;
   return `
   <div class="review-item" style="margin-top:12px">
-    <b style="font-size:14px">${ic("flame", 14)} I cooked this</b>
+    <b style="font-size:14px">${ic("flame", 14)} ${t("I cooked this")}</b>
     <div class="tiny" style="margin-bottom:8px">List what went into the pot — MIRA estimates each ingredient's macros from standard food-composition data, sums the dish, and splits it into servings.</div>
-    <div class="field"><label>Dish name</label><input value="${esc(dishForm.name)}" dir="auto" placeholder="e.g. Chicken machboos" oninput="dishForm.name=this.value"></div>
+    <div class="field"><label>${t("Dish name")}</label><input value="${esc(dishForm.name)}" dir="auto" placeholder="e.g. Chicken machboos" oninput="dishForm.name=this.value"></div>
     <div class="grid2" style="margin-bottom:8px">
-      <div class="field"><label>Servings it makes</label><input type="number" inputmode="decimal" min="1" step="0.5" value="${esc(dishForm.makes)}" oninput="dishForm.makes=this.value;M.dishScale()"></div>
-      <div class="field"><label>Servings I ate</label><input type="number" inputmode="decimal" min="0" step="0.25" value="${esc(dishForm.ate)}" oninput="dishForm.ate=this.value;M.dishScale()"></div>
+      <div class="field"><label>${t("Servings it makes")}</label><input type="number" inputmode="decimal" min="1" step="0.5" value="${esc(dishForm.makes)}" oninput="dishForm.makes=this.value;M.dishScale()"></div>
+      <div class="field"><label>${t("Servings I ate")}</label><input type="number" inputmode="decimal" min="0" step="0.25" value="${esc(dishForm.ate)}" oninput="dishForm.ate=this.value;M.dishScale()"></div>
     </div>
     <label class="tiny" style="display:block;margin-bottom:5px">Ingredients & amounts, raw as they went in — include cooking oil, butter or ghee.</label>
     ${dishForm.ings.map((g, i) => `
     <div class="row" style="margin-bottom:6px">
-      <input value="${esc(g.n)}" dir="auto" placeholder="Ingredient — e.g. basmati rice" oninput="dishForm.ings[${i}].n=this.value">
+      <input value="${esc(g.n)}" dir="auto" placeholder="${t("Ingredient")} — e.g. basmati rice" oninput="dishForm.ings[${i}].n=this.value">
       <input value="${esc(g.a)}" placeholder="200 g · 2 tbsp" style="flex:0 0 104px" oninput="dishForm.ings[${i}].a=this.value">
       <button class="btn sm sec" style="flex:0 0 auto" aria-label="Remove ingredient" onclick="M.dishRow(${i},-1)">✕</button>
     </div>`).join("")}
     <div class="row" style="margin-top:2px">
-      <button class="btn sm sec" style="flex:0 0 auto" onclick="M.dishRow(-1,1)">${ic("plus", 14)} Ingredient</button>
-      <button class="btn sm" style="flex:1" onclick="M.dishMacros()" ${dishBusy ? "disabled" : ""}>${dishBusy ? "Working out macros…" : ic("search", 14) + " Get macros from ingredients"}</button>
+      <button class="btn sm sec" style="flex:0 0 auto" onclick="M.dishRow(-1,1)">${ic("plus", 14)} ${t("Ingredient")}</button>
+      <button class="btn sm" style="flex:1" onclick="M.dishMacros()" ${dishBusy ? "disabled" : ""}>${dishBusy ? "Working out macros…" : ic("search", 14) + " " + t("Get macros from ingredients")}</button>
     </div>
     ${res ? `
     <div class="dish-break">
       ${res.items.map(x => `<div class="dish-line"><span dir="auto">${esc(x.name)}${x.amount ? ` <i>${esc(x.amount)}</i>` : ""}</span><span>${n0(x.kcal)} kcal · ${n1(x.p)}P · ${n1(x.c)}C · ${n1(x.f)}F</span></div>`).join("")}
-      <div class="dish-line tot"><span>Whole dish</span><span>${n0(t.kcal)} kcal · ${n1(t.p)}P · ${n1(t.c)}C · ${n1(t.f)}F</span></div>
-      <div class="dish-line tot"><span>Per serving</span><span id="dishPer">${dishPerText()}</span></div>
-      <div class="dish-line tot"><span>Your portion</span><span id="dishMine">${dishMineText()}</span></div>
+      <div class="dish-line tot"><span>${t("Whole dish")}</span><span>${n0(dt.kcal)} kcal · ${n1(dt.p)}P · ${n1(dt.c)}C · ${n1(dt.f)}F</span></div>
+      <div class="dish-line tot"><span>${t("Per serving")}</span><span id="dishPer">${dishPerText()}</span></div>
+      <div class="dish-line tot"><span>${t("Your portion")}</span><span id="dishMine">${dishMineText()}</span></div>
     </div>
     <div class="row" style="margin-top:10px">
-      <button class="btn sm" style="flex:1" onclick="M.dishLog()">Log my portion</button>
-      <button class="btn sm sec" style="flex:0 0 auto" onclick="M.dishRecipe()">${ic("book", 14)} Save as recipe</button>
+      <button class="btn sm" style="flex:1" onclick="M.dishLog()">${t("Log my portion")}</button>
+      <button class="btn sm sec" style="flex:0 0 auto" onclick="M.dishRecipe()">${ic("book", 14)} ${t("Save as recipe")}</button>
     </div>
-    <div class="tiny" style="margin-top:7px"><span class="badge estimate">estimate</span> From standard composition tables (USDA & regional) — review each line, and you can still edit before saving.</div>
+    <div class="tiny" style="margin-top:7px"><span class="badge estimate">${t("estimate")}</span> From standard composition tables (USDA & regional) — review each line, and you can still edit before saving.</div>
     ` : ""}
   </div>`;
 }
@@ -5268,7 +5328,8 @@ function recipeDetailHTML(){
       <button class="btn sec" style="flex:1" onclick="M.planAddRecipe('${r.id}')">${ic("calendar", 15)} Add to plan</button>
     </div>
     <div class="card"><h3>${ic("list", 16)} Ingredients</h3>
-      <ul class="rc-list">${(r.ingredients || []).length ? r.ingredients.map(i => `<li dir="auto">${esc(i)}</li>`).join("") : `<li class="muted">Not listed.</li>`}</ul></div>
+      <ul class="rc-list">${(r.ingredients || []).length ? r.ingredients.map(i => `<li dir="auto">${esc(i)}</li>`).join("") : `<li class="muted">Not listed.</li>`}</ul>
+      ${(r.ingredients || []).length ? `<button class="btn sm sec" style="width:100%;margin-top:10px" onclick="M.recipeToDish('${r.id}')">${ic("flame", 15)} ${t("Cook & log from these ingredients")}</button>` : ""}</div>
     <div class="card"><h3>${ic("book", 16)} Method</h3>
       <ol class="rc-steps">${(r.steps || []).length ? r.steps.map(s => `<li dir="auto">${esc(s)}</li>`).join("") : `<li class="muted">Not listed.</li>`}</ol></div>
     <button class="btn sec danger" onclick="M.recipeDel('${r.id}')">${ic("trash", 14)} Delete recipe</button>`;
@@ -7822,6 +7883,29 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
     const r = S.recipes.find(x => x.id === id); if (!r) return;
     logFood({name: r.name, amount: "1 serving", kcal: r.per.kcal, p: r.per.p, c: r.per.c, f: r.per.f, conf: "estimate"});
   },
+  // Load a recipe's ingredient list into the "I cooked this" dish builder so the
+  // user can price it from scratch instead of retyping — handy after tweaking a
+  // recipe, or when the stored per-serving macros predate a change.
+  recipeToDish(id){
+    const r = S.recipes.find(x => x.id === id); if (!r) return;
+    const rows = (r.ingredients || []).map(line => {
+      const s = String(line);
+      // recipes saved from this builder store "name — amount"; split on the
+      // em dash (or a plain hyphen with spaces) when present, else name only.
+      const m = s.match(/^(.*?)\s+[—–-]\s+(.+)$/);
+      return m ? {n: m[1].trim(), a: m[2].trim()} : {n: s.trim(), a: ""};
+    }).filter(g => g.n);
+    dishForm.name = r.name;
+    dishForm.makes = String(r.servings || 1);
+    dishForm.ate = "1";
+    dishForm.ings = rows.length ? rows : [{n: "", a: ""}, {n: "", a: ""}];
+    dishForm.res = null;
+    dishForm.open = true;
+    R.recipeId = null; R.tab = "food"; R.homeCat = null;
+    render();
+    setTimeout(() => { const el = $("#addFoodCard"); if (el){ el.classList.add("open"); el.scrollIntoView({behavior: "smooth", block: "start"}); } }, 60);
+    toast("Loaded into the dish builder — tap “Get macros from ingredients”.", 4200);
+  },
   recipeDel(id){ S.recipes = S.recipes.filter(x => x.id !== id); R.recipeId = null; save(); render(); toast("Recipe removed."); },
   /* ---- weekly meal planner + grocery list ---- */
   goPlanner(){ R.tab = "plan"; R.homeCat = null; R.reviewOpen = false; R.quickOpen = false; R.groceryOpen = false; R.planPick = null; save(); render(); const c = $("#content"); if (c) c.scrollTop = 0; },
@@ -8066,6 +8150,41 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
   },
 };
 
+/* ---------------- fresh-build detection ----------------
+   The app is one self-contained index.html, so "a new version" simply means
+   the deployed file now carries a different BUILD than the copy currently
+   running. We fetch the live index.html (bypassing every cache), read its
+   BUILD constant, and if it differs, offer a one-tap reload. This works no
+   matter how the service worker is versioned, and needs nothing from the user
+   beyond tapping Reload. Guarded to http(s) so file:// / tests stay quiet. */
+let _updateShownFor = null;
+async function checkForUpdate(){
+  if (!location.protocol.startsWith("http")) return;
+  try {
+    const res = await fetch("./index.html?_=" + Date.now(), {cache: "no-store"});
+    if (!res.ok) return;
+    const html = await res.text();
+    const m = html.match(/BUILD\s*=\s*"([^"]+)"/);
+    const live = m && m[1];
+    if (live && live !== BUILD && live !== _updateShownFor){
+      _updateShownFor = live;
+      showUpdateBanner();
+    }
+  } catch (e) { /* offline or blocked — try again next time */ }
+}
+function showUpdateBanner(){
+  let bar = document.getElementById("updBar");
+  if (!bar){
+    bar = document.createElement("div");
+    bar.id = "updBar"; bar.className = "upd-bar";
+    bar.innerHTML = `<span class="um">${t("A new version is ready")}</span>
+      <button class="ub" onclick="location.reload()">${t("Reload")}</button>
+      <button class="ux" aria-label="${t("Dismiss")}" onclick="this.parentElement.classList.remove('show')">✕</button>`;
+    document.body.appendChild(bar);
+  }
+  requestAnimationFrame(() => bar.classList.add("show"));
+}
+
 /* ---------------- boot ---------------- */
 applyTheme();
 bindViewport();
@@ -8073,6 +8192,17 @@ bindViewport();
    Skipped on file:// (opening the raw file), where SWs aren't allowed. */
 if ("serviceWorker" in navigator && location.protocol.startsWith("http")){
   window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+}
+/* Check for a newer deploy shortly after launch, and again whenever the app is
+   brought back to the foreground (throttled to once every 10 min). */
+if (location.protocol.startsWith("http")){
+  setTimeout(checkForUpdate, 4000);
+  let lastCheck = Date.now();
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && Date.now() - lastCheck > 6e5){
+      lastCheck = Date.now(); checkForUpdate();
+    }
+  });
 }
 /* start on a fresh chat each launch — previous conversations stay in the log */
 R.convId = null;
