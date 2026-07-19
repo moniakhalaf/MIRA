@@ -1082,7 +1082,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.87";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.88";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1326,6 +1326,7 @@ const TR = {
     "InBody log":"سجل InBody","Upload result sheet":"ارفع ورقة النتائج","Analyse my trend":"حلّل اتجاهي","Add scan":"إضافة قياس",
     "Great":"ممتاز","Good":"جيد","Okay":"لا بأس","Low":"منخفض","Awful":"سيّئ",
     "Exercise":"رياضة","Stress":"توتر","Money":"مال","Friends":"أصدقاء","Family":"عائلة","Weather":"طقس","Food":"طعام",
+    "USDA food-database key (optional)":"مفتاح قاعدة بيانات USDA (اختياري)",
   },
   es: {
     "Home":"Inicio","Chat":"Chat","Insights":"Análisis","Settings":"Ajustes",
@@ -1389,6 +1390,7 @@ const TR = {
     "InBody log":"Registro InBody","Upload result sheet":"Subir hoja de resultados","Analyse my trend":"Analizar mi tendencia","Add scan":"Añadir medición",
     "Great":"Genial","Good":"Bien","Okay":"Normal","Low":"Bajo","Awful":"Fatal",
     "Exercise":"Ejercicio","Stress":"Estrés","Money":"Dinero","Friends":"Amigos","Family":"Familia","Weather":"Clima","Food":"Comida",
+    "USDA food-database key (optional)":"Clave de base de datos USDA (opcional)",
   },
   fr: {
     "Home":"Accueil","Chat":"Chat","Insights":"Analyses","Settings":"Réglages",
@@ -1452,6 +1454,7 @@ const TR = {
     "InBody log":"Journal InBody","Upload result sheet":"Importer la feuille de résultats","Analyse my trend":"Analyser ma tendance","Add scan":"Ajouter une mesure",
     "Great":"Super","Good":"Bien","Okay":"Correct","Low":"Bas","Awful":"Horrible",
     "Exercise":"Exercice","Stress":"Stress","Money":"Argent","Friends":"Amis","Family":"Famille","Weather":"Météo","Food":"Nourriture",
+    "USDA food-database key (optional)":"Clé de base de données USDA (facultatif)",
   },
 };
 // Interface language: null in "Match what I write" mode (chrome stays English).
@@ -1483,7 +1486,7 @@ const BLANK = () => ({
   onboarded: false,
   settings: {
     name: "", style: "balanced", depth: "balanced", lang: "match",
-    apiKey: "", model: "claude-sonnet-5", pinHash: null, webSearch: true,
+    apiKey: "", model: "claude-sonnet-5", pinHash: null, webSearch: true, usdaKey: "",
     theme: "dark", account: null,
     encOn: false, faceAuto: true, autoLockMin: 0,   // on-device encryption + auto-lock
     targets: {kcal: 2000, protein: 120, carbs: 0, fat: 0},
@@ -4229,6 +4232,75 @@ function localFinishIdeas(remK, remP){
   return out;
 }
 
+// Parse a "how much" string to grams, but ONLY when the user gave an explicit
+// mass/volume unit — a bare number or a count ("2 pieces") is ambiguous, so we
+// return null and let the review scaler default to 100 g for the user to set.
+function amountToGrams(s){
+  const m = String(s || "").toLowerCase().match(/([\d.]+)\s*(kg|kilograms?|g|gr|grams?|ml|milliliters?|l|liters?|litres?)\b/);
+  if (!m) return null;
+  const v = parseFloat(m[1]); if (!isFinite(v) || v <= 0) return null;
+  const u = m[2];
+  if (u.startsWith("kg") || u.startsWith("kilo") || u === "l" || u.startsWith("lit")) return v * 1000;
+  return v;   // g / ml treated 1:1
+}
+
+// USDA FoodData Central — the authoritative composition database many nutrition
+// apps (incl. MyFitnessPal) build on. Free; DEMO_KEY works but is rate-limited,
+// so users can add their own instant key. Values are per 100 g/ml.
+async function usdaSearch(query, key){
+  const url = "https://api.nal.usda.gov/fdc/v1/foods/search?api_key=" + encodeURIComponent(key || "DEMO_KEY") +
+    "&query=" + encodeURIComponent(query) + "&pageSize=8&dataType=" + encodeURIComponent("Foundation,SR Legacy,Branded");
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("usda " + res.status);
+  const j = await res.json();
+  return (j.foods || []).map(f => {
+    const per = {kcal: 0, p: 0, c: 0, f: 0};
+    (f.foodNutrients || []).forEach(n => {
+      const no = String(n.nutrientNumber || (n.nutrient && n.nutrient.number) || "");
+      const nm = String(n.nutrientName || (n.nutrient && n.nutrient.name) || "").toLowerCase();
+      const unit = String(n.unitName || (n.nutrient && n.nutrient.unitName) || "").toUpperCase();
+      const v = n.value != null ? n.value : n.amount;
+      if ((no === "208" || no === "1008" || nm.includes("energy")) && unit === "KCAL") per.kcal = v;
+      else if (no === "203" || no === "1003" || nm === "protein") per.p = v;
+      else if (no === "205" || no === "1005" || nm.includes("carbohydrate")) per.c = v;
+      else if (no === "204" || no === "1004" || nm.includes("total lipid") || nm === "fat") per.f = v;
+    });
+    return {name: f.description || "", brand: f.brandOwner || f.brandName || "", src: "USDA",
+      per100: {kcal: num(per.kcal), p: num(per.p), c: num(per.c), f: num(per.f)}};
+  }).filter(x => x.name && (x.per100.kcal > 0 || x.per100.p > 0 || x.per100.c > 0));
+}
+
+// OpenFoodFacts free-text search — strong on branded and regional/packaged
+// products worldwide (Gulf brands included). CORS-open; already used for barcodes.
+async function offSearch(query){
+  const url = "https://world.openfoodfacts.org/cgi/search.pl?search_terms=" + encodeURIComponent(query) +
+    "&search_simple=1&action=process&json=1&page_size=6&fields=product_name,brands,nutriments";
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("off " + res.status);
+  const j = await res.json();
+  return (j.products || []).map(p => {
+    const nu = p.nutriments || {};
+    const kcal = nu["energy-kcal_100g"] != null ? nu["energy-kcal_100g"] : (nu["energy_100g"] ? nu["energy_100g"] / 4.184 : 0);
+    return {name: [p.brands, p.product_name].filter(Boolean).join(" — ") || p.product_name || "",
+      brand: p.brands || "", src: "OpenFoodFacts",
+      per100: {kcal: Math.round(num(kcal)), p: num(nu.proteins_100g), c: num(nu.carbohydrates_100g), f: num(nu.fat_100g)}};
+  }).filter(x => x.name && (x.per100.kcal > 0 || x.per100.p > 0));
+}
+
+// Turn database hits (per 100 g) into review items with a serving scaler, so the
+// user picks the right match and sets their amount — the MyFitnessPal workflow.
+function dbCandidatesToReview(cands, hadGrams){
+  const seen = new Set();
+  return cands.filter(x => { const k = (x.name || "").toLowerCase().slice(0, 44); if (!k || seen.has(k)) return false; seen.add(k); return true; })
+    .slice(0, 6).map(x => {
+      const base = x.per100, had = hadGrams && hadGrams > 0 ? hadGrams : 100, k = had / 100;
+      return {name: x.name, amount: n0(had) + " g",
+        kcal: Math.round(base.kcal * k), p: +(base.p * k).toFixed(1), c: +(base.c * k).toFixed(1), f: +(base.f * k).toFixed(1),
+        conf: "official", note: x.src + (x.brand ? " · " + x.brand : "") + " — per 100 g. Set how much you had below.",
+        basis: 100, unit: "g", pkg: 0, baseMacros: {kcal: num(base.kcal), p: num(base.p), c: num(base.c), f: num(base.f)}, had: String(had)};
+    });
+}
+
 async function findMacros(){
   // Be forgiving about which field the food went in: if "Food name" is empty
   // but the user typed something in "Amount eaten", treat that as the food.
@@ -4238,8 +4310,30 @@ async function findMacros(){
   if (!name){ toast("Type what you ate first."); return; }
   // Only treat the amount field as a quantity when it's separate from the food name.
   const userAmount = nameField ? amtField : "";
-  if (!S.settings.apiKey){ toast("Add your API key in Settings first."); return; }
+  const hadGrams = amountToGrams(userAmount);
   findBusy = true; render();
+  // 1) Authoritative databases first (MyFitnessPal-style): search USDA + OpenFoodFacts
+  //    in parallel, show the matches as a pick-list with a serving scaler. Either
+  //    source failing (offline / CORS / rate-limit) never blocks the other.
+  try {
+    const [ru, ro] = await Promise.allSettled([usdaSearch(name, S.settings.usdaKey), offSearch(name)]);
+    const usda = ru.status === "fulfilled" ? ru.value : [];
+    const off = ro.status === "fulfilled" ? ro.value : [];
+    const cands = [...usda.slice(0, 4), ...off.slice(0, 3)];
+    if (cands.length){
+      reviewItems = dbCandidatesToReview(cands, hadGrams);
+      findBusy = false; render();
+      const z = $("#reviewZone"); if (z) z.scrollIntoView({behavior: "smooth", block: "nearest"});
+      return;
+    }
+  } catch (e) { /* fall through to the AI estimate */ }
+  // 2) No database match (homemade dish, unusual item) — fall back to a clearly
+  //    labelled AI estimate. This path needs the Anthropic key.
+  if (!S.settings.apiKey){
+    findBusy = false; reviewItems = null; render();
+    toast("No database match for that. Add your API key in Settings to estimate it, or enter the macros yourself.", 5200);
+    return;
+  }
   try {
     const txt = await llmJsonCall(`You are MIRA's nutrition lookup with broad food knowledge across cuisines: Gulf/Khaleeji (machboos/majboos, harees, jireesh, balaleet, luqaimat, thareed, madhrooba, gabout, khubz), Levantine (mansaf, mujadara, tabbouleh, fattoush, kibbeh, shawarma, manakish, labneh), Egyptian (koshari, ful medames, ta'meya, molokhia), Iraqi/Yemeni/North-African, and the full range of international foods — Western, Indian/South-Asian, East & Southeast Asian, Mediterranean, Latin, fast food and packaged products. Understand Arabic script AND transliteration, and account for cooking method (مشوي grilled / مقلي fried / مسلوق boiled / محشي stuffed / roasted). For a dish, reconstruct from its typical ingredients; for a combination the user names (e.g. "dates + walnuts"), sum the components.
 IMPORTANT — coverage: almost every real, identifiable food HAS a reasonable, useful macro estimate from standard food-composition data (USDA, McCance & Widdowson, regional tables). Default to giving a clearly-labelled **"estimate"** for any recognizable food or dish, at a sensible standard serving if no amount is given. Reserve **"unavailable"** ONLY for input that is genuinely unidentifiable (gibberish, not a food) — never refuse a real food just because exact figures aren't published.${S.settings.webSearch ? ` You have web search: for a specific branded/restaurant item, check the venue's or manufacturer's OFFICIALLY published nutrition first, then fall back to an estimate.` : ""} Confidence: "official" ONLY if the venue or manufacturer actually publishes these values${S.settings.webSearch ? " (verified via search or known)" : " and you know them"}; otherwise "estimate". Never invent official figures, but a good estimate is expected and welcome. After any research, end your reply with ONLY a JSON object: {"name":str,"amount":str,"kcal":num,"p":num,"c":num,"f":num,"conf":"official"|"estimate"|"unavailable","note":str(short, includes the basis/serving assumed)}. Energy must be consistent: kcal ≈ 4p+4c+9f.${replyLangNote()}`,
@@ -6632,6 +6726,9 @@ function settingsHTML(){
       <div class="field" style="margin-bottom:0"><label>${tr("Goal weight kg")}</label><input type="number" inputmode="decimal" value="${st.goalWeight || ""}" placeholder="optional" oninput="S.settings.goalWeight=num(this.value);save()"></div>
     </div>
     <div class="tiny" style="margin-top:8px">Set a goal weight and Insights shows an honest projection of when you'd reach it, based on your own logged weight trend.</div>
+    <div class="field" style="margin:12px 0 0"><label>${tr("USDA food-database key (optional)")}</label>
+      <input type="password" value="${esc(st.usdaKey || "")}" placeholder="DEMO_KEY" autocomplete="off" oninput="S.settings.usdaKey=this.value.trim();save()">
+      <div class="tiny" style="margin-top:6px">${tr("\"Find macros\" searches the USDA FoodData Central and OpenFoodFacts databases for exact, verified values — the same authoritative data nutrition apps use — and only falls back to an AI estimate when there's no match. Leave blank to use the shared DEMO_KEY, or get your own free instant key at fdc.nal.usda.gov/api-key-signup for reliable lookups.")}</div></div>
   </div>
 
   <div class="card fold" id="savedFoodsCard">
