@@ -1082,7 +1082,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.86";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.87";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1311,6 +1311,21 @@ const TR = {
     "Log your session set by set. Add exercises from the library, or anything custom.":"سجّل جلستك مجموعة بمجموعة. أضِف تمارين من المكتبة أو أي شيء مخصص.",
     "Sync & import from fitness apps":"المزامنة والاستيراد من تطبيقات اللياقة","Sync now":"مزامنة الآن","Connect Strava — automatic sync":"اربط سترافا — مزامنة تلقائية",
     "Activity file":"ملف النشاط","Screenshot":"لقطة شاشة","Repeat a recent session":"كرّر جلسة سابقة","Repeat":"تكرار","Your routines":"روتيناتك",
+    "Healthy recipes":"وصفات صحية","Your recipe box — import from a link, discover with MIRA, or add your own":"صندوق وصفاتك — استورد من رابط، اكتشف مع ميرا، أو أضِف وصفتك",
+    "Import / discover":"استيراد / اكتشاف","Add manually":"إضافة يدويًا","Search your recipes…":"ابحث في وصفاتك…",
+    "No recipes match that filter or search.":"لا توجد وصفات تطابق هذه التصفية أو البحث.","Your recipe box is empty":"صندوق وصفاتك فارغ",
+    "Upload a screenshot of a recipe, import from a link, ask MIRA to find one, or add your own.":"ارفع لقطة شاشة لوصفة، أو استورد من رابط، أو اطلب من ميرا إيجاد واحدة، أو أضِف وصفتك.",
+    "Recipes":"الوصفات","Log a serving":"سجّل حصة","Add to plan":"أضِف إلى الخطة","Ingredients":"المكوّنات","Method":"الطريقة","Not listed.":"غير مُدرج.",
+    "Snacks · supplements · sleep · review":"وجبات خفيفة · مكمّلات · نوم · مراجعة","Snacks":"وجبات خفيفة","Supplements":"المكمّلات","Habits":"العادات","Fasting":"الصيام","Mood":"المزاج","Review":"مراجعة",
+    "Wellness check-in":"تسجيل العافية","How are you feeling today?":"كيف تشعر اليوم؟","What's affecting today?":"ما الذي يؤثّر على يومك؟","optional":"اختياري",
+    "One good thing today":"شيء جميل واحد اليوم","A small win, a moment, someone…":"إنجاز صغير، لحظة، شخص…","Journal":"مذكرات","private":"خاص","Whatever's on your mind…":"أي شيء يدور في بالك…",
+    "Save today's check-in":"احفظ تسجيل اليوم","Today's wellness":"عافية اليوم","Ask MIRA how I'm doing":"اسأل ميرا كيف حالي","Recent check-ins":"التسجيلات الأخيرة","Talk to MIRA":"تحدّث إلى ميرا","Another":"آخر",
+    "Plan your week from recipes & saved meals, then build a grocery list":"خطّط أسبوعك من الوصفات والوجبات المحفوظة، ثم أنشئ قائمة تسوّق","Clear week":"مسح الأسبوع",
+    "Tasks · notes · your field toolkit":"مهام · ملاحظات · أدوات مجالك","Tasks":"المهام","Notes":"الملاحظات","Focus":"التركيز","Toolkit":"الأدوات",
+    "Travel · bills · compare · decisions":"سفر · فواتير · مقارنة · قرارات","Travel":"السفر","Bills":"الفواتير","Budget":"الميزانية","Compare":"مقارنة","Decisions":"القرارات","Dates & reading":"مواعيد وقراءة",
+    "InBody log":"سجل InBody","Upload result sheet":"ارفع ورقة النتائج","Analyse my trend":"حلّل اتجاهي","Add scan":"إضافة قياس",
+    "Great":"ممتاز","Good":"جيد","Okay":"لا بأس","Low":"منخفض","Awful":"سيّئ",
+    "Exercise":"رياضة","Stress":"توتر","Money":"مال","Friends":"أصدقاء","Family":"عائلة","Weather":"طقس","Food":"طعام",
   },
   es: {
     "Home":"Inicio","Chat":"Chat","Insights":"Análisis","Settings":"Ajustes",
@@ -1359,6 +1374,21 @@ const TR = {
     "Log your session set by set. Add exercises from the library, or anything custom.":"Registra tu sesión serie a serie. Añade ejercicios de la biblioteca o los que quieras.",
     "Sync & import from fitness apps":"Sincronizar e importar desde apps de fitness","Sync now":"Sincronizar ahora","Connect Strava — automatic sync":"Conectar Strava — sincronización automática",
     "Activity file":"Archivo de actividad","Screenshot":"Captura","Repeat a recent session":"Repetir una sesión reciente","Repeat":"Repetir","Your routines":"Tus rutinas",
+    "Healthy recipes":"Recetas saludables","Your recipe box — import from a link, discover with MIRA, or add your own":"Tu recetario — importa desde un enlace, descubre con MIRA o añade la tuya",
+    "Import / discover":"Importar / descubrir","Add manually":"Añadir manualmente","Search your recipes…":"Busca en tus recetas…",
+    "No recipes match that filter or search.":"Ninguna receta coincide con ese filtro o búsqueda.","Your recipe box is empty":"Tu recetario está vacío",
+    "Upload a screenshot of a recipe, import from a link, ask MIRA to find one, or add your own.":"Sube una captura de una receta, importa desde un enlace, pide a MIRA que encuentre una o añade la tuya.",
+    "Recipes":"Recetas","Log a serving":"Registrar una porción","Add to plan":"Añadir al plan","Ingredients":"Ingredientes","Method":"Preparación","Not listed.":"No indicado.",
+    "Snacks · supplements · sleep · review":"Tentempiés · suplementos · sueño · repaso","Snacks":"Tentempiés","Supplements":"Suplementos","Habits":"Hábitos","Fasting":"Ayuno","Mood":"Ánimo","Review":"Repaso",
+    "Wellness check-in":"Registro de bienestar","How are you feeling today?":"¿Cómo te sientes hoy?","What's affecting today?":"¿Qué afecta tu día?","optional":"opcional",
+    "One good thing today":"Algo bueno de hoy","A small win, a moment, someone…":"Un pequeño logro, un momento, alguien…","Journal":"Diario","private":"privado","Whatever's on your mind…":"Lo que tengas en mente…",
+    "Save today's check-in":"Guardar el registro de hoy","Today's wellness":"Bienestar de hoy","Ask MIRA how I'm doing":"Pregunta a MIRA cómo estoy","Recent check-ins":"Registros recientes","Talk to MIRA":"Habla con MIRA","Another":"Otra",
+    "Plan your week from recipes & saved meals, then build a grocery list":"Planifica tu semana con recetas y comidas guardadas, luego crea una lista de compras","Clear week":"Vaciar semana",
+    "Tasks · notes · your field toolkit":"Tareas · notas · herramientas de tu campo","Tasks":"Tareas","Notes":"Notas","Focus":"Enfoque","Toolkit":"Herramientas",
+    "Travel · bills · compare · decisions":"Viajes · facturas · comparar · decisiones","Travel":"Viajes","Bills":"Facturas","Budget":"Presupuesto","Compare":"Comparar","Decisions":"Decisiones","Dates & reading":"Fechas y lecturas",
+    "InBody log":"Registro InBody","Upload result sheet":"Subir hoja de resultados","Analyse my trend":"Analizar mi tendencia","Add scan":"Añadir medición",
+    "Great":"Genial","Good":"Bien","Okay":"Normal","Low":"Bajo","Awful":"Fatal",
+    "Exercise":"Ejercicio","Stress":"Estrés","Money":"Dinero","Friends":"Amigos","Family":"Familia","Weather":"Clima","Food":"Comida",
   },
   fr: {
     "Home":"Accueil","Chat":"Chat","Insights":"Analyses","Settings":"Réglages",
@@ -1407,6 +1437,21 @@ const TR = {
     "Log your session set by set. Add exercises from the library, or anything custom.":"Enregistrez votre séance série par série. Ajoutez des exercices de la bibliothèque ou personnalisés.",
     "Sync & import from fitness apps":"Synchroniser et importer depuis les apps de fitness","Sync now":"Synchroniser maintenant","Connect Strava — automatic sync":"Connecter Strava — synchro automatique",
     "Activity file":"Fichier d'activité","Screenshot":"Capture d'écran","Repeat a recent session":"Répéter une séance récente","Repeat":"Répéter","Your routines":"Vos routines",
+    "Healthy recipes":"Recettes saines","Your recipe box — import from a link, discover with MIRA, or add your own":"Votre carnet de recettes — importez depuis un lien, découvrez avec MIRA, ou ajoutez la vôtre",
+    "Import / discover":"Importer / découvrir","Add manually":"Ajouter manuellement","Search your recipes…":"Cherchez dans vos recettes…",
+    "No recipes match that filter or search.":"Aucune recette ne correspond à ce filtre ou cette recherche.","Your recipe box is empty":"Votre carnet de recettes est vide",
+    "Upload a screenshot of a recipe, import from a link, ask MIRA to find one, or add your own.":"Téléchargez une capture d'une recette, importez depuis un lien, demandez à MIRA d'en trouver une, ou ajoutez la vôtre.",
+    "Recipes":"Recettes","Log a serving":"Enregistrer une portion","Add to plan":"Ajouter au plan","Ingredients":"Ingrédients","Method":"Préparation","Not listed.":"Non indiqué.",
+    "Snacks · supplements · sleep · review":"En-cas · compléments · sommeil · bilan","Snacks":"En-cas","Supplements":"Compléments","Habits":"Habitudes","Fasting":"Jeûne","Mood":"Humeur","Review":"Bilan",
+    "Wellness check-in":"Bilan de bien-être","How are you feeling today?":"Comment vous sentez-vous aujourd'hui ?","What's affecting today?":"Qu'est-ce qui influence votre journée ?","optional":"facultatif",
+    "One good thing today":"Une bonne chose aujourd'hui","A small win, a moment, someone…":"Une petite victoire, un moment, quelqu'un…","Journal":"Journal","private":"privé","Whatever's on your mind…":"Ce que vous avez en tête…",
+    "Save today's check-in":"Enregistrer le bilan du jour","Today's wellness":"Bien-être du jour","Ask MIRA how I'm doing":"Demandez à MIRA comment je vais","Recent check-ins":"Bilans récents","Talk to MIRA":"Parler à MIRA","Another":"Une autre",
+    "Plan your week from recipes & saved meals, then build a grocery list":"Planifiez votre semaine avec vos recettes et repas enregistrés, puis créez une liste de courses","Clear week":"Vider la semaine",
+    "Tasks · notes · your field toolkit":"Tâches · notes · outils de votre domaine","Tasks":"Tâches","Notes":"Notes","Focus":"Focus","Toolkit":"Outils",
+    "Travel · bills · compare · decisions":"Voyages · factures · comparer · décisions","Travel":"Voyages","Bills":"Factures","Budget":"Budget","Compare":"Comparer","Decisions":"Décisions","Dates & reading":"Dates et lectures",
+    "InBody log":"Journal InBody","Upload result sheet":"Importer la feuille de résultats","Analyse my trend":"Analyser ma tendance","Add scan":"Ajouter une mesure",
+    "Great":"Super","Good":"Bien","Okay":"Correct","Low":"Bas","Awful":"Horrible",
+    "Exercise":"Exercice","Stress":"Stress","Money":"Argent","Friends":"Amis","Family":"Famille","Weather":"Météo","Food":"Nourriture",
   },
 };
 // Interface language: null in "Match what I write" mode (chrome stays English).
@@ -5037,10 +5082,10 @@ function achievementsHTML(){
 function healthHTML(){
   const tabs = [["snacks","Snacks"],["supps","Supplements"],["sleep","Sleep"],["habits","Habits"],["fasting","Fasting"],["mood","Mood"],["review","Review"]];
   return `
-    <button class="cat-back" onclick="M.healthBack()">${ic("back", 18)} Health</button>
-    <div class="cat-title"><div class="ch-nm">Health</div><div class="ch-ds">Snacks · supplements · sleep · review</div></div>
+    <button class="cat-back" onclick="M.healthBack()">${ic("back", 18)} ${tr("Health")}</button>
+    <div class="cat-title"><div class="ch-nm">${tr("Health")}</div><div class="ch-ds">${tr("Snacks · supplements · sleep · review")}</div></div>
     <div class="chip-row seg-tabs">${tabs.map(([k, l]) =>
-      `<button class="chip ${R.healthTab === k ? "on" : ""}" onclick="M.healthGo('${k}')">${l}</button>`).join("")}</div>
+      `<button class="chip ${R.healthTab === k ? "on" : ""}" onclick="M.healthGo('${k}')">${tr(l)}</button>`).join("")}</div>
     <div style="margin-top:12px">${
       R.healthTab === "snacks" ? healthSnacksHTML() :
       R.healthTab === "supps" ? healthSuppHTML() :
@@ -5365,24 +5410,24 @@ function recipesHTML(){
   if (R.recipeId) return recipeDetailHTML();
   const list = S.recipes.filter(recipeMatch);
   return `
-    <button class="cat-back" onclick="M.backToHome('health')">${ic("back", 18)} Home</button>
-    <div class="cat-title"><div class="ch-nm">Healthy recipes</div>
-      <div class="ch-ds">Your recipe box — import from a link, discover with MIRA, or add your own</div></div>
+    <button class="cat-back" onclick="M.backToHome('health')">${ic("back", 18)} ${tr("Home")}</button>
+    <div class="cat-title"><div class="ch-nm">${tr("Healthy recipes")}</div>
+      <div class="ch-ds">${tr("Your recipe box — import from a link, discover with MIRA, or add your own")}</div></div>
     <div class="rc-actions">
-      <button class="btn ${R.recipeImportOpen ? "sec" : ""}" onclick="M.recipeImportToggle()">${ic("plus", 16)} Import / discover</button>
-      <button class="btn sec" onclick="M.recipeAddManual()">${ic("edit", 15)} Add manually</button>
+      <button class="btn ${R.recipeImportOpen ? "sec" : ""}" onclick="M.recipeImportToggle()">${ic("plus", 16)} ${tr("Import / discover")}</button>
+      <button class="btn sec" onclick="M.recipeAddManual()">${ic("edit", 15)} ${tr("Add manually")}</button>
     </div>
     ${R.recipeImportOpen ? recipeImportPanelHTML() : ""}
-    <div class="rc-filters">${recipeFilters().map(([v, l]) => `<button class="rc-chip ${R.recipeFilter === v ? "on" : ""}" onclick="M.recipeFilter('${v}')">${l}</button>`).join("")}</div>
-    <div class="rc-search">${ic("search", 15)}<input id="recipeSearch" value="${esc(R.recipeQ)}" placeholder="Search your recipes…" oninput="M.recipeSearch(this.value)" dir="auto"></div>
+    <div class="rc-filters">${recipeFilters().map(([v, l]) => `<button class="rc-chip ${R.recipeFilter === v ? "on" : ""}" onclick="M.recipeFilter('${v}')">${tr(l)}</button>`).join("")}</div>
+    <div class="rc-search">${ic("search", 15)}<input id="recipeSearch" value="${esc(R.recipeQ)}" placeholder="${tr("Search your recipes…")}" oninput="M.recipeSearch(this.value)" dir="auto"></div>
     ${list.length ? `<div class="recipe-grid">${list.map(recipeCardHTML).join("")}</div>`
-      : `<div class="empty-state">${S.recipes.length ? "No recipes match that filter or search." : "<b>Your recipe box is empty</b>Upload a screenshot of a recipe, import from a link, ask MIRA to find one, or add your own."}</div>`}`;
+      : `<div class="empty-state">${S.recipes.length ? tr("No recipes match that filter or search.") : "<b>" + tr("Your recipe box is empty") + "</b>" + tr("Upload a screenshot of a recipe, import from a link, ask MIRA to find one, or add your own.")}</div>`}`;
 }
 function recipeDetailHTML(){
   const r = S.recipes.find(x => x.id === R.recipeId);
   if (!r){ R.recipeId = null; return recipesHTML(); }
   return `
-    <button class="cat-back" onclick="M.recipeClose()">${ic("back", 18)} Recipes</button>
+    <button class="cat-back" onclick="M.recipeClose()">${ic("back", 18)} ${tr("Recipes")}</button>
     ${recipeHeroHTML(r, true)}
     <div class="cat-title" style="margin-top:14px"><div class="ch-nm" dir="auto">${esc(r.name)}</div>
       <div class="ch-ds">${r.cuisine ? esc(r.cuisine) + " · " : ""}${r.servings || 1} serving${(r.servings || 1) > 1 ? "s" : ""}${r.source ? ` · <a href="${esc(r.source)}" target="_blank" rel="noopener">source</a>` : ""}</div></div>
@@ -5396,14 +5441,14 @@ function recipeDetailHTML(){
     ${r.healthNote ? `<div class="rc-note">${ic("check", 13)} ${esc(r.healthNote)}</div>` : ""}
     ${(r.tags || []).length ? `<div class="rc-tags" style="margin:12px 2px">${r.tags.map(t => `<span class="rc-tag">${esc(tagLabel(t))}</span>`).join("")}</div>` : ""}
     <div class="row" style="margin:6px 0 4px;gap:8px">
-      <button class="btn" style="flex:1" onclick="M.recipeLog('${r.id}')">${ic("plus", 16)} Log a serving</button>
-      <button class="btn sec" style="flex:1" onclick="M.planAddRecipe('${r.id}')">${ic("calendar", 15)} Add to plan</button>
+      <button class="btn" style="flex:1" onclick="M.recipeLog('${r.id}')">${ic("plus", 16)} ${tr("Log a serving")}</button>
+      <button class="btn sec" style="flex:1" onclick="M.planAddRecipe('${r.id}')">${ic("calendar", 15)} ${tr("Add to plan")}</button>
     </div>
-    <div class="card"><h3>${ic("list", 16)} Ingredients</h3>
+    <div class="card"><h3>${ic("list", 16)} ${tr("Ingredients")}</h3>
       <ul class="rc-list">${(r.ingredients || []).length ? r.ingredients.map(i => `<li dir="auto">${esc(i)}</li>`).join("") : `<li class="muted">Not listed.</li>`}</ul>
       ${(r.ingredients || []).length ? `<button class="btn sm sec" style="width:100%;margin-top:10px" onclick="M.recipeToDish('${r.id}')">${ic("flame", 15)} ${t("Cook & log from these ingredients")}</button>` : ""}</div>
-    <div class="card"><h3>${ic("book", 16)} Method</h3>
-      <ol class="rc-steps">${(r.steps || []).length ? r.steps.map(s => `<li dir="auto">${esc(s)}</li>`).join("") : `<li class="muted">Not listed.</li>`}</ol></div>
+    <div class="card"><h3>${ic("book", 16)} ${tr("Method")}</h3>
+      <ol class="rc-steps">${(r.steps || []).length ? r.steps.map(s => `<li dir="auto">${esc(s)}</li>`).join("") : `<li class="muted">${tr("Not listed.")}</li>`}</ol></div>
     <button class="btn sec danger" onclick="M.recipeDel('${r.id}')">${ic("trash", 14)} Delete recipe</button>`;
 }
 function recipeFormHTML(){
@@ -5513,14 +5558,14 @@ function wellnessHTML(){
   const wk = last7Dates().map(dt => { const c = (S.checkins || []).find(x => x.date === dt); return c ? checkinScore(c) : null; }).filter(v => v != null);
   const wkAvg = wk.length ? Math.round(wk.reduce((a, b) => a + b, 0) / wk.length) : null;
   return `
-    <button class="cat-back" onclick="M.backToHome('health')">${ic("back", 18)} Home</button>
-    <div class="cat-title"><div class="ch-nm">Wellness check-in</div>
+    <button class="cat-back" onclick="M.backToHome('health')">${ic("back", 18)} ${tr("Home")}</button>
+    <div class="cat-title"><div class="ch-nm">${tr("Wellness check-in")}</div>
       <div class="ch-ds">${new Date().toLocaleDateString("en-GB", {weekday: "long", day: "numeric", month: "long"})}</div></div>
 
     <div class="card">
-      <h3 style="justify-content:center">How are you feeling today?</h3>
+      <h3 style="justify-content:center">${tr("How are you feeling today?")}</h3>
       <div class="mood-faces">${MOOD_FACES.map(f => `<button class="mood-face ${d.mood === f.v ? "on" : ""}" style="--fh:${f.h}" onclick="M.ciMood(${f.v})">
-        <span class="mf-e">${f.e}</span><span class="mf-l">${f.l}</span></button>`).join("")}</div>
+        <span class="mf-e">${f.e}</span><span class="mf-l">${tr(f.l)}</span></button>`).join("")}</div>
     </div>
 
     ${d.mood && d.mood <= 3 && R.ciQuote ? `<div class="mood-lift">
@@ -5529,37 +5574,37 @@ function wellnessHTML(){
         <div class="ml-q" dir="auto">${esc(R.ciQuote.t)}</div>
         ${R.ciQuote.by ? `<div class="ml-by">— ${esc(R.ciQuote.by)}</div>` : ""}
         ${d.mood === 1 ? `<div class="ml-note">If today feels heavy, you don't have to carry it alone — talking to someone you trust, or a professional, can genuinely help.</div>` : ""}
-        <div class="ml-actions"><button class="ml-btn" onclick="M.wellnessRead()">${ic("chat", 14)} Talk to MIRA</button><button class="ml-btn ghost" onclick="M.ciQuoteNew()">${ic("refresh", 13)} Another</button></div>
+        <div class="ml-actions"><button class="ml-btn" onclick="M.wellnessRead()">${ic("chat", 14)} ${tr("Talk to MIRA")}</button><button class="ml-btn ghost" onclick="M.ciQuoteNew()">${ic("refresh", 13)} ${tr("Another")}</button></div>
       </div>
     </div>` : ""}
 
     <div class="card">
-      <h3>${ic("compass", 15)} What's affecting today? <span class="opt">optional</span></h3>
-      <div class="ci-factors">${CI_FACTORS.map(t => `<button class="ci-fac ${(d.factors || []).includes(t) ? "on" : ""}" onclick="M.ciFactor('${t}')">${t}</button>`).join("")}</div>
+      <h3>${ic("compass", 15)} ${tr("What's affecting today?")} <span class="opt">${tr("optional")}</span></h3>
+      <div class="ci-factors">${CI_FACTORS.map(t => `<button class="ci-fac ${(d.factors || []).includes(t) ? "on" : ""}" onclick="M.ciFactor('${t}')">${tr(t)}</button>`).join("")}</div>
     </div>
 
     <div class="card">
-      <h3>${ic("heart", 15)} One good thing today</h3>
-      <input id="ciGrat" value="${esc(d.gratitude)}" placeholder="A small win, a moment, someone…" dir="auto" oninput="R.ciDraft.gratitude=this.value" onblur="M.ciPersist()">
+      <h3>${ic("heart", 15)} ${tr("One good thing today")}</h3>
+      <input id="ciGrat" value="${esc(d.gratitude)}" placeholder="${tr("A small win, a moment, someone…")}" dir="auto" oninput="R.ciDraft.gratitude=this.value" onblur="M.ciPersist()">
     </div>
 
     <div class="card">
-      <h3>${ic("fileText", 15)} Journal <span class="opt">private</span></h3>
-      <textarea id="ciJournal" rows="5" placeholder="Whatever's on your mind…" dir="auto" oninput="R.ciDraft.journal=this.value" onblur="M.ciPersist()">${esc(d.journal)}</textarea>
+      <h3>${ic("fileText", 15)} ${tr("Journal")} <span class="opt">${tr("private")}</span></h3>
+      <textarea id="ciJournal" rows="5" placeholder="${tr("Whatever's on your mind…")}" dir="auto" oninput="R.ciDraft.journal=this.value" onblur="M.ciPersist()">${esc(d.journal)}</textarea>
     </div>
 
-    <button class="btn" onclick="M.ciSave()">${ic("check", 16)} Save today's check-in</button>
+    <button class="btn" onclick="M.ciSave()">${ic("check", 16)} ${tr("Save today's check-in")}</button>
 
     <div class="card wellness-score">
-      <div class="ws-l">Today's wellness</div>
+      <div class="ws-l">${tr("Today's wellness")}</div>
       <div class="ws-ring">${score != null ? `<div class="ws-num" style="color:${score >= 66 ? "var(--green)" : score >= 40 ? "var(--amber)" : "var(--red)"}">${score}</div>` : `<div class="ws-num muted">—</div>`}</div>
       <div class="ws-sub">${score != null ? `based on your ${scoreBasis({date: todayStr(), mood: d.mood})}` : "log your mood to see a score"}${wkAvg != null ? ` · 7-day avg ${wkAvg}` : ""}</div>
       <div class="tiny" style="margin-top:4px;color:var(--txt2)">Full trend is on the Insights tab.</div>
     </div>
 
-    <button class="btn sec" onclick="M.wellnessRead()">${ic("chat", 16)} Ask MIRA how I'm doing</button>
+    <button class="btn sec" onclick="M.wellnessRead()">${ic("chat", 16)} ${tr("Ask MIRA how I'm doing")}</button>
 
-    ${recent.length ? `<div class="dash-sec-h">Recent check-ins</div>
+    ${recent.length ? `<div class="dash-sec-h">${tr("Recent check-ins")}</div>
       <div class="ci-history">${recent.map(c => { const face = MOOD_FACES.find(f => f.v === c.mood); return `<div class="ci-hist">
         <span class="ci-h-face">${face ? face.e : "·"}</span>
         <span class="ci-h-tx"><span class="ci-h-d">${fmtDate(c.date)}</span>${c.gratitude ? `<span class="ci-h-g" dir="auto">${esc(c.gratitude)}</span>` : c.journal ? `<span class="ci-h-g" dir="auto">${esc(c.journal.slice(0, 60))}${c.journal.length > 60 ? "…" : ""}</span>` : ""}</span>
@@ -5590,9 +5635,9 @@ function plannerHTML(){
   const today = todayStr();
   const anyPlanned = week.some(d => planDayTotals(d).n > 0);
   return `
-    <button class="cat-back" onclick="M.backToHome('health')">${ic("back", 18)} Home</button>
+    <button class="cat-back" onclick="M.backToHome('health')">${ic("back", 18)} ${t("Home")}</button>
     <div class="cat-title"><div class="ch-nm">${t("Meal planner")}</div>
-      <div class="ch-ds">Plan your week from recipes & saved meals, then build a grocery list</div></div>
+      <div class="ch-ds">${t("Plan your week from recipes & saved meals, then build a grocery list")}</div></div>
     <div class="plan-weeknav">
       <button class="btn sm sec" aria-label="Previous week" onclick="M.planWeek(-1)">${ic("back", 15)}</button>
       <span class="plan-wk">${t(planWeekLabel(off))}</span>
@@ -5600,7 +5645,7 @@ function plannerHTML(){
     </div>
     <div class="row" style="gap:8px;margin-bottom:12px">
       <button class="btn sec" style="flex:1" onclick="M.groceryShow()">${ic("list", 15)} ${t("Grocery list")}</button>
-      ${anyPlanned ? `<button class="btn sm sec" onclick="M.planClearWeek()">${ic("trash", 14)} Clear week</button>` : ""}
+      ${anyPlanned ? `<button class="btn sm sec" onclick="M.planClearWeek()">${ic("trash", 14)} ${t("Clear week")}</button>` : ""}
     </div>
     ${week.map(date => {
       const dt = new Date(date + "T00:00:00");
@@ -5615,7 +5660,7 @@ function plannerHTML(){
         ${FOOD_MEALS.map(([m, ml]) => {
           const items = planItems(date, m);
           return `<div class="plan-slot">
-            <div class="ps-h"><span class="ps-nm">${ml}</span><button class="ps-add" aria-label="Add ${ml}" onclick="M.planPick('${date}','${m}')">${ic("plus", 14)}</button></div>
+            <div class="ps-h"><span class="ps-nm">${t(ml)}</span><button class="ps-add" aria-label="Add ${ml}" onclick="M.planPick('${date}','${m}')">${ic("plus", 14)}</button></div>
             ${items.length ? `<div class="ps-items">${items.map((it, i) => `<div class="ps-it">
                 <span class="pi-nm" dir="auto">${esc(it.name)}${it.kcal ? ` <span class="pi-mac">${n0(it.kcal)} kcal · ${n1(it.p)}P</span>` : ""}</span>
                 <span class="pi-act">
@@ -5741,10 +5786,10 @@ function workHTML(){
   if (R.workTab === "notes" && R.noteId) return workNoteEditorHTML();
   const tabs = [["tasks","Tasks"],["notes","Notes"],["focus","Focus"],["kit","Toolkit"]];
   return `
-    <button class="cat-back" onclick="M.workBack()">${ic("back", 18)} Work</button>
-    <div class="cat-title"><div class="ch-nm">Work</div><div class="ch-ds">Tasks · notes · your field toolkit</div></div>
+    <button class="cat-back" onclick="M.workBack()">${ic("back", 18)} ${tr("Work")}</button>
+    <div class="cat-title"><div class="ch-nm">${tr("Work")}</div><div class="ch-ds">${tr("Tasks · notes · your field toolkit")}</div></div>
     <div class="chip-row seg-tabs">${tabs.map(([k, l]) =>
-      `<button class="chip ${R.workTab === k ? "on" : ""}" onclick="M.workGo('${k}')">${l}</button>`).join("")}</div>
+      `<button class="chip ${R.workTab === k ? "on" : ""}" onclick="M.workGo('${k}')">${tr(l)}</button>`).join("")}</div>
     <div style="margin-top:12px">${
       R.workTab === "tasks" ? workTasksHTML() :
       R.workTab === "notes" ? workNotesHTML() :
@@ -5942,10 +5987,10 @@ function lifeHTML(){
   if (R.lifeTab === "compare" && R.compareId) return compareDetailHTML();
   const tabs = [["trips","Travel"],["bills","Bills"],["budget","Budget"],["compare","Compare"],["decide","Decisions"],["lists","Dates & reading"]];
   return `
-    <button class="cat-back" onclick="M.lifeBack()">${ic("back", 18)} Life</button>
-    <div class="cat-title"><div class="ch-nm">Life</div><div class="ch-ds">Travel · bills · compare · decisions</div></div>
+    <button class="cat-back" onclick="M.lifeBack()">${ic("back", 18)} ${tr("Life")}</button>
+    <div class="cat-title"><div class="ch-nm">${tr("Life")}</div><div class="ch-ds">${tr("Travel · bills · compare · decisions")}</div></div>
     <div class="chip-row seg-tabs">${tabs.map(([k, l]) =>
-      `<button class="chip ${R.lifeTab === k ? "on" : ""}" onclick="M.lifeGo('${k}')">${l}</button>`).join("")}</div>
+      `<button class="chip ${R.lifeTab === k ? "on" : ""}" onclick="M.lifeGo('${k}')">${tr(l)}</button>`).join("")}</div>
     <div style="margin-top:12px">${
       R.lifeTab === "trips" ? tripsHTML() :
       R.lifeTab === "bills" ? billsHTML() :
@@ -6388,23 +6433,23 @@ function weightCardHTML(sorted){
 function bodyHTML(){
   const sorted = [...S.inbody].sort((a, b) => a.date < b.date ? -1 : 1);
   return `
-  <button class="cat-back" aria-label="Back to Home" onclick="M.backToHome('fitness')">${ic("back", 18)} Home</button>
+  <button class="cat-back" aria-label="Back to Home" onclick="M.backToHome('fitness')">${ic("back", 18)} ${tr("Home")}</button>
   ${weightCardHTML(sorted)}
   ${measuresCardHTML()}
   ${photosCardHTML()}
   ${labsCardHTML()}
   ${R.photoView ? photoViewHTML() : ""}
   <div class="card">
-    <h3>${ic("chart", 16)} InBody log</h3>
+    <h3>${ic("chart", 16)} ${tr("InBody log")}</h3>
     <div class="muted">Each scan is stored with the change from the previous entry per metric. MIRA reads this log live — ask for a trend analysis in Fitness mode any time.</div>
     <div class="row" style="margin-top:10px">
-      <button class="btn sm sec" onclick="M.ibPhoto()" ${ibBusy ? "disabled" : ""}>${ibBusy ? "Reading…" : ic("camera", 15) + " Upload result sheet"}</button>
-      <button class="btn sm sec" onclick="M.ibAnalyse()">${ic("trend", 15)} Analyse my trend</button>
+      <button class="btn sm sec" onclick="M.ibPhoto()" ${ibBusy ? "disabled" : ""}>${ibBusy ? "Reading…" : ic("camera", 15) + " " + tr("Upload result sheet")}</button>
+      <button class="btn sm sec" onclick="M.ibAnalyse()">${ic("trend", 15)} ${tr("Analyse my trend")}</button>
     </div>
   </div>
 
   <div class="card">
-    <h3>${ic("plus", 16)} Add scan</h3>
+    <h3>${ic("plus", 16)} ${tr("Add scan")}</h3>
     <div class="grid2" style="margin-bottom:10px">
       <div class="field"><label>Date</label><input type="date" value="${esc(ibForm.date || todayStr())}" oninput="ibForm.date=this.value"></div>
       <div class="field"><label>Weight kg</label><input type="number" inputmode="decimal" value="${esc(ibForm.weight)}" oninput="ibForm.weight=this.value"></div>
