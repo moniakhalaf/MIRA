@@ -1083,7 +1083,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.89";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.90";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -4271,7 +4271,7 @@ async function usdaSearch(query, key){
       else if (no === "205" || no === "1005" || nm.includes("carbohydrate")) per.c = v;
       else if (no === "204" || no === "1004" || nm.includes("total lipid") || nm === "fat") per.f = v;
     });
-    return {name: f.description || "", brand: f.brandOwner || f.brandName || "", src: "USDA",
+    return {name: f.description || "", brand: f.brandOwner || f.brandName || "", src: "USDA", type: f.dataType || "",
       per100: {kcal: num(per.kcal), p: num(per.p), c: num(per.c), f: num(per.f)}};
   }).filter(x => x.name && (x.per100.kcal > 0 || x.per100.p > 0 || x.per100.c > 0));
 }
@@ -4353,6 +4353,34 @@ async function communityUse(id){
   } catch (e) { /* non-critical */ }
 }
 
+// Pick the SINGLE most-trusted match across all sources, rather than showing a
+// confusing list of near-identical variants. Trust order: USDA Foundation & SR
+// Legacy (lab-analysed reference data) > USDA Survey > branded label > community,
+// combined with how well the entry name matches what the user typed (all query
+// words present, and concise — fewer comma-qualifiers like "separable lean only").
+function bestFoodMatch(query, usda, off, comm){
+  const q = String(query || "").toLowerCase().trim();
+  const qTokens = q.split(/\s+/).filter(Boolean);
+  const nameScore = name => {
+    const n = String(name || "").toLowerCase();
+    let s = 0;
+    qTokens.forEach(t => { if (n.includes(t)) s += 3; });
+    if (qTokens.length && qTokens.every(t => n.includes(t))) s += 2;   // all words present
+    s -= Math.min(6, (n.match(/,/g) || []).length);                    // each qualifier is a demerit
+    const extra = n.split(/\s+/).length - qTokens.length;
+    if (extra > 0) s -= Math.min(4, extra * 0.3);                       // prefer concise names
+    return s;
+  };
+  const usdaTrust = t => ({"Foundation": 6, "SR Legacy": 5, "Survey (FNDDS)": 4, "Branded": 2}[t] != null
+    ? {"Foundation": 6, "SR Legacy": 5, "Survey (FNDDS)": 4, "Branded": 2}[t] : 3);
+  const scored = [];
+  (usda || []).forEach(x => scored.push({x, score: usdaTrust(x.type) + nameScore(x.name)}));
+  (off || []).forEach(x => scored.push({x, score: 3 + nameScore(x.name)}));    // branded label ≈ trust 3
+  (comm || []).forEach(x => scored.push({x, score: 1 + nameScore(x.name)}));   // community lowest
+  scored.sort((a, b) => b.score - a.score);
+  return scored.length ? scored[0].x : null;
+}
+
 // Turn database hits (per 100 g) into review items with a serving scaler, so the
 // user picks the right match and sets their amount — the MyFitnessPal workflow.
 function dbCandidatesToReview(cands, hadGrams){
@@ -4390,10 +4418,10 @@ async function findMacros(){
     const usda = ru.status === "fulfilled" ? ru.value : [];
     const off = ro.status === "fulfilled" ? ro.value : [];
     const comm = rc.status === "fulfilled" ? rc.value : [];
-    // verified official sources first, then the community library
-    const cands = [...usda.slice(0, 4), ...off.slice(0, 3), ...comm.slice(0, 3)];
-    if (cands.length){
-      reviewItems = dbCandidatesToReview(cands, hadGrams);
+    // Show ONE result — the single most-trusted match — not a list of variants.
+    const best = bestFoodMatch(name, usda, off, comm);
+    if (best){
+      reviewItems = dbCandidatesToReview([best], hadGrams);
       findBusy = false; render();
       const z = $("#reviewZone"); if (z) z.scrollIntoView({behavior: "smooth", block: "nearest"});
       return;
