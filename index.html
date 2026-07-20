@@ -330,6 +330,7 @@ body.kb .chatbar{padding-bottom:6px}
 .badge.official{background:rgba(52,196,142,.15);color:var(--green)}
 .badge.estimate{background:rgba(232,163,61,.15);color:var(--amber)}
 .badge.user{background:rgba(91,141,239,.15);color:#5B8DEF}
+.badge.community{background:rgba(158,120,220,.16);color:#b18be6}
 .toast{
   position:fixed;left:50%;bottom:calc(var(--safe-bot) + 136px);transform:translateX(-50%) translateY(20px);
   background:var(--card2);border:1px solid var(--line2);color:var(--txt);
@@ -1082,7 +1083,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.88";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.89";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1327,6 +1328,7 @@ const TR = {
     "Great":"ممتاز","Good":"جيد","Okay":"لا بأس","Low":"منخفض","Awful":"سيّئ",
     "Exercise":"رياضة","Stress":"توتر","Money":"مال","Friends":"أصدقاء","Family":"عائلة","Weather":"طقس","Food":"طعام",
     "USDA food-database key (optional)":"مفتاح قاعدة بيانات USDA (اختياري)",
+    "Community food database":"قاعدة بيانات الطعام المجتمعية","Supabase project URL":"رابط مشروع Supabase","Supabase anon key":"مفتاح Supabase العام (anon)",
   },
   es: {
     "Home":"Inicio","Chat":"Chat","Insights":"Análisis","Settings":"Ajustes",
@@ -1391,6 +1393,7 @@ const TR = {
     "Great":"Genial","Good":"Bien","Okay":"Normal","Low":"Bajo","Awful":"Fatal",
     "Exercise":"Ejercicio","Stress":"Estrés","Money":"Dinero","Friends":"Amigos","Family":"Familia","Weather":"Clima","Food":"Comida",
     "USDA food-database key (optional)":"Clave de base de datos USDA (opcional)",
+    "Community food database":"Base de datos de alimentos comunitaria","Supabase project URL":"URL del proyecto Supabase","Supabase anon key":"Clave anon de Supabase",
   },
   fr: {
     "Home":"Accueil","Chat":"Chat","Insights":"Analyses","Settings":"Réglages",
@@ -1455,6 +1458,7 @@ const TR = {
     "Great":"Super","Good":"Bien","Okay":"Correct","Low":"Bas","Awful":"Horrible",
     "Exercise":"Exercice","Stress":"Stress","Money":"Argent","Friends":"Amis","Family":"Famille","Weather":"Météo","Food":"Nourriture",
     "USDA food-database key (optional)":"Clé de base de données USDA (facultatif)",
+    "Community food database":"Base de données alimentaire communautaire","Supabase project URL":"URL du projet Supabase","Supabase anon key":"Clé anon Supabase",
   },
 };
 // Interface language: null in "Match what I write" mode (chrome stays English).
@@ -1494,6 +1498,7 @@ const BLANK = () => ({
     goalWeight: 0,
     iosHintDismissed: false,
     strava: null,       // {cid, secret, access, refresh, exp, athlete, lastSync} when connected
+    community: {url: "", key: ""},   // shared community food database (Supabase) — off until configured
 
     coach: {name: "", email: ""},
     restLen: 90,
@@ -4048,6 +4053,7 @@ function reviewHTML(){
         <div class="row">
           <span class="badge ${it.conf}">${it.conf}</span>
           <span class="tiny" style="flex:1">${esc(it.note || "")}</span>
+          ${communityConfigured() && it.conf !== "community" ? `<button class="btn sm sec" style="flex:0 0 auto" aria-label="Share to community database" onclick="M.reviewShare(${i})" ${it.shared ? "disabled" : ""}>${it.shared ? ic("check", 14) : ic("share", 14)}</button>` : ""}
           <button class="btn sm" style="flex:0 0 auto" onclick="M.reviewAccept(${i})">Log it</button>
           <button class="btn sm sec" style="flex:0 0 auto" onclick="M.reviewDrop(${i})">✕</button>
         </div>
@@ -4287,17 +4293,81 @@ async function offSearch(query){
   }).filter(x => x.name && (x.per100.kcal > 0 || x.per100.p > 0));
 }
 
+// ---- Community food database (opt-in, needs a shared Supabase backend) ----
+// A MyFitnessPal-style shared library: users contribute the foods they log, and
+// everyone's "Find macros" can search them. Dormant until a Supabase project is
+// configured in Settings; every call degrades to a no-op / empty result so the
+// app is unaffected when it's off. Community entries are always labelled as
+// such — never presented as verified data.
+function communityConfigured(){
+  const c = S.settings.community || {};
+  return !!(c.url && c.key);
+}
+function communityRest(path){
+  const base = String((S.settings.community || {}).url || "").replace(/\/+$/, "");
+  return base + "/rest/v1/" + path;
+}
+function communityHeaders(extra){
+  const key = (S.settings.community || {}).key || "";
+  return Object.assign({apikey: key, Authorization: "Bearer " + key}, extra || {});
+}
+async function communitySearch(query){
+  if (!communityConfigured()) return [];
+  try {
+    const q = encodeURIComponent("*" + String(query).toLowerCase().slice(0, 60) + "*");
+    const url = communityRest("community_foods?select=id,name,brand,kcal,p,c,f,uses&name_lc=ilike." + q + "&order=uses.desc&limit=6");
+    const res = await fetch(url, {headers: communityHeaders()});
+    if (!res.ok) return [];
+    const rows = await res.json();
+    return (Array.isArray(rows) ? rows : []).map(r => ({
+      name: r.name || "", brand: r.brand || "", src: "community", id: r.id, uses: num(r.uses),
+      per100: {kcal: num(r.kcal), p: num(r.p), c: num(r.c), f: num(r.f)},
+    })).filter(x => x.name && (x.per100.kcal > 0 || x.per100.p > 0));
+  } catch (e) { return []; }
+}
+// Contribute a food (macros normalised to per 100 g) to the shared library.
+async function communityContribute(food){
+  if (!communityConfigured()) return false;
+  const per = food.per100 || food;
+  const name = String(food.name || "").trim();
+  if (!name || !(num(per.kcal) > 0 || num(per.p) > 0)) return false;
+  try {
+    const res = await fetch(communityRest("community_foods"), {
+      method: "POST",
+      headers: communityHeaders({"Content-Type": "application/json", Prefer: "return=minimal"}),
+      body: JSON.stringify({name, name_lc: name.toLowerCase(), brand: String(food.brand || "").trim(),
+        kcal: num(per.kcal), p: num(per.p), c: num(per.c), f: num(per.f)}),
+    });
+    return res.ok;
+  } catch (e) { return false; }
+}
+// Best-effort "this entry was useful" ping so good community entries rise.
+async function communityUse(id){
+  if (!communityConfigured() || !id) return;
+  try {
+    await fetch(communityRest("rpc/community_food_use"), {
+      method: "POST",
+      headers: communityHeaders({"Content-Type": "application/json"}),
+      body: JSON.stringify({fid: id}),
+    });
+  } catch (e) { /* non-critical */ }
+}
+
 // Turn database hits (per 100 g) into review items with a serving scaler, so the
 // user picks the right match and sets their amount — the MyFitnessPal workflow.
 function dbCandidatesToReview(cands, hadGrams){
   const seen = new Set();
   return cands.filter(x => { const k = (x.name || "").toLowerCase().slice(0, 44); if (!k || seen.has(k)) return false; seen.add(k); return true; })
-    .slice(0, 6).map(x => {
+    .slice(0, 7).map(x => {
       const base = x.per100, had = hadGrams && hadGrams > 0 ? hadGrams : 100, k = had / 100;
+      const community = x.src === "community";
+      const label = community ? ("Community entry" + (x.uses ? " · used " + n0(x.uses) + "×" : "")) : x.src;
       return {name: x.name, amount: n0(had) + " g",
         kcal: Math.round(base.kcal * k), p: +(base.p * k).toFixed(1), c: +(base.c * k).toFixed(1), f: +(base.f * k).toFixed(1),
-        conf: "official", note: x.src + (x.brand ? " · " + x.brand : "") + " — per 100 g. Set how much you had below.",
-        basis: 100, unit: "g", pkg: 0, baseMacros: {kcal: num(base.kcal), p: num(base.p), c: num(base.c), f: num(base.f)}, had: String(had)};
+        conf: community ? "community" : "official",
+        note: label + (x.brand ? " · " + x.brand : "") + " — per 100 g. Set how much you had below.",
+        basis: 100, unit: "g", pkg: 0, baseMacros: {kcal: num(base.kcal), p: num(base.p), c: num(base.c), f: num(base.f)},
+        had: String(had), communityId: community ? x.id : null};
     });
 }
 
@@ -4316,10 +4386,12 @@ async function findMacros(){
   //    in parallel, show the matches as a pick-list with a serving scaler. Either
   //    source failing (offline / CORS / rate-limit) never blocks the other.
   try {
-    const [ru, ro] = await Promise.allSettled([usdaSearch(name, S.settings.usdaKey), offSearch(name)]);
+    const [ru, ro, rc] = await Promise.allSettled([usdaSearch(name, S.settings.usdaKey), offSearch(name), communitySearch(name)]);
     const usda = ru.status === "fulfilled" ? ru.value : [];
     const off = ro.status === "fulfilled" ? ro.value : [];
-    const cands = [...usda.slice(0, 4), ...off.slice(0, 3)];
+    const comm = rc.status === "fulfilled" ? rc.value : [];
+    // verified official sources first, then the community library
+    const cands = [...usda.slice(0, 4), ...off.slice(0, 3), ...comm.slice(0, 3)];
     if (cands.length){
       reviewItems = dbCandidatesToReview(cands, hadGrams);
       findBusy = false; render();
@@ -6731,6 +6803,16 @@ function settingsHTML(){
       <div class="tiny" style="margin-top:6px">${tr("\"Find macros\" searches the USDA FoodData Central and OpenFoodFacts databases for exact, verified values — the same authoritative data nutrition apps use — and only falls back to an AI estimate when there's no match. Leave blank to use the shared DEMO_KEY, or get your own free instant key at fdc.nal.usda.gov/api-key-signup for reliable lookups.")}</div></div>
   </div>
 
+  ${(() => { const cm = st.community || {}; const on = !!(cm.url && cm.key); return `
+  <div class="card" id="setCommunity">
+    <div class="card-h-row"><h3>${ic("database", 16)} ${tr("Community food database")}</h3>
+      <span class="set-status ${on ? "on" : ""}"><span class="dot"></span>${on ? tr("Connected") : tr("Off")}</span></div>
+    <div class="muted" style="margin:12px 0 10px">${tr("An optional shared library, MyFitnessPal-style: foods people contribute become searchable in \"Find macros\" for everyone using your MIRA. Community entries are always labelled as community-submitted — never shown as verified data. It needs a free Supabase project (the runbook and SQL are in the repo's docs folder).")}</div>
+    <div class="field"><label>${tr("Supabase project URL")}</label><input value="${esc(cm.url || "")}" placeholder="https://xxxx.supabase.co" autocomplete="off" oninput="M.communitySet('url',this.value)"></div>
+    <div class="field" style="margin-bottom:0"><label>${tr("Supabase anon key")}</label><input type="password" value="${esc(cm.key || "")}" placeholder="eyJ…" autocomplete="off" oninput="M.communitySet('key',this.value)"></div>
+    <div class="tiny" style="margin-top:8px">${tr("Both values are on your Supabase project's API settings page. The anon key is safe to embed — row-level security (in the provided SQL) governs what it can do: read the shared foods and add new ones, nothing else.")}</div>
+  </div>`; })()}
+
   <div class="card fold" id="savedFoodsCard">
     <h3 onclick="this.parentElement.classList.toggle('open')">${ic("bookmark", 16)} ${tr("Saved foods")} (${S.savedFoods.length}) <span class="chev">▶</span></h3>
     <div class="fold-body">
@@ -7975,6 +8057,8 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
     const s = sanity(it);
     if (s.errors.length){ toast(s.errors[0], 4200); render(); return; }
     logFood(it);
+    // if this was a community entry, ping it as useful so good entries rise
+    if (it.conf === "community" && it.communityId) communityUse(it.communityId);
     reviewItems.splice(i, 1);
     if (!reviewItems.length) reviewItems = null;
     // clear the add-food form too, so the looked-up name/amount don't linger
@@ -7982,6 +8066,24 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
     render();
   },
   reviewDrop(i){ reviewItems.splice(i, 1); if (!reviewItems.length) reviewItems = null; render(); },
+  communitySet(field, v){
+    if (!S.settings.community) S.settings.community = {url: "", key: ""};
+    S.settings.community[field] = (v || "").trim();
+    save();
+  },
+  // Share a reviewed food to the community database (per 100 g).
+  async reviewShare(i){
+    const it = reviewItems[i]; if (!it) return;
+    // normalise the shown (scaled) macros back to per 100 g using the scaler basis
+    let per;
+    if (it.baseMacros && it.basis) per = it.baseMacros;
+    else { const g = amountToGrams(it.amount) || 100, k = 100 / g;
+      per = {kcal: num(it.kcal) * k, p: num(it.p) * k, c: num(it.c) * k, f: num(it.f) * k}; }
+    const ok = await communityContribute({name: it.name, brand: "", per100: per});
+    if (ok){ it.shared = true; toast("Shared to the community database — thank you ✓"); }
+    else toast("Couldn't reach the community database. Check the settings and try again.", 4200);
+    render();
+  },
   // Rescale an extracted label item to the amount the user actually had
   // (e.g. label is per 100 ml, they drank the whole 320 ml can).
   reviewScale(i, val){
