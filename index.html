@@ -1083,7 +1083,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.91";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.92";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -4573,6 +4573,28 @@ function dishScalePatch(){
   if (mine) mine.textContent = dishMineText();
 }
 
+// Build a review item (with an inline serving scaler) from an OpenFoodFacts
+// product. Macros are per 100 g/ml; the "how much did you have?" field is
+// pre-filled with one serving when the label states it, plus a whole-pack
+// shortcut when the package quantity is known.
+function barcodeToReview(code, p){
+  const nu = (p && p.nutriments) || {};
+  const kcal = nu["energy-kcal_100g"] != null ? nu["energy-kcal_100g"] : (nu["energy_100g"] ? nu["energy_100g"] / 4.184 : 0);
+  const um = String((p && p.serving_size) || "").match(/\b(ml|l|g|kg)\b/i);
+  const unit = um && /ml|l/i.test(um[1]) ? "ml" : "g";
+  const base = {kcal: Math.round(num(kcal)), p: num(nu.proteins_100g), c: num(nu.carbohydrates_100g), f: num(nu.fat_100g)};
+  const serve = num(p && p.serving_quantity), pkg = num(p && p.product_quantity);
+  const had = serve > 0 ? serve : 100, k = had / 100;
+  return {
+    name: [p && p.brands, p && p.product_name].filter(Boolean).join(" — ") || ("Product " + code),
+    amount: n0(had) + " " + unit,
+    kcal: Math.round(base.kcal * k), p: +(base.p * k).toFixed(1), c: +(base.c * k).toFixed(1), f: +(base.f * k).toFixed(1),
+    conf: "official",
+    note: "OpenFoodFacts " + code + " — per 100 " + unit + ((p && p.serving_size) ? "; serving " + p.serving_size : "") + ".",
+    basis: 100, unit, pkg: pkg > 0 ? pkg : 0, baseMacros: base, had: String(had),
+  };
+}
+
 async function scanBarcode(){
   if (!S.settings.apiKey){ toast("Add your API key in Settings first."); return; }
   pickFile(async file => {
@@ -4587,20 +4609,12 @@ async function scanBarcode(){
       const code = String(tryParseJson(txt).code || "").replace(/\D/g, "");
       if (!code){ toast("Could not read a barcode in that photo — try a closer, sharper shot."); }
       else {
-        const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${code}.json?fields=product_name,brands,nutriments,serving_size`);
+        const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${code}.json?fields=product_name,brands,nutriments,serving_size,serving_quantity,product_quantity`);
         const j = await res.json();
         if (j.status !== 1 || !j.product){
           toast(`Barcode ${code} isn't in the OpenFoodFacts database — try "Find macros" instead.`, 4800);
         } else {
-          const p = j.product, nu = p.nutriments || {};
-          const kcal = nu["energy-kcal_100g"] ?? (nu["energy_100g"] ? nu["energy_100g"] / 4.184 : 0);
-          reviewItems = [{
-            name: [p.brands, p.product_name].filter(Boolean).join(" — ") || `Product ${code}`,
-            amount: "100 g", kcal: Math.round(kcal || 0),
-            p: nu.proteins_100g ?? 0, c: nu.carbohydrates_100g ?? 0, f: nu.fat_100g ?? 0,
-            conf: "official",
-            note: `OpenFoodFacts ${code} — per 100 g${p.serving_size ? `; serving ${p.serving_size}` : ""}. Use the portion scaler for your amount.`,
-          }];
+          reviewItems = [barcodeToReview(code, j.product)];
         }
       }
     } catch (e) { toast("Barcode lookup failed: " + e.message, 4200); }
