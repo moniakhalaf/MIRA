@@ -1083,7 +1083,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.90";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.91";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1687,42 +1687,38 @@ matchMedia("(prefers-color-scheme: light)").addEventListener("change", () => {
 function bindViewport(){
   const vv = window.visualViewport;
   if (!vv) return;
-  let t = null;
-  const isTyping = () => {
-    const a = document.activeElement;
-    return !!a && (a.tagName === "INPUT" || a.tagName === "TEXTAREA" || a.isContentEditable);
-  };
-  const apply = () => {
+  // Two things go wrong on iOS when the keyboard opens over a deep field:
+  //  1) if we STOP tracking the visible area while typing, the shell gets stuck
+  //     mid-animation and a big empty gap appears above the top bar;
+  //  2) if we reset the page scroll on every pan, the focused field flickers up.
+  // Fix: always re-pin the shell to the visible area (kills the gap), but only
+  // reset the layout-viewport scroll on keyboard show/hide — never during a pan
+  // (kills the flicker).
+  const pin = (resetScroll) => {
     const app = $("#app");
     if (!app) return;
     const kbOpen = (window.innerHeight - vv.height) > 100;
-    app.style.top = vv.offsetTop + "px";
+    app.style.top = vv.offsetTop + "px";      // track the visible top → no gap
     app.style.height = vv.height + "px";
     app.style.bottom = "auto";
     document.body.classList.toggle("kb", kbOpen);
-    // All scrolling lives inside .content, so the layout viewport should stay
-    // at 0 — but only nudge it back when it has ACTUALLY drifted. Calling
-    // scrollTo on every event was itself a jump.
-    if (window.pageYOffset || window.pageXOffset) window.scrollTo(0, 0);
+    if (resetScroll && (window.pageYOffset || window.pageXOffset)) window.scrollTo(0, 0);
     if (kbOpen && R.tab === "chat"){
       const c = $("#content");
       if (c) c.scrollTop = c.scrollHeight;
     }
   };
-  const queue = () => { clearTimeout(t); t = setTimeout(apply, 30); };
-  // A visualViewport "scroll" while a field is focused is iOS panning to keep
-  // the caret above the keyboard. Re-pinning the shell and resetting the scroll
-  // there fights that pan, so the focused field flickers/jumps upward on every
-  // keystroke. Ignore scroll events while typing — the keyboard height itself
-  // only changes via "resize", which we still honour. This is the fix for the
-  // "field flickers up while I type" report; it applies everywhere, not just
-  // the cooked-dish form.
-  const queueScroll = () => { if (isTyping()) return; queue(); };
-  vv.addEventListener("resize", queue);
-  vv.addEventListener("scroll", queueScroll);
-  window.addEventListener("focusin", queue);
-  window.addEventListener("focusout", queue);
-  apply();
+  let rt = null, st = null;
+  // resize / focus change = keyboard shows or hides: full settle (incl. scroll reset)
+  const onResize = () => { clearTimeout(rt); rt = setTimeout(() => pin(true), 30); };
+  // scroll = iOS panning to keep the caret visible: reposition the shell so it
+  // never lags into a gap, but don't touch the scroll (that caused the flicker)
+  const onScroll = () => { clearTimeout(st); st = setTimeout(() => pin(false), 16); };
+  vv.addEventListener("resize", onResize);
+  vv.addEventListener("scroll", onScroll);
+  window.addEventListener("focusin", onResize);
+  window.addEventListener("focusout", onResize);
+  pin(true);
 }
 
 let saveT = null;
