@@ -1083,7 +1083,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.92";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.93";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -4246,6 +4246,36 @@ function amountToGrams(s){
   return v;   // g / ml treated 1:1
 }
 
+// Standard reference weights (USDA) for foods people log by the piece, so
+// "3 eggs" becomes 150 g rather than defaulting to 100 g. Per-100 g macros
+// still come from the trusted database; only the portion size is inferred here.
+const UNIT_GRAMS = [
+  [/\begg\s*whites?\b/, 33, "egg white"], [/\begg\s*yolks?\b/, 17, "egg yolk"], [/\beggs?\b/, 50, "large egg"],
+  [/\bbananas?\b/, 118, "banana"], [/\bapples?\b/, 182, "apple"], [/\boranges?\b/, 131, "orange"],
+  [/\bclementines?\b|\bmandarins?\b|\btangerines?\b/, 74, "mandarin"], [/\bkiwi(?:s|fruit)?\b/, 69, "kiwi"],
+  [/\bpears?\b/, 178, "pear"], [/\bpeach(?:es)?\b/, 150, "peach"], [/\bplums?\b/, 66, "plum"],
+  [/\bstrawberr(?:y|ies)\b/, 12, "strawberry"], [/\bcarrots?\b/, 61, "carrot"], [/\btomato(?:es)?\b/, 123, "tomato"],
+  [/\bpotato(?:es)?\b/, 173, "potato"], [/\bslices?\s*(?:of\s*)?bread\b|\bbread\s*slices?\b/, 30, "slice of bread"],
+  [/\brice\s*cakes?\b/, 9, "rice cake"], [/\bwalnut\s*halves?\b|\bwalnuts?\b/, 5, "walnut half"],
+  [/\balmonds?\b/, 1.2, "almond"], [/\bdried\s*dates?\b|\bmedjool\s*dates?\b|\bdates?\b/, 24, "medjool date"],
+];
+// Split a leading count off a query: "3 whole eggs" → {count: 3, rest: "whole eggs"}.
+function parseCount(query){
+  const m = String(query || "").trim().match(/^(\d+(?:\.\d+)?)\s*x?\s+(.+\S)$/i);
+  if (!m) return null;
+  const count = parseFloat(m[1]);
+  if (!isFinite(count) || count <= 0 || count > 99) return null;
+  return {count, rest: m[2]};
+}
+// If a query is "<count> <known countable food>", return its total grams + basis.
+function countedGrams(query){
+  const pc = parseCount(query);
+  if (!pc) return null;
+  const q = pc.rest.toLowerCase();
+  for (const [re, g, label] of UNIT_GRAMS){ if (re.test(q)) return {grams: pc.count * g, count: pc.count, unitG: g, label}; }
+  return null;
+}
+
 // USDA FoodData Central — the authoritative composition database many nutrition
 // apps (incl. MyFitnessPal) build on. Free; DEMO_KEY works but is rate-limited,
 // so users can add their own instant key. Values are per 100 g/ml.
@@ -4404,20 +4434,27 @@ async function findMacros(){
   if (!name){ toast("Type what you ate first."); return; }
   // Only treat the amount field as a quantity when it's separate from the food name.
   const userAmount = nameField ? amtField : "";
-  const hadGrams = amountToGrams(userAmount);
+  // Understand a leading count of a known countable food ("3 eggs" → 150 g) so
+  // the amount isn't left at the default 100 g. An explicit "150 g" still wins.
+  const cg = countedGrams(name);
+  const hadGrams = amountToGrams(userAmount) != null ? amountToGrams(userAmount) : (cg ? cg.grams : null);
+  // strip the leading count from the DB search term so USDA matches the food itself
+  const searchName = cg && parseCount(name) ? parseCount(name).rest : name;
   findBusy = true; render();
   // 1) Authoritative databases first (MyFitnessPal-style): search USDA + OpenFoodFacts
-  //    in parallel, show the matches as a pick-list with a serving scaler. Either
+  //    in parallel, show the single most-trusted match with a serving scaler. Either
   //    source failing (offline / CORS / rate-limit) never blocks the other.
   try {
-    const [ru, ro, rc] = await Promise.allSettled([usdaSearch(name, S.settings.usdaKey), offSearch(name), communitySearch(name)]);
+    const [ru, ro, rc] = await Promise.allSettled([usdaSearch(searchName, S.settings.usdaKey), offSearch(searchName), communitySearch(searchName)]);
     const usda = ru.status === "fulfilled" ? ru.value : [];
     const off = ro.status === "fulfilled" ? ro.value : [];
     const comm = rc.status === "fulfilled" ? rc.value : [];
     // Show ONE result — the single most-trusted match — not a list of variants.
-    const best = bestFoodMatch(name, usda, off, comm);
+    const best = bestFoodMatch(searchName, usda, off, comm);
     if (best){
       reviewItems = dbCandidatesToReview([best], hadGrams);
+      // when the amount came from a count, spell out the basis so it's transparent
+      if (cg && reviewItems[0]) reviewItems[0].note += ` · ${n1(cg.count)} × ~${n0(cg.unitG)} g ${cg.label}`;
       findBusy = false; render();
       const z = $("#reviewZone"); if (z) z.scrollIntoView({behavior: "smooth", block: "nearest"});
       return;
