@@ -1086,7 +1086,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.95";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.96";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -4662,6 +4662,45 @@ function barcodeToReview(code, p){
   };
 }
 
+// Most-trusted barcode source: USDA Branded Foods — manufacturer label data
+// submitted through GS1/1WorldSync, matched by the product's GTIN/UPC. Returns
+// null when the barcode isn't in USDA (common for non-US products), so the
+// caller falls back to OpenFoodFacts. Badged "official" — it IS the label.
+async function usdaBarcode(code, key){
+  const digits = String(code).replace(/\D/g, "");
+  const url = "https://api.nal.usda.gov/fdc/v1/foods/search?api_key=" + encodeURIComponent(key || "DEMO_KEY") +
+    "&query=" + encodeURIComponent(digits) + "&dataType=Branded&pageSize=15";
+  const res = await fetch(url);
+  if (!res.ok) return null;
+  const j = await res.json();
+  const norm = s => String(s || "").replace(/\D/g, "").replace(/^0+/, "");
+  const f = (j.foods || []).find(x => x.gtinUpc && norm(x.gtinUpc) === norm(digits));
+  if (!f) return null;
+  const per = {kcal: 0, p: 0, c: 0, f: 0};
+  (f.foodNutrients || []).forEach(n => {
+    const no = String(n.nutrientNumber || (n.nutrient && n.nutrient.number) || "");
+    const nm = String(n.nutrientName || (n.nutrient && n.nutrient.name) || "").toLowerCase();
+    const unit = String(n.unitName || (n.nutrient && n.nutrient.unitName) || "").toUpperCase();
+    const v = n.value != null ? n.value : n.amount;
+    if ((no === "208" || no === "1008" || nm.includes("energy")) && unit === "KCAL") per.kcal = v;
+    else if (no === "203" || no === "1003" || nm === "protein") per.p = v;
+    else if (no === "205" || no === "1005" || nm.includes("carbohydrate")) per.c = v;
+    else if (no === "204" || no === "1004" || nm.includes("total lipid") || nm === "fat") per.f = v;
+  });
+  const base = {kcal: Math.round(num(per.kcal)), p: num(per.p), c: num(per.c), f: num(per.f)};
+  if (!(base.kcal > 0 || base.p > 0 || base.c > 0)) return null;
+  const unit = String(f.servingSizeUnit || "g").toLowerCase() === "ml" ? "ml" : "g";
+  const serve = num(f.servingSize), had = serve > 0 ? serve : 100, k = had / 100;
+  return {
+    name: [f.brandOwner || f.brandName, f.description].filter(Boolean).join(" — ") || ("Product " + digits),
+    amount: n0(had) + " " + unit,
+    kcal: Math.round(base.kcal * k), p: +(base.p * k).toFixed(1), c: +(base.c * k).toFixed(1), f: +(base.f * k).toFixed(1),
+    conf: "official",
+    note: "USDA Branded Foods " + digits + " — manufacturer label data, per 100 " + unit + (serve > 0 ? "; serving " + n0(serve) + " " + unit : "") + ".",
+    basis: 100, unit, pkg: 0, baseMacros: base, had: String(had),
+  };
+}
+
 async function scanBarcode(){
   if (!S.settings.apiKey){ toast("Add your API key in Settings first."); return; }
   pickFile(async file => {
@@ -4674,16 +4713,19 @@ async function scanBarcode(){
          {type: "text", text: "What are the barcode digits?"}],
         200);
       const code = String(tryParseJson(txt).code || "").replace(/\D/g, "");
-      if (!code){ toast("Could not read a barcode in that photo — try a closer, sharper shot."); }
-      else {
+      if (!code){ toast("Could not read a barcode in that photo — try a closer, sharper shot."); barcodeBusy = false; render(); return; }
+      // 1) most-trusted: USDA Branded (manufacturer label data). Never lets a
+      //    failure block the OpenFoodFacts fallback.
+      let item = null;
+      try { item = await usdaBarcode(code, S.settings.usdaKey); } catch (e) { /* fall through */ }
+      // 2) fallback: OpenFoodFacts (global coverage, community data, labelled)
+      if (!item){
         const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${code}.json?fields=product_name,brands,nutriments,serving_size,serving_quantity,product_quantity`);
         const j = await res.json();
-        if (j.status !== 1 || !j.product){
-          toast(`Barcode ${code} isn't in the OpenFoodFacts database — try "Find macros" instead.`, 4800);
-        } else {
-          reviewItems = [barcodeToReview(code, j.product)];
-        }
+        if (j.status === 1 && j.product) item = barcodeToReview(code, j.product);
       }
+      if (item) reviewItems = [item];
+      else toast(`Barcode ${code} isn't in USDA or OpenFoodFacts — try "Find macros", or snap the label instead.`, 5200);
     } catch (e) { toast("Barcode lookup failed: " + e.message, 4200); }
     barcodeBusy = false; render();
   });
