@@ -909,6 +909,8 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
 .meal-pick button.on{color:var(--gold);border-color:var(--gold);background:var(--gold-soft)}
 .meal-pick button:active{transform:scale(.96)}
 .edit-banner{display:flex;align-items:center;gap:10px;padding:9px 12px;margin-bottom:10px;border-radius:10px;background:var(--acc-soft);border:1px solid var(--line2);font-size:13px;color:var(--txt2)}
+.lookup-hint{display:flex;align-items:center;gap:8px;padding:10px 13px;margin-bottom:12px;border-radius:10px;background:var(--acc-soft);border:1px solid var(--line2);font-size:13px;font-weight:600;color:var(--acc)}
+.lookup-hint .svgi{flex:0 0 auto}
 .edit-banner button{flex:0 0 auto;margin-inline-start:auto;width:auto}
 /* crash recovery screen */
 .crash{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
@@ -1083,7 +1085,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.93";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.94";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1329,6 +1331,7 @@ const TR = {
     "Exercise":"رياضة","Stress":"توتر","Money":"مال","Friends":"أصدقاء","Family":"عائلة","Weather":"طقس","Food":"طعام",
     "USDA food-database key (optional)":"مفتاح قاعدة بيانات USDA (اختياري)",
     "Community food database":"قاعدة بيانات الطعام المجتمعية","Supabase project URL":"رابط مشروع Supabase","Supabase anon key":"مفتاح Supabase العام (anon)",
+    "Confirm your lookup below":"أكّد نتيجة البحث بالأسفل",
   },
   es: {
     "Home":"Inicio","Chat":"Chat","Insights":"Análisis","Settings":"Ajustes",
@@ -1394,6 +1397,7 @@ const TR = {
     "Exercise":"Ejercicio","Stress":"Estrés","Money":"Dinero","Friends":"Amigos","Family":"Familia","Weather":"Clima","Food":"Comida",
     "USDA food-database key (optional)":"Clave de base de datos USDA (opcional)",
     "Community food database":"Base de datos de alimentos comunitaria","Supabase project URL":"URL del proyecto Supabase","Supabase anon key":"Clave anon de Supabase",
+    "Confirm your lookup below":"Confirma tu búsqueda abajo",
   },
   fr: {
     "Home":"Accueil","Chat":"Chat","Insights":"Analyses","Settings":"Réglages",
@@ -1459,6 +1463,7 @@ const TR = {
     "Exercise":"Exercice","Stress":"Stress","Money":"Argent","Friends":"Amis","Family":"Famille","Weather":"Météo","Food":"Nourriture",
     "USDA food-database key (optional)":"Clé de base de données USDA (facultatif)",
     "Community food database":"Base de données alimentaire communautaire","Supabase project URL":"URL du projet Supabase","Supabase anon key":"Clé anon Supabase",
+    "Confirm your lookup below":"Confirmez votre recherche ci-dessous",
   },
 };
 // Interface language: null in "Match what I write" mode (chrome stays English).
@@ -3701,6 +3706,9 @@ function foodHTML(){
       </div>
       <div class="field"><label>${t("Meal")}</label>
         <div class="seg">${FOOD_MEALS.map(([v, l]) => `<button class="${(foodForm.meal || mealFromTime(foodForm.time || nowHM())) === v ? "on" : ""}" onclick="M.foodMeal('${v}')">${t(l)}</button>`).join("")}</div></div>
+      ${reviewItems && !R.editFoodId ? `
+      <div class="lookup-hint">${ic("search", 14)} ${t("Confirm your lookup below")}</div>
+      ` : `
       <div class="field"><label>${t("Amount eaten")}</label><input id="ffAmount" value="${esc(foodForm.amount)}" placeholder="e.g. 3 pieces · 150 g · 250 ml" oninput="foodForm.amount=this.value"></div>
       <div class="grid2" style="margin-bottom:12px">
         <div class="field"><label>${t("Time")}</label><input id="ffTime" type="time" value="${esc(foodForm.time || nowHM())}" oninput="foodForm.time=this.value"></div>
@@ -3712,6 +3720,7 @@ function foodHTML(){
         <div class="field"><label>${t("Fat g")}</label><input id="ffF" type="number" inputmode="decimal" value="${esc(foodForm.f)}" oninput="foodForm.f=this.value"></div>
       </div>
       <button class="btn" style="width:100%;margin-bottom:12px" onclick="M.foodSave()">${R.editFoodId ? t("Update entry") : t("Save to log")}</button>
+      `}
       <div class="grid2" style="gap:8px">
         <button class="btn sm sec" style="width:100%" onclick="M.scToggle()">${ic("sliders", 15)} ${t("Portion scaler")}</button>
         <button class="btn sm sec" style="width:100%" onclick="M.findMacros()" ${findBusy ? "disabled" : ""}>${findBusy ? "Searching…" : ic("search", 15) + " " + t("Find macros")}</button>
