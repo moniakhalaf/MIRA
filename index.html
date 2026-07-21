@@ -1086,7 +1086,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.96";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.97";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1549,6 +1549,7 @@ const BLANK = () => ({
   dates: [],          // {id, title, date, recurring}
   reading: [],        // {id, title, kind, status}
   water: {},          // date -> glasses
+  barcodeFixes: {},   // code -> {name, unit, serving, per100:{kcal,p,c,f}, ts} — user's own corrected barcode values
   inbody: [],         // {id, date, weight, score, bfm, smm, vfa, pa}
 });
 
@@ -4701,6 +4702,28 @@ async function usdaBarcode(code, key){
   };
 }
 
+// When databases are wrong for a specific product, the user's own pack is the
+// truth: after they correct a scanned barcode's macros and log it, we remember
+// them keyed by the barcode and reuse them on the next scan — badged as theirs.
+function saveBarcodeFix(code, it){
+  const digits = String(code).replace(/\D/g, "");
+  if (!digits) return;
+  const had = num(it.had) > 0 ? num(it.had) : (amountToGrams(it.amount) || 100);
+  const k = 100 / had;
+  S.barcodeFixes = S.barcodeFixes || {};
+  S.barcodeFixes[digits] = {name: it.name, unit: it.unit || "g", serving: had,
+    per100: {kcal: Math.round(num(it.kcal) * k), p: +(num(it.p) * k).toFixed(2), c: +(num(it.c) * k).toFixed(2), f: +(num(it.f) * k).toFixed(2)},
+    ts: Date.now()};
+}
+function barcodeFixToReview(code, fx){
+  const base = fx.per100 || {}, unit = fx.unit || "g", had = num(fx.serving) > 0 ? num(fx.serving) : 100, k = had / 100;
+  return {name: fx.name || ("Product " + code), amount: n0(had) + " " + unit,
+    kcal: Math.round(num(base.kcal) * k), p: +(num(base.p) * k).toFixed(1), c: +(num(base.c) * k).toFixed(1), f: +(num(base.f) * k).toFixed(1),
+    conf: "user", note: "Your saved values for this barcode (from the pack). Edit any time.",
+    basis: 100, unit, pkg: 0, baseMacros: {kcal: num(base.kcal), p: num(base.p), c: num(base.c), f: num(base.f)},
+    had: String(had), barcode: code};
+}
+
 async function scanBarcode(){
   if (!S.settings.apiKey){ toast("Add your API key in Settings first."); return; }
   pickFile(async file => {
@@ -4714,17 +4737,20 @@ async function scanBarcode(){
         200);
       const code = String(tryParseJson(txt).code || "").replace(/\D/g, "");
       if (!code){ toast("Could not read a barcode in that photo — try a closer, sharper shot."); barcodeBusy = false; render(); return; }
-      // 1) most-trusted: USDA Branded (manufacturer label data). Never lets a
-      //    failure block the OpenFoodFacts fallback.
       let item = null;
-      try { item = await usdaBarcode(code, S.settings.usdaKey); } catch (e) { /* fall through */ }
+      // 0) your own saved correction for this exact barcode wins — your pack is the truth
+      const fx = (S.barcodeFixes || {})[code];
+      if (fx) item = barcodeFixToReview(code, fx);
+      // 1) most-trusted database: USDA Branded (manufacturer label data). A
+      //    failure never blocks the OpenFoodFacts fallback.
+      if (!item){ try { item = await usdaBarcode(code, S.settings.usdaKey); } catch (e) { /* fall through */ } }
       // 2) fallback: OpenFoodFacts (global coverage, community data, labelled)
       if (!item){
         const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${code}.json?fields=product_name,brands,nutriments,serving_size,serving_quantity,product_quantity`);
         const j = await res.json();
         if (j.status === 1 && j.product) item = barcodeToReview(code, j.product);
       }
-      if (item) reviewItems = [item];
+      if (item){ item.barcode = code; reviewItems = [item]; }
       else toast(`Barcode ${code} isn't in USDA or OpenFoodFacts — try "Find macros", or snap the label instead.`, 5200);
     } catch (e) { toast("Barcode lookup failed: " + e.message, 4200); }
     barcodeBusy = false; render();
@@ -8206,6 +8232,8 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
     logFood(it);
     // if this was a community entry, ping it as useful so good entries rise
     if (it.conf === "community" && it.communityId) communityUse(it.communityId);
+    // remember a scanned barcode's values so a wrong database is corrected for good
+    if (it.barcode){ saveBarcodeFix(it.barcode, it); save(); toast("Saved your values for this barcode — used automatically next scan ✓", 4200); }
     reviewItems.splice(i, 1);
     if (!reviewItems.length) reviewItems = null;
     // clear the add-food form too, so the looked-up name/amount don't linger
