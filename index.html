@@ -331,6 +331,7 @@ body.kb .chatbar{padding-bottom:6px}
 .badge.estimate{background:rgba(232,163,61,.15);color:var(--amber)}
 .badge.user{background:rgba(91,141,239,.15);color:#5B8DEF}
 .badge.community{background:rgba(158,120,220,.16);color:#b18be6}
+.badge.label{background:rgba(232,163,61,.15);color:var(--amber)}
 .toast{
   position:fixed;left:50%;bottom:calc(var(--safe-bot) + 136px);transform:translateX(-50%) translateY(20px);
   background:var(--card2);border:1px solid var(--line2);color:var(--txt);
@@ -1085,7 +1086,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.94";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.95";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -4423,12 +4424,18 @@ function dbCandidatesToReview(cands, hadGrams){
   return cands.filter(x => { const k = (x.name || "").toLowerCase().slice(0, 44); if (!k || seen.has(k)) return false; seen.add(k); return true; })
     .slice(0, 7).map(x => {
       const base = x.per100, had = hadGrams && hadGrams > 0 ? hadGrams : 100, k = had / 100;
-      const community = x.src === "community";
-      const label = community ? ("Community entry" + (x.uses ? " · used " + n0(x.uses) + "×" : "")) : x.src;
+      const community = x.src === "community", off = x.src === "OpenFoodFacts";
+      // Honest trust signal: USDA = authoritative "official"; OpenFoodFacts = a
+      // community label database ("label", verify against the pack); MIRA's own
+      // shared library = "community".
+      const conf = community ? "community" : off ? "label" : "official";
+      const src = community ? ("Community entry" + (x.uses ? " · used " + n0(x.uses) + "×" : ""))
+        : off ? "OpenFoodFacts (community database)" : x.src;
+      const verify = off ? " Check it against the pack." : " Set how much you had below.";
       return {name: x.name, amount: n0(had) + " g",
         kcal: Math.round(base.kcal * k), p: +(base.p * k).toFixed(1), c: +(base.c * k).toFixed(1), f: +(base.f * k).toFixed(1),
-        conf: community ? "community" : "official",
-        note: label + (x.brand ? " · " + x.brand : "") + " — per 100 g. Set how much you had below.",
+        conf,
+        note: src + (x.brand ? " · " + x.brand : "") + " — per 100 g." + verify,
         basis: 100, unit: "g", pkg: 0, baseMacros: {kcal: num(base.kcal), p: num(base.p), c: num(base.c), f: num(base.f)},
         had: String(had), communityId: community ? x.id : null};
     });
@@ -4620,23 +4627,37 @@ function dishScalePatch(){
 }
 
 // Build a review item (with an inline serving scaler) from an OpenFoodFacts
-// product. Macros are per 100 g/ml; the "how much did you have?" field is
-// pre-filled with one serving when the label states it, plus a whole-pack
-// shortcut when the package quantity is known.
+// product. OFF is a COMMUNITY label database, not an authoritative source, so
+// the result is badged "label" (verify against the pack), never "official".
+// When the label's own per-serving values are present we prefer them (they're
+// transcribed straight from the pack and more reliable than the per-100 g figure).
 function barcodeToReview(code, p){
   const nu = (p && p.nutriments) || {};
-  const kcal = nu["energy-kcal_100g"] != null ? nu["energy-kcal_100g"] : (nu["energy_100g"] ? nu["energy_100g"] / 4.184 : 0);
   const um = String((p && p.serving_size) || "").match(/\b(ml|l|g|kg)\b/i);
   const unit = um && /ml|l/i.test(um[1]) ? "ml" : "g";
-  const base = {kcal: Math.round(num(kcal)), p: num(nu.proteins_100g), c: num(nu.carbohydrates_100g), f: num(nu.fat_100g)};
   const serve = num(p && p.serving_quantity), pkg = num(p && p.product_quantity);
+  // per-serving label values, if the contributor entered them from the pack
+  const kcalServ = nu["energy-kcal_serving"] != null ? nu["energy-kcal_serving"] : (nu["energy_serving"] ? nu["energy_serving"] / 4.184 : null);
+  const usePerServing = serve > 0 && kcalServ != null && num(kcalServ) > 0;
+  let base, basisNote;
+  if (usePerServing){
+    // derive per-100 from the label's per-serving numbers so the scaler stays consistent
+    const s = 100 / serve;
+    base = {kcal: Math.round(num(kcalServ) * s), p: +(num(nu.proteins_serving) * s).toFixed(2),
+      c: +(num(nu.carbohydrates_serving) * s).toFixed(2), f: +(num(nu.fat_serving) * s).toFixed(2)};
+    basisNote = "from the label's per-serving values (" + n0(serve) + " " + unit + ")";
+  } else {
+    const kcal = nu["energy-kcal_100g"] != null ? nu["energy-kcal_100g"] : (nu["energy_100g"] ? nu["energy_100g"] / 4.184 : 0);
+    base = {kcal: Math.round(num(kcal)), p: num(nu.proteins_100g), c: num(nu.carbohydrates_100g), f: num(nu.fat_100g)};
+    basisNote = "per 100 " + unit + ((p && p.serving_size) ? "; serving " + p.serving_size : "");
+  }
   const had = serve > 0 ? serve : 100, k = had / 100;
   return {
     name: [p && p.brands, p && p.product_name].filter(Boolean).join(" — ") || ("Product " + code),
     amount: n0(had) + " " + unit,
     kcal: Math.round(base.kcal * k), p: +(base.p * k).toFixed(1), c: +(base.c * k).toFixed(1), f: +(base.f * k).toFixed(1),
-    conf: "official",
-    note: "OpenFoodFacts " + code + " — per 100 " + unit + ((p && p.serving_size) ? "; serving " + p.serving_size : "") + ".",
+    conf: "label",
+    note: "OpenFoodFacts (community database) " + code + " — " + basisNote + ". Check it against the pack; tap a value to correct it.",
     basis: 100, unit, pkg: pkg > 0 ? pkg : 0, baseMacros: base, had: String(had),
   };
 }
