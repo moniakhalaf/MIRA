@@ -1086,7 +1086,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.98";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.99";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1898,7 +1898,7 @@ const R = {
   workTab: "tasks",    // tasks | notes | focus | kit
   taskForm: {title: "", priority: "med", due: "", dueTime: ""},
   pomo: {mode: null, endsAt: 0, taskId: ""},  // mode: 'work'|'break'|null
-  expForm: {category: "Food", amount: "", note: "", date: ""},
+  expForm: {category: "Groceries", amount: "", note: "", date: ""},
   dateForm: {title: "", date: "", recurring: false},
   readForm: {title: "", kind: "Book"},
   noteId: null,        // note being edited
@@ -6426,8 +6426,18 @@ function billsHTML(){
 }
 
 /* ---------------- Budget ---------------- */
-const EXP_CATS = ["Food","Transport","Housing","Shopping","Health","Bills","Entertainment","Other"];
-const EXP_COLORS = {Food: "#3bb273", Transport: "#4c9fd8", Housing: "#b57edc", Shopping: "#e0864d", Health: "#e06b6b", Bills: "#d8a24c", Entertainment: "#6fb6a8", Other: "#8a94a8"};
+const EXP_CATS = ["Groceries","Dining out","Transport","Rent / housing","Loan","Bills & utilities",
+  "Health / medical","Gym / fitness","Supplements","Shopping","Personal care","Entertainment",
+  "Subscriptions","Education","Travel","Gifts / charity","Family / kids","Savings","Other"];
+const EXP_COLORS = {
+  "Groceries": "#3bb273", "Dining out": "#e0864d", "Transport": "#4c9fd8", "Rent / housing": "#b57edc",
+  "Loan": "#e06b6b", "Bills & utilities": "#d8a24c", "Health / medical": "#e0567a", "Gym / fitness": "#5fb85f",
+  "Supplements": "#7fc4a8", "Shopping": "#d98cc9", "Personal care": "#c9a26b", "Entertainment": "#6fb6a8",
+  "Subscriptions": "#8a7fd8", "Education": "#4cb0c0", "Travel": "#e0a94c", "Gifts / charity": "#d86b8a",
+  "Family / kids": "#6b9fe0", "Savings": "#34c48e", "Other": "#8a94a8",
+  // legacy category names — keep colours so older expenses still render correctly
+  "Food": "#3bb273", "Housing": "#b57edc", "Health": "#e06b6b", "Bills": "#d8a24c",
+};
 function donutSVG(entries, total){
   const cx = 62, cy = 62, r = 46, sw = 17, C = 2 * Math.PI * r;
   let acc = 0, segs = "";
