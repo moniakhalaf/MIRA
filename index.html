@@ -1136,7 +1136,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.101";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.102";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -6482,12 +6482,12 @@ function billsHTML(){
 /* ---------------- Budget ---------------- */
 const EXP_CATS = ["Groceries","Dining out","Transport","Rent / housing","Loan","Bills & utilities",
   "Health / medical","Gym / fitness","Supplements","Shopping","Personal care","Entertainment",
-  "Subscriptions","Education","Travel","Gifts / charity","Family / kids","Savings","Other"];
+  "Subscriptions","Education","Books","Travel","Gifts / charity","Family / kids","Savings","Other"];
 const EXP_COLORS = {
   "Groceries": "#3bb273", "Dining out": "#e0864d", "Transport": "#4c9fd8", "Rent / housing": "#b57edc",
   "Loan": "#e06b6b", "Bills & utilities": "#d8a24c", "Health / medical": "#e0567a", "Gym / fitness": "#5fb85f",
   "Supplements": "#7fc4a8", "Shopping": "#d98cc9", "Personal care": "#c9a26b", "Entertainment": "#6fb6a8",
-  "Subscriptions": "#8a7fd8", "Education": "#4cb0c0", "Travel": "#e0a94c", "Gifts / charity": "#d86b8a",
+  "Subscriptions": "#8a7fd8", "Education": "#4cb0c0", "Books": "#c08a4c", "Travel": "#e0a94c", "Gifts / charity": "#d86b8a",
   "Family / kids": "#6b9fe0", "Savings": "#34c48e", "Other": "#8a94a8",
   // legacy category names — keep colours so older expenses still render correctly
   "Food": "#3bb273", "Housing": "#b57edc", "Health": "#e06b6b", "Bills": "#d8a24c",
