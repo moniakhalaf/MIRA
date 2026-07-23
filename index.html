@@ -311,6 +311,8 @@ body.kb .chatbar{padding-bottom:6px}
 .rec-foot{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
 .rec-foot .btn.sm:first-child{flex:1 1 auto}
 .rec-note{font-size:11.5px;color:var(--txt2);line-height:1.45;margin-top:9px}
+.exp-sum{margin-inline-start:auto;font-size:11.5px;font-weight:500;color:var(--txt3);white-space:nowrap}
+.fold>h3 .exp-sum + .chev{margin-inline-start:10px}
 .tabbar{
   flex:0 0 auto;
   display:flex;justify-content:space-around;
@@ -1170,7 +1172,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.103";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.104";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1989,6 +1991,7 @@ const R = {
   expNewCat: null,    // when non-null, the "add custom category" input is open
   planBusy: false,    // AI savings-plan generation in progress
   saveRecBusy: false, // AI "how much should I save" recommendation in progress
+  expListOpen: false, // this-month expense list starts minimized to save space
   dateForm: {title: "", date: "", recurring: false},
   readForm: {title: "", kind: "Book"},
   noteId: null,        // note being edited
@@ -6629,12 +6632,21 @@ function budgetHTML(){
         <button class="btn sm" style="flex:0 0 auto" onclick="M.expAdd()">Add</button></div>
     </div>
 
-    ${monthExp.length ? `<div class="card"><h3>Recent expenses</h3>
-      ${[...monthExp].sort((a, b) => b.ts - a.ts).slice(0, 12).map(e => `<div class="set-row">
+    ${monthExp.length ? (() => {
+      const monthName = new Date().toLocaleDateString("en", {month: "long"});
+      const sorted = [...monthExp].sort((a, b) => b.ts - a.ts);
+      const shown = sorted.slice(0, 50);
+      return `<div class="card fold ${R.expListOpen ? "open" : ""}">
+      <h3 onclick="M.expListToggle()">${ic("creditCard", 16)} ${monthName} expenses <span class="exp-sum">${monthExp.length} · ${cur(spent)} KWD</span><span class="chev">▶</span></h3>
+      <div class="fold-body">
+      ${shown.map(e => `<div class="set-row">
         <div><div class="k"><span class="bl-dot" style="background:${catColor(e.category)};margin-inline-end:7px"></span>${esc(e.category)}${e.note ? ` · ${esc(e.note)}` : ""}</div><div class="desc">${fmtDate(e.date)}</div></div>
         <span class="end"><b>${cur(e.amount)} KWD</b><button class="btn sm danger" aria-label="Delete" onclick="M.expDel('${e.id}')">${ic("trash", 13)}</button></span>
       </div>`).join("")}
-    </div>` : `<div class="empty-state"><b>No expenses logged this month</b>Add what you spend and MIRA will show where it goes and how to save.</div>`}`;
+      ${sorted.length > shown.length ? `<div class="tiny" style="margin-top:8px;color:var(--txt3);text-align:center">+ ${sorted.length - shown.length} more this month</div>` : ""}
+      </div>
+    </div>`;
+    })() : `<div class="empty-state"><b>No expenses logged this month</b>Add what you spend and MIRA will show where it goes and how to save.</div>`}`;
 }
 
 /* ---------------- Month-by-month trend dashboard ---------------- */
@@ -8198,6 +8210,7 @@ window.M = {
     toast(`Monthly savings target set to ${cur(S.budget.saveTarget)} KWD ✓`);
   },
   planClear(){ S.budget.plan = null; save(); render(); },
+  expListToggle(){ R.expListOpen = !R.expListOpen; render(); },
   // Recommend a realistic monthly savings amount from the user's own multi-month
   // history — returns three tiers (safe / recommended / stretch), not a chat reply.
   async budgetSaveAdvice(){
