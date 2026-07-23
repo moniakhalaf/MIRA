@@ -1086,7 +1086,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.99";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.100";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1547,7 +1547,7 @@ const BLANK = () => ({
   mood: [],           // {id, date, mood(1-5), energy(1-5), note}
   checkins: [],       // {id, date, mood(1-5), factors:[str], gratitude, journal, ts} — daily wellness check-in
   focusLog: [],       // {id, date, minutes, task}
-  budget: {income: 0},
+  budget: {income: 0, cats: []},   // cats: user's own custom expense categories
   expenses: [],       // {id, date, category, amount, note}
   dates: [],          // {id, title, date, recurring}
   reading: [],        // {id, title, kind, status}
@@ -1899,6 +1899,7 @@ const R = {
   taskForm: {title: "", priority: "med", due: "", dueTime: ""},
   pomo: {mode: null, endsAt: 0, taskId: ""},  // mode: 'work'|'break'|null
   expForm: {category: "Groceries", amount: "", note: "", date: ""},
+  expNewCat: null,    // when non-null, the "add custom category" input is open
   dateForm: {title: "", date: "", recurring: false},
   readForm: {title: "", kind: "Book"},
   noteId: null,        // note being edited
@@ -6438,12 +6439,27 @@ const EXP_COLORS = {
   // legacy category names — keep colours so older expenses still render correctly
   "Food": "#3bb273", "Housing": "#b57edc", "Health": "#e06b6b", "Bills": "#d8a24c",
 };
+// Colour for any category — presets from the map above, custom ones get a
+// stable colour derived from their name so they stay consistent across sessions.
+const CAT_PALETTE = ["#3bb273", "#e0864d", "#4c9fd8", "#b57edc", "#e06b6b", "#d8a24c", "#e0567a", "#5fb85f",
+  "#7fc4a8", "#d98cc9", "#c9a26b", "#6fb6a8", "#8a7fd8", "#4cb0c0", "#e0a94c", "#d86b8a", "#6b9fe0", "#34c48e"];
+function catColor(name){
+  if (EXP_COLORS[name]) return EXP_COLORS[name];
+  let h = 0; const s = String(name || "");
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return CAT_PALETTE[h % CAT_PALETTE.length] || "#8a94a8";
+}
+// Preset categories plus the user's own custom ones (kept before "Other").
+function allExpenseCats(){
+  const custom = (S.budget && S.budget.cats) || [];
+  return [...EXP_CATS.filter(c => c !== "Other"), ...custom.filter(c => !EXP_CATS.includes(c)), "Other"];
+}
 function donutSVG(entries, total){
   const cx = 62, cy = 62, r = 46, sw = 17, C = 2 * Math.PI * r;
   let acc = 0, segs = "";
   entries.forEach(([cat, val]) => {
     const frac = total ? val / total : 0, len = frac * C;
-    segs += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${EXP_COLORS[cat] || "#8a94a8"}" stroke-width="${sw}" stroke-dasharray="${len.toFixed(1)} ${(C - len).toFixed(1)}" stroke-dashoffset="${(-acc * C).toFixed(1)}" transform="rotate(-90 ${cx} ${cy})"/>`;
+    segs += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${catColor(cat)}" stroke-width="${sw}" stroke-dasharray="${len.toFixed(1)} ${(C - len).toFixed(1)}" stroke-dashoffset="${(-acc * C).toFixed(1)}" transform="rotate(-90 ${cx} ${cy})"/>`;
     acc += frac;
   });
   return `<svg viewBox="0 0 124 124" class="donut" aria-hidden="true">${segs || `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--line2)" stroke-width="${sw}"/>`}
@@ -6482,7 +6498,7 @@ function budgetHTML(){
       <h3>${ic("wallet", 16)} Where it goes</h3>
       <div class="budget-dash">
         ${donutSVG(entries, totalOut)}
-        <div class="budget-legend">${entries.map(([c, v]) => `<div class="bl-row"><span class="bl-dot" style="background:${EXP_COLORS[c] || "#8a94a8"}"></span><span class="bl-c">${esc(c)}</span><span class="bl-v">${cur(v)}<span class="bl-p">${totalOut ? Math.round(v / totalOut * 100) : 0}%</span></span></div>`).join("")}</div>
+        <div class="budget-legend">${entries.map(([c, v]) => `<div class="bl-row"><span class="bl-dot" style="background:${catColor(c)}"></span><span class="bl-c">${esc(c)}</span><span class="bl-v">${cur(v)}<span class="bl-p">${totalOut ? Math.round(v / totalOut * 100) : 0}%</span></span></div>`).join("")}</div>
       </div>
       ${top ? `<div class="budget-top">${ic("trend", 13)} Most goes to <b>${esc(top[0])}</b> — ${cur(top[1])} KWD (${totalOut ? Math.round(top[1] / totalOut * 100) : 0}% of spending)</div>` : ""}
     </div>` : ""}
@@ -6504,16 +6520,25 @@ function budgetHTML(){
     <div class="card">
       <h3>${ic("plus", 16)} Add expense</h3>
       <div class="grid2" style="margin-bottom:10px">
-        <div class="field"><label>Category</label><select onchange="R.expForm.category=this.value">${EXP_CATS.map(c => `<option ${f.category === c ? "selected" : ""}>${c}</option>`).join("")}</select></div>
+        <div class="field"><label>Category</label>
+          <div class="row" style="gap:6px">
+            <select style="flex:1" onchange="R.expForm.category=this.value">${allExpenseCats().map(c => `<option ${f.category === c ? "selected" : ""}>${esc(c)}</option>`).join("")}</select>
+            <button class="btn sm sec" style="flex:0 0 auto" aria-label="Add a custom category" onclick="M.expCatNewToggle()">${ic(R.expNewCat != null ? "x" : "plus", 15)}</button>
+          </div></div>
         <div class="field"><label>Amount (KWD)</label><input type="number" inputmode="decimal" value="${esc(f.amount)}" oninput="R.expForm.amount=this.value"></div>
       </div>
+      ${R.expNewCat != null ? `<div class="row" style="margin-bottom:10px">
+          <input id="newCatInput" value="${esc(R.expNewCat)}" placeholder="New category — e.g. Tabby, Mob bill, DBA payment" dir="auto" oninput="R.expNewCat=this.value" onkeydown="if(event.key==='Enter')M.expCatAdd()">
+          <button class="btn sm" style="flex:0 0 auto" onclick="M.expCatAdd()">Add</button>
+        </div>
+        ${((S.budget && S.budget.cats) || []).length ? `<div class="rc-tags" style="margin:-4px 2px 10px">${(S.budget.cats).map((c, i) => `<span class="rc-tag" style="display:inline-flex;align-items:center;gap:5px"><span class="bl-dot" style="background:${catColor(c)}"></span>${esc(c)} <button aria-label="Remove ${esc(c)}" style="background:none;color:var(--txt3);font-weight:700" onclick="M.expCatDel(${i})">✕</button></span>`).join("")}</div>` : ""}` : ""}
       <div class="row"><input value="${esc(f.note)}" oninput="R.expForm.note=this.value" placeholder="Note (optional)" dir="auto">
         <button class="btn sm" style="flex:0 0 auto" onclick="M.expAdd()">Add</button></div>
     </div>
 
     ${monthExp.length ? `<div class="card"><h3>Recent expenses</h3>
       ${[...monthExp].sort((a, b) => b.ts - a.ts).slice(0, 12).map(e => `<div class="set-row">
-        <div><div class="k"><span class="bl-dot" style="background:${EXP_COLORS[e.category] || "#8a94a8"};margin-inline-end:7px"></span>${esc(e.category)}${e.note ? ` · ${esc(e.note)}` : ""}</div><div class="desc">${fmtDate(e.date)}</div></div>
+        <div><div class="k"><span class="bl-dot" style="background:${catColor(e.category)};margin-inline-end:7px"></span>${esc(e.category)}${e.note ? ` · ${esc(e.note)}` : ""}</div><div class="desc">${fmtDate(e.date)}</div></div>
         <span class="end"><b>${cur(e.amount)} KWD</b><button class="btn sm danger" aria-label="Delete" onclick="M.expDel('${e.id}')">${ic("trash", 13)}</button></span>
       </div>`).join("")}
     </div>` : `<div class="empty-state"><b>No expenses logged this month</b>Add what you spend and MIRA will show where it goes and how to save.</div>`}`;
@@ -7771,6 +7796,22 @@ window.M = {
     buzz(); save(); render();
   },
   expDel(id){ S.expenses = S.expenses.filter(e => e.id !== id); save(); render(); },
+  /* ---- custom expense categories ---- */
+  expCatNewToggle(){ R.expNewCat = R.expNewCat == null ? "" : null; render(); if (R.expNewCat != null) setTimeout(() => { const el = $("#newCatInput"); if (el) el.focus(); }, 60); },
+  expCatAdd(){
+    const name = (R.expNewCat || "").trim();
+    if (!name){ const el = $("#newCatInput"); if (el) el.focus(); return; }
+    S.budget.cats = S.budget.cats || [];
+    if (!S.budget.cats.includes(name) && !EXP_CATS.includes(name)) S.budget.cats.push(name);
+    R.expForm.category = name; R.expNewCat = null; save(); render();
+    toast(`Added category "${name}" ✓`);
+  },
+  expCatDel(i){
+    const c = (S.budget.cats || [])[i]; if (!c) return;
+    S.budget.cats.splice(i, 1);
+    if (R.expForm.category === c) R.expForm.category = "Groceries";
+    save(); render();
+  },
   async budgetAdvise(){
     if (!S.settings.apiKey){ toast("Add your API key in Settings first."); R.tab = "set"; render(); return; }
     const ym = todayStr().slice(0, 7);
