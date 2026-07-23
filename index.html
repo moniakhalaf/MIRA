@@ -954,6 +954,9 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
 .grid3m{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .grid4 .field,.grid2 .field,.grid3m .field{margin-bottom:0}
 .review-item{background:var(--bg2);border:1px solid var(--line2);border-radius:12px;padding:12px;margin-bottom:10px}
+.rv-warn{display:flex;gap:8px;align-items:flex-start;background:color-mix(in srgb,var(--amber) 13%,transparent);border:1px solid color-mix(in srgb,var(--amber) 40%,transparent);border-radius:10px;padding:9px 11px;margin-bottom:9px;font-size:12px;line-height:1.5;color:var(--txt)}
+.rv-warn svg{flex:0 0 auto;color:var(--amber);margin-top:1px}
+.rv-warn b{color:var(--amber)}
 .review-item .warn{color:var(--amber);font-size:12.5px;margin-top:6px}
 .review-item .err{color:var(--red);font-size:12.5px;margin-top:6px}
 .rv-scale{background:var(--gold-soft);border:1px solid var(--line2);border-radius:10px;padding:10px 11px;margin-bottom:9px;display:flex;flex-wrap:wrap;align-items:center;gap:8px}
@@ -1172,7 +1175,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.106";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.107";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1269,6 +1272,7 @@ const I = {
   trash: '<polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
   database: '<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>',
   trend: '<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>',
+  alert: '<path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
 };
 const ic = (n, s = 18) => `<svg class="svgi" width="${s}" height="${s}" viewBox="0 0 24 24">${I[n]}</svg>`;
 
@@ -4209,6 +4213,7 @@ function reviewHTML(){
           <input value="${esc(it.name)}" dir="auto" oninput="reviewItems[${i}].name=this.value">
           <input id="rvAmt${i}" value="${esc(it.amount || "")}" placeholder="amount" style="flex:0 0 96px" oninput="reviewItems[${i}].amount=this.value">
         </div>
+        ${it.conf === "label" ? `<div class="rv-warn">${ic("alert", 15)}<span><b>Open-source data — double-check the pack.</b> These numbers come from OpenFoodFacts, a free community database that anyone can edit, so they can be out of date or wrong. Compare them with the label and correct any value before saving — MIRA will remember your fix.</span></div>` : ""}
         ${it.basis && it.unit ? `<div class="rv-scale">
           <label>How much did you have?</label>
           <input id="rvHad${i}" type="number" inputmode="decimal" value="${esc(it.had)}" oninput="M.reviewScale(${i}, this.value)">
