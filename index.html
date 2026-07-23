@@ -1086,7 +1086,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.97";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.98";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1333,6 +1333,7 @@ const TR = {
     "USDA food-database key (optional)":"مفتاح قاعدة بيانات USDA (اختياري)",
     "Community food database":"قاعدة بيانات الطعام المجتمعية","Supabase project URL":"رابط مشروع Supabase","Supabase anon key":"مفتاح Supabase العام (anon)",
     "Confirm your lookup below":"أكّد نتيجة البحث بالأسفل",
+    "Estimated maintenance":"سعرات الصيانة المُقدّرة","kcal/day upkeep":"سعرة/يوم للصيانة","Avg intake":"متوسط الاستهلاك","kg/week":"كغ/أسبوع","days logged":"أيام مُسجّلة",
   },
   es: {
     "Home":"Inicio","Chat":"Chat","Insights":"Análisis","Settings":"Ajustes",
@@ -1399,6 +1400,7 @@ const TR = {
     "USDA food-database key (optional)":"Clave de base de datos USDA (opcional)",
     "Community food database":"Base de datos de alimentos comunitaria","Supabase project URL":"URL del proyecto Supabase","Supabase anon key":"Clave anon de Supabase",
     "Confirm your lookup below":"Confirma tu búsqueda abajo",
+    "Estimated maintenance":"Mantenimiento estimado","kcal/day upkeep":"kcal/día mantenimiento","Avg intake":"Consumo medio","kg/week":"kg/semana","days logged":"días registrados",
   },
   fr: {
     "Home":"Accueil","Chat":"Chat","Insights":"Analyses","Settings":"Réglages",
@@ -1465,6 +1467,7 @@ const TR = {
     "USDA food-database key (optional)":"Clé de base de données USDA (facultatif)",
     "Community food database":"Base de données alimentaire communautaire","Supabase project URL":"URL du projet Supabase","Supabase anon key":"Clé anon Supabase",
     "Confirm your lookup below":"Confirmez votre recherche ci-dessous",
+    "Estimated maintenance":"Maintien estimé","kcal/day upkeep":"kcal/jour entretien","Avg intake":"Apport moyen","kg/week":"kg/semaine","days logged":"jours enregistrés",
   },
 };
 // Interface language: null in "Match what I write" mode (chrome stays English).
@@ -2623,6 +2626,7 @@ function trendsHTML(){
 
   return `
     ${weekReviewCardHTML()}
+    ${expenditureCardHTML()}
     ${weightProjectionHTML()}
     ${patternsCardHTML()}
     <div class="ins-range-row"><span class="tiny" style="color:var(--txt2)">${tr("Time range")}</span>${insRangeBarHTML()}</div>
@@ -2667,6 +2671,53 @@ function projCard(msg, goal, w0, perWk, weeks){
     </div>
     <div class="wr-note">${ic("check", 13)} ${esc(msg)}</div>
     <div class="tiny" style="margin-top:9px;color:var(--txt2)">Projected from your own logged weight trend, not a guarantee — real progress varies with training, sleep, water and adherence. Set your goal weight in Settings → Daily targets.</div>
+  </div>`;
+}
+
+// Dynamic energy expenditure (MacroFactor-style): estimate real maintenance
+// calories from the user's OWN data — average logged intake minus the energy
+// implied by their weight trend (~7,700 kcal per kg). No formula, no guess:
+// it's the honest arithmetic of energy balance over their logged window.
+const KCAL_PER_KG = 7700;
+function expenditureEstimate(){
+  const from = new Date(Date.now() - 27 * 864e5).toLocaleDateString("en-CA");   // last 4 weeks
+  const wp = [...(S.inbody || [])].filter(e => e.weight && e.date >= from)
+    .map(e => ({t: new Date(e.date + "T00:00:00").getTime() / 864e5, v: +e.weight, date: e.date}))
+    .sort((a, b) => a.t - b.t);
+  if (wp.length < 2) return null;
+  const spanDays = wp[wp.length - 1].t - wp[0].t;
+  if (spanDays < 10) return null;                       // need a couple of weeks of movement
+  // least-squares weight slope (kg/day) — robust to daily water noise
+  const n = wp.length, mt = wp.reduce((a, p) => a + p.t, 0) / n, mv = wp.reduce((a, p) => a + p.v, 0) / n;
+  let numr = 0, den = 0; wp.forEach(p => { numr += (p.t - mt) * (p.v - mv); den += (p.t - mt) * (p.t - mt); });
+  const slope = den ? numr / den : 0;
+  // average intake over days WITH food logged, inside the weight window
+  const days = [];
+  for (let d = new Date(wp[0].date + "T00:00:00"), end = new Date(wp[wp.length - 1].date + "T00:00:00"); d <= end; d.setDate(d.getDate() + 1))
+    days.push(d.toLocaleDateString("en-CA"));
+  const intakes = days.map(d => dayTotals(d).kcal).filter(k => k > 0);
+  if (intakes.length < 7) return null;                  // too few logged days to be meaningful
+  const avgIntake = intakes.reduce((a, b) => a + b, 0) / intakes.length;
+  const tdee = avgIntake - slope * KCAL_PER_KG;
+  if (!(tdee > 600) || tdee > 8000) return null;        // implausible → withhold rather than mislead
+  return {tdee: Math.round(tdee), avgIntake: Math.round(avgIntake), foodDays: intakes.length,
+    spanDays: Math.round(spanDays), perWk: +(slope * 7).toFixed(2), thin: intakes.length < 12 || spanDays < 17};
+}
+function expenditureCardHTML(){
+  const e = expenditureEstimate();
+  if (!e) return "";
+  const tg = S.settings.targets || {};
+  const dir = e.perWk < -0.05 ? "losing" : e.perWk > 0.05 ? "gaining" : "holding steady at";
+  return `<div class="card">
+    <h3>${ic("flame", 16)} ${tr("Estimated maintenance")} <span class="badge estimate" style="margin-inline-start:auto">${tr("estimate")}</span></h3>
+    <div class="rev-grid" style="margin-bottom:10px">
+      <div class="rev-stat"><div class="rv">${n0(e.tdee)}</div><div class="rl">${tr("kcal/day upkeep")}</div></div>
+      <div class="rev-stat"><div class="rv">${n0(e.avgIntake)}</div><div class="rl">${tr("Avg intake")}</div></div>
+      <div class="rev-stat"><div class="rv">${e.perWk > 0 ? "+" : ""}${n1(e.perWk)}</div><div class="rl">${tr("kg/week")}</div></div>
+      <div class="rev-stat"><div class="rv">${e.foodDays}</div><div class="rl">${tr("days logged")}</div></div>
+    </div>
+    <div class="muted" style="font-size:12.5px">Worked out from your own data: over ~${e.spanDays} days you've been ${dir} ${Math.abs(e.perWk)} kg/week while averaging <b>${n0(e.avgIntake)} kcal</b> on logged days — so your body is burning about <b>${n0(e.tdee)} kcal/day</b>.${tg.kcal ? ` Your current target is ${n0(tg.kcal)} kcal.` : ""}</div>
+    <div class="tiny" style="margin-top:7px;color:var(--txt2)">${e.thin ? "Early estimate — it sharpens as you log more. " : ""}Assumes your food logging is complete, and ~7,700 kcal per kg of weight change. It's an honest estimate from your own trend, not a lab measurement.</div>
   </div>`;
 }
 // Honest cross-signal observations + streaks — associations from the user's own
