@@ -277,6 +277,40 @@ body.kb .chatbar{padding-bottom:6px}
 .plan-foot .btn.sm{flex:1 1 auto}.plan-foot .btn.sm.sec[aria-label]{flex:0 0 auto}
 .plan-note{font-size:12px;color:var(--txt2);line-height:1.5;margin-top:11px;padding:9px 11px;background:var(--bg2);border-radius:10px}
 .plan-src{font-size:10.5px;color:var(--txt3);line-height:1.45;margin-top:9px}
+
+/* ---- Month-by-month trend ---- */
+.mt-svg{width:100%;height:auto;display:block;margin:6px 0 2px;overflow:visible}
+.mt-inc{stroke:var(--line2);stroke-width:1;stroke-dasharray:3 4}
+.mt-v{font-size:10px;font-weight:700;font-family:inherit}
+.mt-x{font-size:11px;fill:var(--txt2);font-family:inherit}
+.mt-legend{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-top:6px}
+.mt-key{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--txt2)}
+.mt-sw{width:11px;height:11px;border-radius:3px;flex:0 0 auto}
+.mt-note{color:var(--txt3)}
+.mt-stats{display:flex;gap:8px;margin-top:12px}
+.mt-stat{flex:1;background:var(--bg2);border-radius:11px;padding:11px 8px;text-align:center}
+.mt-sv{font-size:17px;font-weight:700;color:var(--acc)}
+.mt-sl{font-size:11px;color:var(--txt2);margin-top:2px}
+
+/* ---- AI "how much should I save?" ---- */
+.rec-cta{margin-top:10px;width:100%}
+.rec-box{margin-top:12px;padding:13px;background:var(--card2);border:1px solid var(--line2);border-radius:13px}
+.rec-box.busy{display:flex;gap:9px;align-items:center;font-size:12.5px;color:var(--txt2);line-height:1.4}
+.rec-box.busy svg{color:var(--acc);flex:0 0 auto}
+.rec-hd{font-size:12px;color:var(--txt2);display:flex;align-items:center;gap:6px;margin-bottom:10px}
+.rec-hd svg{color:var(--acc)}
+.rec-tiers{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.rec-tier{padding:12px 6px;border-radius:11px;text-align:center;background:var(--bg2);border:1px solid var(--line2);cursor:pointer;color:var(--txt);transition:border-color .15s,transform .1s}
+.rec-tier:active{transform:scale(.97)}
+.rec-tier.cls-rec{background:color-mix(in srgb,var(--acc) 12%,var(--bg2));border-color:var(--acc)}
+.rt-v{font-size:18px;font-weight:800;color:var(--acc)}
+.rec-tier.cls-safe .rt-v{color:var(--green)}
+.rec-tier.cls-stretch .rt-v{color:var(--amber)}
+.rt-l{font-size:11px;color:var(--txt2);margin-top:3px}
+.rec-why{font-size:12.5px;color:var(--txt);line-height:1.5;margin-top:11px}
+.rec-foot{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.rec-foot .btn.sm:first-child{flex:1 1 auto}
+.rec-note{font-size:11.5px;color:var(--txt2);line-height:1.45;margin-top:9px}
 .tabbar{
   flex:0 0 auto;
   display:flex;justify-content:space-around;
@@ -1136,7 +1170,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.102";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.103";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1686,6 +1720,7 @@ function migrateChats(){
   if (S.budget.goalAmount === undefined) S.budget.goalAmount = 0;
   if (!Array.isArray(S.budget.cats)) S.budget.cats = [];
   if (S.budget.plan === undefined) S.budget.plan = null;   // AI savings plan {ts, headline, moves:[…], note}
+  if (S.budget.saveRec === undefined) S.budget.saveRec = null;   // AI "how much to save" rec {ts, recommend, conservative, stretch, rationale, note}
   if (!Array.isArray(S.expenses)) S.expenses = [];
   if (!Array.isArray(S.dates)) S.dates = [];
   if (!Array.isArray(S.reading)) S.reading = [];
@@ -1953,6 +1988,7 @@ const R = {
   expForm: {category: "Groceries", amount: "", note: "", date: ""},
   expNewCat: null,    // when non-null, the "add custom category" input is open
   planBusy: false,    // AI savings-plan generation in progress
+  saveRecBusy: false, // AI "how much should I save" recommendation in progress
   dateForm: {title: "", date: "", recurring: false},
   readForm: {title: "", kind: "Book"},
   noteId: null,        // note being edited
@@ -6556,9 +6592,12 @@ function budgetHTML(){
       ${top ? `<div class="budget-top">${ic("trend", 13)} Most goes to <b>${esc(top[0])}</b> — ${cur(top[1])} KWD (${totalOut ? Math.round(top[1] / totalOut * 100) : 0}% of spending)</div>` : ""}
     </div>` : ""}
 
+    ${monthTrendHTML()}
+
     <div class="card">
       <h3>${ic("target", 16)} Savings plan</h3>
       <div class="field"><label>Save each month (KWD)</label><input type="number" inputmode="decimal" value="${saveT || ""}" placeholder="${Math.max(0, Math.round(net))}" oninput="S.budget.saveTarget=num(this.value);save()"></div>
+      ${saveRecHTML(net, income)}
       <div class="save-proj">
         ${[3, 6, 12].map(m => `<div class="sp-cell"><div class="sp-v">${cur(saveT * m)}</div><div class="sp-l">${m === 12 ? "1 year" : m + " months"}</div></div>`).join("")}
       </div>
@@ -6596,6 +6635,117 @@ function budgetHTML(){
         <span class="end"><b>${cur(e.amount)} KWD</b><button class="btn sm danger" aria-label="Delete" onclick="M.expDel('${e.id}')">${ic("trash", 13)}</button></span>
       </div>`).join("")}
     </div>` : `<div class="empty-state"><b>No expenses logged this month</b>Add what you spend and MIRA will show where it goes and how to save.</div>`}`;
+}
+
+/* ---------------- Month-by-month trend dashboard ---------------- */
+// Last n calendar months (oldest→newest) with spending, current fixed bills,
+// income and what was left. Income/bills use the current settings — the only
+// figures we have — and the card says so, so the numbers stay honest.
+function monthlyTrend(n){
+  const income = num(S.budget.income);
+  const billsMo = S.bills.reduce((a, b) => a + num(b.amount) * (BILL_CYCLES[b.cycle] || BILL_CYCLES.monthly).perMonth, 0);
+  const now = new Date(); now.setDate(1);
+  const rows = [];
+  for (let i = n - 1; i >= 0; i--){
+    const dt = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const ym = dt.toLocaleDateString("en-CA").slice(0, 7);
+    const spent = S.expenses.filter(e => e.date.slice(0, 7) === ym).reduce((a, e) => a + num(e.amount), 0);
+    const out = spent + billsMo;
+    const saved = income - out;
+    rows.push({ym, label: dt.toLocaleDateString("en", {month: "short"}),
+      spent, bills: billsMo, out, income, saved, rate: income > 0 ? Math.round(saved / income * 100) : null});
+  }
+  return rows;
+}
+function monthTrendSVG(rows){
+  const n = rows.length, colW = 48, H = 132, topPad = 10, axisY = 100;
+  const W = colW * n, area = axisY - topPad, bw = 24;
+  const income = rows[0].income, useInc = income > 0;
+  const maxV = Math.max(1, useInc ? Math.max(income, ...rows.map(r => r.out)) : Math.max(...rows.map(r => r.spent)));
+  const h = v => Math.max(0, (v / maxV) * area);
+  let g = "";
+  // faint income baseline
+  if (useInc){ const y = axisY - h(income); g += `<line x1="0" y1="${y.toFixed(1)}" x2="${W}" y2="${y.toFixed(1)}" class="mt-inc"/>`; }
+  rows.forEach((r, i) => {
+    const cx = i * colW + colW / 2, x = cx - bw / 2;
+    if (useInc){
+      const spH = h(Math.min(r.out, maxV)), svH = r.saved > 0 ? h(r.saved) : 0;
+      g += `<rect x="${x}" y="${(axisY - spH).toFixed(1)}" width="${bw}" height="${spH.toFixed(1)}" rx="4" fill="var(--acc)"/>`;
+      if (svH > 0.5) g += `<rect x="${x}" y="${(axisY - spH - svH).toFixed(1)}" width="${bw}" height="${svH.toFixed(1)}" rx="4" fill="var(--green)"/>`;
+      if (r.saved < 0) g += `<rect x="${x}" y="${(axisY - h(maxV)).toFixed(1)}" width="${bw}" height="3.5" rx="1.5" fill="var(--red)"/>`;
+      if (r.rate != null) g += `<text x="${cx}" y="${(axisY - spH - svH - 5).toFixed(1)}" text-anchor="middle" class="mt-v" fill="${r.saved >= 0 ? "var(--green)" : "var(--red)"}">${r.rate}%</text>`;
+    } else {
+      const bh = h(r.spent);
+      g += `<rect x="${x}" y="${(axisY - bh).toFixed(1)}" width="${bw}" height="${bh.toFixed(1)}" rx="4" fill="var(--acc)"/>`;
+      g += `<text x="${cx}" y="${(axisY - bh - 5).toFixed(1)}" text-anchor="middle" class="mt-v" fill="var(--txt2)">${cur(r.spent)}</text>`;
+    }
+    g += `<text x="${cx}" y="${axisY + 16}" text-anchor="middle" class="mt-x">${esc(r.label)}</text>`;
+  });
+  return `<svg viewBox="0 0 ${W} ${H}" class="mt-svg" preserveAspectRatio="xMidYMid meet" aria-hidden="true">${g}</svg>`;
+}
+function monthTrendHTML(){
+  const all = monthlyTrend(6);
+  const firstActive = all.findIndex(r => r.spent > 0);
+  if (firstActive < 0) return "";
+  const rows = all.slice(firstActive);   // drop leading months with no data (before they started logging)
+  const active = rows.filter(r => r.spent > 0);
+  if (active.length < 2) return "";   // need at least two months with data to show a trend
+  const income = rows[0].income, useInc = income > 0;
+  const avgSpent = rows.reduce((a, r) => a + r.out, 0) / rows.length;
+  const savedRows = rows.filter(r => r.income > 0);
+  const avgSaved = savedRows.length ? savedRows.reduce((a, r) => a + r.saved, 0) / savedRows.length : null;
+  // direction: compare the last two active months' spending
+  const last = active[active.length - 1], prev = active[active.length - 2];
+  const dSpend = last.out - prev.out;
+  const dir = Math.abs(dSpend) < 1 ? "about the same as" : dSpend < 0 ? "less than" : "more than";
+  const dirCol = dSpend <= 0 ? "var(--green)" : "var(--amber)";
+  return `<div class="card mt-card">
+    <h3>${ic("trend", 16)} Month-by-month</h3>
+    ${monthTrendSVG(rows)}
+    <div class="mt-legend">
+      <span class="mt-key"><span class="mt-sw" style="background:var(--acc)"></span>Spent</span>
+      ${useInc ? `<span class="mt-key"><span class="mt-sw" style="background:var(--green)"></span>Saved</span><span class="mt-key mt-note">bar = your income; % = savings rate</span>` : `<span class="mt-key mt-note">bars = total spent</span>`}
+    </div>
+    <div class="mt-stats">
+      <div class="mt-stat"><div class="mt-sv">${cur(avgSpent)}</div><div class="mt-sl">avg out / month</div></div>
+      ${avgSaved != null ? `<div class="mt-stat"><div class="mt-sv" style="color:${avgSaved >= 0 ? "var(--green)" : "var(--red)"}">${cur(avgSaved)}</div><div class="mt-sl">avg saved / month</div></div>` : ""}
+    </div>
+    <div class="budget-top" style="margin-top:11px">${ic("trend", 13)} <span>This month you spent <b style="color:${dirCol}">${dir}</b> last month${useInc ? "" : ""}.</span></div>
+    ${useInc ? "" : `<div class="tiny" style="margin-top:7px;color:var(--txt2)">Add your monthly income above to see your savings rate on each bar.</div>`}
+  </div>`;
+}
+
+/* ---------------- AI: how much should I save? ---------------- */
+function saveRecHTML(net, income){
+  const rec = S.budget.saveRec;
+  if (R.saveRecBusy){
+    return `<div class="rec-box busy">${ic("wallet", 15)} <span>MIRA is working out a realistic amount from your last few months…</span></div>`;
+  }
+  if (!rec){
+    const active = monthlyTrend(6).filter(r => r.spent > 0).length;
+    const canRun = active >= 1 && income > 0;
+    return `<button class="btn sec rec-cta" onclick="M.budgetSaveAdvice()" ${canRun ? "" : "disabled"}>${ic("trend", 15)} Recommend how much I should save</button>
+      ${canRun ? "" : `<div class="tiny" style="margin-top:6px;color:var(--txt2)">Add your income and log a few expenses first.</div>`}`;
+  }
+  const tiers = [
+    ["Safe", rec.conservative, "cls-safe"],
+    ["Recommended", rec.recommend, "cls-rec"],
+    ["Stretch", rec.stretch, "cls-stretch"],
+  ].filter(t => t[1] != null && num(t[1]) > 0);
+  return `<div class="rec-box">
+    <div class="rec-hd">${ic("trend", 14)} MIRA's suggestion from your last months</div>
+    <div class="rec-tiers">
+      ${tiers.map(([lbl, val, cls]) => `<button class="rec-tier ${cls}" onclick="M.planApplyTarget(${num(val)})">
+        <div class="rt-v">${cur(num(val))}</div><div class="rt-l">${lbl}</div></button>`).join("")}
+    </div>
+    ${rec.rationale ? `<div class="rec-why" dir="auto">${esc(rec.rationale)}</div>` : ""}
+    <div class="rec-foot">
+      <button class="btn sm" onclick="M.planApplyTarget(${num(rec.recommend)})">${ic("check", 14)} Use ${cur(num(rec.recommend))} as my target</button>
+      <button class="btn sm sec" onclick="M.budgetSaveAdvice()">${ic("trend", 13)} Redo</button>
+    </div>
+    ${rec.note ? `<div class="rec-note">${esc(rec.note)}</div>` : ""}
+    <div class="plan-src" style="margin-top:8px">AI estimate from your own numbers — a guide, not a rule. Tap a tier to make it your target.</div>
+  </div>`;
 }
 
 /* ---------------- Smart savings plan (AI, structured — not chat) ---------------- */
@@ -8048,6 +8198,61 @@ window.M = {
     toast(`Monthly savings target set to ${cur(S.budget.saveTarget)} KWD ✓`);
   },
   planClear(){ S.budget.plan = null; save(); render(); },
+  // Recommend a realistic monthly savings amount from the user's own multi-month
+  // history — returns three tiers (safe / recommended / stretch), not a chat reply.
+  async budgetSaveAdvice(){
+    if (!S.settings.apiKey){ toast("Add your API key in Settings first."); R.tab = "set"; render(); return; }
+    const income = num(S.budget.income);
+    if (income <= 0){ toast("Add your monthly income first."); return; }
+    const rows = monthlyTrend(6);
+    const active = rows.filter(r => r.spent > 0);
+    if (!active.length){ toast("Log a few expenses first."); return; }
+    const billsMo = S.bills.reduce((a, b) => a + num(b.amount) * (BILL_CYCLES[b.cycle] || BILL_CYCLES.monthly).perMonth, 0);
+    const bills = S.bills.length
+      ? S.bills.map(b => `- ${b.name}: ${cur(num(b.amount) * (BILL_CYCLES[b.cycle] || BILL_CYCLES.monthly).perMonth)} KWD/month`).join("\n")
+      : "- (none listed)";
+    const hist = active.map(r => `- ${r.ym}: spent ${cur(r.out)} KWD (incl. fixed), left ${cur(r.saved)} KWD`).join("\n");
+    const leftVals = active.map(r => r.saved);
+    const avgLeft = leftVals.reduce((a, v) => a + v, 0) / leftVals.length;
+    const goal = num(S.budget.goalAmount) > 0
+      ? `\nGoal: saving toward "${S.budget.goalName || "a goal"}" costing ${cur(S.budget.goalAmount)} KWD.` : "";
+
+    const system = "You are a careful personal-finance coach for someone in Kuwait (currency KWD). "
+      + "Given their monthly income, fixed recurring payments, and how much was left over each month, recommend a REALISTIC amount they should aim to save every month. "
+      + "Base it on what they actually have left, allowing a small buffer for the variability between months — never recommend more than they typically have left. Be honest and encouraging, not preachy. "
+      + "Give three tiers in KWD: a safe/easy amount they'll almost always manage, a recommended target, and a stretch amount for good months. safe < recommended < stretch, and stretch must not exceed their best realistic leftover. "
+      + "Reply with ONLY a JSON object, no prose, no code fence, exactly:\n"
+      + '{"conservative":<KWD>,"recommend":<KWD>,"stretch":<KWD>,"rationale":"one or two short sentences on why, referring to their numbers","note":"one honest caveat"}\n'
+      + "Numbers only for the amounts (no text, no currency symbol).";
+    const user = `Currency: KWD (Kuwait).\n`
+      + `Monthly income: ${cur(income)} KWD\n`
+      + `Fixed recurring payments:\n${bills}\n(total fixed: ${cur(billsMo)} KWD/month)\n`
+      + `What was left over each month recently:\n${hist}\n`
+      + `Average left over: ${cur(avgLeft)} KWD/month${goal}\n\n`
+      + `How much should I aim to save each month?`;
+
+    R.saveRecBusy = true; render();
+    try {
+      const reply = await llmJsonCall(system, user, 700);
+      let obj; try { obj = tryParseJson(reply); } catch (e) { obj = (salvageObjects(reply)[0] || null); }
+      if (!obj || obj.recommend == null) throw new Error("empty");
+      let c = Math.max(0, Math.round(num(obj.conservative))),
+          r = Math.max(0, Math.round(num(obj.recommend))),
+          s = Math.max(0, Math.round(num(obj.stretch)));
+      // keep the tiers sensibly ordered even if the model wobbles
+      if (r < c) [c, r] = [r, c];
+      if (s < r) s = r;
+      S.budget.saveRec = {
+        ts: Date.now(), conservative: c, recommend: r, stretch: s,
+        rationale: obj.rationale ? String(obj.rationale).slice(0, 240) : "",
+        note: obj.note ? String(obj.note).slice(0, 200) : "",
+      };
+      R.saveRecBusy = false; buzz(); save(); render();
+    } catch (e) {
+      R.saveRecBusy = false; render();
+      toast(e.status === 401 || e.status === 403 ? "Your API key was rejected — check it in Settings." : "Couldn't work out a number just now — please try again.", 4200);
+    }
+  },
   /* ---- important dates ---- */
   dateAdd(){
     if (!R.dateForm.title.trim() || !R.dateForm.date){ toast("Add a title and date."); return; }
