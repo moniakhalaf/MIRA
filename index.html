@@ -1172,7 +1172,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.105";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.106";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1639,6 +1639,7 @@ const BLANK = () => ({
   reading: [],        // {id, title, kind, status}
   water: {},          // date -> glasses
   barcodeFixes: {},   // code -> {name, unit, serving, per100:{kcal,p,c,f}, ts} — user's own corrected barcode values
+  foodFixes: {},      // name-key -> {name, per100:{kcal,p,c,f}, serving, ts} (or {name, amount, macros}) — user's own corrected searched-food values
   inbody: [],         // {id, date, weight, score, bfm, smm, vfa, pa}
 });
 
@@ -1741,6 +1742,8 @@ function migrateChats(){
   if (!Array.isArray(S.foods)) S.foods = [];
   if (!Array.isArray(S.savedFoods)) S.savedFoods = [];
   if (!Array.isArray(S.inbody)) S.inbody = [];
+  if (!S.barcodeFixes || typeof S.barcodeFixes !== "object") S.barcodeFixes = {};
+  if (!S.foodFixes || typeof S.foodFixes !== "object") S.foodFixes = {};
   const rec = a => a.filter(x => x && typeof x === "object");
   const str = (v, d) => (typeof v === "string" && v) ? v : (v == null ? d : String(v));
   S.tasks = rec(S.tasks).map(x => ({...x, title: str(x.title, "Untitled task")}));
@@ -4619,6 +4622,16 @@ async function findMacros(){
   const hadGrams = amountToGrams(userAmount) != null ? amountToGrams(userAmount) : (cg ? cg.grams : null);
   // strip the leading count from the DB search term so USDA matches the food itself
   const searchName = cg && parseCount(name) ? parseCount(name).rest : name;
+  // 0) Your own past correction for this food wins — like a saved barcode. No
+  //    network needed; scales to whatever amount you typed this time.
+  const ffx = (S.foodFixes || {})[foodFixKey(searchName)];
+  if (ffx){
+    reviewItems = [foodFixToReview(ffx, hadGrams)];
+    tagSearchOrigin(reviewItems, searchName);
+    render();
+    const z = $("#reviewZone"); if (z) z.scrollIntoView({behavior: "smooth", block: "nearest"});
+    return;
+  }
   findBusy = true; render();
   // 1) Authoritative databases first (MyFitnessPal-style): search USDA + OpenFoodFacts
   //    in parallel, show the single most-trusted match with a serving scaler. Either
@@ -4634,6 +4647,7 @@ async function findMacros(){
       reviewItems = dbCandidatesToReview([best], hadGrams);
       // when the amount came from a count, spell out the basis so it's transparent
       if (cg && reviewItems[0]) reviewItems[0].note += ` · ${n1(cg.count)} × ~${n0(cg.unitG)} g ${cg.label}`;
+      tagSearchOrigin(reviewItems, searchName);
       findBusy = false; render();
       const z = $("#reviewZone"); if (z) z.scrollIntoView({behavior: "smooth", block: "nearest"});
       return;
@@ -4672,6 +4686,7 @@ IMPORTANT — coverage: almost every real, identifiable food HAS a reasonable, u
       // gets replaced by the model's default serving; fall back to the model's only if empty.
       reviewItems = [{name: j.name || name, amount: userAmount || j.amount || "", kcal: j.kcal, p: j.p, c: j.c, f: j.f,
         conf: j.conf === "official" ? "official" : "estimate", note: j.note || ""}];
+      tagSearchOrigin(reviewItems, searchName);
     }
   } catch (e) {
     toast(e.status ? e.message : "Couldn't read the macros back — please try again.", 5000);
@@ -4884,6 +4899,59 @@ function barcodeFixToReview(code, fx){
     conf: "user", note: "Your saved values for this barcode (from the pack). Edit any time.",
     basis: 100, unit, pkg: 0, baseMacros: {kcal: num(base.kcal), p: num(base.p), c: num(base.c), f: num(base.f)},
     had: String(had), barcode: code};
+}
+
+/* ---- Your own corrections for SEARCHED foods (the "Find macros" mirror of
+   barcodeFixes). When you edit a looked-up food's macros and log it, MIRA
+   remembers your values keyed by the food name and reuses them next time you
+   search that food — badged as yours, always editable. ---- */
+// Stable key so "3 eggs", "Eggs" and "eggs " all resolve to the same food.
+function foodFixKey(name){
+  let s = String(name || "").toLowerCase().trim();
+  const pc = parseCount(s); if (pc && pc.rest) s = pc.rest;
+  return s.replace(/[^\p{L}\p{N} ]+/gu, " ").replace(/\s+/g, " ").trim();
+}
+// per-100 (g/ml) macros for a review item, when its amount resolves to grams; else null.
+function itemPer100(it){
+  const g = num(it.had) > 0 ? num(it.had) : amountToGrams(it.amount);
+  if (!(g > 0)) return null;
+  const k = 100 / g;
+  return {kcal: num(it.kcal) * k, p: num(it.p) * k, c: num(it.c) * k, f: num(it.f) * k, grams: g};
+}
+// Tag review items coming from a search so we can detect a later correction.
+function tagSearchOrigin(items, searchName){
+  (items || []).forEach(it => {
+    it._searchName = searchName;
+    it._origMacros = {kcal: num(it.kcal), p: num(it.p), c: num(it.c), f: num(it.f)};
+    it._origAmount = it.amount || "";
+    it._origP100 = itemPer100(it);   // may be null (e.g. "2 pieces")
+  });
+}
+function saveFoodFix(name, it){
+  const key = foodFixKey(name); if (!key) return;
+  S.foodFixes = S.foodFixes || {};
+  const p100 = itemPer100(it);
+  if (p100){
+    S.foodFixes[key] = {name: it.name || name,
+      per100: {kcal: Math.round(p100.kcal), p: +p100.p.toFixed(2), c: +p100.c.toFixed(2), f: +p100.f.toFixed(2)},
+      serving: p100.grams, ts: Date.now()};
+  } else {
+    // amount isn't in grams (pieces/servings) — remember the literal values for it
+    S.foodFixes[key] = {name: it.name || name, amount: it.amount || "",
+      macros: {kcal: num(it.kcal), p: num(it.p), c: num(it.c), f: num(it.f)}, ts: Date.now()};
+  }
+}
+function foodFixToReview(fx, hadGrams){
+  const noteTxt = "Your saved values for this food (from a past correction). Edit any time.";
+  if (fx.per100){
+    const base = fx.per100, had = num(hadGrams) > 0 ? num(hadGrams) : (num(fx.serving) > 0 ? num(fx.serving) : 100), k = had / 100;
+    return {name: fx.name, amount: n0(had) + " g",
+      kcal: Math.round(num(base.kcal) * k), p: +(num(base.p) * k).toFixed(1), c: +(num(base.c) * k).toFixed(1), f: +(num(base.f) * k).toFixed(1),
+      conf: "user", note: noteTxt, basis: 100, unit: "g", pkg: 0,
+      baseMacros: {kcal: num(base.kcal), p: num(base.p), c: num(base.c), f: num(base.f)}, had: String(had)};
+  }
+  const m = fx.macros || {};
+  return {name: fx.name, amount: fx.amount || "", kcal: num(m.kcal), p: num(m.p), c: num(m.c), f: num(m.f), conf: "user", note: noteTxt};
 }
 
 async function scanBarcode(){
@@ -8789,6 +8857,20 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
     if (it.conf === "community" && it.communityId) communityUse(it.communityId);
     // remember a scanned barcode's values so a wrong database is corrected for good
     if (it.barcode){ saveBarcodeFix(it.barcode, it); save(); toast("Saved your values for this barcode — used automatically next scan ✓", 4200); }
+    // remember a CORRECTED searched food (edited macros) so it's your value next time
+    else if (it._searchName){
+      const chg = (a, b) => Math.abs(num(a) - num(b)) > Math.max(1, Math.abs(num(b)) * 0.02);
+      const cur = itemPer100(it);
+      let edited = false;
+      if (cur && it._origP100){
+        edited = chg(cur.kcal, it._origP100.kcal) || chg(cur.p, it._origP100.p) || chg(cur.c, it._origP100.c) || chg(cur.f, it._origP100.f);
+      } else {
+        // grams unknown — only trust an edit when the amount itself is unchanged
+        const om = it._origMacros || {};
+        if ((it.amount || "") === (it._origAmount || "")) edited = chg(it.kcal, om.kcal) || chg(it.p, om.p) || chg(it.c, om.c) || chg(it.f, om.f);
+      }
+      if (edited){ saveFoodFix(it._searchName, it); save(); toast("Saved your correction — used automatically next time you search this ✓", 4200); }
+    }
     reviewItems.splice(i, 1);
     if (!reviewItems.length) reviewItems = null;
     // clear the add-food form too, so the looked-up name/amount don't linger
