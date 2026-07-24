@@ -313,6 +313,39 @@ body.kb .chatbar{padding-bottom:6px}
 .rec-note{font-size:11.5px;color:var(--txt2);line-height:1.45;margin-top:9px}
 .exp-sum{margin-inline-start:auto;font-size:11.5px;font-weight:500;color:var(--txt3);white-space:nowrap}
 .fold>h3 .exp-sum + .chev{margin-inline-start:10px}
+
+/* ---- Adaptive targets (coaching) ---- */
+.coach-card .coach-sub{font-size:13px;color:var(--txt2);line-height:1.5;margin-bottom:11px}
+.coach-card .coach-sub b{color:var(--txt)}
+.coach-goal{background:var(--bg2);border-radius:11px;padding:11px;margin-bottom:11px;display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.coach-goal label{font-size:12.5px;font-weight:600;flex:0 0 auto}
+.coach-goal input{flex:0 0 96px;margin:0}
+.coach-goal .tiny{flex-basis:100%;color:var(--txt3)}
+.coach-pace{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.coach-pace .cp-l{font-size:12.5px;color:var(--txt2);flex:0 0 auto}
+.coach-pace .seg{flex:1}
+.coach-macros{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
+.cm-cell{background:var(--bg2);border-radius:11px;padding:11px 4px;text-align:center}
+.cm-cell.cm-kcal{background:color-mix(in srgb,var(--acc) 12%,var(--bg2));border:1px solid var(--acc)}
+.cm-v{font-size:18px;font-weight:800;color:var(--acc)}
+.cm-cell:not(.cm-kcal) .cm-v{color:var(--txt)}
+.cm-l{font-size:10.5px;color:var(--txt2);margin-top:2px}
+
+/* ---- Weekly check-in ---- */
+.checkin-card{border:1px solid color-mix(in srgb,var(--acc) 45%,transparent);position:relative;overflow:hidden}
+.checkin-card::before{content:"";position:absolute;inset:0 0 auto 0;height:3px;background:linear-gradient(90deg,var(--acc),var(--green))}
+.ci-hd{display:flex;align-items:center;gap:11px;margin-bottom:12px}
+.ci-ic{flex:0 0 auto;width:38px;height:38px;border-radius:11px;display:grid;place-items:center;background:color-mix(in srgb,var(--acc) 14%,transparent);color:var(--acc)}
+.ci-t{font-size:15px;font-weight:700}
+.ci-d{font-size:12px;color:var(--txt2);margin-top:1px}
+.ci-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:11px}
+.ci-stat{background:var(--bg2);border-radius:11px;padding:11px 6px;text-align:center}
+.ci-v{font-size:17px;font-weight:700;color:var(--acc)}
+.ci-l{font-size:10.5px;color:var(--txt2);margin-top:2px}
+.ci-new{font-size:12.5px;color:var(--txt2);line-height:1.5;display:flex;gap:6px;align-items:flex-start;margin-bottom:12px}
+.ci-new svg{color:var(--acc);flex:0 0 auto;margin-top:1px}.ci-new b{color:var(--txt)}
+.ci-actions{display:flex;flex-wrap:wrap;gap:8px}
+.ci-actions .btn.sm{flex:1 1 auto}
 .tabbar{
   flex:0 0 auto;
   display:flex;justify-content:space-around;
@@ -1175,7 +1208,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.108";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.109";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1595,6 +1628,8 @@ const BLANK = () => ({
     targets: {kcal: 2000, protein: 120, carbs: 0, fat: 0},
     waterGoal: 2500,
     goalWeight: 0,
+    coachPace: 0.5,        // adaptive-targets pace: % bodyweight change per week
+    coachLastCheckin: "",  // date of the last weekly check-in accept/snooze
     iosHintDismissed: false,
     strava: null,       // {cid, secret, access, refresh, exp, athlete, lastSync} when connected
     community: {url: "", key: ""},   // shared community food database (Supabase) — off until configured
@@ -1737,6 +1772,8 @@ function migrateChats(){
   if (S.settings.goal === undefined) S.settings.goal = "";
   if (!Array.isArray(S.settings.widgets)) S.settings.widgets = ["cal", "protein", "water", "task", "bill"];
   if (S.settings.restLen === undefined) S.settings.restLen = 90;
+  if (S.settings.coachPace === undefined) S.settings.coachPace = 0.5;
+  if (S.settings.coachLastCheckin === undefined) S.settings.coachLastCheckin = "";
   if (!S.settings.coach) S.settings.coach = {name: "", email: ""};
   if (S.settings.webSearch === undefined) S.settings.webSearch = true;
   if (!S.settings.theme) S.settings.theme = "dark";
@@ -2686,11 +2723,15 @@ function trendsHTML(){
   const tg = S.settings.targets || {};
   const cards = [];
 
-  // Weight (line, from InBody), windowed to the range
+  // Weight (line, from InBody), windowed to the range — with the smoothed trend overlaid
   const from = days[0];
   const wl = [...(S.inbody || [])].filter(e => e.weight && (range === 0 || e.date >= from)).sort((a, b) => a.date < b.date ? -1 : 1).slice(-40).map(e => ({d: e.date, v: +e.weight}));
-  cards.push(trendCard(tr("Weight"), wl.length ? `${wl[0].v} → ${wl[wl.length - 1].v} kg` : "kg",
-    wl.length >= 2 ? lineSVG(wl, {color: "#e8863d"}) + lineMeta(wl, " kg") : trendEmpty("Log at least 2 weight entries to see your trend.")));
+  const tw = trendWeightData();
+  const twSub = tw ? `scale ${tw.scale} · trend ${tw.trend} kg (${tw.perWk > 0 ? "+" : ""}${tw.perWk}/wk)` : (wl.length ? `${wl[0].v} → ${wl[wl.length - 1].v} kg` : "kg");
+  const wSeries = tw ? tw.series.filter(s => range === 0 || s.date >= from).slice(-40) : [];
+  cards.push(trendCard(tr("Weight"), twSub,
+    wSeries.length >= 2 ? weightTrendSVG(wSeries) + `<div class="tc-meta"><span>${tr("dots")} = ${tr("scale")}</span><span style="color:#e8863d">${tr("line")} = ${tr("trend")}</span><span>${wSeries.length} ${tr("points")}</span></div>`
+      : wl.length >= 2 ? lineSVG(wl, {color: "#e8863d"}) + lineMeta(wl, " kg") : trendEmpty("Log at least 2 weight entries to see your trend.")));
 
   // Calories/day
   const kcals = days.map(d => Math.round(dayTotals(d).kcal));
@@ -2725,8 +2766,10 @@ function trendsHTML(){
     setWeeks >= 2 ? barsSVG(setSeries, {color: "#e8863d"}) + barsMeta(setSeries, " sets") : trendEmpty("Log workouts across at least 2 weeks to see your volume trend.")));
 
   return `
+    ${checkinCardHTML()}
     ${weekReviewCardHTML()}
     ${expenditureCardHTML()}
+    ${coachingCardHTML()}
     ${weightProjectionHTML()}
     ${patternsCardHTML()}
     <div class="ins-range-row"><span class="tiny" style="color:var(--txt2)">${tr("Time range")}</span>${insRangeBarHTML()}</div>
@@ -2820,6 +2863,135 @@ function expenditureCardHTML(){
     <div class="tiny" style="margin-top:7px;color:var(--txt2)">${e.thin ? "Early estimate — it sharpens as you log more. " : ""}Assumes your food logging is complete, and ~7,700 kcal per kg of weight change. It's an honest estimate from your own trend, not a lab measurement.</div>
   </div>`;
 }
+/* ---------------- Trend weight (smoothed) ---------------- */
+// A MacroFactor-style smoothed weight: an exponentially-weighted line through
+// the daily scale readings so day-to-day water/salt noise doesn't distort
+// progress. The trend — not the raw scale — is what the coaching reads.
+function trendWeightData(){
+  const pts = [...(S.inbody || [])].filter(e => e.weight)
+    .map(e => ({t: new Date(e.date + "T00:00:00").getTime() / 864e5, v: +e.weight, date: e.date}))
+    .sort((a, b) => a.t - b.t);
+  if (pts.length < 2) return null;
+  const alpha = 0.25;                       // smoothing: each reading nudges the trend 25%
+  let e = pts[0].v; const series = pts.map(p => { e = e + alpha * (p.v - e); return {t: p.t, date: p.date, v: p.v, trend: e}; });
+  const latest = series[series.length - 1];
+  // weekly rate from the least-squares slope of the TREND over the last 28 days
+  const from = latest.t - 27;
+  const rec = series.filter(s => s.t >= from);
+  const use = rec.length >= 2 ? rec : series;
+  const n = use.length, mt = use.reduce((a, p) => a + p.t, 0) / n, mv = use.reduce((a, p) => a + p.trend, 0) / n;
+  let num = 0, den = 0; use.forEach(p => { num += (p.t - mt) * (p.trend - mv); den += (p.t - mt) * (p.t - mt); });
+  const slope = den ? num / den : 0;        // kg/day
+  return {trend: +latest.trend.toFixed(1), scale: +pts[pts.length - 1].v.toFixed(1), perWk: +(slope * 7).toFixed(2), series};
+}
+// Weight chart with the raw dots faint and the smoothed trend line prominent.
+function weightTrendSVG(series){
+  const W = 300, H = 96, pad = 6, n = series.length;
+  const vals = series.flatMap(p => [p.v, p.trend]);
+  const min = Math.min(...vals), max = Math.max(...vals), span = (max - min) || 1;
+  const X = i => n === 1 ? W / 2 : (i / (n - 1)) * W;
+  const Y = v => H - pad - ((v - min) / span) * (H - pad * 2);
+  let dots = "", tpath = "";
+  series.forEach((p, i) => {
+    dots += `<circle cx="${X(i).toFixed(1)}" cy="${Y(p.v).toFixed(1)}" r="2" fill="var(--txt3)" opacity="0.5"/>`;
+    tpath += (i ? "L" : "M") + X(i).toFixed(1) + " " + Y(p.trend).toFixed(1) + " ";
+  });
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img">${dots}<path d="${tpath}" fill="none" stroke="#e8863d" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
+}
+
+/* ---------------- Adaptive targets (coaching) ---------------- */
+// MacroFactor-style: from the measured expenditure and the chosen goal pace,
+// suggest calorie + macro targets that move the user toward their goal weight.
+// Honest and gated — only appears once there's enough data for a real TDEE.
+function adaptiveTargets(){
+  const e = expenditureEstimate(); if (!e) return null;
+  const tw = trendWeightData();
+  const curW = tw ? tw.trend : null;
+  const goalW = +(S.settings.goalWeight || 0);
+  const pace = S.settings.coachPace != null ? +S.settings.coachPace : 0.5;   // % bodyweight / week
+  let dir = "maintain";
+  if (curW && goalW){
+    if (goalW < curW - 0.3) dir = "lose";
+    else if (goalW > curW + 0.3) dir = "gain";
+  }
+  const w = curW || (tw && tw.scale) || 70;
+  const rateKg = dir === "maintain" ? 0 : +(pace / 100 * w).toFixed(2);
+  const daily = rateKg * KCAL_PER_KG / 7;
+  const FLOOR = 1200;
+  let kcal = Math.round((e.tdee + (dir === "lose" ? -daily : dir === "gain" ? daily : 0)) / 10) * 10;
+  const floored = kcal < FLOOR;
+  kcal = Math.max(FLOOR, kcal);
+  // protein 2.0 g/kg on a cut (muscle-sparing), 1.8 otherwise; fat ~0.8 g/kg; carbs fill the rest
+  const protein = Math.round((dir === "lose" ? 2.0 : 1.8) * w);
+  const fat = Math.round(0.8 * w);
+  const carbs = Math.max(0, Math.round((kcal - protein * 4 - fat * 9) / 4));
+  return {tdee: e.tdee, dir, pace, rateKg, kcal, protein, carbs, fat, curW, goalW, floored, thin: e.thin};
+}
+function coachingCardHTML(){
+  const a = adaptiveTargets();
+  if (!a) return "";   // needs a real expenditure estimate first (shown by the maintenance card)
+  const tg = S.settings.targets || {};
+  const paces = [0.25, 0.5, 0.75];
+  const dirTxt = a.dir === "lose" ? "lose weight" : a.dir === "gain" ? "gain weight" : "maintain";
+  const rateTxt = a.dir === "maintain" ? "hold your weight" : `${a.dir === "lose" ? "-" : "+"}${a.rateKg} kg/week`;
+  const needGoal = !(+(S.settings.goalWeight || 0));
+  const changed = tg.kcal !== a.kcal || tg.protein !== a.protein || tg.carbs !== a.carbs || tg.fat !== a.fat;
+  return `<div class="card coach-card">
+    <h3>${ic("target", 16)} ${tr("Adaptive targets")} <span class="badge estimate" style="margin-inline-start:auto">${tr("estimate")}</span></h3>
+    <div class="coach-sub">From your <b>${n0(a.tdee)} kcal</b> expenditure${a.curW ? ` and trend weight <b>${a.curW} kg</b>` : ""}, to <b>${dirTxt}</b> at <b>${rateTxt}</b>:</div>
+    ${needGoal ? `<div class="coach-goal">
+      <label>${tr("Goal weight (kg)")}</label>
+      <input type="number" inputmode="decimal" placeholder="e.g. 74" value="${S.settings.goalWeight || ""}" oninput="M.coachGoal(this.value)">
+      <span class="tiny">Set a goal to aim the targets; leave blank to just maintain.</span>
+    </div>` : ""}
+    ${a.dir !== "maintain" ? `<div class="coach-pace">
+      <span class="cp-l">${tr("Pace")}</span>
+      <div class="seg">${paces.map(p => `<button class="${a.pace === p ? "on" : ""}" onclick="M.coachPace(${p})">${p}%/wk</button>`).join("")}</div>
+    </div>` : ""}
+    <div class="coach-macros">
+      <div class="cm-cell cm-kcal"><div class="cm-v">${n0(a.kcal)}</div><div class="cm-l">kcal</div></div>
+      <div class="cm-cell"><div class="cm-v">${n0(a.protein)}</div><div class="cm-l">protein</div></div>
+      <div class="cm-cell"><div class="cm-v">${n0(a.carbs)}</div><div class="cm-l">carbs</div></div>
+      <div class="cm-cell"><div class="cm-v">${n0(a.fat)}</div><div class="cm-l">fat</div></div>
+    </div>
+    ${a.floored ? `<div class="tiny" style="color:var(--amber);margin-bottom:8px">Held at a 1,200 kcal floor — a gentler pace is healthier here.</div>` : ""}
+    <button class="btn" onclick="M.coachApply()" ${changed ? "" : "disabled"}>${ic("check", 15)} ${changed ? tr("Use these targets") : tr("These are your targets")}</button>
+    <div class="tiny" style="margin-top:9px;color:var(--txt2)">${a.thin ? "Early estimate — sharpens as you log more. " : ""}Protein set to ${a.dir === "lose" ? "2.0" : "1.8"} g/kg, fat ~0.8 g/kg, carbs fill the rest. Re-check weekly — as your expenditure shifts, so should these.</div>
+  </div>`;
+}
+
+/* ---------------- Weekly check-in ---------------- */
+function checkinDue(){
+  const last = S.settings.coachLastCheckin || "";
+  if (!last) return true;
+  const days = (new Date(todayStr()) - new Date(last)) / 864e5;
+  return days >= 7;
+}
+function checkinCardHTML(){
+  if (!checkinDue()) return "";
+  const a = adaptiveTargets(); if (!a) return "";     // only when there's enough data to coach
+  const tw = trendWeightData();
+  const rate = tw ? tw.perWk : a.rateKg;
+  const onPace = a.dir === "maintain" ? Math.abs(rate) < 0.15
+    : a.dir === "lose" ? rate < -0.05 : rate > 0.05;
+  const rateTxt = `${rate > 0 ? "+" : ""}${rate} kg/week`;
+  const tg = S.settings.targets || {};
+  const changed = tg.kcal !== a.kcal || tg.protein !== a.protein;
+  return `<div class="card checkin-card">
+    <div class="ci-hd"><span class="ci-ic">${ic("calendar", 18)}</span><div><div class="ci-t">${tr("Weekly check-in")}</div><div class="ci-d">${tr("Your numbers, updated from this week")}</div></div></div>
+    <div class="ci-row">
+      <div class="ci-stat"><div class="ci-v">${tw ? tw.trend + " kg" : "—"}</div><div class="ci-l">trend weight</div></div>
+      <div class="ci-stat"><div class="ci-v" style="color:${onPace ? "var(--green)" : "var(--amber)"}">${rateTxt}</div><div class="ci-l">${onPace ? "on pace" : "off pace"}</div></div>
+      <div class="ci-stat"><div class="ci-v">${n0(a.tdee)}</div><div class="ci-l">expenditure</div></div>
+    </div>
+    ${changed ? `<div class="ci-new">${ic("trend", 13)} New suggested targets: <b>${n0(a.kcal)} kcal · ${n0(a.protein)}P / ${n0(a.carbs)}C / ${n0(a.fat)}F</b></div>` : `<div class="ci-new">${ic("check", 13)} Your current targets still fit — nothing to change.</div>`}
+    <div class="ci-actions">
+      ${changed ? `<button class="btn sm" onclick="M.coachApply()">${ic("check", 14)} ${tr("Apply new targets")}</button>` : ""}
+      <button class="btn sm sec" onclick="M.checkinSnooze()">${changed ? tr("Not now") : tr("Got it")}</button>
+    </div>
+  </div>`;
+}
+
 // Honest cross-signal observations + streaks — associations from the user's own
 // logs, each gated behind enough data so nothing is invented.
 function logStreak(getHas){
@@ -7768,6 +7940,17 @@ window.M = {
   },
   openReview(){ R.tab = "insights"; R.reviewOpen = true; R.homeCat = null; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
   reviewBack(){ R.reviewOpen = false; R.tab = "insights"; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
+  /* ---- adaptive targets / coaching ---- */
+  coachPace(p){ S.settings.coachPace = +p; save(); render(); },
+  coachGoal(v){ S.settings.goalWeight = num(v); save(); render(); },
+  coachApply(){
+    const a = adaptiveTargets(); if (!a){ toast("Not enough data yet."); return; }
+    S.settings.targets = {kcal: a.kcal, protein: a.protein, carbs: a.carbs, fat: a.fat};
+    S.settings.coachLastCheckin = todayStr();
+    buzz(); save(); render();
+    toast(`Targets updated — ${n0(a.kcal)} kcal · ${n0(a.protein)}P / ${n0(a.carbs)}C / ${n0(a.fat)}F ✓`, 4200);
+  },
+  checkinSnooze(){ S.settings.coachLastCheckin = todayStr(); save(); render(); },
   async genReview(){
     if (!S.settings.apiKey){ toast("Add your API key in Settings first."); R.tab = "set"; R.reviewOpen = false; render(); return; }
     R.reviewOpen = false; R.homeCat = null; R.sheet = null;
