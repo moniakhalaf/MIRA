@@ -797,6 +797,42 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
 .mood-face.on .mf-e{filter:none;transform:scale(1.12)}
 .mood-face.on .mf-l{color:var(--txt);font-weight:650}
 .mood-face:active{transform:scale(.94)}
+
+/* energy + stress levels */
+.lvl-wrap{margin-top:14px;padding-top:13px;border-top:1px solid var(--line2);display:flex;flex-direction:column;gap:12px}
+.lvl-hd{display:flex;justify-content:space-between;align-items:baseline;font-size:12.5px;color:var(--txt2);margin-bottom:6px}
+.lvl-hd span:first-child{font-weight:600;color:var(--txt)}
+.lvl-now{font-size:11.5px;font-weight:600;color:var(--acc)}
+.lvl-dots{display:flex;gap:8px}
+.lvl-dot{flex:1;height:14px;border-radius:7px;background:var(--bg2);border:1px solid var(--line2);cursor:pointer;transition:transform .1s,background .12s}
+.lvl-dot:active{transform:scale(.9)}
+.lvl-dot.on.k-en{background:#4cb07a;border-color:#4cb07a}
+.lvl-dot.on.k-st{background:#d98a4c;border-color:#d98a4c}
+
+/* guided breathing */
+.breathe-card{text-align:center}
+.breathe-card.on{border-color:color-mix(in srgb,#5aa9c9 55%,transparent)}
+.breathe-stage{display:grid;place-items:center;height:190px;margin:6px 0 4px}
+.breathe-ring{width:120px;height:120px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 50% 42%,color-mix(in srgb,#5aa9c9 34%,transparent),color-mix(in srgb,#5aa9c9 10%,transparent));border:2px solid color-mix(in srgb,#5aa9c9 60%,transparent);transform:scale(.6);color:var(--txt)}
+.breathe-ring.run{animation:boxbreathe 16s ease-in-out infinite}
+@keyframes boxbreathe{0%{transform:scale(.55)}25%{transform:scale(1)}50%{transform:scale(1)}75%{transform:scale(.55)}100%{transform:scale(.55)}}
+.breathe-phase{font-size:14px;font-weight:600}
+.breathe-count{font-size:22px;font-weight:800;color:#5aa9c9;margin-top:2px}
+.breathe-meta{font-size:12px;color:var(--txt2);margin-bottom:12px}
+
+/* "help right now" */
+.helpnow-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin-top:4px}
+.hn-btn{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 2px;border-radius:13px;background:var(--bg2);border:1px solid var(--line2);color:var(--txt);cursor:pointer;transition:transform .1s,border-color .12s;font-size:10.5px;font-weight:500}
+.hn-btn svg{color:var(--acc)}
+.hn-btn:active{transform:scale(.94)}
+.hn-btn:hover{border-color:var(--acc)}
+@media (max-width:360px){.helpnow-grid{grid-template-columns:repeat(3,1fr)}}
+
+/* reflection */
+.reflect-card{background:linear-gradient(135deg,color-mix(in srgb,var(--acc) 8%,var(--card)),var(--card))}
+.reflect-in{display:flex;gap:9px;align-items:flex-start;font-size:13px;line-height:1.55;color:var(--txt2)}
+.reflect-in svg{color:var(--acc);flex:0 0 auto;margin-top:2px}
+.reflect-in b{color:var(--txt)}
 .mood-lift{display:flex;gap:12px;align-items:flex-start;padding:15px 16px;margin-bottom:14px;border-radius:15px;background:linear-gradient(135deg,var(--acc-soft),var(--card));border:1px solid var(--acc);animation:liftIn .32s cubic-bezier(.2,.8,.2,1)}
 .mood-lift .ml-ic{width:36px;height:36px;min-width:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--acc);color:var(--btn-ink)}
 .mood-lift .ml-tx{flex:1;min-width:0}
@@ -1208,7 +1244,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.109";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.110";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1306,6 +1342,8 @@ const I = {
   database: '<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>',
   trend: '<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>',
   alert: '<path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
+  wind: '<path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2"/>',
+  users: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
 };
 const ic = (n, s = 18) => `<svg class="svgi" width="${s}" height="${s}" viewBox="0 0 24 24">${I[n]}</svg>`;
 
@@ -6297,30 +6335,84 @@ function pickLift(mood){
   return bucket[Math.floor(Math.random() * bucket.length)];
 }
 const CI_FACTORS = ["Work", "Sleep", "Exercise", "Health", "Family", "Friends", "Money", "Stress", "Food", "Weather"];
+const EN_LEVELS = [{v: 1, l: "Drained"}, {v: 2, l: "Low"}, {v: 3, l: "OK"}, {v: 4, l: "Good"}, {v: 5, l: "Buzzing"}];
+const ST_LEVELS = [{v: 1, l: "Calm"}, {v: 2, l: "Mild"}, {v: 3, l: "Tense"}, {v: 4, l: "High"}, {v: 5, l: "Maxed"}];
 function todayCheckin(){ const t = todayStr(); return (S.checkins || []).find(c => c.date === t); }
 function checkinScore(ci){
   if (!ci) return null;
   const parts = [];
   if (ci.mood) parts.push(ci.mood / 5 * 100);
+  if (ci.energy) parts.push(ci.energy / 5 * 100);
+  if (ci.stress) parts.push((6 - ci.stress) / 5 * 100);        // higher stress → lower wellness
   const sl = (S.sleep || []).find(s => s.date === ci.date); if (sl && sl.quality) parts.push(sl.quality / 5 * 100);
-  const md = (S.mood || []).find(m => m.date === ci.date); if (md && md.energy) parts.push(md.energy / 5 * 100);
+  if (!ci.energy){ const md = (S.mood || []).find(m => m.date === ci.date); if (md && md.energy) parts.push(md.energy / 5 * 100); }
   return parts.length ? Math.round(parts.reduce((a, b) => a + b, 0) / parts.length) : null;
 }
 function scoreBasis(ci){
   const b = [];
   if (ci && ci.mood) b.push("mood");
+  if (ci && ci.energy) b.push("energy");
+  if (ci && ci.stress) b.push("stress");
   if ((S.sleep || []).some(s => s.date === ci.date && s.quality)) b.push("sleep quality");
-  if ((S.mood || []).some(m => m.date === ci.date && m.energy)) b.push("energy");
   return b.join(" + ");
 }
+// Honest reflection drawn from the user's OWN check-ins: which factor tags line
+// up with their better days. Never advice — just a pattern from their data,
+// gated behind enough scored check-ins on both sides so it isn't noise.
+function wellnessReflection(){
+  const scored = (S.checkins || []).map(c => ({c, s: checkinScore(c)})).filter(x => x.s != null);
+  if (scored.length < 6) return null;
+  let best = null;
+  CI_FACTORS.forEach(f => {
+    const withF = scored.filter(x => (x.c.factors || []).includes(f)).map(x => x.s);
+    const without = scored.filter(x => !(x.c.factors || []).includes(f)).map(x => x.s);
+    if (withF.length < 3 || without.length < 3) return;
+    const avg = a => a.reduce((p, q) => p + q, 0) / a.length;
+    const gain = Math.round(avg(withF) - avg(without));
+    if (gain >= 8 && (!best || gain > best.gain)) best = {f, gain, hi: Math.round(avg(withF)), lo: Math.round(avg(without))};
+  });
+  if (!best) return null;
+  return `On days you tag <b>${esc(tr(best.f))}</b> your wellness averages <b>${best.hi}</b> vs <b>${best.lo}</b> otherwise — a real pattern in your own check-ins.`;
+}
+function levelRow(kind, label, levels, cur){
+  return `<div class="lvl-block">
+    <div class="lvl-hd"><span>${label}</span><span class="lvl-now">${cur ? tr((levels.find(x => x.v === cur) || {}).l || "") : ""}</span></div>
+    <div class="lvl-dots">${levels.map(x => `<button class="lvl-dot ${cur >= x.v && cur ? "on" : ""} k-${kind}" aria-label="${x.v}" onclick="M.ci${kind === "en" ? "Energy" : "Stress"}(${x.v})"></button>`).join("")}</div>
+  </div>`;
+}
+function breathingHTML(){
+  const on = R.breathActive;
+  return `<div class="card breathe-card ${on ? "on" : ""}">
+    <h3 style="justify-content:center">${ic("wind", 15)} ${tr("Take a minute")}</h3>
+    <div class="breathe-stage">
+      <div class="breathe-ring ${on ? "run" : ""}"><span class="breathe-phase" id="breathPhase">${on ? tr("Breathe in") : tr("Ready")}</span><span class="breathe-count" id="breathCount">${on ? "4" : ""}</span></div>
+    </div>
+    <div class="breathe-meta"><span id="breathCycle">${on ? tr("Cycle 1") : tr("Box breathing · in 4 · hold 4 · out 4 · hold 4")}</span></div>
+    <button class="btn ${on ? "sec" : ""}" onclick="M.${on ? "breathStop" : "breathStart"}()">${on ? ic("x", 15) + " " + tr("Stop") : ic("play", 15) + " " + tr("Start breathing")}</button>
+    ${on ? "" : `<div class="tiny" style="margin-top:8px;color:var(--txt2);text-align:center">A slow, steady reset — good before a meal, a hard task, or sleep.</div>`}
+  </div>`;
+}
+function helpNowHTML(){
+  return `<div class="card helpnow-card">
+    <h3>${ic("heart", 15)} ${tr("A few things that might help right now")}</h3>
+    <div class="helpnow-grid">
+      <button class="hn-btn" onclick="M.breathStart()">${ic("wind", 17)}<span>${tr("Breathe")}</span></button>
+      <button class="hn-btn" onclick="M.helpWater()">${ic("droplet", 17)}<span>${tr("Water")}</span></button>
+      <button class="hn-btn" onclick="M.helpTip('outside')">${ic("sun", 17)}<span>${tr("Step outside")}</span></button>
+      <button class="hn-btn" onclick="M.helpTip('reach')">${ic("users", 17)}<span>${tr("Reach out")}</span></button>
+      <button class="hn-btn" onclick="M.wellnessRead()">${ic("chat", 17)}<span>${tr("Talk to MIRA")}</span></button>
+    </div>
+  </div>`;
+}
 function wellnessHTML(){
-  if (!R.ciDraft){ const c = todayCheckin(); R.ciDraft = {mood: c ? c.mood : 0, factors: c ? [...(c.factors || [])] : [], gratitude: c ? c.gratitude || "" : "", journal: c ? c.journal || "" : ""}; if (R.ciDraft.mood && R.ciDraft.mood <= 3 && !R.ciQuote) R.ciQuote = pickLift(R.ciDraft.mood); }
+  if (!R.ciDraft){ const c = todayCheckin(); R.ciDraft = {mood: c ? c.mood : 0, energy: c ? c.energy || 0 : 0, stress: c ? c.stress || 0 : 0, factors: c ? [...(c.factors || [])] : [], gratitude: c ? c.gratitude || "" : "", journal: c ? c.journal || "" : ""}; if (R.ciDraft.mood && R.ciDraft.mood <= 3 && !R.ciQuote) R.ciQuote = pickLift(R.ciDraft.mood); }
   const d = R.ciDraft;
   const ci = todayCheckin();
-  const score = checkinScore({date: todayStr(), mood: d.mood});
+  const score = checkinScore({date: todayStr(), mood: d.mood, energy: d.energy, stress: d.stress});
   const recent = [...(S.checkins || [])].filter(c => c.mood || c.gratitude || c.journal).sort((a, b) => a.date < b.date ? 1 : -1).slice(0, 6);
   const wk = last7Dates().map(dt => { const c = (S.checkins || []).find(x => x.date === dt); return c ? checkinScore(c) : null; }).filter(v => v != null);
   const wkAvg = wk.length ? Math.round(wk.reduce((a, b) => a + b, 0) / wk.length) : null;
+  const reflect = wellnessReflection();
   return `
     <button class="cat-back" onclick="M.backToHome('health')">${ic("back", 18)} ${tr("Home")}</button>
     <div class="cat-title"><div class="ch-nm">${tr("Wellness check-in")}</div>
@@ -6330,6 +6422,10 @@ function wellnessHTML(){
       <h3 style="justify-content:center">${tr("How are you feeling today?")}</h3>
       <div class="mood-faces">${MOOD_FACES.map(f => `<button class="mood-face ${d.mood === f.v ? "on" : ""}" style="--fh:${f.h}" onclick="M.ciMood(${f.v})">
         <span class="mf-e">${f.e}</span><span class="mf-l">${tr(f.l)}</span></button>`).join("")}</div>
+      <div class="lvl-wrap">
+        ${levelRow("en", tr("Energy"), EN_LEVELS, d.energy)}
+        ${levelRow("st", tr("Stress"), ST_LEVELS, d.stress)}
+      </div>
     </div>
 
     ${d.mood && d.mood <= 3 && R.ciQuote ? `<div class="mood-lift">
@@ -6342,10 +6438,16 @@ function wellnessHTML(){
       </div>
     </div>` : ""}
 
+    ${(d.mood && d.mood <= 3) || (d.stress && d.stress >= 4) ? helpNowHTML() : ""}
+
+    ${breathingHTML()}
+
     <div class="card">
       <h3>${ic("compass", 15)} ${tr("What's affecting today?")} <span class="opt">${tr("optional")}</span></h3>
       <div class="ci-factors">${CI_FACTORS.map(t => `<button class="ci-fac ${(d.factors || []).includes(t) ? "on" : ""}" onclick="M.ciFactor('${t}')">${tr(t)}</button>`).join("")}</div>
     </div>
+
+    ${reflect ? `<div class="card reflect-card"><div class="reflect-in">${ic("trend", 15)}<span dir="auto">${reflect}</span></div></div>` : ""}
 
     <div class="card">
       <h3>${ic("heart", 15)} ${tr("One good thing today")}</h3>
@@ -6362,7 +6464,7 @@ function wellnessHTML(){
     <div class="card wellness-score">
       <div class="ws-l">${tr("Today's wellness")}</div>
       <div class="ws-ring">${score != null ? `<div class="ws-num" style="color:${score >= 66 ? "var(--green)" : score >= 40 ? "var(--amber)" : "var(--red)"}">${score}</div>` : `<div class="ws-num muted">—</div>`}</div>
-      <div class="ws-sub">${score != null ? `based on your ${scoreBasis({date: todayStr(), mood: d.mood})}` : "log your mood to see a score"}${wkAvg != null ? ` · 7-day avg ${wkAvg}` : ""}</div>
+      <div class="ws-sub">${score != null ? `based on your ${scoreBasis({date: todayStr(), mood: d.mood, energy: d.energy, stress: d.stress})}` : "log your mood to see a score"}${wkAvg != null ? ` · 7-day avg ${wkAvg}` : ""}</div>
       <div class="tiny" style="margin-top:4px;color:var(--txt2)">Full trend is on the Insights tab.</div>
     </div>
 
@@ -9314,19 +9416,45 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
     catch (e) { toast("Could not copy."); }
   },
   /* ---- wellness check-in ---- */
-  goWellness(){ R.tab = "wellness"; R.homeCat = null; R.reviewOpen = false; R.quickOpen = false; R.ciDraft = null; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
-  ciMood(n){ if (!R.ciDraft) R.ciDraft = {mood: 0, factors: [], gratitude: "", journal: ""}; R.ciDraft.mood = n; R.ciQuote = n <= 3 ? pickLift(n) : null; M.ciPersist(); render(); },
+  goWellness(){ R.tab = "wellness"; R.homeCat = null; R.reviewOpen = false; R.quickOpen = false; R.ciDraft = null; if (R._breathTimer) clearInterval(R._breathTimer); R._breathTimer = null; R.breathActive = false; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
+  ciMood(n){ if (!R.ciDraft) R.ciDraft = {mood: 0, energy: 0, stress: 0, factors: [], gratitude: "", journal: ""}; R.ciDraft.mood = n; R.ciQuote = n <= 3 ? pickLift(n) : null; M.ciPersist(); render(); },
+  ciEnergy(n){ if (!R.ciDraft) return; R.ciDraft.energy = R.ciDraft.energy === n ? 0 : n; M.ciPersist(); render(); },
+  ciStress(n){ if (!R.ciDraft) return; R.ciDraft.stress = R.ciDraft.stress === n ? 0 : n; M.ciPersist(); render(); },
   ciQuoteNew(){ if (R.ciDraft && R.ciDraft.mood && R.ciDraft.mood <= 3) R.ciQuote = pickLift(R.ciDraft.mood); render(); },
   ciFactor(t){ if (!R.ciDraft) return; const a = R.ciDraft.factors; const i = a.indexOf(t); if (i >= 0) a.splice(i, 1); else a.push(t); M.ciPersist(); render(); },
   ciPersist(){
     const d = R.ciDraft; if (!d) return;
     const t = todayStr();
     let ci = S.checkins.find(c => c.date === t);
-    const empty = !d.mood && !(d.gratitude || "").trim() && !(d.journal || "").trim() && !(d.factors || []).length;
+    const empty = !d.mood && !d.energy && !d.stress && !(d.gratitude || "").trim() && !(d.journal || "").trim() && !(d.factors || []).length;
     if (empty){ if (ci) S.checkins = S.checkins.filter(c => c !== ci); save(); return; }
     if (!ci){ ci = {id: uid(), date: t, ts: Date.now()}; S.checkins.push(ci); }
-    ci.mood = d.mood || 0; ci.factors = [...(d.factors || [])]; ci.gratitude = (d.gratitude || "").trim(); ci.journal = (d.journal || "").trim(); ci.ts = Date.now();
+    ci.mood = d.mood || 0; ci.energy = d.energy || 0; ci.stress = d.stress || 0; ci.factors = [...(d.factors || [])]; ci.gratitude = (d.gratitude || "").trim(); ci.journal = (d.journal || "").trim(); ci.ts = Date.now();
     save();
+  },
+  /* ---- guided breathing (box breathing, on-device) ---- */
+  breathStart(){
+    if (R._breathTimer) clearInterval(R._breathTimer);
+    R.breathActive = true; R._breathStart = Date.now(); render();
+    const PH = [tr("Breathe in"), tr("Hold"), tr("Breathe out"), tr("Hold")];
+    const tick = () => {
+      const el = $("#breathPhase"); if (!el){ if (R._breathTimer) clearInterval(R._breathTimer); return; }
+      const sec = Math.floor((Date.now() - R._breathStart) / 1000);
+      const idx = sec % 16, phase = Math.floor(idx / 4);
+      el.textContent = PH[phase];
+      const cn = $("#breathCount"); if (cn) cn.textContent = String(4 - (idx % 4));
+      const cy = $("#breathCycle"); if (cy) cy.textContent = tr("Cycle") + " " + (Math.floor(sec / 16) + 1);
+    };
+    setTimeout(() => { tick(); R._breathTimer = setInterval(tick, 250); }, 30);
+  },
+  breathStop(){ if (R._breathTimer) clearInterval(R._breathTimer); R._breathTimer = null; R.breathActive = false; render(); },
+  helpWater(){ const t = todayStr(); S.water[t] = (S.water[t] || 0) + 1; save(); render(); toast(`Water +1 glass · ${(S.water[t] * 0.25).toFixed(2)} L today ✓`); },
+  helpTip(kind){
+    const tips = {
+      outside: "Two minutes of daylight and fresh air genuinely shifts mood and alertness — even just to the window or balcony.",
+      reach: "A quick message to one person you trust — no agenda, just hello — is one of the most reliable mood lifts there is.",
+    };
+    toast(tips[kind] || "", 5200);
   },
   ciSave(){
     const d = R.ciDraft;
