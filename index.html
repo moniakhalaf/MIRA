@@ -1175,7 +1175,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.107";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.108";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -4565,8 +4565,26 @@ async function communityUse(id){
 // Legacy (lab-analysed reference data) > USDA Survey > branded label > community,
 // combined with how well the entry name matches what the user typed (all query
 // words present, and concise — fewer comma-qualifiers like "separable lean only").
+// A query naming an oil-free method (air fryer, no oil) must not match a
+// deep-fried database entry — deep-fried potato carries ~15 g of frying oil per
+// 100 g, which air-frying doesn't add. This is exactly why "air fried potato"
+// was wrongly matching "french fried in vegetable oil".
+function isOilFreeMethod(q){
+  return /\bair[\s-]?fri(?:ed|es|er)?\b|\bair[\s-]?fry\w*\b|\bairfry\w*\b|\boil[\s-]?free\b|\bno[\s-]?oil\b|\bwithout\s+oil\b/i.test(String(q || ""));
+}
+function isDeepFriedName(n){
+  const s = String(n || "").toLowerCase();
+  return /french\s*fried|deep[\s-]?fried|deep\s*fry|fried\s+in\b/.test(s) || (/\bfried\b/.test(s) && /\boil\b/.test(s));
+}
 function bestFoodMatch(query, usda, off, comm){
   const q = String(query || "").toLowerCase().trim();
+  // Drop deep-fried candidates for an air-fried / no-oil query so their frying-oil
+  // calories can't win the match.
+  if (isOilFreeMethod(q)){
+    usda = (usda || []).filter(x => !isDeepFriedName(x.name));
+    off = (off || []).filter(x => !isDeepFriedName(x.name));
+    comm = (comm || []).filter(x => !isDeepFriedName(x.name));
+  }
   const qTokens = q.split(/\s+/).filter(Boolean);
   const nameScore = name => {
     const n = String(name || "").toLowerCase();
@@ -4666,7 +4684,7 @@ async function findMacros(){
     return;
   }
   try {
-    const txt = await llmJsonCall(`You are MIRA's nutrition lookup with broad food knowledge across cuisines: Gulf/Khaleeji (machboos/majboos, harees, jireesh, balaleet, luqaimat, thareed, madhrooba, gabout, khubz), Levantine (mansaf, mujadara, tabbouleh, fattoush, kibbeh, shawarma, manakish, labneh), Egyptian (koshari, ful medames, ta'meya, molokhia), Iraqi/Yemeni/North-African, and the full range of international foods — Western, Indian/South-Asian, East & Southeast Asian, Mediterranean, Latin, fast food and packaged products. Understand Arabic script AND transliteration, and account for cooking method (مشوي grilled / مقلي fried / مسلوق boiled / محشي stuffed / roasted). For a dish, reconstruct from its typical ingredients; for a combination the user names (e.g. "dates + walnuts"), sum the components.
+    const txt = await llmJsonCall(`You are MIRA's nutrition lookup with broad food knowledge across cuisines: Gulf/Khaleeji (machboos/majboos, harees, jireesh, balaleet, luqaimat, thareed, madhrooba, gabout, khubz), Levantine (mansaf, mujadara, tabbouleh, fattoush, kibbeh, shawarma, manakish, labneh), Egyptian (koshari, ful medames, ta'meya, molokhia), Iraqi/Yemeni/North-African, and the full range of international foods — Western, Indian/South-Asian, East & Southeast Asian, Mediterranean, Latin, fast food and packaged products. Understand Arabic script AND transliteration, and account for cooking method (مشوي grilled / مقلي deep-fried / مسلوق boiled / محشي stuffed / roasted / air-fried). CRITICAL: air-fried / air-fryer / "no oil" foods use little or no added oil — treat them like roasted/baked (only a light oil spray if any), NOT like deep-fried; e.g. air-fried potato is far lower in fat and calories than french fries fried in oil. For a dish, reconstruct from its typical ingredients; for a combination the user names (e.g. "dates + walnuts"), sum the components.
 IMPORTANT — coverage: almost every real, identifiable food HAS a reasonable, useful macro estimate from standard food-composition data (USDA, McCance & Widdowson, regional tables). Default to giving a clearly-labelled **"estimate"** for any recognizable food or dish, at a sensible standard serving if no amount is given. Reserve **"unavailable"** ONLY for input that is genuinely unidentifiable (gibberish, not a food) — never refuse a real food just because exact figures aren't published.${S.settings.webSearch ? ` You have web search: for a specific branded/restaurant item, check the venue's or manufacturer's OFFICIALLY published nutrition first, then fall back to an estimate.` : ""} Confidence: "official" ONLY if the venue or manufacturer actually publishes these values${S.settings.webSearch ? " (verified via search or known)" : " and you know them"}; otherwise "estimate". Never invent official figures, but a good estimate is expected and welcome. After any research, end your reply with ONLY a JSON object: {"name":str,"amount":str,"kcal":num,"p":num,"c":num,"f":num,"conf":"official"|"estimate"|"unavailable","note":str(short, includes the basis/serving assumed)}. Energy must be consistent: kcal ≈ 4p+4c+9f.${replyLangNote()}`,
       `Food: ${name}${userAmount ? ` — amount: ${userAmount} (return macros for THIS amount, and echo it back in "amount")` : ""}`,
       1600,
