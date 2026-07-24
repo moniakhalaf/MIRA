@@ -1246,7 +1246,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.111";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.112";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -3950,7 +3950,7 @@ let findBusy = false, extractBusy = false, barcodeBusy = false;
 /* "I cooked this" — build a home-cooked dish from its ingredients: the AI
    prices each ingredient from composition tables, MIRA sums the dish locally
    and splits it into servings. */
-const dishForm = {open: false, name: "", makes: "1", ate: "1", cookedG: "", ateG: "",
+const dishForm = {open: false, name: "", makes: "1", ate: "1", cookedG: "", perServingG: "", ateG: "",
   ings: [{n: "", a: ""}, {n: "", a: ""}, {n: "", a: ""}], res: null};
 let dishBusy = false;
 
@@ -4936,34 +4936,32 @@ function dishTotals(){
   ((dishForm.res && dishForm.res.items) || []).forEach(x => { t.kcal += num(x.kcal); t.p += num(x.p); t.c += num(x.c); t.f += num(x.f); });
   return t;
 }
-function dishMakes(){ return Math.max(1, num(dishForm.makes) || 1); }
-function dishAte(){ return num(dishForm.ate) > 0 ? num(dishForm.ate) : 1; }
-// When a cooked weight is given, portions are done by grams eaten (per-gram of
-// the finished dish) instead of by serving.
-function dishGramsMode(){ return num(dishForm.cookedG) > 0; }
-// Best-effort raw weight from the priced ingredient amounts — a helpful hint for
-// the cooked-weight field (the dish usually weighs less after water loss).
+// Total weight from the ingredient amounts (grams the user typed). This is the
+// dish's reference weight, so per-gram macros come straight from what went in.
 function dishRawGrams(){
   let g = 0; ((dishForm.res && dishForm.res.items) || []).forEach(x => { const v = amountToGrams(x.amount); if (v) g += v; });
   return Math.round(g);
 }
-function dishPerText(){
-  const t = dishTotals(), mk = dishMakes();
-  return `${n0(t.kcal / mk)} kcal · ${n1(t.p / mk)}P · ${n1(t.c / mk)}C · ${n1(t.f / mk)}F`;
-}
+// The weight the per-gram is measured against: the cooked weight if the user
+// weighed the finished dish, otherwise the summed ingredient grams.
+function dishRefG(){ return num(dishForm.cookedG) > 0 ? num(dishForm.cookedG) : dishRawGrams(); }
 function dishPer100Text(){
-  if (!dishGramsMode()) return "—";
-  const t = dishTotals(), k = 100 / num(dishForm.cookedG);
+  const ref = dishRefG(); if (!(ref > 0)) return "—";
+  const t = dishTotals(), k = 100 / ref;
   return `${n0(t.kcal * k)} kcal · ${n1(t.p * k)}P · ${n1(t.c * k)}C · ${n1(t.f * k)}F`;
 }
+// Per-serving line, driven by a grams-per-serving size (not a serving count).
+function dishServeText(){
+  const ref = dishRefG(), gps = num(dishForm.perServingG);
+  if (!(ref > 0) || !(gps > 0)) return "—";
+  const dt = dishTotals(), k = gps / ref, n = ref / gps;
+  return `${n0(gps)} g → ${n0(dt.kcal * k)} kcal · ${n1(dt.p * k)}P · ${n1(dt.c * k)}C · ${n1(dt.f * k)}F · ${t("makes")} ~${n1(n)}`;
+}
 function dishMineText(){
-  const t = dishTotals();
-  if (dishGramsMode()){
-    const cg = num(dishForm.cookedG), ate = num(dishForm.ateG) > 0 ? num(dishForm.ateG) : cg, k = ate / cg;
-    return `${n0(ate)} g of ${n0(cg)} g — ${n0(t.kcal * k)} kcal · ${n1(t.p * k)}P · ${n1(t.c * k)}C · ${n1(t.f * k)}F`;
-  }
-  const mk = dishMakes(), k = dishAte() / mk;
-  return `${n1(dishAte())} of ${n0(mk)} — ${n0(t.kcal * k)} kcal · ${n1(t.p * k)}P · ${n1(t.c * k)}C · ${n1(t.f * k)}F`;
+  const ref = dishRefG(), ate = num(dishForm.ateG);
+  if (!(ref > 0) || !(ate > 0)) return "—";
+  const t = dishTotals(), k = ate / ref;
+  return `${n0(ate)} g — ${n0(t.kcal * k)} kcal · ${n1(t.p * k)}P · ${n1(t.c * k)}C · ${n1(t.f * k)}F`;
 }
 
 function dishHTML(){
@@ -4972,13 +4970,9 @@ function dishHTML(){
   return `
   <div class="review-item" style="margin-top:12px">
     <b style="font-size:14px">${ic("flame", 14)} ${t("I cooked this")}</b>
-    <div class="tiny" style="margin-bottom:8px">List what went into the pot — MIRA estimates each ingredient's macros from standard food-composition data, sums the dish, and splits it into servings.</div>
+    <div class="tiny" style="margin-bottom:8px">${t("List what went into the pot with the grams of each — MIRA prices every ingredient from standard food-composition data and sums the whole dish. Then log by grams.")}</div>
     <div class="field"><label>${t("Dish name")}</label><input value="${esc(dishForm.name)}" dir="auto" placeholder="e.g. Chicken machboos" oninput="dishForm.name=this.value"></div>
-    <div class="grid2" style="margin-bottom:8px">
-      <div class="field"><label>${t("Servings it makes")}</label><input type="number" inputmode="decimal" min="1" step="0.5" value="${esc(dishForm.makes)}" oninput="dishForm.makes=this.value;M.dishScale()"></div>
-      <div class="field"><label>${t("Servings I ate")}</label><input type="number" inputmode="decimal" min="0" step="0.25" value="${esc(dishForm.ate)}" oninput="dishForm.ate=this.value;M.dishScale()"></div>
-    </div>
-    <label class="tiny" style="display:block;margin-bottom:5px">Ingredients & amounts, raw as they went in — include cooking oil, butter or ghee.</label>
+    <label class="tiny" style="display:block;margin-bottom:5px">${t("Ingredients & amounts, raw as they went in — include cooking oil, butter or ghee.")}</label>
     ${dishForm.ings.map((g, i) => `
     <div class="row" style="margin-bottom:6px">
       <input value="${esc(g.n)}" dir="auto" placeholder="${t("Ingredient")} — e.g. basmati rice" oninput="dishForm.ings[${i}].n=this.value">
@@ -4992,18 +4986,19 @@ function dishHTML(){
     ${res ? `
     <div class="dish-break">
       ${res.items.map(x => `<div class="dish-line"><span dir="auto">${esc(x.name)}${x.amount ? ` <i>${esc(x.amount)}</i>` : ""}</span><span>${n0(x.kcal)} kcal · ${n1(x.p)}P · ${n1(x.c)}C · ${n1(x.f)}F</span></div>`).join("")}
-      <div class="dish-line tot"><span>${t("Whole dish")}</span><span>${n0(dt.kcal)} kcal · ${n1(dt.p)}P · ${n1(dt.c)}C · ${n1(dt.f)}F</span></div>
-      <div class="dish-line tot"><span>${t("Per serving")}</span><span id="dishPer">${dishPerText()}</span></div>
-      <div class="dish-line tot" id="dishPer100Row" style="${dishGramsMode() ? "" : "display:none"}"><span>${t("Per 100 g cooked")}</span><span id="dishPer100">${dishPer100Text()}</span></div>
+      <div class="dish-line tot"><span>${t("Whole dish")}${dishRefG() ? ` · ${dishRefG()} g` : ""}</span><span>${n0(dt.kcal)} kcal · ${n1(dt.p)}P · ${n1(dt.c)}C · ${n1(dt.f)}F</span></div>
+      <div class="dish-line tot"><span>${t("Per 100 g")}</span><span id="dishPer100">${dishPer100Text()}</span></div>
+      <div class="dish-line tot"><span>${t("Per serving")}</span><span id="dishServe">${dishServeText()}</span></div>
       <div class="dish-line tot"><span>${t("Your portion")}</span><span id="dishMine">${dishMineText()}</span></div>
     </div>
     <div class="dish-weigh">
-      <div class="tiny" style="margin-bottom:6px;color:var(--txt2)">${t("Prefer to weigh it? Enter the cooked weight and how many grams you ate.")}</div>
-      <div class="grid2">
-        <div class="field"><label>${t("Cooked weight (g)")}</label><input type="number" inputmode="decimal" min="0" value="${esc(dishForm.cookedG)}" placeholder="${dishRawGrams() ? "raw ≈ " + dishRawGrams() : ""}" oninput="dishForm.cookedG=this.value;M.dishWeighChange()"></div>
-        <div class="field"><label>${t("Grams I ate")}</label><input id="dishAteG" type="number" inputmode="decimal" min="0" value="${esc(dishForm.ateG)}" ${dishGramsMode() ? "" : "disabled"} oninput="dishForm.ateG=this.value;M.dishScale()"></div>
+      <div class="field"><label>${t("Cooked weight (g) — optional")}</label><input type="number" inputmode="decimal" min="0" value="${esc(dishForm.cookedG)}" placeholder="${dishRawGrams() ? t("ingredients ≈ ") + dishRawGrams() + " g" : t("weigh the finished dish")}" oninput="dishForm.cookedG=this.value;M.dishScale()"></div>
+      <div class="grid2" style="margin-top:8px">
+        <div class="field"><label>${t("Grams per serving")}</label><input type="number" inputmode="decimal" min="0" value="${esc(dishForm.perServingG)}" placeholder="e.g. 250" oninput="dishForm.perServingG=this.value;M.dishScale()"></div>
+        <div class="field"><label>${t("Grams I ate")}</label><input type="number" inputmode="decimal" min="0" value="${esc(dishForm.ateG)}" placeholder="${num(dishForm.perServingG) > 0 ? "1 serving = " + n0(num(dishForm.perServingG)) : ""}" oninput="dishForm.ateG=this.value;M.dishScale()"></div>
       </div>
-      ${dishRawGrams() ? `<div class="tiny" style="color:var(--txt3);margin-top:-2px">${t("Raw ingredients weigh ~")}${dishRawGrams()} g — cooked usually weighs a bit less (water loss). Weigh the finished dish for the most accurate per-gram.</div>` : ""}
+      ${num(dishForm.perServingG) > 0 ? `<button class="btn sm sec" style="margin-top:8px" onclick="M.dishAteServing()">${t("I ate one serving")} (${n0(num(dishForm.perServingG))} g)</button>` : ""}
+      <div class="tiny" style="color:var(--txt3);margin-top:7px">${t("Per-gram uses the cooked weight if you weighed it, otherwise the ingredient total. Cooked usually weighs a little less (water loss).")}</div>
     </div>
     <div class="row" style="margin-top:10px">
       <button class="btn sm" style="flex:1" onclick="M.dishLog()">${t("Log my portion")}</button>
@@ -5036,21 +5031,17 @@ async function dishMacros(){
 
 function dishLogPortion(){
   if (!dishForm.res) return;
-  const t = dishTotals();
+  const t = dishTotals(), ref = dishRefG();
   let amount, k;
-  if (dishGramsMode()){
-    const cg = num(dishForm.cookedG), ate = num(dishForm.ateG) > 0 ? num(dishForm.ateG) : cg;
-    k = ate / cg; amount = `${n0(ate)} g of ${n0(cg)} g cooked`;
-  } else {
-    const mk = dishMakes(), ate = dishAte(); k = ate / mk;
-    amount = mk > 1 || ate !== 1 ? `${n1(ate)} of ${n0(mk)} servings` : "whole dish";
-  }
+  const ate = num(dishForm.ateG) > 0 ? num(dishForm.ateG) : (num(dishForm.perServingG) > 0 ? num(dishForm.perServingG) : 0);
+  if (ref > 0 && ate > 0){ k = ate / ref; amount = `${n0(ate)} g`; }
+  else { k = 1; amount = "whole dish"; }
   reviewItems = [{
     name: dishForm.name.trim() || "Home-cooked dish",
     amount,
     kcal: Math.round(t.kcal * k), p: +(t.p * k).toFixed(1), c: +(t.c * k).toFixed(1), f: +(t.f * k).toFixed(1),
     conf: "estimate",
-    note: `Built from ${dishForm.res.items.length} ingredients — whole dish ≈ ${n0(t.kcal)} kcal · ${n1(t.p)}P · ${n1(t.c)}C · ${n1(t.f)}F.`,
+    note: `Built from ${dishForm.res.items.length} ingredients — whole dish ≈ ${n0(t.kcal)} kcal · ${n1(t.p)}P · ${n1(t.c)}C · ${n1(t.f)}F${ref > 0 ? ` (${ref} g)` : ""}.`,
   }];
   dishForm.open = false;
   render();
@@ -5059,23 +5050,26 @@ function dishLogPortion(){
 
 function dishSaveToRecipes(){
   if (!dishForm.res) return;
-  const t = dishTotals(), mk = dishMakes();
-  saveRecipe({name: dishForm.name.trim() || "Home-cooked dish", servings: mk, tags: ["home-cooked"],
-    per: {kcal: Math.round(t.kcal / mk), p: +(t.p / mk).toFixed(1), c: +(t.c / mk).toFixed(1), f: +(t.f / mk).toFixed(1)},
-    cookedWeight: num(dishForm.cookedG) > 0 ? Math.round(num(dishForm.cookedG)) : 0,
+  const t = dishTotals(), ref = dishRefG(), gps = num(dishForm.perServingG);
+  // servings derived from grams-per-serving over the reference weight; else 1
+  const servings = (ref > 0 && gps > 0) ? Math.max(1, Math.round(ref / gps)) : 1;
+  saveRecipe({name: dishForm.name.trim() || "Home-cooked dish", servings, tags: ["home-cooked"],
+    per: {kcal: Math.round(t.kcal / servings), p: +(t.p / servings).toFixed(1), c: +(t.c / servings).toFixed(1), f: +(t.f / servings).toFixed(1)},
+    cookedWeight: ref > 0 ? Math.round(ref) : 0,
     ingredients: dishForm.res.items.map(x => x.name + (x.amount ? ` — ${x.amount}` : ""))});
   save(); render();
   toast("Saved to your recipe box ✓");
 }
+function dishAteServing(){ if (num(dishForm.perServingG) > 0){ dishForm.ateG = String(num(dishForm.perServingG)); dishScalePatch(); render(); } }
 
 // Patch the serving/portion lines in place — a full render() mid-keystroke
 // would drop keyboard focus and make the page jump on iOS.
 function dishScalePatch(){
   if (!dishForm.res) return;
-  const per = $("#dishPer"), mine = $("#dishMine"), p100 = $("#dishPer100");
-  if (per) per.textContent = dishPerText();
-  if (mine) mine.textContent = dishMineText();
+  const p100 = $("#dishPer100"), serve = $("#dishServe"), mine = $("#dishMine");
   if (p100) p100.textContent = dishPer100Text();
+  if (serve) serve.textContent = dishServeText();
+  if (mine) mine.textContent = dishMineText();
 }
 
 // Build a review item (with an inline serving scaler) from an OpenFoodFacts
@@ -9186,14 +9180,7 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
   dishLog: dishLogPortion,
   dishRecipe: dishSaveToRecipes,
   dishScale: dishScalePatch,
-  // Cooked-weight typed: toggle grams mode (enable "grams I ate", show per-100 g)
-  // without a full re-render, so the field keeps focus while you type.
-  dishWeighChange(){
-    const on = num(dishForm.cookedG) > 0;
-    const ate = document.getElementById("dishAteG"); if (ate) ate.disabled = !on;
-    const row = document.getElementById("dishPer100Row"); if (row) row.style.display = on ? "" : "none";
-    dishScalePatch();
-  },
+  dishAteServing,
   /* ---- food-log report (date range, multi-format) ---- */
   reportToggle(){ R.reportOpen = !R.reportOpen; render(); },
   openFoodReport(){
@@ -9440,6 +9427,7 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
     dishForm.makes = String(r.servings || 1);
     dishForm.ate = "1";
     dishForm.cookedG = r.cookedWeight ? String(r.cookedWeight) : "";
+    dishForm.perServingG = (r.cookedWeight && r.servings) ? String(Math.round(r.cookedWeight / r.servings)) : "";
     dishForm.ateG = "";
     dishForm.ings = rows.length ? rows : [{n: "", a: ""}, {n: "", a: ""}];
     dishForm.res = null;
