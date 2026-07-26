@@ -1026,6 +1026,13 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
 .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .grid3m{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .grid4 .field,.grid2 .field,.grid3m .field{margin-bottom:0}
+.portion-adj{margin:-4px 0 12px;padding:10px 12px;border:1px solid color-mix(in srgb,var(--acc) 32%,var(--line));border-radius:12px;background:color-mix(in srgb,var(--acc) 7%,var(--card2))}
+.portion-adj .pa-row{display:flex;align-items:center;gap:10px}
+.portion-adj .pa-row label{font-size:12.5px;color:var(--txt2);font-weight:600;white-space:nowrap;margin:0}
+.portion-adj .pa-input{margin-inline-start:auto;display:flex;align-items:center;gap:6px}
+.portion-adj .pa-input input{width:96px;text-align:end;padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:var(--bg);color:var(--txt);font-size:15px}
+.portion-adj .pa-unit{color:var(--txt2);font-size:13px;min-width:20px}
+.portion-adj .pa-hint{margin-top:7px;color:var(--txt3);line-height:1.5}
 .review-item{background:var(--bg2);border:1px solid var(--line2);border-radius:12px;padding:12px;margin-bottom:10px}
 .rv-warn{display:flex;gap:8px;align-items:flex-start;background:color-mix(in srgb,var(--amber) 13%,transparent);border:1px solid color-mix(in srgb,var(--amber) 40%,transparent);border-radius:10px;padding:9px 11px;margin-bottom:9px;font-size:12px;line-height:1.5;color:var(--txt)}
 .rv-warn svg{flex:0 0 auto;color:var(--amber);margin-top:1px}
@@ -1250,7 +1257,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.117";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.118";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1501,6 +1508,11 @@ const TR = {
     "Community food database":"قاعدة بيانات الطعام المجتمعية","Supabase project URL":"رابط مشروع Supabase","Supabase anon key":"مفتاح Supabase العام (anon)",
     "Confirm your lookup below":"أكّد نتيجة البحث بالأسفل",
     "Estimated maintenance":"سعرات الصيانة المُقدّرة","kcal/day upkeep":"سعرة/يوم للصيانة","Avg intake":"متوسط الاستهلاك","kg/week":"كغ/أسبوع","days logged":"أيام مُسجّلة",
+    "Adjust amount": "تعديل الكمية",
+    "Saved as": "محفوظ كـ",
+    "Change the amount and the macros rescale automatically.": "غيّر الكمية وتُعاد الماكروز حسابها تلقائيًا.",
+    "Filled ✓ — change the amount to rescale": "تمّت التعبئة ✓ — غيّر الكمية لإعادة الحساب",
+    "Filled from saved foods ✓": "تمّت التعبئة من الأطعمة المحفوظة ✓",
     "Weekly review": "المراجعة الأسبوعية",
     "Your last 7 days across work, health, fitness & life": "آخر 7 أيام في العمل والصحة واللياقة والحياة",
     "Not logged this week": "لم يُسجَّل هذا الأسبوع",
@@ -4393,7 +4405,20 @@ function sanity(m){
 
 /* ---------------- nutrition tab ---------------- */
 const foodForm = {name: "", amount: "", time: "", meal: "", kcal: "", p: "", c: "", f: "", conf: "user",
-  scOpen: false, scBase: "100", scBaseUnit: "g", scK: "", scP: "", scC: "", scF: "", scEat: ""};
+  scOpen: false, scBase: "100", scBaseUnit: "g", scK: "", scP: "", scC: "", scF: "", scEat: "",
+  portion: null, portG: ""};
+// Pull a scalable quantity out of a saved amount string ("72 g", "250 ml",
+// "3 pieces") — prefers an explicit weight/volume so gram-logged foods rescale
+// precisely; falls back to the first counted quantity. Returns null when there
+// is nothing numeric to scale by (e.g. "1 handful").
+function parsePortion(amount){
+  const s = String(amount || "");
+  let m = s.match(/(\d+(?:\.\d+)?)\s*(g|gram|grams|gm|ml|milliliter|milliliters|millilitre|millilitres)\b/i);
+  if (m) return {base: +m[1], unit: /ml|milli/i.test(m[2]) ? "ml" : "g"};
+  m = s.match(/(\d+(?:\.\d+)?)\s*([a-zA-Z؀-ۿ]+)?/);
+  if (m && +m[1] > 0) return {base: +m[1], unit: (m[2] || "").toLowerCase()};
+  return null;
+}
 let reviewItems = null;   // [{name, amount, kcal, p, c, f, conf, note}] pending user review
 let findBusy = false, extractBusy = false, barcodeBusy = false;
 
@@ -4537,6 +4562,14 @@ function foodHTML(){
       <div class="lookup-hint">${ic("search", 14)} ${t("Confirm your lookup below")}</div>
       ` : `
       <div class="field"><label>${t("Amount eaten")}</label><input id="ffAmount" value="${esc(foodForm.amount)}" placeholder="e.g. 3 pieces · 150 g · 250 ml" oninput="foodForm.amount=this.value"></div>
+      ${foodForm.portion ? `
+      <div class="portion-adj">
+        <div class="pa-row">
+          <label>${t("Adjust amount")}</label>
+          <div class="pa-input"><input id="ffPortion" type="number" inputmode="decimal" min="0" value="${esc(foodForm.portG ?? foodForm.portion.base)}" oninput="M.portionInput(this.value)">${foodForm.portion.unit ? `<span class="pa-unit">${esc(foodForm.portion.unit)}</span>` : ""}</div>
+        </div>
+        <div class="tiny pa-hint">${t("Saved as")} ${n0(foodForm.portion.base)}${foodForm.portion.unit ? " " + esc(foodForm.portion.unit) : ""} · ${n0(foodForm.portion.k)} kcal. ${t("Change the amount and the macros rescale automatically.")}</div>
+      </div>` : ""}
       <div class="grid2" style="margin-bottom:12px">
         <div class="field"><label>${t("Time")}</label><input id="ffTime" type="time" value="${esc(foodForm.time || nowHM())}" oninput="foodForm.time=this.value"></div>
         <div class="field"><label>${t("Calories (kcal)")}</label><input id="ffK" type="number" inputmode="decimal" value="${esc(foodForm.kcal)}" oninput="foodForm.kcal=this.value" placeholder="kcal"></div>
@@ -4924,13 +4957,13 @@ function foodSaveDirect(){
         kcal: num(it.kcal), p: num(it.p), c: num(it.c), f: num(it.f), conf: it.conf || "user"});
     }
     R.editFoodId = null;
-    Object.assign(foodForm, {name: "", amount: "", time: "", meal: "", kcal: "", p: "", c: "", f: "", conf: "user", scOpen: false});
+    Object.assign(foodForm, {name: "", amount: "", time: "", meal: "", kcal: "", p: "", c: "", f: "", conf: "user", scOpen: false, portion: null, portG: ""});
     save(); render();
     toast(f ? "Entry updated ✓" : "That entry no longer exists.");
     return;
   }
   logFood(it);
-  Object.assign(foodForm, {name: "", amount: "", time: "", meal: "", kcal: "", p: "", c: "", f: "", conf: "user", scOpen: false});
+  Object.assign(foodForm, {name: "", amount: "", time: "", meal: "", kcal: "", p: "", c: "", f: "", conf: "user", scOpen: false, portion: null, portG: ""});
   render();
 }
 function logFood(it){
@@ -9574,9 +9607,28 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
   acPick(i){
     const f = S.savedFoods[i];
     if (!f) return;
-    Object.assign(foodForm, {name: f.name, amount: f.amount, kcal: f.kcal, p: f.p, c: f.c, f: f.f, conf: "user"});
+    // Remember the saved portion so a different amount re-scales the macros.
+    const pp = parsePortion(f.amount);
+    const portion = pp && num(f.kcal) > 0 ? {base: pp.base, unit: pp.unit, k: num(f.kcal), p: num(f.p), c: num(f.c), f: num(f.f)} : null;
+    Object.assign(foodForm, {name: f.name, amount: f.amount, kcal: f.kcal, p: f.p, c: f.c, f: f.f, conf: "user",
+      portion, portG: portion ? portion.base : ""});
     render();
-    toast("Filled from saved foods ✓");
+    toast(portion ? tr("Filled ✓ — change the amount to rescale") : tr("Filled from saved foods ✓"));
+  },
+  portionInput(v){
+    const pt = foodForm.portion; if (!pt) return;
+    foodForm.portG = v;
+    const g = num(v), r = pt.base > 0 ? g / pt.base : 0;
+    const rnd = x => Math.round(x * 10) / 10;
+    foodForm.kcal = g > 0 ? Math.round(pt.k * r) : "";
+    foodForm.p = g > 0 ? rnd(pt.p * r) : "";
+    foodForm.c = g > 0 ? rnd(pt.c * r) : "";
+    foodForm.f = g > 0 ? rnd(pt.f * r) : "";
+    foodForm.amount = g > 0 ? (+g + (pt.unit ? " " + pt.unit : "")) : "";
+    // write straight to the inputs so the number field keeps focus (no re-render)
+    const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+    set("ffK", foodForm.kcal); set("ffP", foodForm.p); set("ffC", foodForm.c); set("ffF", foodForm.f);
+    set("ffAmount", foodForm.amount);
   },
   scToggle(){ foodForm.scOpen = !foodForm.scOpen; render(); },
   scApply(){
@@ -9605,13 +9657,13 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
     const f = S.foods.find(x => x.id === id); if (!f) return;
     R.editFoodId = id; R.tab = "food"; R.homeCat = null;
     Object.assign(foodForm, {name: f.name, amount: f.amount || "", time: entryTime(f), meal: entryMeal(f),
-      kcal: String(f.kcal ?? ""), p: String(f.p ?? ""), c: String(f.c ?? ""), f: String(f.f ?? ""), conf: f.conf || "user", scOpen: false});
+      kcal: String(f.kcal ?? ""), p: String(f.p ?? ""), c: String(f.c ?? ""), f: String(f.f ?? ""), conf: f.conf || "user", scOpen: false, portion: null, portG: ""});
     render();
     const card = $("#addFoodCard"); if (card){ card.classList.add("open"); card.scrollIntoView({behavior: "smooth", block: "start"}); }
   },
   foodEditCancel(){
     R.editFoodId = null;
-    Object.assign(foodForm, {name: "", amount: "", time: "", meal: "", kcal: "", p: "", c: "", f: "", conf: "user", scOpen: false});
+    Object.assign(foodForm, {name: "", amount: "", time: "", meal: "", kcal: "", p: "", c: "", f: "", conf: "user", scOpen: false, portion: null, portG: ""});
     render();
   },
   mealMenu(id){ R.mealMenuId = R.mealMenuId === id ? null : id; render(); },
@@ -9711,7 +9763,7 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
     reviewItems.splice(i, 1);
     if (!reviewItems.length) reviewItems = null;
     // clear the add-food form too, so the looked-up name/amount don't linger
-    Object.assign(foodForm, {name: "", amount: "", kcal: "", p: "", c: "", f: "", conf: "user", scOpen: false});
+    Object.assign(foodForm, {name: "", amount: "", kcal: "", p: "", c: "", f: "", conf: "user", scOpen: false, portion: null, portG: ""});
     render();
   },
   reviewDrop(i){ reviewItems.splice(i, 1); if (!reviewItems.length) reviewItems = null; render(); },
