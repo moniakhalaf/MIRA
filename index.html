@@ -1250,7 +1250,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.114";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.115";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1501,6 +1501,26 @@ const TR = {
     "Community food database":"قاعدة بيانات الطعام المجتمعية","Supabase project URL":"رابط مشروع Supabase","Supabase anon key":"مفتاح Supabase العام (anon)",
     "Confirm your lookup below":"أكّد نتيجة البحث بالأسفل",
     "Estimated maintenance":"سعرات الصيانة المُقدّرة","kcal/day upkeep":"سعرة/يوم للصيانة","Avg intake":"متوسط الاستهلاك","kg/week":"كغ/أسبوع","days logged":"أيام مُسجّلة",
+    "Chart": "رسم بياني",
+    "no data yet": "لا توجد بيانات بعد",
+    "trending up": "في ارتفاع",
+    "trending down": "في انخفاض",
+    "holding steady": "ثابت",
+    "from": "من",
+    "to": "إلى",
+    "low": "أدنى",
+    "high": "أعلى",
+    "average": "المتوسط",
+    "peak": "الذروة",
+    "logged": "مُسجّلة",
+    "target": "الهدف",
+    "Spending by category": "الإنفاق حسب الفئة",
+    "total": "الإجمالي",
+    "Most on": "الأكثر على",
+    "Month by month": "شهرًا بشهر",
+    "saved": "مُدّخر",
+    "spending down": "الإنفاق في انخفاض",
+    "spending up": "الإنفاق في ارتفاع",
     "dots": "نقاط",
     "scale": "الميزان",
     "line": "الخط",
@@ -2781,7 +2801,25 @@ function barsSVG(vals, opt){
   });
   let tl = "";
   if (target){ const ty = H - (target / max) * (H - pad); tl = `<line x1="0" y1="${ty.toFixed(1)}" x2="${W}" y2="${ty.toFixed(1)}" stroke="var(--txt2)" stroke-width="1" stroke-dasharray="3 3" opacity="0.6"/>`; }
-  return `<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img">${tl}${bars}</svg>`;
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="${esc(chartAria(vals, opt, "bars"))}">${tl}${bars}</svg>`;
+}
+// One-line spoken summary of a chart's data for screen readers (UI/UX:
+// screen-reader-summary). Numbers only — the metric name comes from opt.label.
+function chartAria(vals, opt, kind){
+  opt = opt || {};
+  const lab = opt.label || tr("Chart");
+  const nz = vals.filter(v => v > 0);
+  const dec = vals.some(v => v % 1 !== 0);
+  const f = v => dec ? n1(v) : n0(v);
+  if (!nz.length) return `${lab}: ${tr("no data yet")}.`;
+  if (kind === "line"){
+    const first = vals[0], last = vals[vals.length - 1], lo = Math.min(...vals), hi = Math.max(...vals);
+    const span = (hi - lo) || 1;
+    const dir = last > first + span * 0.03 ? tr("trending up") : last < first - span * 0.03 ? tr("trending down") : tr("holding steady");
+    return `${lab}: ${tr("from")} ${f(first)} ${tr("to")} ${f(last)}, ${tr("low")} ${f(lo)}, ${tr("high")} ${f(hi)}, ${vals.length} ${tr("points")}, ${dir}.`;
+  }
+  const avg = nz.reduce((a, b) => a + b, 0) / nz.length, peak = Math.max(...nz);
+  return `${lab}: ${tr("average")} ${f(avg)}, ${tr("peak")} ${f(peak)}, ${nz.length} ${tr("logged")}${opt.target ? `, ${tr("target")} ${f(opt.target)}` : ""}.`;
 }
 // Line for a sparse (date,val) series.
 function lineSVG(pts, opt){
@@ -2793,7 +2831,7 @@ function lineSVG(pts, opt){
   const Y = v => H - pad - ((v - min) / span) * (H - pad * 2);
   let dpath = "", dots = "";
   pts.forEach((p, i) => { const x = X(i), y = Y(p.v); dpath += (i ? "L" : "M") + x.toFixed(1) + " " + y.toFixed(1) + " "; dots += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.4" fill="${opt.color || "var(--acc)"}"/>`; });
-  return `<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img"><path d="${dpath}" fill="none" stroke="${opt.color || "var(--acc)"}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>${dots}</svg>`;
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="${esc(chartAria(vals, opt, "line"))}"><path d="${dpath}" fill="none" stroke="${opt.color || "var(--acc)"}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>${dots}</svg>`;
 }
 function trendCard(title, sub, body){
   return `<div class="card trend-card"><div class="tc-h"><span class="tc-t">${title}</span>${sub ? `<span class="tc-s">${sub}</span>` : ""}</div>${body}</div>`;
@@ -2836,31 +2874,31 @@ function trendsHTML(){
   const wSeries = tw ? tw.series.filter(s => range === 0 || s.date >= from).slice(-40) : [];
   cards.push(trendCard(tr("Weight"), twSub,
     wSeries.length >= 2 ? weightTrendSVG(wSeries) + `<div class="tc-meta"><span>${tr("dots")} = ${tr("scale")}</span><span style="color:#e8863d">${tr("line")} = ${tr("trend")}</span><span>${wSeries.length} ${tr("points")}</span></div>`
-      : wl.length >= 2 ? lineSVG(wl, {color: "#e8863d"}) + lineMeta(wl, " kg") : trendEmpty("Log at least 2 weight entries to see your trend.")));
+      : wl.length >= 2 ? lineSVG(wl, {color: "#e8863d", label: tr("Weight") + " (kg)"}) + lineMeta(wl, " kg") : trendEmpty("Log at least 2 weight entries to see your trend.")));
 
   // Calories/day
   const kcals = days.map(d => Math.round(dayTotals(d).kcal));
   const kcalDays = kcals.filter(v => v > 0).length;
   cards.push(trendCard(tr("Calories") + " · " + lab, tg.kcal ? `target ${n0(tg.kcal)}` : "per day",
-    kcalDays >= 2 ? barsSVG(kcals, {color: "#3bb273", target: tg.kcal}) + barsMeta(kcals, "") : trendEmpty("Log food on at least 2 days to see your calorie trend.")));
+    kcalDays >= 2 ? barsSVG(kcals, {color: "#3bb273", target: tg.kcal, label: tr("Calories")}) + barsMeta(kcals, "") : trendEmpty("Log food on at least 2 days to see your calorie trend.")));
 
   // Protein/day
   const prot = days.map(d => Math.round(dayTotals(d).p));
   const protDays = prot.filter(v => v > 0).length;
   cards.push(trendCard(tr("Protein") + " · " + lab, tg.protein ? `target ${n0(tg.protein)} g` : "g per day",
-    protDays >= 2 ? barsSVG(prot, {color: "#4c7fe0", target: tg.protein}) + barsMeta(prot, " g") : trendEmpty("Log food on at least 2 days to see your protein trend.")));
+    protDays >= 2 ? barsSVG(prot, {color: "#4c7fe0", target: tg.protein, label: tr("Protein") + " (g)"}) + barsMeta(prot, " g") : trendEmpty("Log food on at least 2 days to see your protein trend.")));
 
   // Sleep hours
   const sleepMap = {}; (S.sleep || []).forEach(e => { sleepMap[e.date] = +e.hours || 0; });
   const sleeps = days.map(d => sleepMap[d] || 0);
   const sleepDays = sleeps.filter(v => v > 0).length;
   cards.push(trendCard(tr("Sleep") + " · " + lab, "hours per night",
-    sleepDays >= 2 ? barsSVG(sleeps, {color: "#b57edc"}) + barsMeta(sleeps, " h") : trendEmpty("Log at least 2 nights of sleep to see your trend.")));
+    sleepDays >= 2 ? barsSVG(sleeps, {color: "#b57edc", label: tr("Sleep") + " (h)"}) + barsMeta(sleeps, " h") : trendEmpty("Log at least 2 nights of sleep to see your trend.")));
 
   // Wellness score (line, from check-ins)
   const ciPts = days.map(d => { const c = (S.checkins || []).find(x => x.date === d); return c ? {d, v: checkinScore(c)} : null; }).filter(p => p && p.v != null);
   cards.push(trendCard(tr("Wellness") + " · " + lab, "daily score /100",
-    ciPts.length >= 2 ? lineSVG(ciPts, {color: "#3bb273"}) + lineMeta(ciPts, "") : trendEmpty("Do at least 2 wellness check-ins to see your mood trend.")));
+    ciPts.length >= 2 ? lineSVG(ciPts, {color: "#3bb273", label: tr("Wellness")}) + lineMeta(ciPts, "") : trendEmpty("Do at least 2 wellness check-ins to see your mood trend.")));
 
   // Training sets per week — scale week count to the range
   const nWeeks = Math.min(26, Math.max(6, Math.ceil((range || dn) / 7)));
@@ -2868,7 +2906,7 @@ function trendsHTML(){
   const setSeries = weeks.map(wk => { let s = 0; (S.workouts || []).filter(x => x.date >= wk.start && x.date <= wk.end).forEach(x => (x.items || []).forEach(it => s += (it.sets || []).length)); return s; });
   const setWeeks = setSeries.filter(v => v > 0).length;
   cards.push(trendCard(`${tr("Training volume")} · ${nWeeks} ${tr("weeks")}`, "sets per week",
-    setWeeks >= 2 ? barsSVG(setSeries, {color: "#e8863d"}) + barsMeta(setSeries, " sets") : trendEmpty("Log workouts across at least 2 weeks to see your volume trend.")));
+    setWeeks >= 2 ? barsSVG(setSeries, {color: "#e8863d", label: tr("Training volume") + " (sets)"}) + barsMeta(setSeries, " sets") : trendEmpty("Log workouts across at least 2 weeks to see your volume trend.")));
 
   return `
     ${checkinCardHTML()}
@@ -3001,7 +3039,9 @@ function weightTrendSVG(series){
     dots += `<circle cx="${X(i).toFixed(1)}" cy="${Y(p.v).toFixed(1)}" r="2" fill="var(--txt3)" opacity="0.5"/>`;
     tpath += (i ? "L" : "M") + X(i).toFixed(1) + " " + Y(p.trend).toFixed(1) + " ";
   });
-  return `<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img">${dots}<path d="${tpath}" fill="none" stroke="#e8863d" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
+  const last = series[series.length - 1];
+  const aria = `${tr("Weight")} (kg): ${tr("scale")} ${last.v}, ${tr("trend")} ${last.trend}, ${series[0].trend < last.trend ? tr("trending up") : series[0].trend > last.trend ? tr("trending down") : tr("holding steady")}, ${n} ${tr("points")}.`;
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="${esc(aria)}">${dots}<path d="${tpath}" fill="none" stroke="#e8863d" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
 }
 
 /* ---------------- Adaptive targets (coaching) ---------------- */
@@ -7070,9 +7110,13 @@ function donutSVG(entries, total){
     segs += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${catColor(cat)}" stroke-width="${sw}" stroke-dasharray="${len.toFixed(1)} ${(C - len).toFixed(1)}" stroke-dashoffset="${(-acc * C).toFixed(1)}" transform="rotate(-90 ${cx} ${cy})"/>`;
     acc += frac;
   });
-  return `<svg viewBox="0 0 124 124" class="donut" aria-hidden="true">${segs || `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--line2)" stroke-width="${sw}"/>`}
-    <text x="${cx}" y="${cy - 1}" text-anchor="middle" class="d-c">${cur(total)}</text>
-    <text x="${cx}" y="${cy + 15}" text-anchor="middle" class="d-l">spent</text></svg>`;
+  const top = entries[0];
+  const aria = entries.length
+    ? `${tr("Spending by category")}: ${tr("total")} ${cur(total)} KWD. ${tr("Most on")} ${top[0]} ${cur(top[1])}.`
+    : `${tr("Spending by category")}: ${tr("no data yet")}.`;
+  return `<svg viewBox="0 0 124 124" class="donut" role="img" aria-label="${esc(aria)}">${segs || `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--line2)" stroke-width="${sw}"/>`}
+    <text x="${cx}" y="${cy - 1}" text-anchor="middle" class="d-c" aria-hidden="true">${cur(total)}</text>
+    <text x="${cx}" y="${cy + 15}" text-anchor="middle" class="d-l" aria-hidden="true">spent</text></svg>`;
 }
 function budgetHTML(){
   const ym = todayStr().slice(0, 7);
@@ -7209,7 +7253,9 @@ function monthTrendSVG(rows){
     }
     g += `<text x="${cx}" y="${axisY + 16}" text-anchor="middle" class="mt-x">${esc(r.label)}</text>`;
   });
-  return `<svg viewBox="0 0 ${W} ${H}" class="mt-svg" preserveAspectRatio="xMidYMid meet" aria-hidden="true">${g}</svg>`;
+  const first = rows[0], last = rows[rows.length - 1];
+  const aria = `${tr("Month by month")}: ${rows.map(r => `${r.label} ${cur(r.out)}${useInc && r.rate != null ? ` (${r.rate}% ${tr("saved")})` : ""}`).join(", ")}. ${last.out < first.out ? tr("spending down") : last.out > first.out ? tr("spending up") : tr("holding steady")}.`;
+  return `<svg viewBox="0 0 ${W} ${H}" class="mt-svg" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${esc(aria)}">${g}</svg>`;
 }
 function monthTrendHTML(){
   const all = monthlyTrend(6);
