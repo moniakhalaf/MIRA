@@ -1268,7 +1268,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.119";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.120";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -7553,7 +7553,7 @@ function budgetHTML(){
       </div>
     </div>
 
-    ${savingsBalanceHTML(income, net, totalOut)}
+    ${savingsBalanceHTML()}
 
     ${entries.length ? `<div class="card">
       <h3>${ic("wallet", 16)} ${tr("Where it goes")}</h3>
@@ -7703,12 +7703,23 @@ function monthTrendHTML(){
    flows into it: overspend draws the pot down, underspend tops it up.
    The balance is user-maintained — MIRA shows where it lands if the
    month ends as it stands, and can bank that net into the balance once. */
-function savingsBalanceHTML(income, net, totalOut){
+// This month's net, recomputed from state so the body can refresh on its
+// own (typing in the balance patches #savBody in place — never the whole
+// card — so the number field keeps focus and the keyboard stays up).
+function budgetNet(){
+  const ym = todayStr().slice(0, 7);
+  const spent = S.expenses.filter(e => e.date.slice(0, 7) === ym).reduce((a, e) => a + num(e.amount), 0);
+  const billsMo = S.bills.reduce((a, b) => a + num(b.amount) * (BILL_CYCLES[b.cycle] || BILL_CYCLES.monthly).perMonth, 0);
+  const income = num(S.budget.income);
+  const totalOut = spent + billsMo;
+  return {income, totalOut, net: income - totalOut};
+}
+function savingsBodyHTML(){
+  const {income, totalOut, net} = budgetNet();
   const bal = num(S.budget.savings);
   const has = S.budget.savings != null && S.budget.savings !== "";
   const active = income > 0 || totalOut > 0;          // a meaningful month to project
-  const ym = todayStr().slice(0, 7);
-  const banked = S.budget.savingsBankedMonth === ym; // already folded this month's net in
+  const banked = S.budget.savingsBankedMonth === todayStr().slice(0, 7); // net already folded in
   const projected = bal + net;
   const flow = active && !banked ? `
     <div class="sav-flow ${net >= 0 ? "up" : "down"}">
@@ -7723,12 +7734,16 @@ function savingsBalanceHTML(income, net, totalOut){
     </div>
     ${projected < 0 ? `<div class="tiny sav-warn">${ic("wallet", 13)} ${tr("This would take your savings below zero — worth trimming spending or topping up.")}</div>` : ""}` : ""}
   ` : banked ? `<div class="sav-flow up"><span class="sf-ic">${ic("check", 15)}</span><span>${tr("This month's change is already banked into your balance.")}</span></div>` : "";
+  return `${flow}
+    <div class="tiny" style="margin-top:${flow ? "10px" : "2px"};color:var(--txt2)">${tr("Spending more than your income draws from savings; spending less adds to it.")}${has && active && !banked ? " " + tr("Bank it at month-end to roll the change into your balance.") : ""}</div>
+    ${has && active && !banked ? `<button class="btn sm sec" style="width:100%;margin-top:10px" onclick="M.savingsBank(${net})">${ic("check", 14)} ${tr("Bank this month into my balance")}</button>` : ""}`;
+}
+function savingsBalanceHTML(){
+  const has = S.budget.savings != null && S.budget.savings !== "";
   return `<div class="card sav-card">
     <h3>${ic("wallet", 16)} ${tr("Savings balance")}</h3>
     <div class="field"><label>${tr("Current savings (KWD)")}</label><input type="number" inputmode="decimal" value="${has ? S.budget.savings : ""}" placeholder="0" oninput="M.savingsSet(this.value)"></div>
-    ${flow}
-    <div class="tiny" style="margin-top:${flow ? "10px" : "2px"};color:var(--txt2)">${tr("Spending more than your income draws from savings; spending less adds to it.")}${has && active && !banked ? " " + tr("Bank it at month-end to roll the change into your balance.") : ""}</div>
-    ${has && active && !banked ? `<button class="btn sm sec" style="width:100%;margin-top:10px" onclick="M.savingsBank(${net})">${ic("check", 14)} ${tr("Bank this month into my balance")}</button>` : ""}
+    <div id="savBody">${savingsBodyHTML()}</div>
   </div>`;
 }
 
@@ -9231,7 +9246,11 @@ window.M = {
     S.budget.savings = v.trim() === "" ? "" : num(v);
     // editing the balance by hand undoes an accidental "banked" lock for this month
     if (S.budget.savingsBankedMonth === todayStr().slice(0, 7)) S.budget.savingsBankedMonth = null;
-    save(); render();
+    save();
+    // Patch ONLY the projection region — never re-render the input itself, so the
+    // number field keeps focus and the keyboard stays up (no flicker).
+    const el = document.getElementById("savBody");
+    if (el) el.innerHTML = savingsBodyHTML();
   },
   savingsBank(net){
     const bal = num(S.budget.savings) + num(net);
