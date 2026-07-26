@@ -1250,7 +1250,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.115";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.116";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1501,6 +1501,185 @@ const TR = {
     "Community food database":"قاعدة بيانات الطعام المجتمعية","Supabase project URL":"رابط مشروع Supabase","Supabase anon key":"مفتاح Supabase العام (anon)",
     "Confirm your lookup below":"أكّد نتيجة البحث بالأسفل",
     "Estimated maintenance":"سعرات الصيانة المُقدّرة","kcal/day upkeep":"سعرة/يوم للصيانة","Avg intake":"متوسط الاستهلاك","kg/week":"كغ/أسبوع","days logged":"أيام مُسجّلة",
+    "Estimated monthly spend": "الإنفاق الشهري التقديري",
+    "items": "عناصر",
+    "yr": "سنة",
+    "Add a bill / subscription": "أضف فاتورة / اشتراك",
+    "e.g. Netflix, rent, gym": "مثال: نتفليكس، إيجار، نادي",
+    "Amount (KWD)": "المبلغ (د.ك)",
+    "Next renewal (optional)": "التجديد القادم (اختياري)",
+    "Your bills": "فواتيرك",
+    "KWD": "د.ك",
+    "renews": "يتجدد",
+    "Remind": "تذكير",
+    "Add renewal reminder": "أضف تذكير التجديد",
+    "Delete": "حذف",
+    "spent": "أُنفق",
+    "Monthly income (KWD)": "الدخل الشهري (د.ك)",
+    "Out this month": "الصادر هذا الشهر",
+    "Net left": "المتبقّي الصافي",
+    "Savings rate": "معدّل الادّخار",
+    "Where it goes": "أين يذهب المال",
+    "Most goes to": "الأكثر يذهب إلى",
+    "of spending": "من الإنفاق",
+    "Savings plan": "خطة الادّخار",
+    "Save each month (KWD)": "ادّخر شهريًا (د.ك)",
+    "1 year": "سنة",
+    "months": "أشهر",
+    "Saving toward (optional)": "الادّخار من أجل (اختياري)",
+    "e.g. new laptop, Umrah, emergency fund": "مثال: لابتوب جديد، عمرة، صندوق طوارئ",
+    "Cost (KWD)": "التكلفة (د.ك)",
+    "At": "عند",
+    "KWD/month you'll reach": "د.ك/شهر ستصل إلى",
+    "your goal": "هدفك",
+    "in about": "خلال حوالي",
+    "month": "شهر",
+    "Set a monthly saving amount above to see when you'll reach it.": "حدّد مبلغ ادّخار شهري بالأعلى لمعرفة متى ستصل إليه.",
+    "Add expense": "أضف مصروفًا",
+    "Category": "الفئة",
+    "Add a custom category": "أضف فئة مخصّصة",
+    "New category — e.g. Tabby, Mob bill, DBA payment": "فئة جديدة — مثال: تابي، فاتورة موبايل، دفعة DBA",
+    "Note (optional)": "ملاحظة (اختياري)",
+    "expenses": "مصاريف",
+    "more this month": "المزيد هذا الشهر",
+    "No expenses logged this month": "لا مصاريف مُسجّلة هذا الشهر",
+    "Add what you spend and MIRA will show where it goes and how to save.": "سجّل ما تنفقه وستُظهر لك ميرا أين يذهب وكيف تدّخر.",
+    "about the same as": "تقريبًا نفس",
+    "less than": "أقل من",
+    "more than": "أكثر من",
+    "Month-by-month": "شهرًا بشهر",
+    "Spent": "أُنفق",
+    "Saved": "مُدّخر",
+    "bar = your income; % = savings rate": "العمود = دخلك؛ % = معدّل الادّخار",
+    "bars = total spent": "الأعمدة = إجمالي الإنفاق",
+    "avg out / month": "متوسط الصادر / شهر",
+    "avg saved / month": "متوسط المدّخر / شهر",
+    "This month you spent": "هذا الشهر أنفقت",
+    "last month": "الشهر الماضي",
+    "Add your monthly income above to see your savings rate on each bar.": "أضف دخلك الشهري بالأعلى لرؤية معدّل ادّخارك على كل عمود.",
+    "MIRA is working out a realistic amount from your last few months…": "تحسب ميرا مبلغًا واقعيًا من أشهرك الأخيرة…",
+    "Recommend how much I should save": "اقترح كم ينبغي أن أدّخر",
+    "Add your income and log a few expenses first.": "أضف دخلك وسجّل بعض المصاريف أولًا.",
+    "MIRA's suggestion from your last months": "اقتراح ميرا من أشهرك الأخيرة",
+    "Use": "استخدم",
+    "as my target": "كهدفي",
+    "Redo": "إعادة",
+    "AI estimate from your own numbers — a guide, not a rule. Tap a tier to make it your target.": "تقدير بالذكاء الاصطناعي من أرقامك — إرشاد لا قاعدة. اضغط على مستوى لجعله هدفك.",
+    "Reading your money…": "قراءة أموالك…",
+    "MIRA is going through your income, fixed bills and where it goes to find realistic ways to save.": "تراجع ميرا دخلك وفواتيرك الثابتة وأين يذهب المال لإيجاد طرق واقعية للادّخار.",
+    "Smart savings plan": "خطة ادّخار ذكية",
+    "MIRA looks at your income, your fixed monthly payments and where your money actually goes — then finds specific ways to save, with the KWD/month each one frees up. Built for you, not generic tips.": "تنظر ميرا إلى دخلك ومدفوعاتك الشهرية الثابتة وأين يذهب مالك فعلًا — ثم تجد طرقًا محدّدة للادّخار، مع مقدار د.ك/شهر الذي يوفّره كل منها. مصمَّمة لك، لا نصائح عامة.",
+    "Find ways to save my money": "جِد طرقًا لتوفير أموالي",
+    "Add your monthly income and a few expenses above first.": "أضف دخلك الشهري وبعض المصاريف بالأعلى أولًا.",
+    "committed across": "ملتزم بـ",
+    "move": "خطوة",
+    "moves": "خطوات",
+    "if you do all": "إذا فعلت كل الـ",
+    "KWD/mo": "د.ك/شهر",
+    "KWD/year": "د.ك/سنة",
+    "Tap the ones you'll actually do — MIRA totals them up and updates your plan.": "اضغط على التي ستفعلها فعلًا — تجمعها ميرا وتحدّث خطتك.",
+    "Save here": "وفّر هنا",
+    "/mo": "/شهر",
+    "Set aside": "خصّص",
+    "KWD/month": "د.ك/شهر",
+    "committed": "ملتزَم",
+    "the full plan": "الخطة كاملة",
+    "and you'll have": "وسيكون لديك",
+    "6 months": "6 أشهر",
+    "3 years": "3 سنوات",
+    "That reaches": "هذا يصل إلى",
+    "Money simply set aside — no investment growth assumed.": "مال مُخصّص فقط — دون افتراض نمو استثماري.",
+    "Make this my monthly target": "اجعل هذا هدفي الشهري",
+    "Redo plan": "إعادة الخطة",
+    "Clear plan": "مسح الخطة",
+    "AI suggestions from your own numbers — estimates, so adjust to your life.": "اقتراحات بالذكاء الاصطناعي من أرقامك — تقديرات، فعدّلها حسب حياتك.",
+    "Generated": "أُنشئت",
+    "just now": "الآن",
+    "Important dates": "تواريخ مهمة",
+    "What": "ماذا",
+    "e.g. Mum's birthday": "مثال: عيد ميلاد أمي",
+    "Date": "التاريخ",
+    "Repeats every year": "يتكرر كل سنة",
+    "Add date": "أضف تاريخًا",
+    "Reading list": "قائمة القراءة",
+    "Title…": "العنوان…",
+    "Add books or articles; tap the circle to move To read → Reading → Done.": "أضف كتبًا أو مقالات؛ اضغط الدائرة للانتقال: للقراءة ← قيد القراءة ← منتهية.",
+    "New trip": "رحلة جديدة",
+    "Destination": "الوجهة",
+    "e.g. Istanbul": "مثال: إسطنبول",
+    "From": "من",
+    "To": "إلى",
+    "Budget (optional)": "الميزانية (اختياري)",
+    "Create trip": "أنشئ رحلة",
+    "Trip": "رحلة",
+    "done": "منجَز",
+    "No trips yet. Add your destination, dates and budget — then MIRA can search live for flights and hotels from trusted sources, and you build a checklist alongside.": "لا رحلات بعد. أضف وجهتك وتواريخك وميزانيتك — عندها يمكن لميرا البحث المباشر عن الطيران والفنادق من مصادر موثوقة، وتبني قائمة تحقّق بجانبها.",
+    "All trips": "كل الرحلات",
+    "budget": "ميزانية",
+    "Find flights & hotels": "ابحث عن طيران وفنادق",
+    "Plan itinerary & practical info": "خطّط لبرنامج الرحلة والمعلومات العملية",
+    "Flight/hotel search runs a live web search on your API key and cites its sources. Always confirm prices on the booking site before paying.": "يجري البحث عن الطيران/الفنادق بحثًا مباشرًا على الويب عبر مفتاحك ويذكر مصادره. تحقّق دائمًا من الأسعار على موقع الحجز قبل الدفع.",
+    "Checklist": "قائمة التحقّق",
+    "Add packing items and to-dos.": "أضف أغراض الحقيبة والمهام.",
+    "Add item…": "أضف عنصرًا…",
+    "Itinerary, bookings, ideas…": "برنامج الرحلة، الحجوزات، الأفكار…",
+    "Delete trip": "حذف الرحلة",
+    "What are you comparing? e.g. New phone": "ماذا تقارن؟ مثال: هاتف جديد",
+    "Create": "إنشاء",
+    "options": "خيارات",
+    "No comparisons yet. Create one to weigh options side by side — MIRA can research and you save the verdict.": "لا مقارنات بعد. أنشئ واحدة لموازنة الخيارات جنبًا إلى جنب — يمكن لميرا البحث وتحفظ أنت القرار.",
+    "All comparisons": "كل المقارنات",
+    "Research with MIRA": "ابحث مع ميرا",
+    "Delete option": "حذف الخيار",
+    "Add an option": "أضف خيارًا",
+    "Price": "السعر",
+    "e.g. 220 KWD": "مثال: 220 د.ك",
+    "Pros": "الإيجابيات",
+    "Cons": "السلبيات",
+    "Source / link (optional)": "المصدر / الرابط (اختياري)",
+    "Add option": "أضف خيارًا",
+    "Delete comparison": "حذف المقارنة",
+    "Log a decision": "سجّل قرارًا",
+    "The decision": "القرار",
+    "e.g. Which job offer to take?": "مثال: أي عرض عمل أقبل؟",
+    "Options weighed": "الخيارات المدروسة",
+    "The choices you considered": "الخيارات التي فكّرت بها",
+    "What you decided": "ما قرّرته",
+    "Why": "لماذا",
+    "The reasoning — so you can revisit it": "المنطق — لتتمكّن من مراجعته لاحقًا",
+    "Save decision": "احفظ القرار",
+    "Deep Solve it": "حلّه بعمق",
+    "Options:": "الخيارات:",
+    "Decided:": "القرار:",
+    "Why:": "لماذا:",
+    "No decisions logged. Record big choices and the reasoning, or Deep Solve one first.": "لا قرارات مُسجّلة. سجّل الخيارات الكبيرة ومنطقها، أو حلّ واحدًا بعمق أولًا.",
+    "Groceries": "بقالة",
+    "Dining out": "مطاعم",
+    "Transport": "مواصلات",
+    "Rent / housing": "إيجار / سكن",
+    "Loan": "قرض",
+    "Bills & utilities": "فواتير ومرافق",
+    "Health / medical": "صحة / طبي",
+    "Gym / fitness": "نادي / لياقة",
+    "Personal care": "عناية شخصية",
+    "Entertainment": "ترفيه",
+    "Subscriptions": "اشتراكات",
+    "Education": "تعليم",
+    "Books": "كتب",
+    "Gifts / charity": "هدايا / صدقة",
+    "Family / kids": "عائلة / أطفال",
+    "Other": "أخرى",
+    "Weekly": "أسبوعي",
+    "Monthly": "شهري",
+    "Quarterly": "ربع سنوي",
+    "Yearly": "سنوي",
+    "Quick win": "مكسب سريع",
+    "Some effort": "بعض الجهد",
+    "Bigger move": "خطوة أكبر",
+    "To read": "للقراءة",
+    "Reading": "قيد القراءة",
+    "Book": "كتاب",
+    "Article": "مقال",
     "Chart": "رسم بياني",
     "no data yet": "لا توجد بيانات بعد",
     "trending up": "في ارتفاع",
@@ -7020,6 +7199,8 @@ function workKitHTML(){
 
 const BILL_CYCLES = {weekly: {label: "Weekly", perMonth: 52 / 12}, monthly: {label: "Monthly", perMonth: 1}, quarterly: {label: "Quarterly", perMonth: 1 / 3}, yearly: {label: "Yearly", perMonth: 1 / 12}};
 const cur = v => (Math.round(v * 100) / 100).toLocaleString("en", {minimumFractionDigits: 0, maximumFractionDigits: 2});
+// Localised month name (long/short) for the UI language.
+const monLoc = (d, style) => d.toLocaleDateString((typeof uiLang === "function" && uiLang()) || "en", {month: style});
 
 function lifeHTML(){
   if (R.lifeTab === "trips" && R.tripId) return tripDetailHTML();
@@ -7046,29 +7227,29 @@ function billsHTML(){
   const f = R.billForm;
   return `
     ${S.bills.length ? `<div class="card">
-      <div class="wo-hd"><div><div class="tiny">Estimated monthly spend</div><div style="font-size:26px;font-weight:700;color:var(--acc)">${cur(total)}</div></div>
-      <div class="tiny" style="text-align:end;flex:0 0 auto">${S.bills.length} item${S.bills.length > 1 ? "s" : ""}<br>${cur(total * 12)}/yr</div></div>
+      <div class="wo-hd"><div><div class="tiny">${tr("Estimated monthly spend")}</div><div style="font-size:26px;font-weight:700;color:var(--acc)">${cur(total)}</div></div>
+      <div class="tiny" style="text-align:end;flex:0 0 auto">${S.bills.length} ${tr("items")}<br>${cur(total * 12)}/${tr("yr")}</div></div>
     </div>` : ""}
     <div class="card fold ${f.open || !S.bills.length ? "open" : ""}">
-      <h3 onclick="M.billFormToggle()">${ic("plus", 16)} Add a bill / subscription <span class="chev">▶</span></h3>
+      <h3 onclick="M.billFormToggle()">${ic("plus", 16)} ${tr("Add a bill / subscription")} <span class="chev">▶</span></h3>
       <div class="fold-body">
-        <div class="field"><label>Name</label><input value="${esc(f.name)}" oninput="R.billForm.name=this.value" placeholder="e.g. Netflix, rent, gym" dir="auto"></div>
+        <div class="field"><label>${tr("Name")}</label><input value="${esc(f.name)}" oninput="R.billForm.name=this.value" placeholder="${tr("e.g. Netflix, rent, gym")}" dir="auto"></div>
         <div class="grid2" style="margin-bottom:10px">
-          <div class="field"><label>Amount (KWD)</label><input type="number" inputmode="decimal" value="${esc(f.amount)}" oninput="R.billForm.amount=this.value"></div>
-          <div class="field"><label>Cycle</label><select onchange="R.billForm.cycle=this.value">${Object.entries(BILL_CYCLES).map(([k, c]) => `<option value="${k}" ${f.cycle === k ? "selected" : ""}>${c.label}</option>`).join("")}</select></div>
+          <div class="field"><label>${tr("Amount (KWD)")}</label><input type="number" inputmode="decimal" value="${esc(f.amount)}" oninput="R.billForm.amount=this.value"></div>
+          <div class="field"><label>${tr("Cycle")}</label><select onchange="R.billForm.cycle=this.value">${Object.entries(BILL_CYCLES).map(([k, c]) => `<option value="${k}" ${f.cycle === k ? "selected" : ""}>${tr(c.label)}</option>`).join("")}</select></div>
         </div>
-        <div class="field"><label>Next renewal (optional)</label><input type="date" value="${esc(f.next)}" oninput="R.billForm.next=this.value"></div>
-        <button class="btn sm" onclick="M.billSave()">Add</button>
+        <div class="field"><label>${tr("Next renewal (optional)")}</label><input type="date" value="${esc(f.next)}" oninput="R.billForm.next=this.value"></div>
+        <button class="btn sm" onclick="M.billSave()">${tr("Add")}</button>
       </div>
     </div>
     ${S.bills.length ? `<div class="card">
-      <h3>${ic("creditCard", 16)} Your bills</h3>
+      <h3>${ic("creditCard", 16)} ${tr("Your bills")}</h3>
       ${[...S.bills].sort((a, b) => num(b.amount) * (BILL_CYCLES[b.cycle] || {perMonth:1}).perMonth - num(a.amount) * (BILL_CYCLES[a.cycle] || {perMonth:1}).perMonth).map(b => {
         const overdue = b.next && b.next < todayStr();
         return `<div class="set-row">
-          <div><div class="k" dir="auto">${esc(b.name)}</div><div class="desc">${cur(b.amount)} KWD · ${(BILL_CYCLES[b.cycle] || {label: b.cycle}).label}${b.next ? ` · <span class="${overdue ? "" : ""}">renews ${fmtDate(b.next)}</span>` : ""}</div></div>
-          <span class="end">${b.next ? `<button class="btn sm sec" aria-label="Remind" title="Add renewal reminder" onclick="M.billCal('${b.id}')">${ic("calendar", 13)}</button>` : ""}
-            <button class="btn sm danger" aria-label="Delete" onclick="M.billDel('${b.id}')">${ic("trash", 13)}</button></span>
+          <div><div class="k" dir="auto">${esc(b.name)}</div><div class="desc">${cur(b.amount)} ${tr("KWD")} · ${tr((BILL_CYCLES[b.cycle] || {label: b.cycle}).label)}${b.next ? ` · <span class="${overdue ? "" : ""}">${tr("renews")} ${fmtDate(b.next)}</span>` : ""}</div></div>
+          <span class="end">${b.next ? `<button class="btn sm sec" aria-label="${tr("Remind")}" title="${tr("Add renewal reminder")}" onclick="M.billCal('${b.id}')">${ic("calendar", 13)}</button>` : ""}
+            <button class="btn sm danger" aria-label="${tr("Delete")}" onclick="M.billDel('${b.id}')">${ic("trash", 13)}</button></span>
         </div>`;
       }).join("")}
     </div>` : ""}`;
@@ -7112,11 +7293,11 @@ function donutSVG(entries, total){
   });
   const top = entries[0];
   const aria = entries.length
-    ? `${tr("Spending by category")}: ${tr("total")} ${cur(total)} KWD. ${tr("Most on")} ${top[0]} ${cur(top[1])}.`
+    ? `${tr("Spending by category")}: ${tr("total")} ${cur(total)} KWD. ${tr("Most on")} ${tr(top[0])} ${cur(top[1])}.`
     : `${tr("Spending by category")}: ${tr("no data yet")}.`;
   return `<svg viewBox="0 0 124 124" class="donut" role="img" aria-label="${esc(aria)}">${segs || `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--line2)" stroke-width="${sw}"/>`}
     <text x="${cx}" y="${cy - 1}" text-anchor="middle" class="d-c" aria-hidden="true">${cur(total)}</text>
-    <text x="${cx}" y="${cy + 15}" text-anchor="middle" class="d-l" aria-hidden="true">spent</text></svg>`;
+    <text x="${cx}" y="${cy + 15}" text-anchor="middle" class="d-l" aria-hidden="true">${tr("spent")}</text></svg>`;
 }
 function budgetHTML(){
   const ym = todayStr().slice(0, 7);
@@ -7138,75 +7319,75 @@ function budgetHTML(){
   const f = R.expForm;
   return `
     <div class="card">
-      <div class="field"><label>Monthly income (KWD)</label><input type="number" inputmode="decimal" value="${S.budget.income || ""}" oninput="S.budget.income=num(this.value);save()"></div>
+      <div class="field"><label>${tr("Monthly income (KWD)")}</label><input type="number" inputmode="decimal" value="${S.budget.income || ""}" oninput="S.budget.income=num(this.value);save()"></div>
       <div class="rev-grid">
-        <div class="rev-stat"><div class="rv">${cur(totalOut)}</div><div class="rl">Out this month</div></div>
-        <div class="rev-stat"><div class="rv" style="color:${net >= 0 ? "var(--green)" : "var(--red)"}">${cur(net)}</div><div class="rl">Net left</div></div>
-        <div class="rev-stat"><div class="rv">${saveRate != null ? saveRate + "%" : "—"}</div><div class="rl">Savings rate</div></div>
+        <div class="rev-stat"><div class="rv">${cur(totalOut)}</div><div class="rl">${tr("Out this month")}</div></div>
+        <div class="rev-stat"><div class="rv" style="color:${net >= 0 ? "var(--green)" : "var(--red)"}">${cur(net)}</div><div class="rl">${tr("Net left")}</div></div>
+        <div class="rev-stat"><div class="rv">${saveRate != null ? saveRate + "%" : "—"}</div><div class="rl">${tr("Savings rate")}</div></div>
       </div>
     </div>
 
     ${entries.length ? `<div class="card">
-      <h3>${ic("wallet", 16)} Where it goes</h3>
+      <h3>${ic("wallet", 16)} ${tr("Where it goes")}</h3>
       <div class="budget-dash">
         ${donutSVG(entries, totalOut)}
-        <div class="budget-legend">${entries.map(([c, v]) => `<div class="bl-row"><span class="bl-dot" style="background:${catColor(c)}"></span><span class="bl-c">${esc(c)}</span><span class="bl-v">${cur(v)}<span class="bl-p">${totalOut ? Math.round(v / totalOut * 100) : 0}%</span></span></div>`).join("")}</div>
+        <div class="budget-legend">${entries.map(([c, v]) => `<div class="bl-row"><span class="bl-dot" style="background:${catColor(c)}"></span><span class="bl-c">${esc(tr(c))}</span><span class="bl-v">${cur(v)}<span class="bl-p">${totalOut ? Math.round(v / totalOut * 100) : 0}%</span></span></div>`).join("")}</div>
       </div>
-      ${top ? `<div class="budget-top">${ic("trend", 13)} Most goes to <b>${esc(top[0])}</b> — ${cur(top[1])} KWD (${totalOut ? Math.round(top[1] / totalOut * 100) : 0}% of spending)</div>` : ""}
+      ${top ? `<div class="budget-top">${ic("trend", 13)} ${tr("Most goes to")} <b>${esc(tr(top[0]))}</b> — ${cur(top[1])} ${tr("KWD")} (${totalOut ? Math.round(top[1] / totalOut * 100) : 0}% ${tr("of spending")})</div>` : ""}
     </div>` : ""}
 
     ${monthTrendHTML()}
 
     <div class="card">
-      <h3>${ic("target", 16)} Savings plan</h3>
-      <div class="field"><label>Save each month (KWD)</label><input type="number" inputmode="decimal" value="${saveT || ""}" placeholder="${Math.max(0, Math.round(net))}" oninput="S.budget.saveTarget=num(this.value);save()"></div>
+      <h3>${ic("target", 16)} ${tr("Savings plan")}</h3>
+      <div class="field"><label>${tr("Save each month (KWD)")}</label><input type="number" inputmode="decimal" value="${saveT || ""}" placeholder="${Math.max(0, Math.round(net))}" oninput="S.budget.saveTarget=num(this.value);save()"></div>
       ${saveRecHTML(net, income)}
       <div class="save-proj">
-        ${[3, 6, 12].map(m => `<div class="sp-cell"><div class="sp-v">${cur(saveT * m)}</div><div class="sp-l">${m === 12 ? "1 year" : m + " months"}</div></div>`).join("")}
+        ${[3, 6, 12].map(m => `<div class="sp-cell"><div class="sp-v">${cur(saveT * m)}</div><div class="sp-l">${m === 12 ? tr("1 year") : m + " " + tr("months")}</div></div>`).join("")}
       </div>
       <div class="row" style="margin-top:12px;gap:8px">
-        <div class="field" style="flex:2;margin:0"><label>Saving toward (optional)</label><input value="${esc(S.budget.goalName || "")}" oninput="S.budget.goalName=this.value;save()" placeholder="e.g. new laptop, Umrah, emergency fund" dir="auto"></div>
-        <div class="field" style="flex:1;margin:0"><label>Cost (KWD)</label><input type="number" inputmode="decimal" value="${S.budget.goalAmount || ""}" oninput="S.budget.goalAmount=num(this.value);save()"></div>
+        <div class="field" style="flex:2;margin:0"><label>${tr("Saving toward (optional)")}</label><input value="${esc(S.budget.goalName || "")}" oninput="S.budget.goalName=this.value;save()" placeholder="${tr("e.g. new laptop, Umrah, emergency fund")}" dir="auto"></div>
+        <div class="field" style="flex:1;margin:0"><label>${tr("Cost (KWD)")}</label><input type="number" inputmode="decimal" value="${S.budget.goalAmount || ""}" oninput="S.budget.goalAmount=num(this.value);save()"></div>
       </div>
-      ${monthsToGoal ? `<div class="budget-top" style="margin-top:10px">${ic("check", 13)} At ${cur(saveT)} KWD/month you'll reach <b>${esc(S.budget.goalName || "your goal")}</b> in about <b>${monthsToGoal} month${monthsToGoal === 1 ? "" : "s"}</b> (${fmtDate(new Date(Date.now() + monthsToGoal * 30 * 864e5).toLocaleDateString("en-CA"))}).</div>` : goalAmt > 0 ? `<div class="tiny" style="margin-top:8px;color:var(--txt2)">Set a monthly saving amount above to see when you'll reach it.</div>` : ""}
+      ${monthsToGoal ? `<div class="budget-top" style="margin-top:10px">${ic("check", 13)} ${tr("At")} ${cur(saveT)} ${tr("KWD/month you'll reach")} <b>${esc(S.budget.goalName || tr("your goal"))}</b> ${tr("in about")} <b>${monthsToGoal} ${monthsToGoal === 1 ? tr("month") : tr("months")}</b> (${fmtDate(new Date(Date.now() + monthsToGoal * 30 * 864e5).toLocaleDateString("en-CA"))}).</div>` : goalAmt > 0 ? `<div class="tiny" style="margin-top:8px;color:var(--txt2)">${tr("Set a monthly saving amount above to see when you'll reach it.")}</div>` : ""}
     </div>
 
     ${savingsPlanHTML(income, net, billsMo)}
 
     <div class="card">
-      <h3>${ic("plus", 16)} Add expense</h3>
+      <h3>${ic("plus", 16)} ${tr("Add expense")}</h3>
       <div class="grid2" style="margin-bottom:10px">
-        <div class="field"><label>Category</label>
+        <div class="field"><label>${tr("Category")}</label>
           <div class="row" style="gap:6px">
-            <select style="flex:1" onchange="R.expForm.category=this.value">${allExpenseCats().map(c => `<option ${f.category === c ? "selected" : ""}>${esc(c)}</option>`).join("")}</select>
-            <button class="btn sm sec" style="flex:0 0 auto" aria-label="Add a custom category" onclick="M.expCatNewToggle()">${ic(R.expNewCat != null ? "x" : "plus", 15)}</button>
+            <select style="flex:1" onchange="R.expForm.category=this.value">${allExpenseCats().map(c => `<option value="${esc(c)}" ${f.category === c ? "selected" : ""}>${esc(tr(c))}</option>`).join("")}</select>
+            <button class="btn sm sec" style="flex:0 0 auto" aria-label="${tr("Add a custom category")}" onclick="M.expCatNewToggle()">${ic(R.expNewCat != null ? "x" : "plus", 15)}</button>
           </div></div>
-        <div class="field"><label>Amount (KWD)</label><input type="number" inputmode="decimal" value="${esc(f.amount)}" oninput="R.expForm.amount=this.value"></div>
+        <div class="field"><label>${tr("Amount (KWD)")}</label><input type="number" inputmode="decimal" value="${esc(f.amount)}" oninput="R.expForm.amount=this.value"></div>
       </div>
       ${R.expNewCat != null ? `<div class="row" style="margin-bottom:10px">
-          <input id="newCatInput" value="${esc(R.expNewCat)}" placeholder="New category — e.g. Tabby, Mob bill, DBA payment" dir="auto" oninput="R.expNewCat=this.value" onkeydown="if(event.key==='Enter')M.expCatAdd()">
-          <button class="btn sm" style="flex:0 0 auto" onclick="M.expCatAdd()">Add</button>
+          <input id="newCatInput" value="${esc(R.expNewCat)}" placeholder="${tr("New category — e.g. Tabby, Mob bill, DBA payment")}" dir="auto" oninput="R.expNewCat=this.value" onkeydown="if(event.key==='Enter')M.expCatAdd()">
+          <button class="btn sm" style="flex:0 0 auto" onclick="M.expCatAdd()">${tr("Add")}</button>
         </div>
-        ${((S.budget && S.budget.cats) || []).length ? `<div class="rc-tags" style="margin:-4px 2px 10px">${(S.budget.cats).map((c, i) => `<span class="rc-tag" style="display:inline-flex;align-items:center;gap:5px"><span class="bl-dot" style="background:${catColor(c)}"></span>${esc(c)} <button aria-label="Remove ${esc(c)}" style="background:none;color:var(--txt3);font-weight:700" onclick="M.expCatDel(${i})">✕</button></span>`).join("")}</div>` : ""}` : ""}
-      <div class="row"><input value="${esc(f.note)}" oninput="R.expForm.note=this.value" placeholder="Note (optional)" dir="auto">
-        <button class="btn sm" style="flex:0 0 auto" onclick="M.expAdd()">Add</button></div>
+        ${((S.budget && S.budget.cats) || []).length ? `<div class="rc-tags" style="margin:-4px 2px 10px">${(S.budget.cats).map((c, i) => `<span class="rc-tag" style="display:inline-flex;align-items:center;gap:5px"><span class="bl-dot" style="background:${catColor(c)}"></span>${esc(c)} <button aria-label="${tr("Remove")} ${esc(c)}" style="background:none;color:var(--txt3);font-weight:700" onclick="M.expCatDel(${i})">✕</button></span>`).join("")}</div>` : ""}` : ""}
+      <div class="row"><input value="${esc(f.note)}" oninput="R.expForm.note=this.value" placeholder="${tr("Note (optional)")}" dir="auto">
+        <button class="btn sm" style="flex:0 0 auto" onclick="M.expAdd()">${tr("Add")}</button></div>
     </div>
 
     ${monthExp.length ? (() => {
-      const monthName = new Date().toLocaleDateString("en", {month: "long"});
+      const monthName = monLoc(new Date(), "long");
       const sorted = [...monthExp].sort((a, b) => b.ts - a.ts);
       const shown = sorted.slice(0, 50);
       return `<div class="card fold ${R.expListOpen ? "open" : ""}">
-      <h3 onclick="M.expListToggle()">${ic("creditCard", 16)} ${monthName} expenses <span class="exp-sum">${monthExp.length} · ${cur(spent)} KWD</span><span class="chev">▶</span></h3>
+      <h3 onclick="M.expListToggle()">${ic("creditCard", 16)} ${monthName} ${tr("expenses")} <span class="exp-sum">${monthExp.length} · ${cur(spent)} ${tr("KWD")}</span><span class="chev">▶</span></h3>
       <div class="fold-body">
       ${shown.map(e => `<div class="set-row">
-        <div><div class="k"><span class="bl-dot" style="background:${catColor(e.category)};margin-inline-end:7px"></span>${esc(e.category)}${e.note ? ` · ${esc(e.note)}` : ""}</div><div class="desc">${fmtDate(e.date)}</div></div>
-        <span class="end"><b>${cur(e.amount)} KWD</b><button class="btn sm danger" aria-label="Delete" onclick="M.expDel('${e.id}')">${ic("trash", 13)}</button></span>
+        <div><div class="k"><span class="bl-dot" style="background:${catColor(e.category)};margin-inline-end:7px"></span>${esc(tr(e.category))}${e.note ? ` · ${esc(e.note)}` : ""}</div><div class="desc">${fmtDate(e.date)}</div></div>
+        <span class="end"><b>${cur(e.amount)} ${tr("KWD")}</b><button class="btn sm danger" aria-label="${tr("Delete")}" onclick="M.expDel('${e.id}')">${ic("trash", 13)}</button></span>
       </div>`).join("")}
-      ${sorted.length > shown.length ? `<div class="tiny" style="margin-top:8px;color:var(--txt3);text-align:center">+ ${sorted.length - shown.length} more this month</div>` : ""}
+      ${sorted.length > shown.length ? `<div class="tiny" style="margin-top:8px;color:var(--txt3);text-align:center">+ ${sorted.length - shown.length} ${tr("more this month")}</div>` : ""}
       </div>
     </div>`;
-    })() : `<div class="empty-state"><b>No expenses logged this month</b>Add what you spend and MIRA will show where it goes and how to save.</div>`}`;
+    })() : `<div class="empty-state"><b>${tr("No expenses logged this month")}</b>${tr("Add what you spend and MIRA will show where it goes and how to save.")}</div>`}`;
 }
 
 /* ---------------- Month-by-month trend dashboard ---------------- */
@@ -7224,7 +7405,7 @@ function monthlyTrend(n){
     const spent = S.expenses.filter(e => e.date.slice(0, 7) === ym).reduce((a, e) => a + num(e.amount), 0);
     const out = spent + billsMo;
     const saved = income - out;
-    rows.push({ym, label: dt.toLocaleDateString("en", {month: "short"}),
+    rows.push({ym, label: monLoc(dt, "short"),
       spent, bills: billsMo, out, income, saved, rate: income > 0 ? Math.round(saved / income * 100) : null});
   }
   return rows;
@@ -7271,21 +7452,21 @@ function monthTrendHTML(){
   // direction: compare the last two active months' spending
   const last = active[active.length - 1], prev = active[active.length - 2];
   const dSpend = last.out - prev.out;
-  const dir = Math.abs(dSpend) < 1 ? "about the same as" : dSpend < 0 ? "less than" : "more than";
+  const dir = Math.abs(dSpend) < 1 ? tr("about the same as") : dSpend < 0 ? tr("less than") : tr("more than");
   const dirCol = dSpend <= 0 ? "var(--green)" : "var(--amber)";
   return `<div class="card mt-card">
-    <h3>${ic("trend", 16)} Month-by-month</h3>
+    <h3>${ic("trend", 16)} ${tr("Month-by-month")}</h3>
     ${monthTrendSVG(rows)}
     <div class="mt-legend">
-      <span class="mt-key"><span class="mt-sw" style="background:var(--acc)"></span>Spent</span>
-      ${useInc ? `<span class="mt-key"><span class="mt-sw" style="background:var(--green)"></span>Saved</span><span class="mt-key mt-note">bar = your income; % = savings rate</span>` : `<span class="mt-key mt-note">bars = total spent</span>`}
+      <span class="mt-key"><span class="mt-sw" style="background:var(--acc)"></span>${tr("Spent")}</span>
+      ${useInc ? `<span class="mt-key"><span class="mt-sw" style="background:var(--green)"></span>${tr("Saved")}</span><span class="mt-key mt-note">${tr("bar = your income; % = savings rate")}</span>` : `<span class="mt-key mt-note">${tr("bars = total spent")}</span>`}
     </div>
     <div class="mt-stats">
-      <div class="mt-stat"><div class="mt-sv">${cur(avgSpent)}</div><div class="mt-sl">avg out / month</div></div>
-      ${avgSaved != null ? `<div class="mt-stat"><div class="mt-sv" style="color:${avgSaved >= 0 ? "var(--green)" : "var(--red)"}">${cur(avgSaved)}</div><div class="mt-sl">avg saved / month</div></div>` : ""}
+      <div class="mt-stat"><div class="mt-sv">${cur(avgSpent)}</div><div class="mt-sl">${tr("avg out / month")}</div></div>
+      ${avgSaved != null ? `<div class="mt-stat"><div class="mt-sv" style="color:${avgSaved >= 0 ? "var(--green)" : "var(--red)"}">${cur(avgSaved)}</div><div class="mt-sl">${tr("avg saved / month")}</div></div>` : ""}
     </div>
-    <div class="budget-top" style="margin-top:11px">${ic("trend", 13)} <span>This month you spent <b style="color:${dirCol}">${dir}</b> last month${useInc ? "" : ""}.</span></div>
-    ${useInc ? "" : `<div class="tiny" style="margin-top:7px;color:var(--txt2)">Add your monthly income above to see your savings rate on each bar.</div>`}
+    <div class="budget-top" style="margin-top:11px">${ic("trend", 13)} <span>${tr("This month you spent")} <b style="color:${dirCol}">${dir}</b> ${tr("last month")}.</span></div>
+    ${useInc ? "" : `<div class="tiny" style="margin-top:7px;color:var(--txt2)">${tr("Add your monthly income above to see your savings rate on each bar.")}</div>`}
   </div>`;
 }
 
@@ -7293,32 +7474,32 @@ function monthTrendHTML(){
 function saveRecHTML(net, income){
   const rec = S.budget.saveRec;
   if (R.saveRecBusy){
-    return `<div class="rec-box busy">${ic("wallet", 15)} <span>MIRA is working out a realistic amount from your last few months…</span></div>`;
+    return `<div class="rec-box busy">${ic("wallet", 15)} <span>${tr("MIRA is working out a realistic amount from your last few months…")}</span></div>`;
   }
   if (!rec){
     const active = monthlyTrend(6).filter(r => r.spent > 0).length;
     const canRun = active >= 1 && income > 0;
-    return `<button class="btn sec rec-cta" onclick="M.budgetSaveAdvice()" ${canRun ? "" : "disabled"}>${ic("trend", 15)} Recommend how much I should save</button>
-      ${canRun ? "" : `<div class="tiny" style="margin-top:6px;color:var(--txt2)">Add your income and log a few expenses first.</div>`}`;
+    return `<button class="btn sec rec-cta" onclick="M.budgetSaveAdvice()" ${canRun ? "" : "disabled"}>${ic("trend", 15)} ${tr("Recommend how much I should save")}</button>
+      ${canRun ? "" : `<div class="tiny" style="margin-top:6px;color:var(--txt2)">${tr("Add your income and log a few expenses first.")}</div>`}`;
   }
   const tiers = [
     ["Safe", rec.conservative, "cls-safe"],
     ["Recommended", rec.recommend, "cls-rec"],
     ["Stretch", rec.stretch, "cls-stretch"],
-  ].filter(t => t[1] != null && num(t[1]) > 0);
+  ].filter(x => x[1] != null && num(x[1]) > 0);
   return `<div class="rec-box">
-    <div class="rec-hd">${ic("trend", 14)} MIRA's suggestion from your last months</div>
+    <div class="rec-hd">${ic("trend", 14)} ${tr("MIRA's suggestion from your last months")}</div>
     <div class="rec-tiers">
       ${tiers.map(([lbl, val, cls]) => `<button class="rec-tier ${cls}" onclick="M.planApplyTarget(${num(val)})">
-        <div class="rt-v">${cur(num(val))}</div><div class="rt-l">${lbl}</div></button>`).join("")}
+        <div class="rt-v">${cur(num(val))}</div><div class="rt-l">${tr(lbl)}</div></button>`).join("")}
     </div>
     ${rec.rationale ? `<div class="rec-why" dir="auto">${esc(rec.rationale)}</div>` : ""}
     <div class="rec-foot">
-      <button class="btn sm" onclick="M.planApplyTarget(${num(rec.recommend)})">${ic("check", 14)} Use ${cur(num(rec.recommend))} as my target</button>
-      <button class="btn sm sec" onclick="M.budgetSaveAdvice()">${ic("trend", 13)} Redo</button>
+      <button class="btn sm" onclick="M.planApplyTarget(${num(rec.recommend)})">${ic("check", 14)} ${tr("Use")} ${cur(num(rec.recommend))} ${tr("as my target")}</button>
+      <button class="btn sm sec" onclick="M.budgetSaveAdvice()">${ic("trend", 13)} ${tr("Redo")}</button>
     </div>
     ${rec.note ? `<div class="rec-note">${esc(rec.note)}</div>` : ""}
-    <div class="plan-src" style="margin-top:8px">AI estimate from your own numbers — a guide, not a rule. Tap a tier to make it your target.</div>
+    <div class="plan-src" style="margin-top:8px">${tr("AI estimate from your own numbers — a guide, not a rule. Tap a tier to make it your target.")}</div>
   </div>`;
 }
 
@@ -7338,7 +7519,7 @@ function savingsPlanHTML(income, net, billsMo){
     return `<div class="card plan-card">
       <div class="plan-hero">
         <div class="plan-hero-ic pulse">${ic("wallet", 22)}</div>
-        <div class="plan-loading"><b>Reading your money…</b><span class="tiny">MIRA is going through your income, fixed bills and where it goes to find realistic ways to save.</span></div>
+        <div class="plan-loading"><b>${tr("Reading your money…")}</b><span class="tiny">${tr("MIRA is going through your income, fixed bills and where it goes to find realistic ways to save.")}</span></div>
       </div></div>`;
   }
 
@@ -7348,11 +7529,11 @@ function savingsPlanHTML(income, net, billsMo){
     return `<div class="card plan-card plan-intro">
       <div class="plan-hero">
         <div class="plan-hero-ic">${ic("trend", 22)}</div>
-        <div><div class="plan-title">Smart savings plan</div>
-          <div class="tiny" style="margin-top:2px;line-height:1.45">MIRA looks at your income, your fixed monthly payments and where your money actually goes — then finds specific ways to save, with the KWD/month each one frees up. Built for you, not generic tips.</div></div>
+        <div><div class="plan-title">${tr("Smart savings plan")}</div>
+          <div class="tiny" style="margin-top:2px;line-height:1.45">${tr("MIRA looks at your income, your fixed monthly payments and where your money actually goes — then finds specific ways to save, with the KWD/month each one frees up. Built for you, not generic tips.")}</div></div>
       </div>
-      <button class="btn plan-cta" onclick="M.budgetPlan()" ${canRun ? "" : "disabled"}>${ic("wallet", 16)} Find ways to save my money</button>
-      ${canRun ? "" : `<div class="tiny" style="margin-top:8px;color:var(--txt2)">Add your monthly income and a few expenses above first.</div>`}
+      <button class="btn plan-cta" onclick="M.budgetPlan()" ${canRun ? "" : "disabled"}>${ic("wallet", 16)} ${tr("Find ways to save my money")}</button>
+      ${canRun ? "" : `<div class="tiny" style="margin-top:8px;color:var(--txt2)">${tr("Add your monthly income and a few expenses above first.")}</div>`}
     </div>`;
   }
 
@@ -7365,20 +7546,20 @@ function savingsPlanHTML(income, net, billsMo){
   const monthsToGoal = goalAmt > 0 && base > 0 ? Math.ceil(goalAmt / base) : null;
   const heroNum = applied.length ? committed : potential;
   const heroLbl = applied.length
-    ? `committed across ${applied.length} move${applied.length === 1 ? "" : "s"}`
-    : `if you do all ${moves.length}`;
+    ? `${tr("committed across")} ${applied.length} ${applied.length === 1 ? tr("move") : tr("moves")}`
+    : `${tr("if you do all")} ${moves.length}`;
 
   return `<div class="card plan-card">
     <div class="plan-hero">
       <div class="plan-hero-ic">${ic("trend", 22)}</div>
       <div class="plan-hero-tx">
-        <div class="plan-big">${cur(heroNum)}<span class="plan-unit">KWD/mo</span></div>
-        <div class="plan-sub">${heroLbl} · <b>${cur(heroNum * 12)} KWD/year</b></div>
+        <div class="plan-big">${cur(heroNum)}<span class="plan-unit">${tr("KWD/mo")}</span></div>
+        <div class="plan-sub">${heroLbl} · <b>${cur(heroNum * 12)} ${tr("KWD/year")}</b></div>
       </div>
     </div>
     ${plan.headline ? `<div class="plan-headline">${esc(plan.headline)}</div>` : ""}
 
-    <div class="plan-hint">${ic("check", 12)} Tap the ones you'll actually do — MIRA totals them up and updates your plan.</div>
+    <div class="plan-hint">${ic("check", 12)} ${tr("Tap the ones you'll actually do — MIRA totals them up and updates your plan.")}</div>
 
     <div class="plan-moves">
       ${moves.map((m, i) => {
@@ -7387,11 +7568,11 @@ function savingsPlanHTML(income, net, billsMo){
         return `<button class="plan-move ${on ? "on" : ""}" onclick="M.planMoveToggle(${i})">
           <span class="pm-check">${on ? ic("check", 14) : ""}</span>
           <span class="pm-body">
-            <span class="pm-top"><span class="pm-title" dir="auto">${esc(m.title || "Save here")}</span><span class="pm-amt">${cur(num(m.monthly))}<span class="pm-mo">/mo</span></span></span>
+            <span class="pm-top"><span class="pm-title" dir="auto">${esc(m.title || tr("Save here"))}</span><span class="pm-amt">${cur(num(m.monthly))}<span class="pm-mo">${tr("/mo")}</span></span></span>
             ${m.action ? `<span class="pm-action" dir="auto">${esc(m.action)}</span>` : ""}
             <span class="pm-meta">
-              ${m.category ? `<span class="pm-cat"><span class="bl-dot" style="background:${catColor(m.category)}"></span>${esc(m.category)}</span>` : ""}
-              <span class="pm-effort ${ef.cls}"><span class="pm-edot" style="background:${ef.dot}"></span>${ef.label}</span>
+              ${m.category ? `<span class="pm-cat"><span class="bl-dot" style="background:${catColor(m.category)}"></span>${esc(tr(m.category))}</span>` : ""}
+              <span class="pm-effort ${ef.cls}"><span class="pm-edot" style="background:${ef.dot}"></span>${tr(ef.label)}</span>
             </span>
             ${m.why ? `<span class="pm-why" dir="auto">${esc(m.why)}</span>` : ""}
           </span>
@@ -7400,22 +7581,22 @@ function savingsPlanHTML(income, net, billsMo){
     </div>
 
     <div class="plan-proj">
-      <div class="pp-hd">${ic("target", 13)} Set aside <b>${cur(base)} KWD/month</b>${applied.length ? "" : ` (${committed ? "committed" : "the full plan"})`} and you'll have</div>
+      <div class="pp-hd">${ic("target", 13)} ${tr("Set aside")} <b>${cur(base)} ${tr("KWD/month")}</b>${applied.length ? "" : ` (${committed ? tr("committed") : tr("the full plan")})`} ${tr("and you'll have")}</div>
       <div class="pp-cells">
-        ${[[6, "6 months"], [12, "1 year"], [36, "3 years"]].map(([m, l]) =>
+        ${[[6, tr("6 months")], [12, tr("1 year")], [36, tr("3 years")]].map(([m, l]) =>
           `<div class="pp-cell"><div class="pp-v">${cur(base * m)}</div><div class="pp-l">${l}</div></div>`).join("")}
       </div>
-      ${monthsToGoal ? `<div class="pp-goal">${ic("check", 12)} That reaches <b>${esc(S.budget.goalName || "your goal")}</b> in about <b>${monthsToGoal} month${monthsToGoal === 1 ? "" : "s"}</b>.</div>` : ""}
-      <div class="tiny" style="margin-top:6px;color:var(--txt3)">Money simply set aside — no investment growth assumed.</div>
+      ${monthsToGoal ? `<div class="pp-goal">${ic("check", 12)} ${tr("That reaches")} <b>${esc(S.budget.goalName || tr("your goal"))}</b> ${tr("in about")} <b>${monthsToGoal} ${monthsToGoal === 1 ? tr("month") : tr("months")}</b>.</div>` : ""}
+      <div class="tiny" style="margin-top:6px;color:var(--txt3)">${tr("Money simply set aside — no investment growth assumed.")}</div>
     </div>
 
     <div class="plan-foot">
-      ${base > 0 ? `<button class="btn sm" onclick="M.planApplyTarget(${base})">${ic("target", 14)} Make this my monthly target</button>` : ""}
-      <button class="btn sm sec" onclick="M.budgetPlan()" ${R.planBusy ? "disabled" : ""}>${ic("trend", 14)} Redo plan</button>
-      <button class="btn sm sec" onclick="M.planClear()" aria-label="Clear plan">${ic("trash", 13)}</button>
+      ${base > 0 ? `<button class="btn sm" onclick="M.planApplyTarget(${base})">${ic("target", 14)} ${tr("Make this my monthly target")}</button>` : ""}
+      <button class="btn sm sec" onclick="M.budgetPlan()" ${R.planBusy ? "disabled" : ""}>${ic("trend", 14)} ${tr("Redo plan")}</button>
+      <button class="btn sm sec" onclick="M.planClear()" aria-label="${tr("Clear plan")}">${ic("trash", 13)}</button>
     </div>
     ${plan.note ? `<div class="plan-note">${esc(plan.note)}</div>` : ""}
-    <div class="plan-src">AI suggestions from your own numbers — estimates, so adjust to your life. Generated ${plan.ts ? fmtDate(new Date(plan.ts).toLocaleDateString("en-CA")) : "just now"}.</div>
+    <div class="plan-src">${tr("AI suggestions from your own numbers — estimates, so adjust to your life.")} ${tr("Generated")} ${plan.ts ? fmtDate(new Date(plan.ts).toLocaleDateString("en-CA")) : tr("just now")}.</div>
   </div>`;
 }
 
@@ -7430,35 +7611,35 @@ function listsHTML(){
   }).sort((a, b) => a.next < b.next ? -1 : 1);
   return `
     <div class="card">
-      <h3>${ic("bell", 16)} Important dates</h3>
+      <h3>${ic("bell", 16)} ${tr("Important dates")}</h3>
       <div class="grid2" style="margin-bottom:8px">
-        <div class="field"><label>What</label><input value="${esc(df.title)}" oninput="R.dateForm.title=this.value" placeholder="e.g. Mum's birthday" dir="auto"></div>
-        <div class="field"><label>Date</label><input type="date" value="${esc(df.date)}" oninput="R.dateForm.date=this.value"></div>
+        <div class="field"><label>${tr("What")}</label><input value="${esc(df.title)}" oninput="R.dateForm.title=this.value" placeholder="${tr("e.g. Mum's birthday")}" dir="auto"></div>
+        <div class="field"><label>${tr("Date")}</label><input type="date" value="${esc(df.date)}" oninput="R.dateForm.date=this.value"></div>
       </div>
-      <label class="row" style="gap:8px;margin-bottom:10px"><input type="checkbox" style="width:auto;min-height:0" ${df.recurring ? "checked" : ""} onchange="R.dateForm.recurring=this.checked"> <span class="tiny">Repeats every year</span></label>
-      <button class="btn sm" onclick="M.dateAdd()">Add date</button>
+      <label class="row" style="gap:8px;margin-bottom:10px"><input type="checkbox" style="width:auto;min-height:0" ${df.recurring ? "checked" : ""} onchange="R.dateForm.recurring=this.checked"> <span class="tiny">${tr("Repeats every year")}</span></label>
+      <button class="btn sm" onclick="M.dateAdd()">${tr("Add date")}</button>
       ${upcoming.length ? `<div style="margin-top:12px">${upcoming.map(d => `<div class="set-row">
         <div><div class="k" dir="auto">${esc(d.title)}${d.recurring ? " ↻" : ""}</div><div class="desc">${fmtDate(d.next)}</div></div>
-        <span class="end"><button class="btn sm sec" aria-label="Remind" onclick="M.dateCal('${d.id}')">${ic("calendar", 13)}</button>
-          <button class="btn sm danger" aria-label="Delete" onclick="M.dateDel('${d.id}')">${ic("trash", 13)}</button></span>
+        <span class="end"><button class="btn sm sec" aria-label="${tr("Remind")}" onclick="M.dateCal('${d.id}')">${ic("calendar", 13)}</button>
+          <button class="btn sm danger" aria-label="${tr("Delete")}" onclick="M.dateDel('${d.id}')">${ic("trash", 13)}</button></span>
       </div>`).join("")}</div>` : ""}
     </div>
     <div class="card">
-      <h3>${ic("book", 16)} Reading list</h3>
+      <h3>${ic("book", 16)} ${tr("Reading list")}</h3>
       <div class="row" style="margin-bottom:10px">
-        <input value="${esc(rf.title)}" oninput="R.readForm.title=this.value" placeholder="Title…" dir="auto" onkeydown="if(event.key==='Enter')M.readAdd()">
-        <select style="flex:0 0 96px" onchange="R.readForm.kind=this.value">${["Book","Article","Other"].map(k => `<option ${rf.kind === k ? "selected" : ""}>${k}</option>`).join("")}</select>
-        <button class="btn sm" style="flex:0 0 auto" onclick="M.readAdd()">Add</button>
+        <input value="${esc(rf.title)}" oninput="R.readForm.title=this.value" placeholder="${tr("Title…")}" dir="auto" onkeydown="if(event.key==='Enter')M.readAdd()">
+        <select style="flex:0 0 96px" onchange="R.readForm.kind=this.value">${["Book","Article","Other"].map(k => `<option value="${k}" ${rf.kind === k ? "selected" : ""}>${tr(k)}</option>`).join("")}</select>
+        <button class="btn sm" style="flex:0 0 auto" onclick="M.readAdd()">${tr("Add")}</button>
       </div>
       ${S.reading.length ? ["reading","todo","done"].map(st => {
         const items = S.reading.filter(r => r.status === st);
-        return items.length ? `<div class="tiny" style="margin:8px 0 4px;color:var(--txt3)">${READ_STATUS[st]}</div>
+        return items.length ? `<div class="tiny" style="margin:8px 0 4px;color:var(--txt3)">${tr(READ_STATUS[st])}</div>
           ${items.map(r => `<div class="set-row">
             <button class="task-check" style="border-radius:7px" onclick="M.readCycle('${r.id}')">${r.status === "done" ? ic("check", 14) : ""}</button>
-            <div class="task-tx"><div class="task-nm ${r.status === "done" ? "" : ""}" dir="auto" style="${r.status === "done" ? "text-decoration:line-through;color:var(--txt3)" : ""}">${esc(r.title)}</div><div class="task-ds">${esc(r.kind)}</div></div>
-            <button class="del" aria-label="Delete" onclick="M.readDel('${r.id}')">${ic("trash", 13)}</button>
+            <div class="task-tx"><div class="task-nm ${r.status === "done" ? "" : ""}" dir="auto" style="${r.status === "done" ? "text-decoration:line-through;color:var(--txt3)" : ""}">${esc(r.title)}</div><div class="task-ds">${esc(tr(r.kind))}</div></div>
+            <button class="del" aria-label="${tr("Delete")}" onclick="M.readDel('${r.id}')">${ic("trash", 13)}</button>
           </div>`).join("")}` : "";
-      }).join("") : `<div class="muted">Add books or articles; tap the circle to move To read → Reading → Done.</div>`}
+      }).join("") : `<div class="muted">${tr("Add books or articles; tap the circle to move To read → Reading → Done.")}</div>`}
     </div>`;
 }
 
@@ -7468,94 +7649,94 @@ function tripsHTML(){
   const trips = [...S.trips].sort((a, b) => (a.start || "9999") < (b.start || "9999") ? -1 : 1);
   return `
     <div class="card fold ${f.open || !S.trips.length ? "open" : ""}">
-      <h3 onclick="M.tripFormToggle()">${ic("plus", 16)} New trip <span class="chev">▶</span></h3>
+      <h3 onclick="M.tripFormToggle()">${ic("plus", 16)} ${tr("New trip")} <span class="chev">▶</span></h3>
       <div class="fold-body">
-        <div class="field"><label>Destination</label><input value="${esc(f.dest)}" oninput="R.tripForm.dest=this.value" placeholder="e.g. Istanbul" dir="auto"></div>
+        <div class="field"><label>${tr("Destination")}</label><input value="${esc(f.dest)}" oninput="R.tripForm.dest=this.value" placeholder="${tr("e.g. Istanbul")}" dir="auto"></div>
         <div class="grid2" style="margin-bottom:10px">
-          <div class="field"><label>From</label><input type="date" value="${esc(f.start)}" oninput="R.tripForm.start=this.value"></div>
-          <div class="field"><label>To</label><input type="date" value="${esc(f.end)}" oninput="R.tripForm.end=this.value"></div>
+          <div class="field"><label>${tr("From")}</label><input type="date" value="${esc(f.start)}" oninput="R.tripForm.start=this.value"></div>
+          <div class="field"><label>${tr("To")}</label><input type="date" value="${esc(f.end)}" oninput="R.tripForm.end=this.value"></div>
         </div>
-        <div class="field"><label>Budget (optional)</label><input type="number" inputmode="decimal" value="${esc(f.budget)}" oninput="R.tripForm.budget=this.value" placeholder="KWD"></div>
-        <button class="btn sm" onclick="M.tripSave()">Create trip</button>
+        <div class="field"><label>${tr("Budget (optional)")}</label><input type="number" inputmode="decimal" value="${esc(f.budget)}" oninput="R.tripForm.budget=this.value" placeholder="${tr("KWD")}"></div>
+        <button class="btn sm" onclick="M.tripSave()">${tr("Create trip")}</button>
       </div>
     </div>
     ${trips.length ? trips.map(t => `<button class="feat-card" onclick="M.tripOpen('${t.id}')">
       <span class="fc-ic">${ic("plane", 18)}</span>
-      <span class="fc-tx"><span class="fc-nm" dir="auto">${esc(t.dest || "Trip")}</span>
-        <span class="fc-ds">${t.start ? fmtDate(t.start) : ""}${t.end ? " → " + fmtDate(t.end) : ""}${(t.checklist || []).length ? ` · ${t.checklist.filter(c => c.done).length}/${t.checklist.length} done` : ""}</span></span>
+      <span class="fc-tx"><span class="fc-nm" dir="auto">${esc(t.dest || tr("Trip"))}</span>
+        <span class="fc-ds">${t.start ? fmtDate(t.start) : ""}${t.end ? " → " + fmtDate(t.end) : ""}${(t.checklist || []).length ? ` · ${t.checklist.filter(c => c.done).length}/${t.checklist.length} ${tr("done")}` : ""}</span></span>
       <span class="fc-ar">${ic("chevR", 16)}</span>
-    </button>`).join("") : `<div class="card"><div class="muted">No trips yet. Add your destination, dates and budget — then MIRA can search live for flights and hotels from trusted sources, and you build a checklist alongside.</div></div>`}`;
+    </button>`).join("") : `<div class="card"><div class="muted">${tr("No trips yet. Add your destination, dates and budget — then MIRA can search live for flights and hotels from trusted sources, and you build a checklist alongside.")}</div></div>`}`;
 }
 function tripDetailHTML(){
   const t = S.trips.find(x => x.id === R.tripId);
   if (!t){ R.tripId = null; return lifeHTML(); }
   const cl = t.checklist || [];
   return `
-    <button class="cat-back" onclick="M.tripClose()">${ic("back", 18)} All trips</button>
-    <div class="cat-title"><div class="ch-nm" dir="auto">${esc(t.dest || "Trip")}</div>
-      <div class="ch-ds">${t.start ? fmtDate(t.start) : ""}${t.end ? " → " + fmtDate(t.end) : ""}${t.budget ? " · budget " + cur(t.budget) : ""}</div></div>
-    <button class="btn cat-ask" onclick="M.tripFind()">${ic("globe", 17)} Find flights & hotels</button>
-    <button class="btn sec" style="margin:-4px 0 14px" onclick="M.tripPlan()">${ic("chat", 16)} Plan itinerary & practical info</button>
-    <div class="tiny" style="margin:-8px 2px 14px;color:var(--txt2)">Flight/hotel search runs a live web search on your API key and cites its sources. Always confirm prices on the booking site before paying.</div>
+    <button class="cat-back" onclick="M.tripClose()">${ic("back", 18)} ${tr("All trips")}</button>
+    <div class="cat-title"><div class="ch-nm" dir="auto">${esc(t.dest || tr("Trip"))}</div>
+      <div class="ch-ds">${t.start ? fmtDate(t.start) : ""}${t.end ? " → " + fmtDate(t.end) : ""}${t.budget ? " · " + tr("budget") + " " + cur(t.budget) : ""}</div></div>
+    <button class="btn cat-ask" onclick="M.tripFind()">${ic("globe", 17)} ${tr("Find flights & hotels")}</button>
+    <button class="btn sec" style="margin:-4px 0 14px" onclick="M.tripPlan()">${ic("chat", 16)} ${tr("Plan itinerary & practical info")}</button>
+    <div class="tiny" style="margin:-8px 2px 14px;color:var(--txt2)">${tr("Flight/hotel search runs a live web search on your API key and cites its sources. Always confirm prices on the booking site before paying.")}</div>
     <div class="card">
-      <h3>${ic("checkSquare", 16)} Checklist</h3>
+      <h3>${ic("checkSquare", 16)} ${tr("Checklist")}</h3>
       ${cl.length ? cl.map(c => `<div class="task-row ${c.done ? "done" : ""}">
         <button class="task-check" onclick="M.tripCheck('${c.id}')">${c.done ? ic("check", 15) : ""}</button>
         <div class="task-tx"><div class="task-nm" dir="auto">${esc(c.text)}</div></div>
-        <button class="del" aria-label="Delete" onclick="M.tripItemDel('${c.id}')">${ic("trash", 13)}</button>
-      </div>`).join("") : `<div class="muted" style="margin-bottom:8px">Add packing items and to-dos.</div>`}
-      <div class="row" style="margin-top:10px"><input id="tripItem" placeholder="Add item…" dir="auto" onkeydown="if(event.key==='Enter')M.tripItemAdd()">
-        <button class="btn sm" style="flex:0 0 auto" onclick="M.tripItemAdd()">Add</button></div>
+        <button class="del" aria-label="${tr("Delete")}" onclick="M.tripItemDel('${c.id}')">${ic("trash", 13)}</button>
+      </div>`).join("") : `<div class="muted" style="margin-bottom:8px">${tr("Add packing items and to-dos.")}</div>`}
+      <div class="row" style="margin-top:10px"><input id="tripItem" placeholder="${tr("Add item…")}" dir="auto" onkeydown="if(event.key==='Enter')M.tripItemAdd()">
+        <button class="btn sm" style="flex:0 0 auto" onclick="M.tripItemAdd()">${tr("Add")}</button></div>
     </div>
     <div class="card">
-      <h3>${ic("fileText", 16)} Notes</h3>
-      <textarea rows="6" oninput="M.tripNote(this.value)" placeholder="Itinerary, bookings, ideas…" dir="auto">${esc(t.notes || "")}</textarea>
+      <h3>${ic("fileText", 16)} ${tr("Notes")}</h3>
+      <textarea rows="6" oninput="M.tripNote(this.value)" placeholder="${tr("Itinerary, bookings, ideas…")}" dir="auto">${esc(t.notes || "")}</textarea>
     </div>
-    <button class="btn sec danger" onclick="M.tripDel('${t.id}')">${ic("trash", 14)} Delete trip</button>`;
+    <button class="btn sec danger" onclick="M.tripDel('${t.id}')">${ic("trash", 14)} ${tr("Delete trip")}</button>`;
 }
 
 /* ---------------- Purchase comparisons ---------------- */
 function compareHTML(){
   return `
     <div class="card">
-      <div class="row"><input value="${esc(R.cmpNew)}" oninput="R.cmpNew=this.value" placeholder="What are you comparing? e.g. New phone" dir="auto" onkeydown="if(event.key==='Enter')M.cmpNew()">
-        <button class="btn sm" style="flex:0 0 auto" onclick="M.cmpNew()">Create</button></div>
+      <div class="row"><input value="${esc(R.cmpNew)}" oninput="R.cmpNew=this.value" placeholder="${tr("What are you comparing? e.g. New phone")}" dir="auto" onkeydown="if(event.key==='Enter')M.cmpNew()">
+        <button class="btn sm" style="flex:0 0 auto" onclick="M.cmpNew()">${tr("Create")}</button></div>
     </div>
     ${S.compares.length ? S.compares.map(c => `<button class="feat-card" onclick="M.cmpOpen('${c.id}')">
       <span class="fc-ic">${ic("scale", 18)}</span>
-      <span class="fc-tx"><span class="fc-nm" dir="auto">${esc(c.title)}</span><span class="fc-ds">${(c.options || []).length} option${(c.options || []).length !== 1 ? "s" : ""}</span></span>
+      <span class="fc-tx"><span class="fc-nm" dir="auto">${esc(c.title)}</span><span class="fc-ds">${(c.options || []).length} ${tr("options")}</span></span>
       <span class="fc-ar">${ic("chevR", 16)}</span>
-    </button>`).join("") : `<div class="card"><div class="muted">No comparisons yet. Create one to weigh options side by side — MIRA can research and you save the verdict.</div></div>`}`;
+    </button>`).join("") : `<div class="card"><div class="muted">${tr("No comparisons yet. Create one to weigh options side by side — MIRA can research and you save the verdict.")}</div></div>`}`;
 }
 function compareDetailHTML(){
   const c = S.compares.find(x => x.id === R.compareId);
   if (!c){ R.compareId = null; return lifeHTML(); }
   const o = R.optForm;
   return `
-    <button class="cat-back" onclick="M.cmpClose()">${ic("back", 18)} All comparisons</button>
+    <button class="cat-back" onclick="M.cmpClose()">${ic("back", 18)} ${tr("All comparisons")}</button>
     <div class="cat-title"><div class="ch-nm" dir="auto">${esc(c.title)}</div></div>
-    <button class="btn cat-ask" onclick="M.cmpResearch()">${ic("globe", 17)} Research with MIRA</button>
+    <button class="btn cat-ask" onclick="M.cmpResearch()">${ic("globe", 17)} ${tr("Research with MIRA")}</button>
     ${(c.options || []).map(op => `<div class="card">
       <div class="wo-hd" style="margin-bottom:6px"><div><div style="font-weight:600" dir="auto">${esc(op.name)}</div>${op.price ? `<div class="tiny">${esc(op.price)}</div>` : ""}</div>
-        <button class="del" style="flex:0 0 auto;color:var(--txt3)" aria-label="Delete option" onclick="M.optDel('${c.id}','${op.id}')">✕</button></div>
+        <button class="del" style="flex:0 0 auto;color:var(--txt3)" aria-label="${tr("Delete option")}" onclick="M.optDel('${c.id}','${op.id}')">✕</button></div>
       ${op.pros ? `<div class="tiny" style="color:var(--green)">＋ ${esc(op.pros)}</div>` : ""}
       ${op.cons ? `<div class="tiny" style="color:var(--amber)">－ ${esc(op.cons)}</div>` : ""}
       ${op.source ? `<div class="tiny" style="margin-top:4px">${esc(op.source)}</div>` : ""}
     </div>`).join("")}
     <div class="card fold open">
-      <h3>${ic("plus", 16)} Add an option</h3>
+      <h3>${ic("plus", 16)} ${tr("Add an option")}</h3>
       <div class="fold-body">
         <div class="grid2" style="margin-bottom:10px">
-          <div class="field"><label>Name</label><input value="${esc(o.name)}" oninput="R.optForm.name=this.value" dir="auto"></div>
-          <div class="field"><label>Price</label><input value="${esc(o.price)}" oninput="R.optForm.price=this.value" placeholder="e.g. 220 KWD"></div>
+          <div class="field"><label>${tr("Name")}</label><input value="${esc(o.name)}" oninput="R.optForm.name=this.value" dir="auto"></div>
+          <div class="field"><label>${tr("Price")}</label><input value="${esc(o.price)}" oninput="R.optForm.price=this.value" placeholder="${tr("e.g. 220 KWD")}"></div>
         </div>
-        <div class="field"><label>Pros</label><input value="${esc(o.pros)}" oninput="R.optForm.pros=this.value" dir="auto"></div>
-        <div class="field"><label>Cons</label><input value="${esc(o.cons)}" oninput="R.optForm.cons=this.value" dir="auto"></div>
-        <div class="field"><label>Source / link (optional)</label><input value="${esc(o.source)}" oninput="R.optForm.source=this.value"></div>
-        <button class="btn sm" onclick="M.optAdd('${c.id}')">Add option</button>
+        <div class="field"><label>${tr("Pros")}</label><input value="${esc(o.pros)}" oninput="R.optForm.pros=this.value" dir="auto"></div>
+        <div class="field"><label>${tr("Cons")}</label><input value="${esc(o.cons)}" oninput="R.optForm.cons=this.value" dir="auto"></div>
+        <div class="field"><label>${tr("Source / link (optional)")}</label><input value="${esc(o.source)}" oninput="R.optForm.source=this.value"></div>
+        <button class="btn sm" onclick="M.optAdd('${c.id}')">${tr("Add option")}</button>
       </div>
     </div>
-    <button class="btn sec danger" onclick="M.cmpDel('${c.id}')">${ic("trash", 14)} Delete comparison</button>`;
+    <button class="btn sec danger" onclick="M.cmpDel('${c.id}')">${ic("trash", 14)} ${tr("Delete comparison")}</button>`;
 }
 
 /* ---------------- Decisions log ---------------- */
@@ -7564,23 +7745,23 @@ function decideHTML(){
   const list = [...S.decisions].sort((a, b) => b.ts - a.ts);
   return `
     <div class="card fold ${f.open || !S.decisions.length ? "open" : ""}">
-      <h3 onclick="M.decideFormToggle()">${ic("plus", 16)} Log a decision <span class="chev">▶</span></h3>
+      <h3 onclick="M.decideFormToggle()">${ic("plus", 16)} ${tr("Log a decision")} <span class="chev">▶</span></h3>
       <div class="fold-body">
-        <div class="field"><label>The decision</label><input value="${esc(f.title)}" oninput="R.decideForm.title=this.value" placeholder="e.g. Which job offer to take?" dir="auto"></div>
-        <div class="field"><label>Options weighed</label><textarea rows="2" oninput="R.decideForm.options=this.value" placeholder="The choices you considered" dir="auto">${esc(f.options)}</textarea></div>
-        <div class="field"><label>What you decided</label><input value="${esc(f.decision)}" oninput="R.decideForm.decision=this.value" dir="auto"></div>
-        <div class="field"><label>Why</label><textarea rows="2" oninput="R.decideForm.why=this.value" placeholder="The reasoning — so you can revisit it" dir="auto">${esc(f.why)}</textarea></div>
-        <div class="row"><button class="btn sm" onclick="M.decideSave()">Save decision</button>
-          <button class="btn sm sec" onclick="M.decideDeepSolve()">${ic("layers", 14)} Deep Solve it</button></div>
+        <div class="field"><label>${tr("The decision")}</label><input value="${esc(f.title)}" oninput="R.decideForm.title=this.value" placeholder="${tr("e.g. Which job offer to take?")}" dir="auto"></div>
+        <div class="field"><label>${tr("Options weighed")}</label><textarea rows="2" oninput="R.decideForm.options=this.value" placeholder="${tr("The choices you considered")}" dir="auto">${esc(f.options)}</textarea></div>
+        <div class="field"><label>${tr("What you decided")}</label><input value="${esc(f.decision)}" oninput="R.decideForm.decision=this.value" dir="auto"></div>
+        <div class="field"><label>${tr("Why")}</label><textarea rows="2" oninput="R.decideForm.why=this.value" placeholder="${tr("The reasoning — so you can revisit it")}" dir="auto">${esc(f.why)}</textarea></div>
+        <div class="row"><button class="btn sm" onclick="M.decideSave()">${tr("Save decision")}</button>
+          <button class="btn sm sec" onclick="M.decideDeepSolve()">${ic("layers", 14)} ${tr("Deep Solve it")}</button></div>
       </div>
     </div>
     ${list.length ? list.map(d => `<div class="card">
       <div class="wo-hd" style="margin-bottom:6px"><div><div style="font-weight:600" dir="auto">${esc(d.title)}</div><div class="tiny">${new Date(d.ts).toLocaleDateString("en-GB", {day: "numeric", month: "short", year: "numeric"})}</div></div>
-        <button class="del" style="flex:0 0 auto;color:var(--txt3)" aria-label="Delete" onclick="M.decideDel('${d.id}')">✕</button></div>
-      ${d.options ? `<div class="tiny"><b>Options:</b> ${esc(d.options)}</div>` : ""}
-      ${d.decision ? `<div class="tiny" style="margin-top:3px;color:var(--acc)"><b>Decided:</b> ${esc(d.decision)}</div>` : ""}
-      ${d.why ? `<div class="tiny" style="margin-top:3px"><b>Why:</b> ${esc(d.why)}</div>` : ""}
-    </div>`).join("") : `<div class="card"><div class="muted">No decisions logged. Record big choices and the reasoning, or Deep Solve one first.</div></div>`}`;
+        <button class="del" style="flex:0 0 auto;color:var(--txt3)" aria-label="${tr("Delete")}" onclick="M.decideDel('${d.id}')">✕</button></div>
+      ${d.options ? `<div class="tiny"><b>${tr("Options:")}</b> ${esc(d.options)}</div>` : ""}
+      ${d.decision ? `<div class="tiny" style="margin-top:3px;color:var(--acc)"><b>${tr("Decided:")}</b> ${esc(d.decision)}</div>` : ""}
+      ${d.why ? `<div class="tiny" style="margin-top:3px"><b>${tr("Why:")}</b> ${esc(d.why)}</div>` : ""}
+    </div>`).join("") : `<div class="card"><div class="muted">${tr("No decisions logged. Record big choices and the reasoning, or Deep Solve one first.")}</div></div>`}`;
 }
 </script>
 <script>
