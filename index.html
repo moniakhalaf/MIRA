@@ -1250,7 +1250,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.116";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.117";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1501,6 +1501,171 @@ const TR = {
     "Community food database":"قاعدة بيانات الطعام المجتمعية","Supabase project URL":"رابط مشروع Supabase","Supabase anon key":"مفتاح Supabase العام (anon)",
     "Confirm your lookup below":"أكّد نتيجة البحث بالأسفل",
     "Estimated maintenance":"سعرات الصيانة المُقدّرة","kcal/day upkeep":"سعرة/يوم للصيانة","Avg intake":"متوسط الاستهلاك","kg/week":"كغ/أسبوع","days logged":"أيام مُسجّلة",
+    "Weekly review": "المراجعة الأسبوعية",
+    "Your last 7 days across work, health, fitness & life": "آخر 7 أيام في العمل والصحة واللياقة والحياة",
+    "Not logged this week": "لم يُسجَّل هذا الأسبوع",
+    "Workouts": "التمارين",
+    "Total sets": "إجمالي المجموعات",
+    "logged across sessions": "مُسجّلة عبر الجلسات",
+    "Fasts": "الصيام",
+    "avg": "متوسط",
+    "Avg calories": "متوسط السعرات",
+    "over": "على مدى",
+    "Avg protein": "متوسط البروتين",
+    "hit target": "بلغت الهدف",
+    "days": "أيام",
+    "days met water goal": "أيام بلغت هدف الماء",
+    "avg over": "متوسط على مدى",
+    "energy": "طاقة",
+    "Open tasks": "مهام مفتوحة",
+    "overdue": "متأخرة",
+    "none overdue": "لا شيء متأخر",
+    "Focus sessions": "جلسات تركيز",
+    "pomodoros this week": "بومودورو هذا الأسبوع",
+    "check-ins": "تسجيلات",
+    "Spending": "الإنفاق",
+    "of": "من",
+    "income (this month)": "دخل (هذا الشهر)",
+    "this month": "هذا الشهر",
+    "Back to Insights": "العودة إلى الرؤى",
+    "Every number below is from what you actually logged. Blank tiles mean nothing was recorded — not zero progress.": "كل رقم بالأسفل من تسجيلاتك الفعلية. الخانات الفارغة تعني عدم تسجيل شيء — لا انعدام التقدّم.",
+    "Ask MIRA for my weekly review": "اطلب من ميرا مراجعتي الأسبوعية",
+    "MIRA reads these figures and gives you wins, watch-outs and next-week priorities — grounded in your data.": "تقرأ ميرا هذه الأرقام وتعطيك الإنجازات والتنبيهات وأولويات الأسبوع القادم — مبنيّة على بياناتك.",
+    "Calories left": "السعرات المتبقية",
+    "logged today": "مُسجّل اليوم",
+    "Protein left": "البروتين المتبقي",
+    "goal": "هدف",
+    "Last sleep": "آخر نوم",
+    "not logged": "غير مُسجّل",
+    "no InBody yet": "لا قياس InBody بعد",
+    "active day": "يوم نشط",
+    "active days": "أيام نشطة",
+    "Sets": "المجموعات",
+    "across sessions": "عبر الجلسات",
+    "Last session": "آخر جلسة",
+    "none logged": "لا شيء مُسجّل",
+    "pomodoros": "بومودورو",
+    "Next task": "المهمة التالية",
+    "due": "تُستحق",
+    "all clear": "كل شيء منجز",
+    "none tracked": "لا شيء مُتابع",
+    "Next bill": "الفاتورة التالية",
+    "none due": "لا شيء مستحق",
+    "No domains enabled.": "لا مجالات مُفعّلة.",
+    "Quick add": "إضافة سريعة",
+    "Add a meal or item": "أضف وجبة أو عنصرًا",
+    "Add water": "أضف ماءً",
+    "+1 glass · 250 ml": "+كوب · 250 مل",
+    "Log workout": "سجّل تمرينًا",
+    "Start a session": "ابدأ جلسة",
+    "Log weight": "سجّل الوزن",
+    "Quick body entry": "إدخال جسم سريع",
+    "Add task": "أضف مهمة",
+    "A to-do or reminder": "مهمة أو تذكير",
+    "Ask MIRA": "اسأل ميرا",
+    "Start a new chat": "ابدأ محادثة جديدة",
+    "all time": "كل الوقت",
+    "wk": "أسبوع",
+    "Log at least 2 weight entries to see your trend.": "سجّل وزنين على الأقل لرؤية اتجاهك.",
+    "per day": "يوميًا",
+    "Log food on at least 2 days to see your calorie trend.": "سجّل الطعام في يومين على الأقل لرؤية اتجاه سعراتك.",
+    "g per day": "غ يوميًا",
+    "Log food on at least 2 days to see your protein trend.": "سجّل الطعام في يومين على الأقل لرؤية اتجاه بروتينك.",
+    "hours per night": "ساعات كل ليلة",
+    "Log at least 2 nights of sleep to see your trend.": "سجّل ليلتي نوم على الأقل لرؤية اتجاهك.",
+    "daily score /100": "الدرجة اليومية /100",
+    "Do at least 2 wellness check-ins to see your mood trend.": "سجّل تقييمين للعافية على الأقل لرؤية اتجاه مزاجك.",
+    "sets per week": "مجموعات أسبوعيًا",
+    "sets": "مجموعات",
+    "Log workouts across at least 2 weeks to see your volume trend.": "سجّل تمارين عبر أسبوعين على الأقل لرؤية اتجاه حجمك.",
+    "Trends are drawn only from what you logged. A chart appears once there are at least two data points; until then it says so.": "تُرسم الاتجاهات فقط مما سجّلته. يظهر الرسم البياني عند وجود نقطتي بيانات على الأقل؛ وحتى ذلك الحين يوضّح ذلك.",
+    "More data, sharper trends. Keep logging and these fill in automatically.": "بيانات أكثر، اتجاهات أوضح. واصل التسجيل وستمتلئ هذه تلقائيًا.",
+    "You're essentially at your goal of": "أنت عمليًا عند هدفك البالغ",
+    "kg. Nice.": "كجم. رائع.",
+    "Your weight is holding steady, so there's no reliable ETA yet. Keep logging — a trend needs a couple of weeks of movement.": "وزنك ثابت، لذا لا يوجد وقت وصول موثوق بعد. واصل التسجيل — يحتاج الاتجاه إلى أسبوعين من الحركة.",
+    "Your recent trend is moving away from": "اتجاهك الأخير يبتعد عن",
+    "kg, so no ETA — worth a look at intake vs output.": "كجم، لذا لا وقت وصول — يستحق النظر في المُدخل مقابل المُخرج.",
+    "about a week": "حوالي أسبوع",
+    "At your recent rate of": "بمعدّلك الأخير البالغ",
+    "kg/week, reaching": "كجم/أسبوع، الوصول إلى",
+    "kg would take": "كجم سيستغرق",
+    "around": "حوالي",
+    "Projected from your own logged weight trend, not a guarantee — real progress varies with training, sleep, water and adherence. Set your goal weight in Settings → Daily targets.": "مُقدَّر من اتجاه وزنك المُسجّل، ليس ضمانًا — يتفاوت التقدّم الحقيقي مع التدريب والنوم والماء والالتزام. حدّد وزنك الهدف في الإعدادات ← الأهداف اليومية.",
+    "losing": "تفقد",
+    "gaining": "تكتسب",
+    "holding steady at": "ثابت عند",
+    "Worked out from your own data: over ~": "محسوب من بياناتك: على مدى ~",
+    "days you've been": "أيام كنت",
+    "kg/week while averaging": "كجم/أسبوع بمتوسط",
+    "on logged days — so your body is burning about": "في الأيام المُسجّلة — فجسمك يحرق حوالي",
+    "kcal/day": "سعرة/يوم",
+    "Your current target is": "هدفك الحالي هو",
+    "Early estimate — it sharpens as you log more. ": "تقدير مبكّر — يزداد دقّة كلما سجّلت أكثر. ",
+    "Assumes your food logging is complete, and ~7,700 kcal per kg of weight change. It's an honest estimate from your own trend, not a lab measurement.": "يفترض أن تسجيل طعامك مكتمل، و~7,700 سعرة لكل كجم من تغيّر الوزن. إنه تقدير صادق من اتجاهك، وليس قياسًا مخبريًا.",
+    "lose weight": "إنقاص الوزن",
+    "gain weight": "زيادة الوزن",
+    "maintain": "المحافظة",
+    "hold your weight": "الحفاظ على وزنك",
+    "From your": "انطلاقًا من",
+    "expenditure": "إنفاقك",
+    "and trend weight": "ووزن الاتجاه",
+    "at": "عند",
+    "e.g. 74": "مثال: 74",
+    "Set a goal to aim the targets; leave blank to just maintain.": "حدّد هدفًا لتوجيه الأهداف؛ اتركه فارغًا للمحافظة فقط.",
+    "protein": "بروتين",
+    "carbs": "كربوهيدرات",
+    "fat": "دهون",
+    "Held at a 1,200 kcal floor — a gentler pace is healthier here.": "مُثبَّت عند حدّ 1,200 سعرة — وتيرة ألطف أصحّ هنا.",
+    "Early estimate — sharpens as you log more. ": "تقدير مبكّر — يزداد دقّة كلما سجّلت أكثر. ",
+    "Protein set to": "البروتين مضبوط على",
+    "g/kg, fat ~0.8 g/kg, carbs fill the rest. Re-check weekly — as your expenditure shifts, so should these.": "غ/كجم، الدهون ~0.8 غ/كجم، والكربوهيدرات تملأ الباقي. راجعها أسبوعيًا — كلما تغيّر إنفاقك، تغيّرت هذه.",
+    "trend weight": "وزن الاتجاه",
+    "on pace": "على المسار",
+    "off pace": "خارج المسار",
+    "New suggested targets:": "أهداف مقترحة جديدة:",
+    "Your current targets still fit — nothing to change.": "أهدافك الحالية ما زالت مناسبة — لا شيء للتغيير.",
+    "day": "يوم",
+    "Food log streak": "تتابع تسجيل الطعام",
+    "Check-in streak": "تتابع التسجيل",
+    "Training streak": "تتابع التدريب",
+    "Your wellness score averages": "متوسط درجة عافيتك",
+    "on nights of 7 h+ sleep vs": "في ليالي النوم 7 ساعات+ مقابل",
+    "after shorter nights.": "بعد الليالي الأقصر.",
+    "You average": "متوسطك",
+    "g protein on training days vs": "غ بروتين في أيام التدريب مقابل",
+    "g on rest days.": "غ في أيام الراحة.",
+    "Patterns & streaks": "الأنماط والتتابعات",
+    "Associations from your own logs — patterns to notice, not medical advice. They appear only once there's enough data.": "ارتباطات من تسجيلاتك — أنماط للملاحظة، وليست نصيحة طبية. تظهر فقط عند توفّر بيانات كافية.",
+    "Nothing logged.": "لا شيء مُسجّل.",
+    "Food log": "سجلّ الطعام",
+    "No food logged in this range.": "لا طعام مُسجّل في هذه الفترة.",
+    "Daily average:": "المتوسط اليومي:",
+    "Targets:": "الأهداف:",
+    "Generated by MIRA. Figures reflect logged entries; items marked [estimate] are approximate.": "أُنشئ بواسطة ميرا. الأرقام تعكس المُدخلات المُسجّلة؛ العناصر المُعلّمة [تقدير] تقريبية.",
+    "Item": "العنصر",
+    "Amount": "الكمية",
+    "Protein_g": "البروتين_غ",
+    "Carbs_g": "الكربوهيدرات_غ",
+    "Fat_g": "الدهون_غ",
+    "Source": "المصدر",
+    "Daily average": "المتوسط اليومي",
+    "Total": "الإجمالي",
+    "Close": "إغلاق",
+    "Save as PDF": "حفظ كـ PDF",
+    "Avg carbs": "متوسط الكربوهيدرات",
+    "Avg fat": "متوسط الدهون",
+    "Target": "الهدف",
+    "Generated by MIRA. Figures reflect logged entries; items marked [estimate] are approximate, not official.": "أُنشئ بواسطة ميرا. الأرقام تعكس المُدخلات المُسجّلة؛ العناصر المُعلّمة [تقدير] تقريبية وغير رسمية.",
+    "nothing logged": "لا شيء مُسجّل",
+    "Daily avg": "متوسط يومي",
+    "g protein": "غ بروتين",
+    "Generated by MIRA · figures reflect logged entries; estimates are approximate.": "أُنشئ بواسطة ميرا · الأرقام تعكس المُدخلات المُسجّلة؛ التقديرات تقريبية.",
+    "Share food log": "مشاركة سجلّ الطعام",
+    "Pick a date range, then share a clean summary image (great for WhatsApp), a spreadsheet (CSV), or a PDF.": "اختر نطاق تواريخ، ثم شارك صورة ملخّص نظيفة (مثالية لواتساب)، أو جدول بيانات (CSV)، أو PDF.",
+    "item": "عنصر",
+    "Share": "مشاركة",
+    "Copy": "نسخ",
+    "Moved to": "نُقل إلى",
     "Estimated monthly spend": "الإنفاق الشهري التقديري",
     "items": "عناصر",
     "yr": "سنة",
@@ -2816,7 +2981,7 @@ function weekReviewCardHTML(){
   if (!anything) return "";   // nothing to review yet
   return `<button class="review-card" onclick="M.openReview()">
     <span class="rc-ic">${ic("calendar", 20)}</span>
-    <span class="rc-tx"><span class="rc-nm">Weekly review</span><span class="rc-ds">Your last 7 days across work, health, fitness & life</span></span>
+    <span class="rc-tx"><span class="rc-nm">${tr("Weekly review")}</span><span class="rc-ds">${tr("Your last 7 days across work, health, fitness & life")}</span></span>
     <span class="rc-ar">${ic("chevR", 16)}</span>
   </button>`;
 }
@@ -2826,43 +2991,44 @@ function weeklyReviewHTML(){
   const rng = `${fmtDate(s.from)} – ${fmtDate(todayStr())}`;
   const pct = (a, b) => b ? Math.round(a / b * 100) : 0;
   // tile: value present -> normal; null -> honest "not logged"
+  const dayW = (n, one, many) => n + " " + (n === 1 ? tr(one) : tr(many));
   const tile = (label, val, sub, has) => `<div class="wr-tile ${has ? "" : "empty"}">
     <div class="wr-l">${label}</div>
     <div class="wr-v">${has ? val : "—"}</div>
-    <div class="wr-s">${has ? sub : "Not logged this week"}</div></div>`;
+    <div class="wr-s">${has ? sub : tr("Not logged this week")}</div></div>`;
   const sec = (title, color, tiles) => `<div class="wr-sec"><div class="wr-h"><span class="wr-dot" style="background:${color}"></span>${title}</div><div class="wr-grid">${tiles.join("")}</div></div>`;
 
-  const fitness = sec("Fitness", "#e8863d", [
-    tile("Workouts", `${s.ws}`, `${s.trainDays} active day${s.trainDays === 1 ? "" : "s"}`, s.ws > 0),
-    tile("Total sets", `${s.sets}`, "logged across sessions", s.sets > 0),
-    tile("Fasts", `${s.fasts}`, s.avgFast != null ? `avg ${(Math.round(s.avgFast * 10) / 10)} h` : "", s.fasts > 0),
+  const fitness = sec(tr("Fitness"), "#e8863d", [
+    tile(tr("Workouts"), `${s.ws}`, `${dayW(s.trainDays, "active day", "active days")}`, s.ws > 0),
+    tile(tr("Total sets"), `${s.sets}`, tr("logged across sessions"), s.sets > 0),
+    tile(tr("Fasts"), `${s.fasts}`, s.avgFast != null ? `${tr("avg")} ${(Math.round(s.avgFast * 10) / 10)} h` : "", s.fasts > 0),
   ]);
-  const health = sec("Health", "#3bb273", [
-    tile("Avg calories", s.avgKcal != null ? n0(s.avgKcal) : "", `over ${s.nDaysFood} logged day${s.nDaysFood === 1 ? "" : "s"}${s.tg.kcal ? ` · target ${n0(s.tg.kcal)}` : ""}`, s.avgKcal != null),
-    tile("Avg protein", s.avgP != null ? n0(s.avgP) + " g" : "", s.tg.protein ? `hit target ${s.proteinHitDays}/${s.nDaysFood} days` : `over ${s.nDaysFood} days`, s.avgP != null),
-    tile("Hydration", s.waterDaysLogged ? `${s.waterHitDays}/${s.waterDaysLogged}` : "", "days met water goal", s.waterDaysLogged > 0),
-    tile("Sleep", s.avgSleep != null ? (Math.round(s.avgSleep * 10) / 10) + " h" : "", `avg over ${s.sl} night${s.sl === 1 ? "" : "s"}`, s.avgSleep != null),
-    tile("Mood", s.avgMood != null ? (Math.round(s.avgMood * 10) / 10) + "/5" : "", s.avgEnergy != null ? `energy ${(Math.round(s.avgEnergy * 10) / 10)}/5` : "", s.avgMood != null),
+  const health = sec(tr("Health"), "#3bb273", [
+    tile(tr("Avg calories"), s.avgKcal != null ? n0(s.avgKcal) : "", `${tr("over")} ${dayW(s.nDaysFood, "logged day", "logged days")}${s.tg.kcal ? ` · ${tr("target")} ${n0(s.tg.kcal)}` : ""}`, s.avgKcal != null),
+    tile(tr("Avg protein"), s.avgP != null ? n0(s.avgP) + " g" : "", s.tg.protein ? `${tr("hit target")} ${s.proteinHitDays}/${s.nDaysFood} ${tr("days")}` : `${tr("over")} ${s.nDaysFood} ${tr("days")}`, s.avgP != null),
+    tile(tr("Hydration"), s.waterDaysLogged ? `${s.waterHitDays}/${s.waterDaysLogged}` : "", tr("days met water goal"), s.waterDaysLogged > 0),
+    tile(tr("Sleep"), s.avgSleep != null ? (Math.round(s.avgSleep * 10) / 10) + " h" : "", `${tr("avg over")} ${dayW(s.sl, "night", "nights")}`, s.avgSleep != null),
+    tile(tr("Mood"), s.avgMood != null ? (Math.round(s.avgMood * 10) / 10) + "/5" : "", s.avgEnergy != null ? `${tr("energy")} ${(Math.round(s.avgEnergy * 10) / 10)}/5` : "", s.avgMood != null),
   ]);
-  const work = sec("Work", "#4c7fe0", [
-    tile("Open tasks", `${s.openN}`, s.overdueN ? `${s.overdueN} overdue` : "none overdue", s.totalTasks > 0),
-    tile("Focus sessions", `${s.focusN}`, "pomodoros this week", s.focusN > 0),
+  const work = sec(tr("Work"), "#4c7fe0", [
+    tile(tr("Open tasks"), `${s.openN}`, s.overdueN ? `${s.overdueN} ${tr("overdue")}` : tr("none overdue"), s.totalTasks > 0),
+    tile(tr("Focus sessions"), `${s.focusN}`, tr("pomodoros this week"), s.focusN > 0),
   ]);
-  const life = sec("Life", "#b57edc", [
-    tile("Habits", s.habTotal ? pct(s.habDone, s.habTotal) + "%" : "", `${s.habDone}/${s.habTotal} check-ins`, s.habTotal > 0),
-    tile("Spending", (s.income || s.spent) ? n0(s.spent) : "", s.income ? `of ${n0(s.income)} income (this month)` : "this month", (s.income || s.spent) > 0),
+  const life = sec(tr("Life"), "#b57edc", [
+    tile(tr("Habits"), s.habTotal ? pct(s.habDone, s.habTotal) + "%" : "", `${s.habDone}/${s.habTotal} ${tr("check-ins")}`, s.habTotal > 0),
+    tile(tr("Spending"), (s.income || s.spent) ? n0(s.spent) : "", s.income ? `${tr("of")} ${n0(s.income)} ${tr("income (this month)")}` : tr("this month"), (s.income || s.spent) > 0),
   ]);
 
   return `
-    <button class="cat-back" aria-label="Back to Insights" onclick="M.reviewBack()">${ic("back", 18)} Insights</button>
+    <button class="cat-back" aria-label="${tr("Back to Insights")}" onclick="M.reviewBack()">${ic("back", 18)} ${tr("Insights")}</button>
     <div class="cat-title">
-      <div class="ch-nm">Weekly review</div>
+      <div class="ch-nm">${tr("Weekly review")}</div>
       <div class="ch-ds">${rng}</div>
     </div>
-    <div class="wr-note">${ic("check", 13)} Every number below is from what you actually logged. Blank tiles mean nothing was recorded — not zero progress.</div>
+    <div class="wr-note">${ic("check", 13)} ${tr("Every number below is from what you actually logged. Blank tiles mean nothing was recorded — not zero progress.")}</div>
     ${fitness}${health}${work}${life}
-    <button class="btn wr-ai" onclick="M.genReview()">${ic("chat", 17)} Ask MIRA for my weekly review</button>
-    <div class="tiny" style="text-align:center;margin-top:9px;color:var(--txt2)">MIRA reads these figures and gives you wins, watch-outs and next-week priorities — grounded in your data.</div>`;
+    <button class="btn wr-ai" onclick="M.genReview()">${ic("chat", 17)} ${tr("Ask MIRA for my weekly review")}</button>
+    <div class="tiny" style="text-align:center;margin-top:9px;color:var(--txt2)">${tr("MIRA reads these figures and gives you wins, watch-outs and next-week priorities — grounded in your data.")}</div>`;
 }
 
 /* ---------------- Dashboard tab (per-domain) ---------------- */
@@ -2877,10 +3043,10 @@ function domDashTiles(id){
     const water = (S.water[t] || 0) * 0.25;
     const lastSleep = [...(S.sleep || [])].sort((a, b) => a.date < b.date ? -1 : 1).pop();
     return [
-      {l: "Calories left", v: tg.kcal ? n0(Math.max(0, tg.kcal - tot.kcal)) : n0(tot.kcal), s: tg.kcal ? `${n0(tot.kcal)} / ${n0(tg.kcal)}` : "logged today"},
-      {l: "Protein left", v: tg.protein ? n0(Math.max(0, tg.protein - tot.p)) + " g" : n1(tot.p) + " g", s: tg.protein ? `${n0(tot.p)} / ${n0(tg.protein)} g` : "logged today"},
-      {l: "Water", v: water.toFixed(2) + " L", s: `goal ${(S.settings.waterGoal / 1000).toFixed(2)} L`},
-      {l: "Last sleep", v: lastSleep ? lastSleep.hours + " h" : "—", s: lastSleep ? fmtDate(lastSleep.date) + (lastSleep.quality ? ` · q${lastSleep.quality}/5` : "") : "not logged"},
+      {l: tr("Calories left"), v: tg.kcal ? n0(Math.max(0, tg.kcal - tot.kcal)) : n0(tot.kcal), s: tg.kcal ? `${n0(tot.kcal)} / ${n0(tg.kcal)}` : tr("logged today")},
+      {l: tr("Protein left"), v: tg.protein ? n0(Math.max(0, tg.protein - tot.p)) + " g" : n1(tot.p) + " g", s: tg.protein ? `${n0(tot.p)} / ${n0(tg.protein)} g` : tr("logged today")},
+      {l: tr("Water"), v: water.toFixed(2) + " L", s: `${tr("goal")} ${(S.settings.waterGoal / 1000).toFixed(2)} L`},
+      {l: tr("Last sleep"), v: lastSleep ? lastSleep.hours + " h" : "—", s: lastSleep ? fmtDate(lastSleep.date) + (lastSleep.quality ? ` · q${lastSleep.quality}/5` : "") : tr("not logged")},
     ];
   }
   if (id === "fitness"){
@@ -2888,33 +3054,33 @@ function domDashTiles(id){
     const lastW = wl[wl.length - 1];
     const lastWo = [...(S.workouts || [])].sort((a, b) => a.date < b.date ? -1 : 1).pop();
     return [
-      {l: "Weight", v: lastW ? lastW.weight + " kg" : "—", s: lastW ? fmtDate(lastW.date) : "no InBody yet"},
-      {l: "Workouts · 7d", v: `${s.ws}`, s: `${s.trainDays} active day${s.trainDays === 1 ? "" : "s"}`},
-      {l: "Sets · 7d", v: `${s.sets}`, s: "across sessions"},
-      {l: "Last session", v: lastWo ? esc(lastWo.name.length > 14 ? lastWo.name.slice(0, 13) + "…" : lastWo.name) : "—", s: lastWo ? fmtDate(lastWo.date) : "none logged"},
+      {l: tr("Weight"), v: lastW ? lastW.weight + " kg" : "—", s: lastW ? fmtDate(lastW.date) : tr("no InBody yet")},
+      {l: `${tr("Workouts")} · 7d`, v: `${s.ws}`, s: `${s.trainDays} ${s.trainDays === 1 ? tr("active day") : tr("active days")}`},
+      {l: `${tr("Sets")} · 7d`, v: `${s.sets}`, s: tr("across sessions")},
+      {l: tr("Last session"), v: lastWo ? esc(lastWo.name.length > 14 ? lastWo.name.slice(0, 13) + "…" : lastWo.name) : "—", s: lastWo ? fmtDate(lastWo.date) : tr("none logged")},
     ];
   }
   if (id === "work"){
     const nextTask = (typeof openTasks === "function" ? openTasks() : (S.tasks || []).filter(x => !x.done))[0];
     return [
-      {l: "Open tasks", v: `${s.openN}`, s: s.overdueN ? `${s.overdueN} overdue` : "none overdue"},
-      {l: "Focus · 7d", v: `${s.focusN}`, s: "pomodoros"},
-      {l: "Next task", v: nextTask ? esc(nextTask.title.length > 16 ? nextTask.title.slice(0, 15) + "…" : nextTask.title) : "—", s: nextTask ? (nextTask.due ? "due " + fmtDate(nextTask.due) : (PRIOS[nextTask.priority] || {}).label || "") : "all clear"},
+      {l: tr("Open tasks"), v: `${s.openN}`, s: s.overdueN ? `${s.overdueN} ${tr("overdue")}` : tr("none overdue")},
+      {l: `${tr("Focus")} · 7d`, v: `${s.focusN}`, s: tr("pomodoros")},
+      {l: tr("Next task"), v: nextTask ? esc(nextTask.title.length > 16 ? nextTask.title.slice(0, 15) + "…" : nextTask.title) : "—", s: nextTask ? (nextTask.due ? tr("due") + " " + fmtDate(nextTask.due) : (PRIOS[nextTask.priority] || {}).label || "") : tr("all clear")},
     ];
   }
   if (id === "life"){
     const bill = [...(S.bills || [])].filter(b => b.next && b.next >= t).sort((a, b) => a.next < b.next ? -1 : 1)[0];
     return [
-      {l: "Habits · 7d", v: s.habTotal ? Math.round(s.habDone / s.habTotal * 100) + "%" : "—", s: s.habTotal ? `${s.habDone}/${s.habTotal} check-ins` : "none tracked"},
-      {l: "Spending", v: (s.income || s.spent) ? n0(s.spent) : "—", s: s.income ? `of ${n0(s.income)} this month` : "this month"},
-      {l: "Next bill", v: bill ? esc(bill.name.length > 14 ? bill.name.slice(0, 13) + "…" : bill.name) : "—", s: bill ? fmtDate(bill.next) : "none due"},
+      {l: `${tr("Habits")} · 7d`, v: s.habTotal ? Math.round(s.habDone / s.habTotal * 100) + "%" : "—", s: s.habTotal ? `${s.habDone}/${s.habTotal} ${tr("check-ins")}` : tr("none tracked")},
+      {l: tr("Spending"), v: (s.income || s.spent) ? n0(s.spent) : "—", s: s.income ? `${tr("of")} ${n0(s.income)} ${tr("this month")}` : tr("this month")},
+      {l: tr("Next bill"), v: bill ? esc(bill.name.length > 14 ? bill.name.slice(0, 13) + "…" : bill.name) : "—", s: bill ? fmtDate(bill.next) : tr("none due")},
     ];
   }
   return [];
 }
 function domainDashHTML(id){
   const d = S.domains.find(x => x.id === id) || dashDomains()[0];
-  if (!d) return `<div class="muted" style="padding:20px 0">No domains enabled.</div>`;
+  if (!d) return `<div class="muted" style="padding:20px 0">${tr("No domains enabled.")}</div>`;
   const tiles = domDashTiles(d.id);
   const feats = domFeatures(d);
   const groups = ["Track", "Plan", "Tools", "Ask MIRA"];
@@ -2925,31 +3091,31 @@ function domainDashHTML(id){
   const sections = groups.map(g => {
     const items = feats.filter(f => (f.g || "Ask MIRA") === g);
     if (!items.length) return "";
-    return `<div class="dash-sec-h">${g}</div><div class="feat-list">${items.map(featCard).join("")}</div>`;
+    return `<div class="dash-sec-h">${tr(g)}</div><div class="feat-list">${items.map(featCard).join("")}</div>`;
   }).join("");
   return `
     <div class="wr-grid dash-stats">
       ${tiles.map(x => `<div class="wr-tile ${x.v === "—" ? "empty" : ""}"><div class="wr-l">${x.l}</div><div class="wr-v">${x.v}</div><div class="wr-s">${x.s}</div></div>`).join("")}
     </div>
-    <button class="btn cat-ask" style="--mc:${d.color}" onclick="M.enterMode('${d.id}')">${ic("chat", 17)} Ask ${esc(d.name)}</button>
+    <button class="btn cat-ask" style="--mc:${d.color}" onclick="M.enterMode('${d.id}')">${ic("chat", 17)} ${tr("Ask")} ${esc(d.name)}</button>
     ${sections}`;
 }
 /* ---------------- quick add (floating +) ---------------- */
 function fabHTML(){
-  return `<button class="fab ${R.quickOpen ? "open" : ""}" aria-label="Quick add" aria-expanded="${R.quickOpen}" onclick="M.quickAdd()">${R.quickOpen ? ic("x", 24) : ic("plus", 26)}</button>`;
+  return `<button class="fab ${R.quickOpen ? "open" : ""}" aria-label="${tr("Quick add")}" aria-expanded="${R.quickOpen}" onclick="M.quickAdd()">${R.quickOpen ? ic("x", 24) : ic("plus", 26)}</button>`;
 }
 function quickAddHTML(){
   const item = (icon, label, sub, act) => `<button class="qa-item" onclick="${act}"><span class="qa-ic">${ic(icon, 20)}</span><span class="qa-tx"><span class="qa-nm">${label}</span><span class="qa-ds">${sub}</span></span><span class="qa-ar">${ic("chevR", 15)}</span></button>`;
   return `<div class="qa-scrim" onclick="M.quickClose()"></div>
     <div class="qa-sheet">
       <div class="qa-grip"></div>
-      <div class="qa-h">Quick add</div>
-      ${item("food", "Log food", "Add a meal or item", `M.qa('food')`)}
-      ${item("droplet", "Add water", "+1 glass · 250 ml", `M.qa('water')`)}
-      ${item("barbell", "Log workout", "Start a session", `M.qa('workout')`)}
-      ${item("trend", "Log weight", "Quick body entry", `M.qa('weight')`)}
-      ${item("checkSquare", "Add task", "A to-do or reminder", `M.qa('task')`)}
-      ${item("chat", "Ask MIRA", "Start a new chat", `M.qa('ask')`)}
+      <div class="qa-h">${tr("Quick add")}</div>
+      ${item("food", tr("Log food"), tr("Add a meal or item"), `M.qa('food')`)}
+      ${item("droplet", tr("Add water"), tr("+1 glass · 250 ml"), `M.qa('water')`)}
+      ${item("barbell", tr("Log workout"), tr("Start a session"), `M.qa('workout')`)}
+      ${item("trend", tr("Log weight"), tr("Quick body entry"), `M.qa('weight')`)}
+      ${item("checkSquare", tr("Add task"), tr("A to-do or reminder"), `M.qa('task')`)}
+      ${item("chat", tr("Ask MIRA"), tr("Start a new chat"), `M.qa('ask')`)}
     </div>`;
 }
 
@@ -3023,12 +3189,12 @@ function barsMeta(vals, unit){
   const nz = vals.filter(v => v > 0);
   if (nz.length < 2) return "";
   const peak = Math.max(...nz), avg = nz.reduce((a, b) => a + b, 0) / nz.length;
-  return `<div class="tc-meta"><span>peak <b>${n0(peak)}${unit}</b></span><span>avg <b>${n0(avg)}${unit}</b></span><span>${nz.length} logged</span></div>`;
+  return `<div class="tc-meta"><span>${tr("peak")} <b>${n0(peak)}${unit}</b></span><span>${tr("avg")} <b>${n0(avg)}${unit}</b></span><span>${nz.length} ${tr("logged")}</span></div>`;
 }
 function lineMeta(pts, unit){
   if (pts.length < 2) return "";
   const vals = pts.map(p => p.v), lo = Math.min(...vals), hi = Math.max(...vals);
-  return `<div class="tc-meta"><span>low <b>${n1(lo)}${unit}</b></span><span>high <b>${n1(hi)}${unit}</b></span><span>${pts.length} points</span></div>`;
+  return `<div class="tc-meta"><span>${tr("low")} <b>${n1(lo)}${unit}</b></span><span>${tr("high")} <b>${n1(hi)}${unit}</b></span><span>${pts.length} ${tr("points")}</span></div>`;
 }
 const INS_RANGES = [[7, "7d"], [14, "14d"], [30, "30d"], [90, "90d"], [0, "All"]];
 function insRangeBarHTML(){
@@ -3041,7 +3207,7 @@ function trendsHTML(){
   const range = R.insRange == null ? 14 : R.insRange;
   const days = insDates(range);
   const dn = days.length;
-  const lab = range === 0 ? "all time" : dn + " days";
+  const lab = range === 0 ? tr("all time") : dn + " " + tr("days");
   const tg = S.settings.targets || {};
   const cards = [];
 
@@ -3049,43 +3215,43 @@ function trendsHTML(){
   const from = days[0];
   const wl = [...(S.inbody || [])].filter(e => e.weight && (range === 0 || e.date >= from)).sort((a, b) => a.date < b.date ? -1 : 1).slice(-40).map(e => ({d: e.date, v: +e.weight}));
   const tw = trendWeightData();
-  const twSub = tw ? `scale ${tw.scale} · trend ${tw.trend} kg (${tw.perWk > 0 ? "+" : ""}${tw.perWk}/wk)` : (wl.length ? `${wl[0].v} → ${wl[wl.length - 1].v} kg` : "kg");
+  const twSub = tw ? `${tr("scale")} ${tw.scale} · ${tr("trend")} ${tw.trend} kg (${tw.perWk > 0 ? "+" : ""}${tw.perWk}/${tr("wk")})` : (wl.length ? `${wl[0].v} → ${wl[wl.length - 1].v} kg` : "kg");
   const wSeries = tw ? tw.series.filter(s => range === 0 || s.date >= from).slice(-40) : [];
   cards.push(trendCard(tr("Weight"), twSub,
     wSeries.length >= 2 ? weightTrendSVG(wSeries) + `<div class="tc-meta"><span>${tr("dots")} = ${tr("scale")}</span><span style="color:#e8863d">${tr("line")} = ${tr("trend")}</span><span>${wSeries.length} ${tr("points")}</span></div>`
-      : wl.length >= 2 ? lineSVG(wl, {color: "#e8863d", label: tr("Weight") + " (kg)"}) + lineMeta(wl, " kg") : trendEmpty("Log at least 2 weight entries to see your trend.")));
+      : wl.length >= 2 ? lineSVG(wl, {color: "#e8863d", label: tr("Weight") + " (kg)"}) + lineMeta(wl, " kg") : trendEmpty(tr("Log at least 2 weight entries to see your trend."))));
 
   // Calories/day
   const kcals = days.map(d => Math.round(dayTotals(d).kcal));
   const kcalDays = kcals.filter(v => v > 0).length;
-  cards.push(trendCard(tr("Calories") + " · " + lab, tg.kcal ? `target ${n0(tg.kcal)}` : "per day",
-    kcalDays >= 2 ? barsSVG(kcals, {color: "#3bb273", target: tg.kcal, label: tr("Calories")}) + barsMeta(kcals, "") : trendEmpty("Log food on at least 2 days to see your calorie trend.")));
+  cards.push(trendCard(tr("Calories") + " · " + lab, tg.kcal ? `${tr("target")} ${n0(tg.kcal)}` : tr("per day"),
+    kcalDays >= 2 ? barsSVG(kcals, {color: "#3bb273", target: tg.kcal, label: tr("Calories")}) + barsMeta(kcals, "") : trendEmpty(tr("Log food on at least 2 days to see your calorie trend."))));
 
   // Protein/day
   const prot = days.map(d => Math.round(dayTotals(d).p));
   const protDays = prot.filter(v => v > 0).length;
-  cards.push(trendCard(tr("Protein") + " · " + lab, tg.protein ? `target ${n0(tg.protein)} g` : "g per day",
-    protDays >= 2 ? barsSVG(prot, {color: "#4c7fe0", target: tg.protein, label: tr("Protein") + " (g)"}) + barsMeta(prot, " g") : trendEmpty("Log food on at least 2 days to see your protein trend.")));
+  cards.push(trendCard(tr("Protein") + " · " + lab, tg.protein ? `${tr("target")} ${n0(tg.protein)} g` : tr("g per day"),
+    protDays >= 2 ? barsSVG(prot, {color: "#4c7fe0", target: tg.protein, label: tr("Protein") + " (g)"}) + barsMeta(prot, " g") : trendEmpty(tr("Log food on at least 2 days to see your protein trend."))));
 
   // Sleep hours
   const sleepMap = {}; (S.sleep || []).forEach(e => { sleepMap[e.date] = +e.hours || 0; });
   const sleeps = days.map(d => sleepMap[d] || 0);
   const sleepDays = sleeps.filter(v => v > 0).length;
-  cards.push(trendCard(tr("Sleep") + " · " + lab, "hours per night",
-    sleepDays >= 2 ? barsSVG(sleeps, {color: "#b57edc", label: tr("Sleep") + " (h)"}) + barsMeta(sleeps, " h") : trendEmpty("Log at least 2 nights of sleep to see your trend.")));
+  cards.push(trendCard(tr("Sleep") + " · " + lab, tr("hours per night"),
+    sleepDays >= 2 ? barsSVG(sleeps, {color: "#b57edc", label: tr("Sleep") + " (h)"}) + barsMeta(sleeps, " h") : trendEmpty(tr("Log at least 2 nights of sleep to see your trend."))));
 
   // Wellness score (line, from check-ins)
   const ciPts = days.map(d => { const c = (S.checkins || []).find(x => x.date === d); return c ? {d, v: checkinScore(c)} : null; }).filter(p => p && p.v != null);
-  cards.push(trendCard(tr("Wellness") + " · " + lab, "daily score /100",
-    ciPts.length >= 2 ? lineSVG(ciPts, {color: "#3bb273", label: tr("Wellness")}) + lineMeta(ciPts, "") : trendEmpty("Do at least 2 wellness check-ins to see your mood trend.")));
+  cards.push(trendCard(tr("Wellness") + " · " + lab, tr("daily score /100"),
+    ciPts.length >= 2 ? lineSVG(ciPts, {color: "#3bb273", label: tr("Wellness")}) + lineMeta(ciPts, "") : trendEmpty(tr("Do at least 2 wellness check-ins to see your mood trend."))));
 
   // Training sets per week — scale week count to the range
   const nWeeks = Math.min(26, Math.max(6, Math.ceil((range || dn) / 7)));
   const weeks = []; for (let w = nWeeks - 1; w >= 0; w--){ const start = new Date(Date.now() - (w * 7 + 6) * 864e5).toLocaleDateString("en-CA"); const end = new Date(Date.now() - (w * 7) * 864e5).toLocaleDateString("en-CA"); weeks.push({start, end}); }
   const setSeries = weeks.map(wk => { let s = 0; (S.workouts || []).filter(x => x.date >= wk.start && x.date <= wk.end).forEach(x => (x.items || []).forEach(it => s += (it.sets || []).length)); return s; });
   const setWeeks = setSeries.filter(v => v > 0).length;
-  cards.push(trendCard(`${tr("Training volume")} · ${nWeeks} ${tr("weeks")}`, "sets per week",
-    setWeeks >= 2 ? barsSVG(setSeries, {color: "#e8863d", label: tr("Training volume") + " (sets)"}) + barsMeta(setSeries, " sets") : trendEmpty("Log workouts across at least 2 weeks to see your volume trend.")));
+  cards.push(trendCard(`${tr("Training volume")} · ${nWeeks} ${tr("weeks")}`, tr("sets per week"),
+    setWeeks >= 2 ? barsSVG(setSeries, {color: "#e8863d", label: tr("Training volume") + " (sets)"}) + barsMeta(setSeries, " " + tr("sets")) : trendEmpty(tr("Log workouts across at least 2 weeks to see your volume trend."))));
 
   return `
     ${checkinCardHTML()}
@@ -3095,9 +3261,9 @@ function trendsHTML(){
     ${weightProjectionHTML()}
     ${patternsCardHTML()}
     <div class="ins-range-row"><span class="tiny" style="color:var(--txt2)">${tr("Time range")}</span>${insRangeBarHTML()}</div>
-    <div class="wr-note">${ic("check", 13)} Trends are drawn only from what you logged. A chart appears once there are at least two data points; until then it says so.</div>
+    <div class="wr-note">${ic("check", 13)} ${tr("Trends are drawn only from what you logged. A chart appears once there are at least two data points; until then it says so.")}</div>
     ${cards.join("")}
-    <div class="tiny" style="text-align:center;margin:4px 0 2px;color:var(--txt2)">More data, sharper trends. Keep logging and these fill in automatically.</div>`;
+    <div class="tiny" style="text-align:center;margin:4px 0 2px;color:var(--txt2)">${tr("More data, sharper trends. Keep logging and these fill in automatically.")}</div>`;
 }
 // Honest weight-goal projection: measures the real rate from the user's own
 // weight log (least-squares slope) and extrapolates to their goal weight.
@@ -3114,15 +3280,15 @@ function weightProjectionHTML(){
   const spanDays = pts[nP - 1].t - pts[0].t;
   const slope = den ? num / den : 0;           // kg/day
   const perWk = slope * 7;
-  if (Math.abs(w0 - goal) < 0.3) return projCard(`You're essentially at your goal of ${goal} kg. Nice.`, goal, w0, perWk);
-  if (spanDays < 7 || Math.abs(perWk) < 0.05) return projCard(`Your weight is holding steady, so there's no reliable ETA yet. Keep logging — a trend needs a couple of weeks of movement.`, goal, w0, perWk);
+  if (Math.abs(w0 - goal) < 0.3) return projCard(`${tr("You're essentially at your goal of")} ${goal} ${tr("kg. Nice.")}`, goal, w0, perWk);
+  if (spanDays < 7 || Math.abs(perWk) < 0.05) return projCard(tr("Your weight is holding steady, so there's no reliable ETA yet. Keep logging — a trend needs a couple of weeks of movement."), goal, w0, perWk);
   const towardGoal = (goal < w0 && slope < 0) || (goal > w0 && slope > 0);
-  if (!towardGoal) return projCard(`Your recent trend is moving away from ${goal} kg, so no ETA — worth a look at intake vs output.`, goal, w0, perWk);
+  if (!towardGoal) return projCard(`${tr("Your recent trend is moving away from")} ${goal} ${tr("kg, so no ETA — worth a look at intake vs output.")}`, goal, w0, perWk);
   const weeks = Math.abs((goal - w0) / perWk);
   const eta = new Date(Date.now() + weeks * 7 * 864e5);
-  const etaStr = eta.toLocaleDateString("en-GB", {day: "numeric", month: "long", year: "numeric"});
-  const wkTxt = weeks < 1.5 ? "about a week" : `~${Math.round(weeks)} weeks`;
-  return projCard(`At your recent rate of ${perWk > 0 ? "+" : ""}${perWk.toFixed(2)} kg/week, reaching ${goal} kg would take ${wkTxt} — around ${etaStr}.`, goal, w0, perWk, weeks);
+  const etaStr = eta.toLocaleDateString(uiLang() || "en-GB", {day: "numeric", month: "long", year: "numeric"});
+  const wkTxt = weeks < 1.5 ? tr("about a week") : `~${Math.round(weeks)} ${tr("weeks")}`;
+  return projCard(`${tr("At your recent rate of")} ${perWk > 0 ? "+" : ""}${perWk.toFixed(2)} ${tr("kg/week, reaching")} ${goal} ${tr("kg would take")} ${wkTxt} — ${tr("around")} ${etaStr}.`, goal, w0, perWk, weeks);
 }
 function projCard(msg, goal, w0, perWk, weeks){
   const gap = goal - w0;
@@ -3135,7 +3301,7 @@ function projCard(msg, goal, w0, perWk, weeks){
       ${weeks ? `<div class="rev-stat"><div class="rv">${weeks < 1.5 ? "~1" : "~" + Math.round(weeks)}</div><div class="rl">${tr("Weeks")}</div></div>` : ""}
     </div>
     <div class="wr-note">${ic("check", 13)} ${esc(msg)}</div>
-    <div class="tiny" style="margin-top:9px;color:var(--txt2)">Projected from your own logged weight trend, not a guarantee — real progress varies with training, sleep, water and adherence. Set your goal weight in Settings → Daily targets.</div>
+    <div class="tiny" style="margin-top:9px;color:var(--txt2)">${tr("Projected from your own logged weight trend, not a guarantee — real progress varies with training, sleep, water and adherence. Set your goal weight in Settings → Daily targets.")}</div>
   </div>`;
 }
 
@@ -3172,7 +3338,7 @@ function expenditureCardHTML(){
   const e = expenditureEstimate();
   if (!e) return "";
   const tg = S.settings.targets || {};
-  const dir = e.perWk < -0.05 ? "losing" : e.perWk > 0.05 ? "gaining" : "holding steady at";
+  const dir = e.perWk < -0.05 ? tr("losing") : e.perWk > 0.05 ? tr("gaining") : tr("holding steady at");
   return `<div class="card">
     <h3>${ic("flame", 16)} ${tr("Estimated maintenance")} <span class="badge estimate" style="margin-inline-start:auto">${tr("estimate")}</span></h3>
     <div class="rev-grid" style="margin-bottom:10px">
@@ -3181,8 +3347,8 @@ function expenditureCardHTML(){
       <div class="rev-stat"><div class="rv">${e.perWk > 0 ? "+" : ""}${n1(e.perWk)}</div><div class="rl">${tr("kg/week")}</div></div>
       <div class="rev-stat"><div class="rv">${e.foodDays}</div><div class="rl">${tr("days logged")}</div></div>
     </div>
-    <div class="muted" style="font-size:12.5px">Worked out from your own data: over ~${e.spanDays} days you've been ${dir} ${Math.abs(e.perWk)} kg/week while averaging <b>${n0(e.avgIntake)} kcal</b> on logged days — so your body is burning about <b>${n0(e.tdee)} kcal/day</b>.${tg.kcal ? ` Your current target is ${n0(tg.kcal)} kcal.` : ""}</div>
-    <div class="tiny" style="margin-top:7px;color:var(--txt2)">${e.thin ? "Early estimate — it sharpens as you log more. " : ""}Assumes your food logging is complete, and ~7,700 kcal per kg of weight change. It's an honest estimate from your own trend, not a lab measurement.</div>
+    <div class="muted" style="font-size:12.5px">${tr("Worked out from your own data: over ~")}${e.spanDays} ${tr("days you've been")} ${dir} ${Math.abs(e.perWk)} ${tr("kg/week while averaging")} <b>${n0(e.avgIntake)} kcal</b> ${tr("on logged days — so your body is burning about")} <b>${n0(e.tdee)} ${tr("kcal/day")}</b>.${tg.kcal ? ` ${tr("Your current target is")} ${n0(tg.kcal)} kcal.` : ""}</div>
+    <div class="tiny" style="margin-top:7px;color:var(--txt2)">${e.thin ? tr("Early estimate — it sharpens as you log more. ") : ""}${tr("Assumes your food logging is complete, and ~7,700 kcal per kg of weight change. It's an honest estimate from your own trend, not a lab measurement.")}</div>
   </div>`;
 }
 /* ---------------- Trend weight (smoothed) ---------------- */
@@ -3256,17 +3422,17 @@ function coachingCardHTML(){
   if (!a) return "";   // needs a real expenditure estimate first (shown by the maintenance card)
   const tg = S.settings.targets || {};
   const paces = [0.25, 0.5, 0.75];
-  const dirTxt = a.dir === "lose" ? "lose weight" : a.dir === "gain" ? "gain weight" : "maintain";
-  const rateTxt = a.dir === "maintain" ? "hold your weight" : `${a.dir === "lose" ? "-" : "+"}${a.rateKg} kg/week`;
+  const dirTxt = a.dir === "lose" ? tr("lose weight") : a.dir === "gain" ? tr("gain weight") : tr("maintain");
+  const rateTxt = a.dir === "maintain" ? tr("hold your weight") : `${a.dir === "lose" ? "-" : "+"}${a.rateKg} ${tr("kg/week")}`;
   const needGoal = !(+(S.settings.goalWeight || 0));
   const changed = tg.kcal !== a.kcal || tg.protein !== a.protein || tg.carbs !== a.carbs || tg.fat !== a.fat;
   return `<div class="card coach-card">
     <h3>${ic("target", 16)} ${tr("Adaptive targets")} <span class="badge estimate" style="margin-inline-start:auto">${tr("estimate")}</span></h3>
-    <div class="coach-sub">From your <b>${n0(a.tdee)} kcal</b> expenditure${a.curW ? ` and trend weight <b>${a.curW} kg</b>` : ""}, to <b>${dirTxt}</b> at <b>${rateTxt}</b>:</div>
+    <div class="coach-sub">${tr("From your")} <b>${n0(a.tdee)} kcal</b> ${tr("expenditure")}${a.curW ? ` ${tr("and trend weight")} <b>${a.curW} kg</b>` : ""}, ${tr("to")} <b>${dirTxt}</b> ${tr("at")} <b>${rateTxt}</b>:</div>
     ${needGoal ? `<div class="coach-goal">
       <label>${tr("Goal weight (kg)")}</label>
-      <input type="number" inputmode="decimal" placeholder="e.g. 74" value="${S.settings.goalWeight || ""}" oninput="M.coachGoal(this.value)">
-      <span class="tiny">Set a goal to aim the targets; leave blank to just maintain.</span>
+      <input type="number" inputmode="decimal" placeholder="${tr("e.g. 74")}" value="${S.settings.goalWeight || ""}" oninput="M.coachGoal(this.value)">
+      <span class="tiny">${tr("Set a goal to aim the targets; leave blank to just maintain.")}</span>
     </div>` : ""}
     ${a.dir !== "maintain" ? `<div class="coach-pace">
       <span class="cp-l">${tr("Pace")}</span>
@@ -3274,13 +3440,13 @@ function coachingCardHTML(){
     </div>` : ""}
     <div class="coach-macros">
       <div class="cm-cell cm-kcal"><div class="cm-v">${n0(a.kcal)}</div><div class="cm-l">kcal</div></div>
-      <div class="cm-cell"><div class="cm-v">${n0(a.protein)}</div><div class="cm-l">protein</div></div>
-      <div class="cm-cell"><div class="cm-v">${n0(a.carbs)}</div><div class="cm-l">carbs</div></div>
-      <div class="cm-cell"><div class="cm-v">${n0(a.fat)}</div><div class="cm-l">fat</div></div>
+      <div class="cm-cell"><div class="cm-v">${n0(a.protein)}</div><div class="cm-l">${tr("protein")}</div></div>
+      <div class="cm-cell"><div class="cm-v">${n0(a.carbs)}</div><div class="cm-l">${tr("carbs")}</div></div>
+      <div class="cm-cell"><div class="cm-v">${n0(a.fat)}</div><div class="cm-l">${tr("fat")}</div></div>
     </div>
-    ${a.floored ? `<div class="tiny" style="color:var(--amber);margin-bottom:8px">Held at a 1,200 kcal floor — a gentler pace is healthier here.</div>` : ""}
+    ${a.floored ? `<div class="tiny" style="color:var(--amber);margin-bottom:8px">${tr("Held at a 1,200 kcal floor — a gentler pace is healthier here.")}</div>` : ""}
     <button class="btn" onclick="M.coachApply()" ${changed ? "" : "disabled"}>${ic("check", 15)} ${changed ? tr("Use these targets") : tr("These are your targets")}</button>
-    <div class="tiny" style="margin-top:9px;color:var(--txt2)">${a.thin ? "Early estimate — sharpens as you log more. " : ""}Protein set to ${a.dir === "lose" ? "2.0" : "1.8"} g/kg, fat ~0.8 g/kg, carbs fill the rest. Re-check weekly — as your expenditure shifts, so should these.</div>
+    <div class="tiny" style="margin-top:9px;color:var(--txt2)">${a.thin ? tr("Early estimate — sharpens as you log more. ") : ""}${tr("Protein set to")} ${a.dir === "lose" ? "2.0" : "1.8"} ${tr("g/kg, fat ~0.8 g/kg, carbs fill the rest. Re-check weekly — as your expenditure shifts, so should these.")}</div>
   </div>`;
 }
 
@@ -3298,17 +3464,17 @@ function checkinCardHTML(){
   const rate = tw ? tw.perWk : a.rateKg;
   const onPace = a.dir === "maintain" ? Math.abs(rate) < 0.15
     : a.dir === "lose" ? rate < -0.05 : rate > 0.05;
-  const rateTxt = `${rate > 0 ? "+" : ""}${rate} kg/week`;
+  const rateTxt = `${rate > 0 ? "+" : ""}${rate} ${tr("kg/week")}`;
   const tg = S.settings.targets || {};
   const changed = tg.kcal !== a.kcal || tg.protein !== a.protein;
   return `<div class="card checkin-card">
     <div class="ci-hd"><span class="ci-ic">${ic("calendar", 18)}</span><div><div class="ci-t">${tr("Weekly check-in")}</div><div class="ci-d">${tr("Your numbers, updated from this week")}</div></div></div>
     <div class="ci-row">
-      <div class="ci-stat"><div class="ci-v">${tw ? tw.trend + " kg" : "—"}</div><div class="ci-l">trend weight</div></div>
-      <div class="ci-stat"><div class="ci-v" style="color:${onPace ? "var(--green)" : "var(--amber)"}">${rateTxt}</div><div class="ci-l">${onPace ? "on pace" : "off pace"}</div></div>
-      <div class="ci-stat"><div class="ci-v">${n0(a.tdee)}</div><div class="ci-l">expenditure</div></div>
+      <div class="ci-stat"><div class="ci-v">${tw ? tw.trend + " kg" : "—"}</div><div class="ci-l">${tr("trend weight")}</div></div>
+      <div class="ci-stat"><div class="ci-v" style="color:${onPace ? "var(--green)" : "var(--amber)"}">${rateTxt}</div><div class="ci-l">${onPace ? tr("on pace") : tr("off pace")}</div></div>
+      <div class="ci-stat"><div class="ci-v">${n0(a.tdee)}</div><div class="ci-l">${tr("expenditure")}</div></div>
     </div>
-    ${changed ? `<div class="ci-new">${ic("trend", 13)} New suggested targets: <b>${n0(a.kcal)} kcal · ${n0(a.protein)}P / ${n0(a.carbs)}C / ${n0(a.fat)}F</b></div>` : `<div class="ci-new">${ic("check", 13)} Your current targets still fit — nothing to change.</div>`}
+    ${changed ? `<div class="ci-new">${ic("trend", 13)} ${tr("New suggested targets:")} <b>${n0(a.kcal)} kcal · ${n0(a.protein)}P / ${n0(a.carbs)}C / ${n0(a.fat)}F</b></div>` : `<div class="ci-new">${ic("check", 13)} ${tr("Your current targets still fit — nothing to change.")}</div>`}
     <div class="ci-actions">
       ${changed ? `<button class="btn sm" onclick="M.coachApply()">${ic("check", 14)} ${tr("Apply new targets")}</button>` : ""}
       <button class="btn sm sec" onclick="M.checkinSnooze()">${changed ? tr("Not now") : tr("Got it")}</button>
@@ -3330,12 +3496,13 @@ function logStreak(getHas){
 }
 function patternsCardHTML(){
   const tiles = [], notes = [];
+  const dayW = n => n + " " + (n === 1 ? tr("day") : tr("days"));
   const foodStreak = logStreak(d => S.foods.some(f => f.date === d));
-  if (foodStreak >= 2) tiles.push(["Food log streak", foodStreak + " day" + (foodStreak === 1 ? "" : "s")]);
+  if (foodStreak >= 2) tiles.push([tr("Food log streak"), dayW(foodStreak)]);
   const ciStreak = logStreak(d => (S.checkins || []).some(c => c.date === d));
-  if (ciStreak >= 2) tiles.push(["Check-in streak", ciStreak + " day" + (ciStreak === 1 ? "" : "s")]);
+  if (ciStreak >= 2) tiles.push([tr("Check-in streak"), dayW(ciStreak)]);
   const wStreak = logStreak(d => (S.workouts || []).some(w => w.date === d));
-  if (wStreak >= 2) tiles.push(["Training streak", wStreak + " day" + (wStreak === 1 ? "" : "s")]);
+  if (wStreak >= 2) tiles.push([tr("Training streak"), dayW(wStreak)]);
 
   // Sleep → next-day wellness (paired days only)
   const paired = (S.checkins || []).map(c => {
@@ -3347,7 +3514,7 @@ function patternsCardHTML(){
     if (good.length >= 2 && poor.length >= 2){
       const avg = a => Math.round(a.reduce((x, y) => x + y.score, 0) / a.length);
       const g = avg(good), p = avg(poor);
-      if (Math.abs(g - p) >= 3) notes.push(`Your wellness score averages ${g}/100 on nights of 7 h+ sleep vs ${p}/100 after shorter nights.`);
+      if (Math.abs(g - p) >= 3) notes.push(`${tr("Your wellness score averages")} ${g}/100 ${tr("on nights of 7 h+ sleep vs")} ${p}/100 ${tr("after shorter nights.")}`);
     }
   }
   // Protein on training vs rest days (last 30 days, days with food logged)
@@ -3359,15 +3526,15 @@ function patternsCardHTML(){
   if (train.length >= 2 && rest.length >= 2){
     const avg = a => Math.round(a.reduce((x, y) => x + y, 0) / a.length);
     const tP = avg(train), rP = avg(rest);
-    if (Math.abs(tP - rP) >= 8) notes.push(`You average ${tP} g protein on training days vs ${rP} g on rest days.`);
+    if (Math.abs(tP - rP) >= 8) notes.push(`${tr("You average")} ${tP} ${tr("g protein on training days vs")} ${rP} ${tr("g on rest days.")}`);
   }
 
   if (!tiles.length && !notes.length) return "";
   return `<div class="card">
-    <h3>${ic("chart", 16)} Patterns &amp; streaks</h3>
+    <h3>${ic("chart", 16)} ${tr("Patterns & streaks")}</h3>
     ${tiles.length ? `<div class="rev-grid" style="margin-bottom:${notes.length ? "10px" : "0"}">${tiles.map(([l, v]) => `<div class="rev-stat"><div class="rv">${esc(v)}</div><div class="rl">${esc(l)}</div></div>`).join("")}</div>` : ""}
     ${notes.map(n => `<div class="wr-note" style="margin-top:8px">${ic("check", 13)} ${esc(n)}</div>`).join("")}
-    <div class="tiny" style="margin-top:9px;color:var(--txt2)">Associations from your own logs — patterns to notice, not medical advice. They appear only once there's enough data.</div>
+    <div class="tiny" style="margin-top:9px;color:var(--txt2)">${tr("Associations from your own logs — patterns to notice, not medical advice. They appear only once there's enough data.")}</div>
   </div>`;
 }
 
@@ -4265,7 +4432,7 @@ function foodItemHTML(f){
     <button class="mmove ${menu ? "on" : ""}" aria-label="Change meal for ${esc(f.name)}" onclick="M.mealMenu('${f.id}')">${ic("refresh", 13)}</button>
     <button class="edit" aria-label="Edit ${esc(f.name)}" onclick="M.foodEdit('${f.id}')">${ic("edit", 14)}</button>
     <button class="del" aria-label="Delete ${esc(f.name)}" onclick="M.foodDel('${f.id}')">✕</button>
-  </div>${menu ? `<div class="meal-pick">${FOOD_MEALS.map(([v, l]) => `<button class="${entryMeal(f) === v ? "on" : ""}" onclick="M.setEntryMeal('${f.id}','${v}')">${l}</button>`).join("")}</div>` : ""}`;
+  </div>${menu ? `<div class="meal-pick">${FOOD_MEALS.map(([v, l]) => `<button class="${entryMeal(f) === v ? "on" : ""}" onclick="M.setEntryMeal('${f.id}','${v}')">${tr(l)}</button>`).join("")}</div>` : ""}`;
 }
 
 /* ---------------- 7-day insights ---------------- */
@@ -4447,7 +4614,7 @@ function foodHTML(){
         if (!mi.length) return "";
         const mt = mi.reduce((a, x) => ({k: a.k + num(x.kcal), p: a.p + num(x.p)}), {k: 0, p: 0});
         return `<div class="meal-h"><span>${esc(t(ml))}</span><span class="mh-sum">${n0(mt.k)} kcal · ${n1(mt.p)}P</span></div>${mi.map(foodItemHTML).join("")}`;
-      }).join("") : `<div class="food-it"><span class="muted">Nothing logged.</span></div>`}</div>` : ""}
+      }).join("") : `<div class="food-it"><span class="muted">${tr("Nothing logged.")}</span></div>`}</div>` : ""}
     </div>`;
   }).join("")}`;
 }
@@ -4505,32 +4672,32 @@ function foodReportText(from, to){
   const s = foodRangeStats(from, to);
   const tg = S.settings.targets || {};
   const L = [];
-  L.push(`MIRA — Food log${S.settings.name ? " · " + S.settings.name : ""}`);
-  L.push(`${fmtDate(from)} → ${fmtDate(to)}  (${s.n} day${s.n === 1 ? "" : "s"} logged)`);
+  L.push(`MIRA — ${tr("Food log")}${S.settings.name ? " · " + S.settings.name : ""}`);
+  L.push(`${fmtDate(from)} → ${fmtDate(to)}  (${s.n} ${s.n === 1 ? tr("day") : tr("days")} ${tr("logged")})`);
   L.push("");
-  if (!s.n){ L.push("No food logged in this range."); return L.join("\n"); }
-  L.push(`Daily average: ${n0(s.avgKcal)} kcal · ${n0(s.avgP)}P · ${n0(s.avgC)}C · ${n0(s.avgF)}F`);
-  if (tg.kcal) L.push(`Targets: ${n0(tg.kcal)} kcal · ${n0(tg.protein)}P${tg.carbs ? ` · ${n0(tg.carbs)}C` : ""}${tg.fat ? ` · ${n0(tg.fat)}F` : ""}`);
+  if (!s.n){ L.push(tr("No food logged in this range.")); return L.join("\n"); }
+  L.push(`${tr("Daily average:")} ${n0(s.avgKcal)} kcal · ${n0(s.avgP)}P · ${n0(s.avgC)}C · ${n0(s.avgF)}F`);
+  if (tg.kcal) L.push(`${tr("Targets:")} ${n0(tg.kcal)} kcal · ${n0(tg.protein)}P${tg.carbs ? ` · ${n0(tg.carbs)}C` : ""}${tg.fat ? ` · ${n0(tg.fat)}F` : ""}`);
   L.push("");
   s.days.forEach(d => {
     L.push(`▪ ${fmtDate(d.date)} — ${n0(d.kcal)} kcal · ${n1(d.p)}P · ${n1(d.c)}C · ${n1(d.f)}F`);
     groupByMeal(d.items).forEach(ml => {
-      L.push(`   ${ml.label} — ${n0(ml.kcal)} kcal · ${n1(ml.p)}P`);
-      ml.items.forEach(it => L.push(`      · ${it.name}${it.amount ? ` (${it.amount})` : ""} — ${n0(it.kcal)} kcal / ${n1(it.p)}P / ${n1(it.c)}C / ${n1(it.f)}F${it.conf && it.conf !== "user" ? ` [${it.conf}]` : ""}`));
+      L.push(`   ${tr(ml.label)} — ${n0(ml.kcal)} kcal · ${n1(ml.p)}P`);
+      ml.items.forEach(it => L.push(`      · ${it.name}${it.amount ? ` (${it.amount})` : ""} — ${n0(it.kcal)} kcal / ${n1(it.p)}P / ${n1(it.c)}C / ${n1(it.f)}F${it.conf && it.conf !== "user" ? ` [${tr(it.conf)}]` : ""}`));
     });
   });
   L.push("");
-  L.push("Generated by MIRA. Figures reflect logged entries; items marked [estimate] are approximate.");
+  L.push(tr("Generated by MIRA. Figures reflect logged entries; items marked [estimate] are approximate."));
   return L.join("\n");
 }
 function foodReportCSV(from, to){
   const s = foodRangeStats(from, to);
   const esc = v => { const t = String(v ?? ""); return /[",\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; };
-  const rows = [["Date", "Meal", "Item", "Amount", "Calories", "Protein_g", "Carbs_g", "Fat_g", "Source"]];
-  s.days.forEach(d => groupByMeal(d.items).forEach(ml => ml.items.forEach(it => rows.push([d.date, ml.label, it.name, it.amount || "", n0(it.kcal), n1(it.p), n1(it.c), n1(it.f), it.conf || "user"]))));
+  const rows = [[tr("Date"), tr("Meal"), tr("Item"), tr("Amount"), tr("Calories"), tr("Protein_g"), tr("Carbs_g"), tr("Fat_g"), tr("Source")]];
+  s.days.forEach(d => groupByMeal(d.items).forEach(ml => ml.items.forEach(it => rows.push([d.date, tr(ml.label), it.name, it.amount || "", n0(it.kcal), n1(it.p), n1(it.c), n1(it.f), it.conf || "user"]))));
   rows.push([]);
-  rows.push(["Daily average", "", "", "", n0(s.avgKcal), n1(s.avgP), n1(s.avgC), n1(s.avgF), ""]);
-  rows.push(["Total", "", "", "", n0(s.tot.kcal), n1(s.tot.p), n1(s.tot.c), n1(s.tot.f), ""]);
+  rows.push([tr("Daily average"), "", "", "", n0(s.avgKcal), n1(s.avgP), n1(s.avgC), n1(s.avgF), ""]);
+  rows.push([tr("Total"), "", "", "", n0(s.tot.kcal), n1(s.tot.p), n1(s.tot.c), n1(s.tot.f), ""]);
   return rows.map(r => r.map(esc).join(",")).join("\n");
 }
 function foodReportPrintHTML(from, to){
@@ -4539,11 +4706,12 @@ function foodReportPrintHTML(from, to){
   const rowsHtml = s.days.map(d => `
     <tr class="dh"><td colspan="5"><b>${fmtDate(d.date)}</b> — ${n0(d.kcal)} kcal · ${n1(d.p)}P · ${n1(d.c)}C · ${n1(d.f)}F</td></tr>
     ${groupByMeal(d.items).map(ml => `
-      <tr class="mh"><td colspan="5">${ml.label} · ${n0(ml.kcal)} kcal · ${n1(ml.p)}P</td></tr>
-      ${ml.items.map(it => `<tr><td>${escp(it.name)}${it.conf && it.conf !== "user" ? ` <i>[${it.conf}]</i>` : ""}</td><td>${escp(it.amount || "")}</td><td class="n">${n0(it.kcal)}</td><td class="n">${n1(it.p)}</td><td class="n">${n1(it.c)}/${n1(it.f)}</td></tr>`).join("")}
+      <tr class="mh"><td colspan="5">${tr(ml.label)} · ${n0(ml.kcal)} kcal · ${n1(ml.p)}P</td></tr>
+      ${ml.items.map(it => `<tr><td>${escp(it.name)}${it.conf && it.conf !== "user" ? ` <i>[${tr(it.conf)}]</i>` : ""}</td><td>${escp(it.amount || "")}</td><td class="n">${n0(it.kcal)}</td><td class="n">${n1(it.p)}</td><td class="n">${n1(it.c)}/${n1(it.f)}</td></tr>`).join("")}
     `).join("")}
   `).join("");
-  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MIRA food log ${from} to ${to}</title>
+  const rtl = uiLang() === "ar";
+  return `<!doctype html><html dir="${rtl ? "rtl" : "ltr"}" lang="${uiLang() || "en"}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MIRA ${tr("Food log")} ${from} → ${to}</title>
   <style>
     *{box-sizing:border-box} html,body{margin:0}
     body{font:13px/1.5 -apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#1b2130;background:#f2f3f5}
@@ -4557,31 +4725,31 @@ function foodReportPrintHTML(from, to){
     .kpis{display:flex;gap:10px;margin:0 0 18px;flex-wrap:wrap}
     .kpi{border:1px solid #e2e5ec;border-radius:10px;padding:9px 13px;min-width:120px}
     .kpi .l{font-size:11px;color:#777;text-transform:uppercase;letter-spacing:.04em} .kpi .v{font-size:17px;font-weight:700}
-    table{width:100%;border-collapse:collapse;font-size:12.5px} th,td{text-align:left;padding:6px 8px;border-bottom:1px solid #edeff3}
-    th{font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:#888} td.n,th.n{text-align:right;white-space:nowrap}
+    table{width:100%;border-collapse:collapse;font-size:12.5px} th,td{text-align:start;padding:6px 8px;border-bottom:1px solid #edeff3}
+    th{font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:#888} td.n,th.n{text-align:end;white-space:nowrap}
     tr.dh td{background:#f6f7f9;font-size:12px;padding-top:9px} i{color:#999}
     tr.mh td{background:#fbfcfd;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#8A6D2F;padding:5px 8px 5px 8px}
     .foot{margin-top:20px;color:#888;font-size:11px}
     @media print{.bar{display:none} body{background:#fff} .pg{max-width:none;margin:0;padding:12mm}}
   </style></head><body>
     <div class="bar">
-      <button class="close" onclick="window.close()">✕ Close</button>
-      <b>Food log</b>
-      <button class="save" onclick="window.print()">Save as PDF</button>
+      <button class="close" onclick="window.close()">✕ ${tr("Close")}</button>
+      <b>${tr("Food log")}</b>
+      <button class="save" onclick="window.print()">${tr("Save as PDF")}</button>
     </div>
     <div class="pg">
-    <h1>Food log${S.settings.name ? " — " + escp(S.settings.name) : ""}</h1>
-    <div class="sub">${fmtDate(from)} → ${fmtDate(to)} · ${s.n} day${s.n === 1 ? "" : "s"} logged</div>
+    <h1>${tr("Food log")}${S.settings.name ? " — " + escp(S.settings.name) : ""}</h1>
+    <div class="sub">${fmtDate(from)} → ${fmtDate(to)} · ${s.n} ${s.n === 1 ? tr("day") : tr("days")} ${tr("logged")}</div>
     <div class="kpis">
-      <div class="kpi"><div class="l">Avg calories</div><div class="v">${n0(s.avgKcal)}</div></div>
-      <div class="kpi"><div class="l">Avg protein</div><div class="v">${n0(s.avgP)} g</div></div>
-      <div class="kpi"><div class="l">Avg carbs</div><div class="v">${n0(s.avgC)} g</div></div>
-      <div class="kpi"><div class="l">Avg fat</div><div class="v">${n0(s.avgF)} g</div></div>
-      ${tg.kcal ? `<div class="kpi"><div class="l">Target</div><div class="v">${n0(tg.kcal)} / ${n0(tg.protein)}P</div></div>` : ""}
+      <div class="kpi"><div class="l">${tr("Avg calories")}</div><div class="v">${n0(s.avgKcal)}</div></div>
+      <div class="kpi"><div class="l">${tr("Avg protein")}</div><div class="v">${n0(s.avgP)} g</div></div>
+      <div class="kpi"><div class="l">${tr("Avg carbs")}</div><div class="v">${n0(s.avgC)} g</div></div>
+      <div class="kpi"><div class="l">${tr("Avg fat")}</div><div class="v">${n0(s.avgF)} g</div></div>
+      ${tg.kcal ? `<div class="kpi"><div class="l">${tr("Target")}</div><div class="v">${n0(tg.kcal)} / ${n0(tg.protein)}P</div></div>` : ""}
     </div>
-    <table><thead><tr><th>Item</th><th>Amount</th><th class="n">kcal</th><th class="n">P</th><th class="n">C/F</th></tr></thead>
-    <tbody>${rowsHtml || `<tr><td colspan="5">No food logged in this range.</td></tr>`}</tbody></table>
-    <div class="foot">Generated by MIRA. Figures reflect logged entries; items marked [estimate] are approximate, not official.</div>
+    <table><thead><tr><th>${tr("Item")}</th><th>${tr("Amount")}</th><th class="n">kcal</th><th class="n">P</th><th class="n">C/F</th></tr></thead>
+    <tbody>${rowsHtml || `<tr><td colspan="5">${tr("No food logged in this range.")}</td></tr>`}</tbody></table>
+    <div class="foot">${tr("Generated by MIRA. Figures reflect logged entries; items marked [estimate] are approximate, not official.")}</div>
     </div>
   </body></html>`;
 }
@@ -4594,8 +4762,8 @@ function dlFile(name, content, mime){
 }
 function foodShareCaption(from, to){
   const s = foodRangeStats(from, to);
-  if (!s.n) return `MIRA food log — nothing logged ${fmtDate(from)} → ${fmtDate(to)}.`;
-  return `MIRA · Food log\n${fmtDate(from)} → ${fmtDate(to)} · ${s.n} day${s.n === 1 ? "" : "s"}\nDaily avg ${n0(s.avgKcal)} kcal · ${n0(s.avgP)}g protein`;
+  if (!s.n) return `MIRA ${tr("Food log")} — ${tr("nothing logged")} ${fmtDate(from)} → ${fmtDate(to)}.`;
+  return `MIRA · ${tr("Food log")}\n${fmtDate(from)} → ${fmtDate(to)} · ${s.n} ${s.n === 1 ? tr("day") : tr("days")}\n${tr("Daily avg")} ${n0(s.avgKcal)} kcal · ${n0(s.avgP)}${tr("g protein")}`;
 }
 // Render a clean summary card as a PNG so sharing (e.g. WhatsApp) looks professional, not a wall of text.
 function foodReportImage(from, to){
@@ -4605,8 +4773,8 @@ function foodReportImage(from, to){
       const tg = S.settings.targets || {};
       const DPR = Math.min(3, Math.max(2, Math.round(window.devicePixelRatio || 2)));
       const W = 1000, pad = 56;
-      const kpis = [["Avg calories", n0(s.avgKcal)], ["Avg protein", n0(s.avgP) + " g"], ["Avg carbs", n0(s.avgC) + " g"], ["Avg fat", n0(s.avgF) + " g"]];
-      if (tg.kcal) kpis.push(["Target", n0(tg.kcal) + " / " + n0(tg.protein) + "P"]);
+      const kpis = [[tr("Avg calories"), n0(s.avgKcal)], [tr("Avg protein"), n0(s.avgP) + " g"], [tr("Avg carbs"), n0(s.avgC) + " g"], [tr("Avg fat"), n0(s.avgF) + " g"]];
+      if (tg.kcal) kpis.push([tr("Target"), n0(tg.kcal) + " / " + n0(tg.protein) + "P"]);
       const kpiTop = 176, kpiH = 88;
       const daysTop = kpiTop + kpiH + 34, dayH = 60;
       const H = daysTop + Math.max(1, s.days.length) * dayH + 96;
@@ -4622,9 +4790,9 @@ function foodReportImage(from, to){
       g.fillStyle = "#B08A3E"; g.font = "700 24px Georgia, 'Times New Roman', serif";
       g.fillText("M I R A", pad, 62);
       g.fillStyle = "#161B26"; g.font = "700 30px -apple-system, Segoe UI, Roboto, Arial, sans-serif";
-      g.fillText("Food log" + (S.settings.name ? " — " + S.settings.name : ""), pad, 108);
+      g.fillText(tr("Food log") + (S.settings.name ? " — " + S.settings.name : ""), pad, 108);
       g.fillStyle = "#6B7280"; g.font = "400 17px -apple-system, Segoe UI, Roboto, Arial, sans-serif";
-      g.fillText(`${fmtDate(from)}  →  ${fmtDate(to)}   ·   ${s.n} day${s.n === 1 ? "" : "s"} logged`, pad, 138);
+      g.fillText(`${fmtDate(from)}  →  ${fmtDate(to)}   ·   ${s.n} ${s.n === 1 ? tr("day") : tr("days")} ${tr("logged")}`, pad, 138);
       // KPI boxes
       const n = kpis.length, gap = 12, bw = (W - pad * 2 - gap * (n - 1)) / n;
       kpis.forEach((k, i) => {
@@ -4651,7 +4819,7 @@ function foodReportImage(from, to){
       // footer
       g.strokeStyle = "#EEF0F3"; g.beginPath(); g.moveTo(pad, y); g.lineTo(W - pad, y); g.stroke();
       g.fillStyle = "#9AA0AB"; g.font = "400 13px -apple-system, Segoe UI, Roboto, Arial, sans-serif";
-      g.fillText("Generated by MIRA · figures reflect logged entries; estimates are approximate.", pad, y + 34);
+      g.fillText(tr("Generated by MIRA · figures reflect logged entries; estimates are approximate."), pad, y + 34);
       cv.toBlob(b => resolve(b), "image/png");
     } catch (e) { resolve(null); }
   });
@@ -4660,24 +4828,24 @@ function foodReportCardHTML(){
   const {from, to} = foodRange();
   const s = foodRangeStats(from, to);
   return `<div class="card fold ${R.reportOpen ? "open" : ""}" id="reportCard">
-    <h3 onclick="M.reportToggle()">${ic("share", 16)} Share food log <span class="chev">▶</span></h3>
+    <h3 onclick="M.reportToggle()">${ic("share", 16)} ${tr("Share food log")} <span class="chev">▶</span></h3>
     <div class="fold-body">
-      <div class="muted" style="margin-bottom:10px">Pick a date range, then share a clean summary image (great for WhatsApp), a spreadsheet (CSV), or a PDF.</div>
+      <div class="muted" style="margin-bottom:10px">${tr("Pick a date range, then share a clean summary image (great for WhatsApp), a spreadsheet (CSV), or a PDF.")}</div>
       <div class="row" style="gap:10px">
-        <div class="field" style="flex:1;margin:0"><label>From</label><input type="date" value="${from}" max="${todayStr()}" onchange="M.frSet('from',this.value)"></div>
-        <div class="field" style="flex:1;margin:0"><label>To</label><input type="date" value="${to}" max="${todayStr()}" onchange="M.frSet('to',this.value)"></div>
+        <div class="field" style="flex:1;margin:0"><label>${tr("From")}</label><input type="date" value="${from}" max="${todayStr()}" onchange="M.frSet('from',this.value)"></div>
+        <div class="field" style="flex:1;margin:0"><label>${tr("To")}</label><input type="date" value="${to}" max="${todayStr()}" onchange="M.frSet('to',this.value)"></div>
       </div>
       <div class="row" style="gap:7px;margin:10px 0 4px;flex-wrap:wrap">
-        <button class="btn sm sec" onclick="M.frQuick(7)">7 days</button>
-        <button class="btn sm sec" onclick="M.frQuick(30)">30 days</button>
-        <button class="btn sm sec" onclick="M.frQuick(0)">Today</button>
+        <button class="btn sm sec" onclick="M.frQuick(7)">7 ${tr("days")}</button>
+        <button class="btn sm sec" onclick="M.frQuick(30)">30 ${tr("days")}</button>
+        <button class="btn sm sec" onclick="M.frQuick(0)">${tr("Today")}</button>
       </div>
-      <div class="rep-sum">${s.n ? `${s.n} day${s.n === 1 ? "" : "s"} · ${s.entries} item${s.entries === 1 ? "" : "s"} · avg ${n0(s.avgKcal)} kcal / ${n0(s.avgP)}g protein` : "No food logged in this range."}</div>
+      <div class="rep-sum">${s.n ? `${s.n} ${s.n === 1 ? tr("day") : tr("days")} · ${s.entries} ${s.entries === 1 ? tr("item") : tr("items")} · ${tr("avg")} ${n0(s.avgKcal)} kcal / ${n0(s.avgP)}${tr("g protein")}` : tr("No food logged in this range.")}</div>
       <div class="rep-actions">
-        <button class="btn sm" onclick="M.foodShare()" ${s.n ? "" : "disabled"}>${ic("share", 15)} Share</button>
+        <button class="btn sm" onclick="M.foodShare()" ${s.n ? "" : "disabled"}>${ic("share", 15)} ${tr("Share")}</button>
         <button class="btn sm sec" onclick="M.foodCSV()" ${s.n ? "" : "disabled"}>${ic("fileText", 15)} CSV</button>
         <button class="btn sm sec" onclick="M.foodPDF()" ${s.n ? "" : "disabled"}>${ic("fileText", 15)} PDF</button>
-        <button class="btn sm sec" onclick="M.foodCopy()" ${s.n ? "" : "disabled"}>${ic("copy", 15)} Copy</button>
+        <button class="btn sm sec" onclick="M.foodCopy()" ${s.n ? "" : "disabled"}>${ic("copy", 15)} ${tr("Copy")}</button>
       </div>
     </div>
   </div>`;
@@ -9451,7 +9619,7 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
     const f = S.foods.find(x => x.id === id);
     if (f) f.meal = meal;
     R.mealMenuId = null; save(); render();
-    if (f) toast("Moved to " + mealLabel(meal) + " ✓");
+    if (f) toast(tr("Moved to") + " " + tr(mealLabel(meal)) + " ✓");
   },
   findMacros,
   extractPhoto,
