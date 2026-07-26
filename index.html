@@ -20,7 +20,7 @@
   --bg:#0A0D13; --bg2:#10141C; --card:#141925; --card2:#1A2030;
   --sheet-bg:#161B29;
   --line:rgba(226,232,250,.07); --line2:rgba(226,232,250,.13);
-  --txt:#ECEEF3; --txt2:#9DA6BA; --txt3:#626C82;
+  --txt:#ECEEF3; --txt2:#9DA6BA; --txt3:#767F97;
   --gold:#D2AC64; --gold-soft:rgba(210,172,100,.13);
   --acc:#D2AC64; --acc-soft:rgba(210,172,100,.13);
   --btn-ink:#12100B;
@@ -111,7 +111,7 @@
   --bg:#000000; --bg2:#08080A; --card:#0F0F13; --card2:#16161C;
   --sheet-bg:#121216;
   --line:rgba(255,255,255,.08); --line2:rgba(255,255,255,.15);
-  --txt:#F3F3F6; --txt2:#9A9AA6; --txt3:#5C5C67;
+  --txt:#F3F3F6; --txt2:#9A9AA6; --txt3:#6E6E7B;
   --gold:#E6C074; --gold-soft:rgba(230,192,116,.14);
   --acc:#E6C074; --acc-soft:rgba(230,192,116,.14);
   --btn-ink:#100D06;
@@ -435,13 +435,17 @@ body.kb .chatbar{padding-bottom:6px}
 .btn:active{transform:scale(.98);filter:brightness(1.1)}
 .btn.sec{background:var(--card2);color:var(--txt);border:1px solid var(--line2);box-shadow:none}
 .btn.danger{box-shadow:none}
-.btn.sm{min-height:38px;padding:7px 13px;font-size:13.5px;width:auto;border-radius:10px}
+.btn.sm{min-height:40px;padding:7px 13px;font-size:13.5px;width:auto;border-radius:10px}
 .btn.danger{background:rgba(232,87,87,.15);color:var(--red);border:1px solid rgba(232,87,87,.35)}
 .btn[disabled]{opacity:.45;pointer-events:none}
 .row{display:flex;gap:10px;align-items:center}
 .row>*{flex:1}
 .muted{color:var(--txt2);font-size:13px}
 .tiny{color:var(--txt3);font-size:12px}
+/* Tabular (monospaced) figures on numeric stats — steadier alignment and no
+   width jump as values change (UI/UX: number-tabular). */
+.rv,.cm-v,.mt-sv,.ci-v,.sp-v,.pp-v,.ws-num,.d-c,.d-l,.plan-big,.plan-unit,.rt-v,.pm-amt,
+.wr-v,.rcm b,.bl-v,.mt-v,.rev-stat .rv,.pp-l,.sp-l{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
 .badge{
   display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;letter-spacing:.03em;
   background:var(--acc-soft);color:var(--acc);vertical-align:middle;
@@ -548,7 +552,7 @@ body.kb .chatbar{padding-bottom:6px}
 .grid3 .btn{width:auto}
 .set-list{display:flex;flex-direction:column;gap:6px}
 .set-row2{display:flex;align-items:center;gap:10px;padding:8px 11px;background:var(--bg2);border-radius:10px;font-size:14px}
-.set-row2 .del{margin-inline-start:auto;color:var(--txt3);min-width:34px;min-height:34px;display:flex;align-items:center;justify-content:center;border-radius:8px}
+.set-row2 .del{margin-inline-start:auto;color:var(--txt3);min-width:40px;min-height:40px;display:flex;align-items:center;justify-content:center;border-radius:8px}
 .lib-list{display:flex;flex-direction:column;gap:8px}
 .wo-hd{display:flex;align-items:center;gap:8px}
 .pr-badge{background:rgba(52,196,142,.16);color:var(--green);border-radius:20px;padding:2px 9px;font-size:11px;font-weight:700}
@@ -571,7 +575,7 @@ body.kb .chatbar{padding-bottom:6px}
 .supp-tx{flex:1;display:flex;flex-direction:column;gap:1px;min-width:0}
 .supp-nm{font-size:14.5px;font-weight:500}
 .supp-ds{font-size:12px;color:var(--txt2)}
-.supp-row .del{flex:0 0 auto;color:var(--txt3);min-width:34px;min-height:34px;display:flex;align-items:center;justify-content:center;border-radius:8px}
+.supp-row .del{flex:0 0 auto;color:var(--txt3);min-width:40px;min-height:40px;display:flex;align-items:center;justify-content:center;border-radius:8px}
 .rev-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
 .rev-stat{background:var(--bg2);border-radius:12px;padding:12px 8px;text-align:center}
 .rev-stat .rv{font-size:19px;font-weight:700;color:var(--acc)}
@@ -597,7 +601,7 @@ body.kb .chatbar{padding-bottom:6px}
 .task-row.done .task-nm{text-decoration:line-through;color:var(--txt3)}
 .task-ds{font-size:12px;color:var(--txt2);margin-top:1px}
 .task-ds.over{color:var(--red)}
-.task-row .del{flex:0 0 auto;color:var(--txt3);min-width:34px;min-height:34px;display:flex;align-items:center;justify-content:center;border-radius:8px}
+.task-row .del{flex:0 0 auto;color:var(--txt3);min-width:40px;min-height:40px;display:flex;align-items:center;justify-content:center;border-radius:8px}
 
 /* ---------- chat ---------- */
 .chat-head{
@@ -1006,7 +1010,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
 .day-items .food-it + .meal-h{border-top:1px solid var(--line2)}
 .food-it .nm{font-size:14.5px;font-weight:500}
 .food-it .meta{font-size:12px;color:var(--txt2)}
-.food-it .del{margin-inline-start:auto;color:var(--txt3);font-size:17px;min-width:38px;min-height:38px;display:flex;align-items:center;justify-content:center;border-radius:9px}
+.food-it .del{margin-inline-start:auto;color:var(--txt3);font-size:17px;min-width:40px;min-height:40px;display:flex;align-items:center;justify-content:center;border-radius:9px}
 .food-it .del:active{background:rgba(232,87,87,.15);color:var(--red)}
 .ac-wrap{position:relative}
 .ac-list{
@@ -1092,7 +1096,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
 .ib-entry{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:13px 14px;margin-bottom:10px}
 .ib-entry .hd{display:flex;align-items:center;margin-bottom:8px}
 .ib-entry .hd .d{font-weight:600;font-size:14px}
-.ib-entry .hd .del{margin-inline-start:auto;color:var(--txt3);min-width:38px;min-height:38px;display:flex;align-items:center;justify-content:center;border-radius:9px}
+.ib-entry .hd .del{margin-inline-start:auto;color:var(--txt3);min-width:40px;min-height:40px;display:flex;align-items:center;justify-content:center;border-radius:9px}
 .ib-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .ib-cell{background:var(--bg2);border-radius:10px;padding:8px 9px}
 .ib-cell .k{font-size:11px;color:var(--txt3);letter-spacing:.02em}
@@ -1246,7 +1250,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.113";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.114";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
