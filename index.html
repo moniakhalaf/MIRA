@@ -222,6 +222,17 @@ body.kb .chatbar{padding-bottom:6px}
 .bl-p{color:var(--txt2);font-weight:500;font-size:11.5px}
 .budget-top{font-size:12.5px;color:var(--txt2);line-height:1.45;margin-top:12px;padding-top:11px;border-top:1px solid var(--line2);display:flex;gap:6px;align-items:flex-start}
 .budget-top svg{color:var(--acc);flex:0 0 auto;margin-top:1px}
+.sav-flow{display:flex;align-items:center;gap:9px;margin-top:12px;padding:10px 12px;border-radius:11px;font-size:13.5px;line-height:1.4}
+.sav-flow .sf-ic{display:inline-flex;flex:0 0 auto}
+.sav-flow.up{background:color-mix(in srgb,var(--green) 12%,transparent);color:var(--txt)}
+.sav-flow.up .sf-ic{color:var(--green)}
+.sav-flow.down{background:color-mix(in srgb,var(--red) 12%,transparent);color:var(--txt)}
+.sav-flow.down .sf-ic{color:var(--red);transform:rotate(180deg)}
+.sav-after{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-top:10px;padding-top:11px;border-top:1px solid var(--line2)}
+.sav-after .sa-l{font-size:13px;color:var(--txt2);font-weight:600}
+.sav-after .sa-v{font-size:19px;font-weight:800;font-variant-numeric:tabular-nums}
+.sav-warn{margin-top:9px;color:var(--amber);display:flex;gap:6px;align-items:flex-start;line-height:1.45}
+.sav-warn svg{color:var(--amber);flex:0 0 auto;margin-top:1px}
 .budget-top b{color:var(--txt)}
 .save-proj{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
 .sp-cell{background:var(--card2);border:1px solid var(--line2);border-radius:11px;padding:11px 6px;text-align:center}
@@ -1257,7 +1268,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.118";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.119";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1508,6 +1519,20 @@ const TR = {
     "Community food database":"قاعدة بيانات الطعام المجتمعية","Supabase project URL":"رابط مشروع Supabase","Supabase anon key":"مفتاح Supabase العام (anon)",
     "Confirm your lookup below":"أكّد نتيجة البحث بالأسفل",
     "Estimated maintenance":"سعرات الصيانة المُقدّرة","kcal/day upkeep":"سعرة/يوم للصيانة","Avg intake":"متوسط الاستهلاك","kg/week":"كغ/أسبوع","days logged":"أيام مُسجّلة",
+    "Savings balance": "رصيد المدّخرات",
+    "Current savings (KWD)": "المدّخرات الحالية (د.ك)",
+    "Adding": "إضافة",
+    "to savings this month": "إلى المدّخرات هذا الشهر",
+    "Drawing": "سحب",
+    "from savings this month": "من المدّخرات هذا الشهر",
+    "Savings after this month": "المدّخرات بعد هذا الشهر",
+    "This would take your savings below zero — worth trimming spending or topping up.": "هذا سيخفض مدّخراتك دون الصفر — يستحق تقليل الإنفاق أو إضافة مبلغ.",
+    "This month's change is already banked into your balance.": "تغيّر هذا الشهر مُضاف بالفعل إلى رصيدك.",
+    "Spending more than your income draws from savings; spending less adds to it.": "الإنفاق أكثر من دخلك يسحب من المدّخرات؛ والإنفاق أقل يضيف إليها.",
+    "Bank it at month-end to roll the change into your balance.": "أضِفه في نهاية الشهر لترحيل التغيّر إلى رصيدك.",
+    "Bank this month into my balance": "أضِف هذا الشهر إلى رصيدي",
+    "Banked into your savings ✓": "أُضيف إلى مدّخراتك ✓",
+    "Deducted from your savings ✓": "خُصم من مدّخراتك ✓",
     "Adjust amount": "تعديل الكمية",
     "Saved as": "محفوظ كـ",
     "Change the amount and the macros rescale automatically.": "غيّر الكمية وتُعاد الماكروز حسابها تلقائيًا.",
@@ -7528,6 +7553,8 @@ function budgetHTML(){
       </div>
     </div>
 
+    ${savingsBalanceHTML(income, net, totalOut)}
+
     ${entries.length ? `<div class="card">
       <h3>${ic("wallet", 16)} ${tr("Where it goes")}</h3>
       <div class="budget-dash">
@@ -7668,6 +7695,40 @@ function monthTrendHTML(){
     </div>
     <div class="budget-top" style="margin-top:11px">${ic("trend", 13)} <span>${tr("This month you spent")} <b style="color:${dirCol}">${dir}</b> ${tr("last month")}.</span></div>
     ${useInc ? "" : `<div class="tiny" style="margin-top:7px;color:var(--txt2)">${tr("Add your monthly income above to see your savings rate on each bar.")}</div>`}
+  </div>`;
+}
+
+/* ---------------- Savings balance (carry-over pot) ----------------
+   The running pot the user has saved. This month's net (income − out)
+   flows into it: overspend draws the pot down, underspend tops it up.
+   The balance is user-maintained — MIRA shows where it lands if the
+   month ends as it stands, and can bank that net into the balance once. */
+function savingsBalanceHTML(income, net, totalOut){
+  const bal = num(S.budget.savings);
+  const has = S.budget.savings != null && S.budget.savings !== "";
+  const active = income > 0 || totalOut > 0;          // a meaningful month to project
+  const ym = todayStr().slice(0, 7);
+  const banked = S.budget.savingsBankedMonth === ym; // already folded this month's net in
+  const projected = bal + net;
+  const flow = active && !banked ? `
+    <div class="sav-flow ${net >= 0 ? "up" : "down"}">
+      <span class="sf-ic">${ic("arrowUp", 15)}</span>
+      <span>${net >= 0
+        ? `${tr("Adding")} <b>${cur(net)} ${tr("KWD")}</b> ${tr("to savings this month")}`
+        : `${tr("Drawing")} <b>${cur(-net)} ${tr("KWD")}</b> ${tr("from savings this month")}`}</span>
+    </div>
+    ${has ? `<div class="sav-after">
+      <span class="sa-l">${tr("Savings after this month")}</span>
+      <span class="sa-v" style="color:${projected >= 0 ? "var(--green)" : "var(--red)"}">${cur(projected)} ${tr("KWD")}</span>
+    </div>
+    ${projected < 0 ? `<div class="tiny sav-warn">${ic("wallet", 13)} ${tr("This would take your savings below zero — worth trimming spending or topping up.")}</div>` : ""}` : ""}
+  ` : banked ? `<div class="sav-flow up"><span class="sf-ic">${ic("check", 15)}</span><span>${tr("This month's change is already banked into your balance.")}</span></div>` : "";
+  return `<div class="card sav-card">
+    <h3>${ic("wallet", 16)} ${tr("Savings balance")}</h3>
+    <div class="field"><label>${tr("Current savings (KWD)")}</label><input type="number" inputmode="decimal" value="${has ? S.budget.savings : ""}" placeholder="0" oninput="M.savingsSet(this.value)"></div>
+    ${flow}
+    <div class="tiny" style="margin-top:${flow ? "10px" : "2px"};color:var(--txt2)">${tr("Spending more than your income draws from savings; spending less adds to it.")}${has && active && !banked ? " " + tr("Bank it at month-end to roll the change into your balance.") : ""}</div>
+    ${has && active && !banked ? `<button class="btn sm sec" style="width:100%;margin-top:10px" onclick="M.savingsBank(${net})">${ic("check", 14)} ${tr("Bank this month into my balance")}</button>` : ""}
   </div>`;
 }
 
@@ -9165,6 +9226,20 @@ window.M = {
     toast(`Monthly savings target set to ${cur(S.budget.saveTarget)} KWD ✓`);
   },
   planClear(){ S.budget.plan = null; save(); render(); },
+  savingsSet(v){
+    // A blank field means "not set" (hide the projection); any number (incl. 0) is a real balance.
+    S.budget.savings = v.trim() === "" ? "" : num(v);
+    // editing the balance by hand undoes an accidental "banked" lock for this month
+    if (S.budget.savingsBankedMonth === todayStr().slice(0, 7)) S.budget.savingsBankedMonth = null;
+    save(); render();
+  },
+  savingsBank(net){
+    const bal = num(S.budget.savings) + num(net);
+    S.budget.savings = Math.round(bal * 100) / 100;
+    S.budget.savingsBankedMonth = todayStr().slice(0, 7);   // once per month — no double counting
+    save(); render();
+    toast(num(net) >= 0 ? tr("Banked into your savings ✓") : tr("Deducted from your savings ✓"));
+  },
   expListToggle(){ R.expListOpen = !R.expListOpen; render(); },
   // Recommend a realistic monthly savings amount from the user's own multi-month
   // history — returns three tiers (safe / recommended / stretch), not a chat reply.
