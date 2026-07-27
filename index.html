@@ -186,9 +186,11 @@ h1,h2,h3,h4{margin:0;font-weight:600}
    standalone bug where 100vh/100dvh exclude the bottom safe area */
 body{overflow:hidden}
 #app{position:fixed;inset:0;display:flex;flex-direction:column;overflow:hidden}
-/* while the keyboard is up: tab bar hides so the input sits on the keyboard */
+/* while the keyboard is up: tab bar hides so the input sits on the keyboard,
+   and the composer reads as a bar docked to the keyboard (hairline + lift) */
 body.kb .tabbar{display:none}
-body.kb .chatbar{padding-bottom:6px}
+body.kb .chatbar{padding-bottom:calc(4px + env(safe-area-inset-bottom,0px)*0.4);border-top:1px solid var(--line);box-shadow:0 -8px 22px rgba(0,0,0,.24)}
+body.kb .fab{display:none}
 .topbar{
   flex:0 0 auto;
   padding:calc(var(--safe-top) + 10px) 16px 10px;
@@ -1268,7 +1270,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.120";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.121";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -2335,17 +2337,34 @@ matchMedia("(prefers-color-scheme: light)").addEventListener("change", () => {
 function bindViewport(){
   const vv = window.visualViewport;
   if (!vv) return;
-  // Two things go wrong on iOS when the keyboard opens over a deep field:
+  // Detecting "keyboard is up" reliably is the crux. `window.innerHeight` is NOT
+  // trustworthy — in a home-screen PWA it shrinks with the keyboard too, so
+  // `innerHeight - vv.height` collapses to ~0 and the tab bar never hides,
+  // leaving it stranded above the keyboard. Instead we track the tallest
+  // viewport seen while no text field is focused (the true "no keyboard"
+  // baseline) and treat the keyboard as open only when a real text field is
+  // focused AND the viewport has shrunk from that baseline.
+  let vvBase = vv.height;
+  const editable = () => {
+    const a = document.activeElement;
+    if (!a) return false;
+    if (a.tagName === "TEXTAREA" || a.isContentEditable) return true;
+    if (a.tagName === "INPUT") return !/^(button|checkbox|radio|submit|reset|range|color|file|image|hidden)$/i.test(a.type || "text");
+    return false;
+  };
+  // Two things also go wrong on iOS when the keyboard opens over a deep field:
   //  1) if we STOP tracking the visible area while typing, the shell gets stuck
   //     mid-animation and a big empty gap appears above the top bar;
   //  2) if we reset the page scroll on every pan, the focused field flickers up.
   // Fix: always re-pin the shell to the visible area (kills the gap), but only
-  // reset the layout-viewport scroll on keyboard show/hide — never during a pan
-  // (kills the flicker).
+  // reset the layout-viewport scroll on keyboard show/hide — never during a pan.
   const pin = (resetScroll) => {
     const app = $("#app");
     if (!app) return;
-    const kbOpen = (window.innerHeight - vv.height) > 100;
+    const ed = editable();
+    if (!ed) vvBase = Math.max(vvBase, vv.height);          // refresh baseline while the keyboard is down
+    const shrink = Math.max(vvBase - vv.height, window.innerHeight - vv.height);
+    const kbOpen = ed && shrink > 100;
     app.style.top = vv.offsetTop + "px";      // track the visible top → no gap
     app.style.height = vv.height + "px";
     app.style.bottom = "auto";
@@ -2366,6 +2385,8 @@ function bindViewport(){
   vv.addEventListener("scroll", onScroll);
   window.addEventListener("focusin", onResize);
   window.addEventListener("focusout", onResize);
+  // rotation changes the true baseline — forget the old one and re-measure
+  window.addEventListener("orientationchange", () => { vvBase = 0; setTimeout(() => { vvBase = vv.height; pin(true); }, 250); });
   pin(true);
 }
 
