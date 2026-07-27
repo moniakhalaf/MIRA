@@ -675,6 +675,13 @@ body.kb .fab{display:none}
 .action-card .ach{font-size:11.5px;font-weight:700;letter-spacing:.07em;color:var(--acc);text-transform:uppercase;display:flex;align-items:center;gap:6px;margin-bottom:8px}
 .action-card .acf{font-size:13.5px;margin:2px 0}
 .action-card .acb{background:var(--card);border:1px solid var(--line);border-radius:9px;padding:9px 11px;margin-top:8px;font-size:14px;white-space:normal}
+.logged-card{background:color-mix(in srgb,var(--green) 9%,var(--bg2));border:1px solid color-mix(in srgb,var(--green) 34%,transparent);border-radius:12px;padding:11px 12px;margin:.6em 0 .2em}
+.logged-card .lc-h{font-size:12px;font-weight:700;letter-spacing:.05em;color:var(--green);text-transform:uppercase;display:flex;align-items:center;gap:6px;margin-bottom:8px}
+.logged-card .lc-h svg{color:var(--green)}
+.logged-card .lc-row{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:3px 0;font-size:14px}
+.logged-card .lc-nm{font-weight:600}
+.logged-card .lc-m{color:var(--txt2);font-size:12px;white-space:nowrap}
+.logged-card .lc-acts{display:flex;gap:8px;margin-top:9px}
 .typing{display:inline-flex;gap:4px;padding:4px 0}
 .typing i{width:7px;height:7px;border-radius:50%;background:var(--txt3);animation:blink 1.2s infinite}
 .typing i:nth-child(2){animation-delay:.2s}.typing i:nth-child(3){animation-delay:.4s}
@@ -1270,7 +1277,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.121";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.122";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1521,6 +1528,10 @@ const TR = {
     "Community food database":"قاعدة بيانات الطعام المجتمعية","Supabase project URL":"رابط مشروع Supabase","Supabase anon key":"مفتاح Supabase العام (anon)",
     "Confirm your lookup below":"أكّد نتيجة البحث بالأسفل",
     "Estimated maintenance":"سعرات الصيانة المُقدّرة","kcal/day upkeep":"سعرة/يوم للصيانة","Avg intake":"متوسط الاستهلاك","kg/week":"كغ/أسبوع","days logged":"أيام مُسجّلة",
+    "Added to your food log": "أُضيف إلى سجلّ طعامك",
+    "Open food log": "افتح سجلّ الطعام",
+    "Undo": "تراجع",
+    "Removed from your food log ✓": "أُزيل من سجلّ طعامك ✓",
     "Savings balance": "رصيد المدّخرات",
     "Current savings (KWD)": "المدّخرات الحالية (د.ك)",
     "Adding": "إضافة",
@@ -4029,6 +4040,17 @@ NUTRITION & FOOD RULES (whenever food comes up)
 - Label every figure: Official (venue/manufacturer publishes it), Estimate (reconstructed from standard composition data — say so), or Not available (when even an estimate would be irresponsible).
 - Recognise restaurant and café items including local Kuwait venues; recognise pan-Arab foods (Gulf, Levantine, Egyptian, Iraqi, Maghrebi, Yemeni, Sudanese…) in Arabic script or transliteration.
 - Distinguish cooking methods — grilled/مشوي, rotisserie, fried/مقلي, boiled/مسلوق, roasted — and adjust macros accordingly.
+- LOGGING TO THE FOOD DIARY: when the user asks you to log, register, add, track or record a specific food or meal they ate (e.g. "log it", "register this", "add it to my food", "سجّلها", "أضِفها"), append at the very END of your reply one fenced block PER food item in EXACTLY this format (English field names, numbers only for the macros):
+\`\`\`action:food
+name: <short food name, in the user's language>
+amount: <portion, e.g. 1 serving · 150 g>
+kcal: <number>
+protein: <grams>
+carbs: <grams>
+fat: <grams>
+meal: <breakfast|lunch|dinner|snack>
+\`\`\`
+  The app itself SAVES these to today's real food diary and shows a confirmation card with an Undo button — so keep your own visible confirmation to ONE short line, and DO NOT invent a running "total for today" or a "total after adding" table (the app tracks the real totals). Emit action:food ONLY when the user clearly wants the item logged — never when they are just asking about a food's macros. Use the meal the user names; otherwise infer it from the current time of day.
 
 CROSS-DOMAIN AWARENESS
 Connect signals across areas when it genuinely helps (a heavy work week informing training advice; a body-composition trend informing nutrition targets) — never force links that are not there.
@@ -4087,11 +4109,54 @@ function actionCardHTML(kind, raw){
   </div>`;
 }
 
+/* ---------------- food-log action (agent writes to the diary) ----------------
+   MIRA emits ```action:food``` blocks when the user asks to log/register a food.
+   Unlike email/event (draft-then-tap), logging is low-stakes and reversible, so
+   we execute it for real the moment the reply lands and show a confirmation card
+   with Undo — matching what the user asked ("register it") instead of only
+   claiming it was done. */
+const FOOD_ACT_RE = /```action:food\s*\n([\s\S]*?)```/g;
+function chatExtractFoodLogs(content){
+  const logged = [];
+  const cleaned = String(content || "").replace(FOOD_ACT_RE, (_, raw) => {
+    const f = parseAction(raw);
+    if (!f.name || !(num(f.kcal) >= 0)) return "";               // ignore malformed blocks
+    const time = nowHM();
+    const meal = ["breakfast", "lunch", "dinner", "snack"].includes((f.meal || "").toLowerCase())
+      ? f.meal.toLowerCase() : mealFromTime(time);
+    const item = {id: uid(), date: todayStr(), name: f.name.trim(), amount: (f.amount || "").trim(),
+      time, meal, kcal: num(f.kcal), p: num(f.protein), c: num(f.carbs), f: num(f.fat), conf: "estimate", ts: Date.now()};
+    S.foods.push(item);
+    // remember it for autocomplete, like a normal log
+    const key = item.name.toLowerCase();
+    const ex = S.savedFoods.findIndex(x => x.name.toLowerCase() === key);
+    const saved = {name: item.name, amount: item.amount, kcal: item.kcal, p: item.p, c: item.c, f: item.f};
+    if (ex >= 0) S.savedFoods[ex] = saved; else S.savedFoods.unshift(saved);
+    logged.push({id: item.id, name: item.name, amount: item.amount, kcal: item.kcal, p: item.p, c: item.c, f: item.f, meal: item.meal});
+    return "";                                                    // strip the block from the visible reply
+  });
+  return {logged, cleaned: cleaned.replace(/\n{3,}/g, "\n\n").trim()};
+}
+// Confirmation card shown under a MIRA reply that logged food for real.
+function chatLoggedCardHTML(logged, convId, idx){
+  return `<div class="logged-card">
+    <div class="lc-h">${ic("check", 15)} ${tr("Added to your food log")}</div>
+    ${logged.map(x => `<div class="lc-row"><span class="lc-nm" dir="auto">${esc(x.name)}</span><span class="lc-m">${n0(x.kcal)} kcal · ${n1(x.p)}P · ${esc(tr(mealLabel(x.meal)))}</span></div>`).join("")}
+    <div class="lc-acts">
+      <button class="btn sm sec" onclick="M.openFoodLog()">${ic("wallet", 14)} ${tr("Open food log")}</button>
+      <button class="btn sm sec" onclick="M.undoChatLog('${convId}',${idx})">${ic("refresh", 13)} ${tr("Undo")}</button>
+    </div>
+  </div>`;
+}
+
 /* ---------------- markdown (minimal, safe) ---------------- */
 function md(src){
   let s = esc(src);
   // agent action blocks first, then normal code blocks
   s = s.replace(/```action:(email|event)\n([\s\S]*?)```/g, (_, kind, raw) => actionCardHTML(kind, raw));
+  // food-log blocks are executed & shown as their own confirmation card, so hide
+  // the raw block here (also keeps it from flashing mid-stream before it's parsed)
+  s = s.replace(/```action:food\s*\n[\s\S]*?```/g, "");
   s = s.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, l, c) => `<pre><code>${c}</code></pre>`);
   // tables
   s = s.replace(/((?:^\|.*\|\s*$\n?)+)/gm, block => {
@@ -4174,6 +4239,7 @@ function msgHTML(m, convId, idx, isLast, isLastUser){
     return `<div class="msg user" dir="auto">${esc(m.content)}${m.att ? `<div class="att">${ic("paperclip", 12)} ${esc(m.att)}</div>` : ""}
       ${isLastUser && !R.busy ? `<div><button class="msg-act" aria-label="Edit and resend" onclick="M.editLast('${convId}')">${ic("edit", 12)} Edit</button></div>` : ""}</div>`;
   return `<div class="msg mira" dir="auto"><div class="who">MIRA${m.ds ? " · DEEP SOLVE" : ""}</div>${md(m.content)}
+    ${m.logged && m.logged.length ? chatLoggedCardHTML(m.logged, convId, idx) : ""}
     ${m.content ? `<div><button class="msg-act" aria-label="Copy reply" onclick="M.copyMsg('${convId}',${idx})">${ic("copy", 13)} Copy</button>${
       isLast && !R.busy ? ` <button class="msg-act" aria-label="Regenerate reply" onclick="M.regen('${convId}')">${ic("refresh", 13)} Regenerate</button>` : ""}</div>` : ""}</div>`;
 }
@@ -4218,9 +4284,25 @@ function chatbarHTML(){
     <div class="ds-note ${R.deepSolve ? "open" : ""}">Deep Solve on — two-stage reasoning for hard problems</div>
   </div>`;
 }
+// Chat scroll behaviour:
+//  • opening a chat / switching → jump to the newest message (bottom), as normal;
+//  • after YOU send → bring your question to the TOP so the answer reads from its
+//    start and you scroll down for the rest (not stuck showing the tail end).
 function afterChatRender(){
   const c = $("#content");
-  if (c) c.scrollTop = c.scrollHeight;
+  if (!c) return;
+  if (R.busy || R._justAnswered){ scrollQuestionToTop(); if (!R.busy) R._justAnswered = false; }  // during & just after a turn
+  else c.scrollTop = c.scrollHeight;                            // idle: show the latest
+}
+function scrollQuestionToTop(){
+  const box = $("#msgs"), c = $("#content");
+  if (!box || !c) return;
+  const users = box.querySelectorAll(".msg.user");
+  const q = users[users.length - 1];
+  if (!q){ c.scrollTop = c.scrollHeight; return; }
+  // align the question's top just under the content's top edge
+  const delta = q.getBoundingClientRect().top - c.getBoundingClientRect().top;
+  c.scrollTop = Math.max(0, c.scrollTop + delta - 8);
 }
 
 /* ---------------- API ---------------- */
@@ -4363,15 +4445,17 @@ async function sendChat(){
       if (msgsEl2){
         const el = msgsEl2.lastElementChild;
         el.innerHTML = `<div class="who">MIRA${ds ? " · DEEP SOLVE" : ""}</div>${md(partial)}`;
-        const c = $("#content");
-        if (c && c.scrollHeight - c.scrollTop - c.clientHeight < 300) c.scrollTop = c.scrollHeight;
+        // no auto-scroll: the question stays pinned at the top and the answer
+        // grows below it, so the user reads from the start and scrolls down.
       }
     });
     holder.content = full || "(no response)";
+    // execute any food-log actions MIRA prepared, then strip them from the text
+    try { const r = chatExtractFoodLogs(holder.content); if (r.logged.length){ holder.content = r.cleaned; holder.logged = r.logged; R.openDays.add(todayStr()); buzz(); } } catch (e) {}
   } catch (e) {
     holder.content = `**Could not reach the API.** ${e.message}\n\nCheck your key, model and connection in Settings, then try again.`;
   }
-  R.busy = false;
+  R.busy = false; R._justAnswered = true;
   save(); render();
 }
 
@@ -4403,15 +4487,14 @@ async function regenLast(cid){
       const el = $("#msgs") && $("#msgs").lastElementChild;
       if (el){
         el.innerHTML = `<div class="who">MIRA</div>${md(partial)}`;
-        const c = $("#content");
-        if (c && c.scrollHeight - c.scrollTop - c.clientHeight < 300) c.scrollTop = c.scrollHeight;
       }
     });
     holder.content = full || "(no response)";
+    try { const r = chatExtractFoodLogs(holder.content); if (r.logged.length){ holder.content = r.cleaned; holder.logged = r.logged; R.openDays.add(todayStr()); buzz(); } } catch (e) {}
   } catch (e) {
     holder.content = `**Could not reach the API.** ${e.message}`;
   }
-  R.busy = false;
+  R.busy = false; R._justAnswered = true;
   save(); render();
 }
 
@@ -9506,6 +9589,16 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
   chatSheet(){ R.sheet = "chats"; render(); },
   sheetClose(){ R.sheet = null; render(); },
   openConv(id){ R.convId = id; R.sheet = null; render(); },
+  openFoodLog(){ R.tab = "food"; R.homeCat = null; R.mealsOpen = false; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
+  undoChatLog(cid, idx){
+    const conv = S.convs.find(c => c.id === cid); if (!conv) return;
+    const m = conv.msgs[idx]; if (!m || !m.logged) return;
+    const ids = new Set(m.logged.map(x => x.id));
+    S.foods = S.foods.filter(f => !ids.has(f.id));
+    delete m.logged;
+    save(); render();
+    toast(tr("Removed from your food log ✓"));
+  },
   delConv(id){
     if (!confirm("Delete this chat? This cannot be undone.")) return;
     S.convs = S.convs.filter(c => c.id !== id);
