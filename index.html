@@ -1172,6 +1172,12 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
 .fold.open>h3 .chev{transform:rotate(90deg)}
 .fold>.fold-body{display:none}
 .fold.open>.fold-body{display:block}
+/* "more ways to add" — collapses the Log food helper tools behind one button */
+.food-tools-wrap{margin-top:8px}
+.food-tools-wrap>.ft-body{display:none}
+.food-tools-wrap.open>.ft-body{display:block;margin-top:8px}
+.food-tools-wrap>.ft-toggle .chev{color:var(--txt3);transition:transform .2s;font-size:11px;margin-inline-start:6px}
+.food-tools-wrap.open>.ft-toggle .chev{transform:rotate(90deg)}
 
 /* ---------- body comp ---------- */
 .ib-entry{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:13px 14px;margin-bottom:10px}
@@ -1331,7 +1337,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.127";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.128";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1582,6 +1588,8 @@ const TR = {
     "Community food database":"قاعدة بيانات الطعام المجتمعية","Supabase project URL":"رابط مشروع Supabase","Supabase anon key":"مفتاح Supabase العام (anon)",
     "Confirm your lookup below":"أكّد نتيجة البحث بالأسفل",
     "Estimated maintenance":"سعرات الصيانة المُقدّرة","kcal/day upkeep":"سعرة/يوم للصيانة","Avg intake":"متوسط الاستهلاك","kg/week":"كغ/أسبوع","days logged":"أيام مُسجّلة",
+    "More ways to add this": "طرق أخرى لإضافته",
+    "Don't have the numbers? Search a food, scan a label or barcode, scale a portion, or build a cooked dish.": "لا تعرف الأرقام؟ ابحث عن طعام، أو امسح ملصقًا أو باركود، أو عدّل الكمية، أو ابنِ طبقًا مطبوخًا.",
     "Over target": "تجاوز الهدف",
     "Cheat meal": "وجبة حرة",
     "kcal so far — a cheat meal draws from the bank.": "سعرة حتى الآن — الوجبة الحرة تُخصم من البنك.",
@@ -4960,13 +4968,19 @@ function foodHTML(){
       </div>
       <button class="btn" style="width:100%;margin-bottom:12px" onclick="M.foodSave()">${R.editFoodId ? t("Update entry") : t("Save to log")}</button>
       `}
-      <div class="grid2" style="gap:8px">
-        <button class="btn sm sec" style="width:100%" onclick="M.scToggle()">${ic("sliders", 15)} ${t("Portion scaler")}</button>
-        <button class="btn sm sec" style="width:100%" onclick="M.findMacros()" ${findBusy ? "disabled" : ""}>${findBusy ? "Searching…" : ic("search", 15) + " " + t("Find macros")}</button>
-        <button class="btn sm sec" style="width:100%" onclick="M.extractPhoto()" ${extractBusy ? "disabled" : ""}>${extractBusy ? "Reading…" : ic("camera", 15) + " " + t("Snap food / label")}</button>
-        <button class="btn sm sec" style="width:100%" onclick="M.barcode()" ${barcodeBusy ? "disabled" : ""}>${barcodeBusy ? "Looking up…" : ic("barcode", 15) + " " + t("Barcode")}</button>
+      <div class="food-tools-wrap ${(R.foodToolsOpen || foodForm.scOpen || dishForm.open || findBusy || extractBusy || barcodeBusy) ? "open" : ""}">
+        <button class="btn sm sec ft-toggle" style="width:100%" aria-expanded="${R.foodToolsOpen ? "true" : "false"}" onclick="M.foodTools(this)">${ic("plus", 16)} ${t("More ways to add this")} <span class="chev">▶</span></button>
+        <div class="ft-body">
+          <div class="tiny" style="margin:2px 2px 8px;color:var(--txt2)">${t("Don't have the numbers? Search a food, scan a label or barcode, scale a portion, or build a cooked dish.")}</div>
+          <div class="grid2" style="gap:8px">
+            <button class="btn sm sec" style="width:100%" onclick="M.findMacros()" ${findBusy ? "disabled" : ""}>${findBusy ? "Searching…" : ic("search", 15) + " " + t("Find macros")}</button>
+            <button class="btn sm sec" style="width:100%" onclick="M.barcode()" ${barcodeBusy ? "disabled" : ""}>${barcodeBusy ? "Looking up…" : ic("barcode", 15) + " " + t("Barcode")}</button>
+            <button class="btn sm sec" style="width:100%" onclick="M.extractPhoto()" ${extractBusy ? "disabled" : ""}>${extractBusy ? "Reading…" : ic("camera", 15) + " " + t("Snap food / label")}</button>
+            <button class="btn sm sec" style="width:100%" onclick="M.scToggle()">${ic("sliders", 15)} ${t("Portion scaler")}</button>
+          </div>
+          <button class="btn sm sec" style="width:100%;margin-top:8px" aria-expanded="${dishForm.open}" onclick="M.dishToggle()">${ic("flame", 15)} ${t("I cooked this — build the dish from ingredients")}</button>
+        </div>
       </div>
-      <button class="btn sm sec" style="width:100%;margin-top:8px" aria-expanded="${dishForm.open}" onclick="M.dishToggle()">${ic("flame", 15)} ${t("I cooked this — build the dish from ingredients")}</button>
       ${foodForm.scOpen ? `
       <div class="review-item" style="margin-top:12px">
         <b style="font-size:14px">Portion scaler</b>
@@ -10024,6 +10038,9 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
   // in R so a later render (triggered by another card) keeps it — fixes cards
   // springing back open and the page jumping when a sibling card re-renders.
   fold(key, el){ const card = el.closest(".fold"); if (!card) return; R[key] = card.classList.toggle("open"); },
+  // Reveal/hide the "more ways to add" tools (Find macros, Barcode, Snap, scaler,
+  // cooked dish) under the Log food form — collapsed by default to keep it short.
+  foodTools(btn){ const w = btn.closest(".food-tools-wrap"); if (!w) return; R.foodToolsOpen = w.classList.toggle("open"); },
   barcode: scanBarcode,
   quickWeight(){
     const v = num(($("#qw") || {}).value);
