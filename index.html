@@ -1031,6 +1031,14 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
 .cbh-sub{font-size:12px;color:var(--txt3);margin-top:2px}
 .cbh-cheats{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
 .cbh-cheat{font-size:11.5px;font-weight:600;color:var(--amber);background:color-mix(in srgb,var(--amber) 12%,transparent);border:1px solid color-mix(in srgb,var(--amber) 28%,transparent);border-radius:7px;padding:2px 7px;font-variant-numeric:tabular-nums}
+/* cheat-meal foods (current week, under the card + in history) */
+.cb-cheatlist{margin-top:10px;border-top:1px dashed var(--line2);padding-top:9px;display:flex;flex-direction:column;gap:6px}
+.cb-cheatrow,.cbh-food{display:flex;align-items:baseline;justify-content:space-between;gap:10px;font-size:13px}
+.cb-cheatrow .cc-nm,.cbh-food .cf-nm{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cb-cheatrow .cc-mt,.cbh-food .cf-mt{color:var(--amber);white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr}
+.cbh-foods{margin-top:7px;display:flex;flex-direction:column;gap:5px}
+.cbh-food{font-size:12.5px}
+.cbh-food .cf-mt{font-size:12px}
 .bar-line{display:flex;flex-direction:column;gap:4px}
 .bar-top{display:flex;justify-content:space-between;font-size:13px}
 .bar-top .lab{font-weight:600}
@@ -1317,7 +1325,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.125";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.126";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1568,6 +1576,8 @@ const TR = {
     "Community food database":"قاعدة بيانات الطعام المجتمعية","Supabase project URL":"رابط مشروع Supabase","Supabase anon key":"مفتاح Supabase العام (anon)",
     "Confirm your lookup below":"أكّد نتيجة البحث بالأسفل",
     "Estimated maintenance":"سعرات الصيانة المُقدّرة","kcal/day upkeep":"سعرة/يوم للصيانة","Avg intake":"متوسط الاستهلاك","kg/week":"كغ/أسبوع","days logged":"أيام مُسجّلة",
+    "Over target": "تجاوز الهدف",
+    "Cheat meal": "وجبة حرة",
     "kcal so far — a cheat meal draws from the bank.": "سعرة حتى الآن — الوجبة الحرة تُخصم من البنك.",
     "Cheat meals": "وجبات حرة",
     "Come in under target on your chosen days to bank calories for a cheat meal (a meal out is roughly 600–900 kcal).": "ابقَ تحت هدفك في الأيام التي اخترتها لتدّخر سعرات لوجبة حرة (وجبة بالخارج تقارب 600–900 سعرة).",
@@ -4204,7 +4214,7 @@ function chatExtractFoodLogs(content){
     const f = parseAction(raw);
     if (!f.name || !(num(f.kcal) >= 0)) return "";               // ignore malformed blocks
     const time = nowHM();
-    const meal = ["breakfast", "lunch", "dinner", "snack"].includes((f.meal || "").toLowerCase())
+    const meal = ["breakfast", "lunch", "dinner", "snack", "cheat"].includes((f.meal || "").toLowerCase())
       ? f.meal.toLowerCase() : mealFromTime(time);
     const item = {id: uid(), date: todayStr(), name: f.name.trim(), amount: (f.amount || "").trim(),
       time, meal, kcal: num(f.kcal), p: num(f.protein), c: num(f.carbs), f: num(f.fat), conf: "estimate", ts: Date.now()};
@@ -4645,15 +4655,16 @@ function nowHM(){ const d = new Date(); return String(d.getHours()).padStart(2, 
 function hmFromTs(ts){ const d = new Date(ts); return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); }
 function entryTime(f){ return f.time || (f.ts ? hmFromTs(f.ts) : ""); }
 /* meal grouping — breakfast / lunch / dinner / snack, auto-derived from the time when unset */
-const FOOD_MEALS = [["breakfast", "Breakfast"], ["lunch", "Lunch"], ["dinner", "Dinner"], ["snack", "Snack"]];
+const FOOD_MEALS = [["breakfast", "Breakfast"], ["lunch", "Lunch"], ["dinner", "Dinner"], ["snack", "Snack"], ["cheat", "Cheat meal"]];
 function mealFromTime(hm){ const h = parseInt(String(hm || nowHM()).slice(0, 2), 10) || 0; return h < 11 ? "breakfast" : h < 16 ? "lunch" : h < 21 ? "dinner" : "snack"; }
 function entryMeal(f){ return f.meal || mealFromTime(entryTime(f)); }
 function mealLabel(m){ const x = FOOD_MEALS.find(a => a[0] === m); return x ? x[1] : "Snack"; }
+function isCheat(f){ return (f.meal || "") === "cheat"; }
 // Split a day's logged items into their meal groups (breakfast/lunch/dinner/
 // snack), in that order, each with its own macro totals — so shared reports
 // read the way the day was logged, not as one flat list.
 function groupByMeal(items){
-  const g = {breakfast: [], lunch: [], dinner: [], snack: []};
+  const g = {breakfast: [], lunch: [], dinner: [], snack: [], cheat: []};
   items.forEach(it => { (g[entryMeal(it)] || g.snack).push(it); });
   return FOOD_MEALS.filter(([v]) => g[v].length).map(([v, label]) => {
     const t = g[v].reduce((a, x) => ({kcal: a.kcal + num(x.kcal), p: a.p + num(x.p), c: a.c + num(x.c), f: a.f + num(x.f)}), {kcal: 0, p: 0, c: 0, f: 0});
@@ -4738,20 +4749,33 @@ function calorieBank(offset){
   const today = todayStr();
   const now = new Date(today + "T00:00:00");
   const sunday = new Date(now); sunday.setDate(now.getDate() - now.getDay() + offset * 7);
+  const weekDates = []; for (let i = 0; i < 7; i++){ const dt = new Date(sunday); dt.setDate(sunday.getDate() + i); weekDates.push(dt.toLocaleDateString("en-CA")); }
+  const weekStart = weekDates[0], weekEnd = weekDates[6];
+  // Split this week's foods: NORMAL intake per day (vs target = deposits) and
+  // CHEAT-tagged foods (explicit withdrawals that draw the bank on ANY day).
+  const normalByDay = {}, cheats = [];
+  S.foods.forEach(f => {
+    if (!f.date || f.date < weekStart || f.date > weekEnd || f.date > today) return;   // this week, not future
+    if (isCheat(f)) cheats.push({date: f.date, name: f.name || "Cheat meal", kcal: num(f.kcal), dow: new Date(f.date + "T00:00:00").getDay(), meal: f.meal});
+    else normalByDay[f.date] = (normalByDay[f.date] || 0) + num(f.kcal);
+  });
   const days = [];
   for (let dow = from; dow <= to; dow++){
-    const dt = new Date(sunday); dt.setDate(sunday.getDate() + dow);
-    const date = dt.toLocaleDateString("en-CA");
-    const consumed = dayTotals(date).kcal;
-    days.push({date, dow, consumed, logged: consumed > 0, isToday: date === today, isFuture: date > today, diff: tg - consumed});
+    const date = weekDates[dow];
+    const normal = normalByDay[date] || 0;
+    days.push({date, dow, normal, logged: normal > 0, isToday: date === today, isFuture: date > today, diff: tg - normal});
   }
-  let saved = 0, used = 0, contribDays = 0;
+  let saved = 0, overWindow = 0, contribDays = 0;
   days.forEach(d => {
-    if (d.isFuture || d.isToday || !d.logged) return;                          // only completed, logged days settle
+    if (d.isFuture || d.isToday || !d.logged) return;                          // deposit only on completed days with normal food
     contribDays++;
-    if (d.diff >= 0) saved += d.diff; else used += -d.diff;                    // over target = a cheat meal, deducted
+    if (d.diff >= 0) saved += d.diff; else overWindow += -d.diff;              // ate over target on normal food = deduction
   });
-  return {tg, from, to, days, saved: Math.round(saved), used: Math.round(used), balance: Math.round(saved - used),
+  const cheatTotal = cheats.reduce((a, c) => a + c.kcal, 0);
+  const used = overWindow + cheatTotal;                                        // cheat meals + over-target days
+  cheats.sort((a, b) => a.date < b.date ? 1 : a.date > b.date ? -1 : 0);
+  return {tg, from, to, days, cheats, saved: Math.round(saved), overWindow: Math.round(overWindow),
+    cheatTotal: Math.round(cheatTotal), used: Math.round(used), balance: Math.round(saved - used),
     contribDays, today: days.find(d => d.isToday) || null,
     startDate: days[0] && days[0].date, endDate: days.length ? days[days.length - 1].date : null};
 }
@@ -4799,7 +4823,8 @@ function calorieBankHTML(){
       <div class="cb-bl">${tr("kcal banked this week")}</div>
     </div>
     <div class="cb-strip" style="grid-template-columns:repeat(${b.days.length}, 1fr)">${strip}</div>
-    ${b.saved || b.used ? `<div class="cb-meta">${tr("Saved")} <b>${n0(b.saved)}</b> · ${tr("Cheat meals")} <b>${n0(b.used)}</b></div>` : ""}
+    ${b.saved || b.used ? `<div class="cb-meta">${tr("Saved")} <b>${n0(b.saved)}</b>${b.cheatTotal ? ` · ${tr("Cheat meals")} <b>${n0(b.cheatTotal)}</b>` : ""}${b.overWindow ? ` · ${tr("Over target")} <b>${n0(b.overWindow)}</b>` : ""}</div>` : ""}
+    ${b.cheats.length ? `<div class="cb-cheatlist">${b.cheats.map(c => `<div class="cb-cheatrow"><span class="cc-nm" dir="auto">${esc(c.name)}</span><span class="cc-mt">${esc(dowName(c.dow, "short"))} · <b>−${n0(c.kcal)}</b></span></div>`).join("")}</div>` : ""}
     ${todayLine}
     <div class="tiny cb-note">${ready
       ? tr("You've banked enough room for a cheat meal — enjoy it without breaking your week.")
@@ -4820,23 +4845,23 @@ function bankHistoryListHTML(){
   const fSun = new Date(first); fSun.setDate(first.getDate() - first.getDay());
   const nSun = new Date(now); nSun.setDate(now.getDate() - now.getDay());
   const weeks = Math.max(0, Math.round((nSun - fSun) / (7 * 864e5)));
-  const rows = []; let totSaved = 0, totUsed = 0;
+  const rows = []; let totSaved = 0, totCheat = 0;
   for (let w = 0; w >= -weeks && rows.length < 26; w--){
     const b = calorieBank(w);
     if (!b) break;
-    if (!b.days.some(d => d.logged && !d.isFuture && !d.isToday)) continue;    // no settled day this week
-    totSaved += b.saved; totUsed += b.used;
-    const cheats = b.days.filter(d => !d.isFuture && !d.isToday && d.logged && d.diff < 0);
+    const settled = b.days.some(d => d.logged && !d.isFuture && !d.isToday);
+    if (!settled && !b.cheats.length) continue;                               // nothing happened this week
+    totSaved += b.saved; totCheat += b.cheatTotal;
     rows.push(`<div class="cbh-row">
       <div class="cbh-top"><span class="cbh-rng"><bdi dir="ltr">${esc(bankRange(b.startDate, b.endDate))}</bdi>${w === 0 ? ` · ${tr("this week")}` : ""}</span>
         <span class="cbh-bal ${b.balance >= 0 ? "pos" : "neg"}">${b.balance >= 0 ? "+" : "−"}${n0(Math.abs(b.balance))}</span></div>
-      <div class="cbh-sub">${tr("Saved")} ${n0(b.saved)} · ${tr("Cheat meals")} ${n0(b.used)}</div>
-      ${cheats.length ? `<div class="cbh-cheats">${cheats.map(d => `<span class="cbh-cheat">${esc(dowName(d.dow, "short"))} −${n0(-d.diff)}</span>`).join("")}</div>` : ""}
+      <div class="cbh-sub">${tr("Saved")} ${n0(b.saved)}${b.cheatTotal ? ` · ${tr("Cheat meals")} ${n0(b.cheatTotal)}` : ""}${b.overWindow ? ` · ${tr("Over target")} ${n0(b.overWindow)}` : ""}</div>
+      ${b.cheats.length ? `<div class="cbh-foods">${b.cheats.map(c => `<div class="cbh-food"><span class="cf-nm" dir="auto">${esc(c.name)}</span><span class="cf-mt">${esc(dowName(c.dow, "short"))} · −${n0(c.kcal)}</span></div>`).join("")}</div>` : ""}
     </div>`);
   }
   if (!rows.length) return `<div class="tiny" style="color:var(--txt2);margin-top:10px">${tr("No completed weeks yet.")}</div>`;
   return `<div class="cbh">
-    <div class="cbh-summary">${tr("Since you started")} · ${tr("Saved")} <b>${n0(totSaved)}</b> · ${tr("Cheat meals")} <b>${n0(totUsed)}</b></div>
+    <div class="cbh-summary">${tr("Since you started")} · ${tr("Saved")} <b>${n0(totSaved)}</b> · ${tr("Cheat meals")} <b>${n0(totCheat)}</b></div>
     ${rows.join("")}
   </div>`;
 }
@@ -7424,7 +7449,7 @@ function plannerHTML(){
           <span class="pd-date">${dt.toLocaleDateString("en-GB", {day: "numeric", month: "short"})}</span>
           ${tot.n ? `<span class="pd-tot">${n0(tot.k)} kcal · ${n1(tot.p)}P${tg.kcal ? ` <span class="pd-tg">/ ${n0(tg.kcal)}</span>` : ""}</span>` : ""}
         </div>
-        ${FOOD_MEALS.map(([m, ml]) => {
+        ${FOOD_MEALS.filter(([m]) => m !== "cheat").map(([m, ml]) => {
           const items = planItems(date, m);
           return `<div class="plan-slot">
             <div class="ps-h"><span class="ps-nm">${t(ml)}</span><button class="ps-add" aria-label="Add ${ml}" onclick="M.planPick('${date}','${m}')">${ic("plus", 14)}</button></div>
