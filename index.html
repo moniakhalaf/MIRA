@@ -1298,7 +1298,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.123";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.124";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1549,6 +1549,28 @@ const TR = {
     "Community food database":"قاعدة بيانات الطعام المجتمعية","Supabase project URL":"رابط مشروع Supabase","Supabase anon key":"مفتاح Supabase العام (anon)",
     "Confirm your lookup below":"أكّد نتيجة البحث بالأسفل",
     "Estimated maintenance":"سعرات الصيانة المُقدّرة","kcal/day upkeep":"سعرة/يوم للصيانة","Avg intake":"متوسط الاستهلاك","kg/week":"كغ/أسبوع","days logged":"أيام مُسجّلة",
+    "All": "الكل",
+    "Lunch / Dinner": "غداء / عشاء",
+    "Salads": "سلطات",
+    "Sweets": "حلويات",
+    "Drinks": "مشروبات",
+    "Edit recipe": "تعديل الوصفة",
+    "Delete recipe": "حذف الوصفة",
+    "Add a recipe": "أضف وصفة",
+    "Change photo": "تغيير الصورة",
+    "Add a photo (optional)": "أضف صورة (اختياري)",
+    "e.g. Grilled chicken bowl": "مثال: وعاء دجاج مشوي",
+    "Servings": "الحصص",
+    "Cuisine (optional)": "المطبخ (اختياري)",
+    "Tags (comma-separated)": "وسوم (مفصولة بفواصل)",
+    "high-protein, quick": "عالي البروتين، سريع",
+    "Ingredients (one per line)": "المكوّنات (واحد بكل سطر)",
+    "Method (one step per line)": "الطريقة (خطوة بكل سطر)",
+    "Save changes": "حفظ التغييرات",
+    "Save recipe": "احفظ الوصفة",
+    "Give the recipe a name.": "أعطِ الوصفة اسمًا.",
+    "Recipe updated ✓": "حُدّثت الوصفة ✓",
+    "Recipe saved ✓": "حُفظت الوصفة ✓",
     "now": "الآن",
     "Today: under by": "اليوم: أقل بـ",
     "kcal so far — banks tonight if you finish here.": "سعرة حتى الآن — تُضاف الليلة إن أنهيت هنا.",
@@ -7030,36 +7052,40 @@ function recipeDetailHTML(){
       ${(r.ingredients || []).length ? `<button class="btn sm sec" style="width:100%;margin-top:10px" onclick="M.recipeToDish('${r.id}')">${ic("flame", 15)} ${t("Cook & log from these ingredients")}</button>` : ""}</div>
     <div class="card"><h3>${ic("book", 16)} ${tr("Method")}</h3>
       <ol class="rc-steps">${(r.steps || []).length ? r.steps.map(s => `<li dir="auto">${esc(s)}</li>`).join("") : `<li class="muted">${tr("Not listed.")}</li>`}</ol></div>
-    <button class="btn sec danger" onclick="M.recipeDel('${r.id}')">${ic("trash", 14)} Delete recipe</button>`;
+    <div class="row" style="gap:8px">
+      <button class="btn sec" style="flex:1" onclick="M.recipeEdit('${r.id}')">${ic("edit", 14)} ${tr("Edit recipe")}</button>
+      <button class="btn sec danger" style="flex:1" onclick="M.recipeDel('${r.id}')">${ic("trash", 14)} ${tr("Delete recipe")}</button>
+    </div>`;
 }
 function recipeFormHTML(){
   const f = R.recipeForm;
+  const editing = !!f.id;
   return `
-    <button class="cat-back" onclick="M.recipeFormCancel()">${ic("back", 18)} Recipes</button>
-    <div class="cat-title"><div class="ch-nm">Add a recipe</div></div>
+    <button class="cat-back" onclick="M.recipeFormCancel()">${ic("back", 18)} ${tr("Recipes")}</button>
+    <div class="cat-title"><div class="ch-nm">${editing ? tr("Edit recipe") : tr("Add a recipe")}</div></div>
     <div class="card">
       ${f.image ? `<img class="rc-formimg" src="${esc(f.image)}" alt="">` : ""}
-      <button class="btn sm sec" onclick="M.recipePhoto()">${ic("camera", 15)} ${f.image ? "Change photo" : "Add a photo (optional)"}</button>
-      <div class="field" style="margin-top:12px"><label>Name</label><input value="${esc(f.name)}" oninput="R.recipeForm.name=this.value" dir="auto" placeholder="e.g. Grilled chicken bowl"></div>
-      <div class="field"><label>Category</label>
+      <button class="btn sm sec" onclick="M.recipePhoto()">${ic("camera", 15)} ${f.image ? tr("Change photo") : tr("Add a photo (optional)")}</button>
+      <div class="field" style="margin-top:12px"><label>${tr("Name")}</label><input value="${esc(f.name)}" oninput="R.recipeForm.name=this.value" dir="auto" placeholder="${tr("e.g. Grilled chicken bowl")}"></div>
+      <div class="field"><label>${tr("Category")}</label>
         <select oninput="R.recipeForm.meal=this.value" onchange="R.recipeForm.meal=this.value">
-          ${RECIPE_CATS.filter(([v]) => v !== "all").map(([v, l]) => `<option value="${v}" ${(f.meal || "main") === v ? "selected" : ""}>${l}</option>`).join("")}
+          ${RECIPE_CATS.filter(([v]) => v !== "all").map(([v, l]) => `<option value="${v}" ${(f.meal || "main") === v ? "selected" : ""}>${esc(tr(l))}</option>`).join("")}
         </select></div>
       <div class="row">
-        <div class="field" style="flex:1"><label>Servings</label><input type="number" inputmode="numeric" value="${esc(f.servings)}" oninput="R.recipeForm.servings=this.value"></div>
-        <div class="field" style="flex:2"><label>Cuisine (optional)</label><input value="${esc(f.cuisine)}" oninput="R.recipeForm.cuisine=this.value" dir="auto"></div>
+        <div class="field" style="flex:1"><label>${tr("Servings")}</label><input type="number" inputmode="numeric" value="${esc(f.servings)}" oninput="R.recipeForm.servings=this.value"></div>
+        <div class="field" style="flex:2"><label>${tr("Cuisine (optional)")}</label><input value="${esc(f.cuisine)}" oninput="R.recipeForm.cuisine=this.value" dir="auto"></div>
       </div>
-      <label style="display:block;font-size:13px;font-weight:600;color:var(--txt2);margin-bottom:6px">Per serving</label>
+      <label style="display:block;font-size:13px;font-weight:600;color:var(--txt2);margin-bottom:6px">${tr("Per serving")}</label>
       <div class="grid4" style="margin-bottom:10px">
         <div class="field"><label>kcal</label><input type="number" inputmode="decimal" value="${esc(f.kcal)}" oninput="R.recipeForm.kcal=this.value"></div>
         <div class="field"><label>P</label><input type="number" inputmode="decimal" value="${esc(f.p)}" oninput="R.recipeForm.p=this.value"></div>
         <div class="field"><label>C</label><input type="number" inputmode="decimal" value="${esc(f.c)}" oninput="R.recipeForm.c=this.value"></div>
         <div class="field"><label>F</label><input type="number" inputmode="decimal" value="${esc(f.f)}" oninput="R.recipeForm.f=this.value"></div>
       </div>
-      <div class="field"><label>Tags (comma-separated)</label><input value="${esc(f.tags)}" oninput="R.recipeForm.tags=this.value" placeholder="high-protein, quick" dir="auto"></div>
-      <div class="field"><label>Ingredients (one per line)</label><textarea rows="5" oninput="R.recipeForm.ingredients=this.value" dir="auto">${esc(f.ingredients)}</textarea></div>
-      <div class="field"><label>Method (one step per line)</label><textarea rows="6" oninput="R.recipeForm.steps=this.value" dir="auto">${esc(f.steps)}</textarea></div>
-      <button class="btn" onclick="M.recipeFormSave()">Save recipe</button>
+      <div class="field"><label>${tr("Tags (comma-separated)")}</label><input value="${esc(f.tags)}" oninput="R.recipeForm.tags=this.value" placeholder="${tr("high-protein, quick")}" dir="auto"></div>
+      <div class="field"><label>${tr("Ingredients (one per line)")}</label><textarea rows="5" oninput="R.recipeForm.ingredients=this.value" dir="auto">${esc(f.ingredients)}</textarea></div>
+      <div class="field"><label>${tr("Method (one step per line)")}</label><textarea rows="6" oninput="R.recipeForm.steps=this.value" dir="auto">${esc(f.steps)}</textarea></div>
+      <button class="btn" onclick="M.recipeFormSave()">${editing ? tr("Save changes") : tr("Save recipe")}</button>
     </div>`;
 }
 function saveRecipe(j){
@@ -10186,7 +10212,21 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
     } catch (e) { R.recipeBusy = false; render(); toast("Search failed: " + e.message, 4400); }
   },
   recipeAddManual(){ R.recipeForm = {name: "", image: "", meal: "main", servings: "1", cuisine: "", kcal: "", p: "", c: "", f: "", tags: "", ingredients: "", steps: ""}; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
-  recipeFormCancel(){ R.recipeForm = null; render(); },
+  // Edit an existing recipe (incl. ones built via "I cooked this"). The form's
+  // `id` flags edit mode; save updates the recipe in place, keeping fields the
+  // form doesn't expose (cookedWeight, source, health note, timestamp).
+  recipeEdit(id){
+    const r = S.recipes.find(x => x.id === id); if (!r) return;
+    const p = r.per || {};
+    R.recipeForm = {id: r.id, name: r.name || "", image: r.image || "", meal: r.meal || "main",
+      servings: String(r.servings || 1), cuisine: r.cuisine || "",
+      kcal: p.kcal != null ? String(p.kcal) : "", p: p.p != null ? String(p.p) : "",
+      c: p.c != null ? String(p.c) : "", f: p.f != null ? String(p.f) : "",
+      tags: (r.tags || []).join(", "),
+      ingredients: (r.ingredients || []).join("\n"), steps: (r.steps || []).join("\n")};
+    R.recipeId = null; render(); const c = $("#content"); if (c) c.scrollTop = 0;
+  },
+  recipeFormCancel(){ const back = R.recipeForm && R.recipeForm.id; R.recipeForm = null; if (back) R.recipeId = back; render(); },
   recipePhoto(){
     const inp = $("#fileImg"); inp.value = "";
     inp.onchange = () => { const file = inp.files[0]; if (!file) return; if (!/^image\//.test(file.type)){ toast("Pick an image."); return; } resizeImage(file, 800, data => { if (R.recipeForm){ R.recipeForm.image = data; render(); } }); };
@@ -10194,13 +10234,25 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
   },
   recipeFormSave(){
     const f = R.recipeForm; if (!f) return;
-    if (!f.name.trim()){ toast("Give the recipe a name."); return; }
+    if (!f.name.trim()){ toast(tr("Give the recipe a name.")); return; }
+    const ingredients = (f.ingredients || "").split("\n").map(s => s.trim()).filter(Boolean);
+    const steps = (f.steps || "").split("\n").map(s => s.trim()).filter(Boolean);
+    if (f.id){                                                   // edit: update the existing recipe in place
+      const r = S.recipes.find(x => x.id === f.id);
+      if (r){
+        r.name = f.name.trim(); r.image = f.image || ""; r.cuisine = (f.cuisine || "").trim();
+        r.meal = normMeal(f.meal, f.tags); r.servings = Math.max(1, parseInt(f.servings) || 1);
+        r.tags = normTags(f.tags); r.per = {kcal: num(f.kcal), p: num(f.p), c: num(f.c), f: num(f.f)};
+        r.ingredients = ingredients; r.steps = steps;            // cookedWeight/source/healthNote/ts left intact
+      }
+      R.recipeForm = null; R.recipeId = f.id; save(); render();
+      toast(tr("Recipe updated ✓"));
+      return;
+    }
     const r = saveRecipe({name: f.name, image: f.image, cuisine: f.cuisine, meal: f.meal, servings: f.servings, tags: f.tags,
-      per: {kcal: f.kcal, p: f.p, c: f.c, f: f.f},
-      ingredients: (f.ingredients || "").split("\n").map(s => s.trim()).filter(Boolean),
-      steps: (f.steps || "").split("\n").map(s => s.trim()).filter(Boolean)});
+      per: {kcal: f.kcal, p: f.p, c: f.c, f: f.f}, ingredients, steps});
     R.recipeForm = null; R.recipeId = r.id; save(); render();
-    toast("Recipe saved ✓");
+    toast(tr("Recipe saved ✓"));
   },
   recipeLog(id){
     const r = S.recipes.find(x => x.id === id); if (!r) return;
