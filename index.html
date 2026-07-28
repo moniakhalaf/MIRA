@@ -1337,7 +1337,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.128";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.129";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -4939,7 +4939,7 @@ function foodHTML(){
       ${R.editFoodId ? `<div class="edit-banner">${ic("edit", 14)} Editing a logged entry <button class="btn sm sec" onclick="M.foodEditCancel()">Cancel</button></div>` : ""}
       <div class="field ac-wrap"><label>${t("Food name")}</label>
         <input id="ffName" value="${esc(foodForm.name)}" placeholder="Start typing — saved foods appear" dir="auto" autocomplete="off" style="padding-right:44px"
-          oninput="M.ffName(this.value)" onfocus="M.ffName(this.value)" onblur="setTimeout(()=>M.acHide(),180)">
+          oninput="M.ffName(this.value)" onfocus="acRender(this.value)" onblur="setTimeout(()=>M.acHide(),180)">
         <button class="in-mic" aria-label="Voice input" onmousedown="event.preventDefault()" onclick="M.voiceFood()">${ic("mic", 17)}</button>
         <div id="acList"></div>
       </div>
@@ -5282,6 +5282,10 @@ function acRender(q){
   const el = $("#acList");
   if (!el) return;
   const query = (q || "").trim().toLowerCase();
+  // Just picked this exact food → keep the list closed. Re-rendering the form
+  // restores focus to the name field, which would otherwise re-open the list
+  // showing the very item that was just chosen. Typing again clears the flag.
+  if (R.acPickedName && query === R.acPickedName.trim().toLowerCase()){ el.innerHTML = ""; return; }
   const hits = S.savedFoods
     .filter(f => !query || f.name.toLowerCase().includes(query))
     .slice(0, 8);
@@ -9097,7 +9101,7 @@ window.M = {
 
   /* ---- voice input ---- */
   voiceChat(){ startVoice(t => { const ta = $("#chatIn"); if (ta){ ta.value = (ta.value ? ta.value + " " : "") + t; ta.style.height = "auto"; ta.style.height = Math.min(ta.scrollHeight, 120) + "px"; ta.focus(); } }); },
-  voiceFood(){ startVoice(t => { foodForm.name = t; render(); acRender(t); }); },
+  voiceFood(){ startVoice(t => { foodForm.name = t; R.acPickedName = null; render(); acRender(t); }); },
 
   /* ---- training ---- */
   goTrain(sub){ R.tab = "train"; R.trainTab = sub || "today"; R.homeCat = null; R.sheet = null; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
@@ -10057,7 +10061,7 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
     catch (e) { toast("Could not copy on this browser."); }
   },
   dayToggle(d){ R.openDays.has(d) ? R.openDays.delete(d) : R.openDays.add(d); render(); },
-  ffName(v){ foodForm.name = v; acRender(v); },
+  ffName(v){ foodForm.name = v; R.acPickedName = null; acRender(v); },
   foodMeal(m){ foodForm.meal = m; render(); },
   async finishSuggest(){
     if (!S.settings.apiKey){ toast("Add your API key in Settings first."); R.tab = "set"; render(); return; }
@@ -10100,7 +10104,9 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
     const portion = pp && num(f.kcal) > 0 ? {base: pp.base, unit: pp.unit, k: num(f.kcal), p: num(f.p), c: num(f.c), f: num(f.f)} : null;
     Object.assign(foodForm, {name: f.name, amount: f.amount, kcal: f.kcal, p: f.p, c: f.c, f: f.f, conf: "user",
       portion, portG: portion ? portion.base : ""});
+    R.acPickedName = f.name;                 // keep the suggestion list closed after picking
     render();
+    const el = $("#acList"); if (el) el.innerHTML = "";   // clear immediately (before any focus re-render)
     toast(portion ? tr("Filled ✓ — change the amount to rescale") : tr("Filled from saved foods ✓"));
   },
   portionInput(v){
