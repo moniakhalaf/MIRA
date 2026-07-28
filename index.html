@@ -1014,6 +1014,12 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
 .cb-today{color:var(--txt2);margin-top:8px}
 .cb-note{color:var(--txt2);margin-top:8px;line-height:1.5}
 .cb-range-btn{margin-inline-start:auto;display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--txt2);background:var(--card2);border:1px solid var(--line2);border-radius:8px;padding:4px 9px}
+/* minimized calorie bank: balance badge in the header, tidy right-side group */
+.cbank>h3 .cb-hdr-bal{margin-inline-start:auto;font-size:16px;font-weight:800;font-variant-numeric:tabular-nums;direction:ltr}
+.cbank>h3 .cb-hdr-bal.pos{color:var(--green)}
+.cbank>h3 .cb-hdr-bal.neg{color:var(--amber)}
+.cbank>h3 .cb-range-btn{margin-inline-start:8px}
+.cbank>h3 .chev{margin-inline-start:8px}
 .cb-range-btn svg{color:var(--txt3)}
 .cb-range{display:flex;gap:10px;margin:2px 0 12px}
 .cb-range .field{flex:1;margin:0}
@@ -1325,7 +1331,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.126";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.127";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -4814,26 +4820,30 @@ function calorieBankHTML(){
         ? `<div class="tiny cb-today">${tr("Today: under by")} ${n0(b.today.diff)} ${tr("kcal so far — banks tonight if you finish here.")}</div>`
         : `<div class="tiny cb-today">${tr("Today: over by")} ${n0(-b.today.diff)} ${tr("kcal so far — a cheat meal draws from the bank.")}</div>`)
     : "";
-  return `<div class="card cbank">
-    <h3>${ic("wallet", 16)} ${tr("Calorie bank")}
-      <button class="cb-range-btn" onclick="M.bankEditToggle()">${esc(dowName(b.from, "short"))}–${esc(dowName(b.to, "short"))} ${ic(R.bankEdit ? "x" : "edit", 12)}</button></h3>
-    ${R.bankEdit ? bankRangePickerHTML() : ""}
-    <div class="cb-balance ${b.balance >= 0 ? "pos" : "neg"}">
-      <div class="cb-bv">${b.balance >= 0 ? "+" : "−"}${n0(Math.abs(b.balance))}</div>
-      <div class="cb-bl">${tr("kcal banked this week")}</div>
+  return `<div class="card fold cbank ${R.bankOpen === false ? "" : "open"}" id="cbankCard">
+    <h3 onclick="M.fold('bankOpen', this)">${ic("wallet", 16)} ${tr("Calorie bank")}
+      <span class="cb-hdr-bal ${b.balance >= 0 ? "pos" : "neg"}">${b.balance >= 0 ? "+" : "−"}${n0(Math.abs(b.balance))}</span>
+      <button class="cb-range-btn" onclick="event.stopPropagation();M.bankEditToggle()">${esc(dowName(b.from, "short"))}–${esc(dowName(b.to, "short"))} ${ic(R.bankEdit ? "x" : "edit", 12)}</button>
+      <span class="chev">▶</span></h3>
+    <div class="fold-body">
+      ${R.bankEdit ? bankRangePickerHTML() : ""}
+      <div class="cb-balance ${b.balance >= 0 ? "pos" : "neg"}">
+        <div class="cb-bv">${b.balance >= 0 ? "+" : "−"}${n0(Math.abs(b.balance))}</div>
+        <div class="cb-bl">${tr("kcal banked this week")}</div>
+      </div>
+      <div class="cb-strip" style="grid-template-columns:repeat(${b.days.length}, 1fr)">${strip}</div>
+      ${b.saved || b.used ? `<div class="cb-meta">${tr("Saved")} <b>${n0(b.saved)}</b>${b.cheatTotal ? ` · ${tr("Cheat meals")} <b>${n0(b.cheatTotal)}</b>` : ""}${b.overWindow ? ` · ${tr("Over target")} <b>${n0(b.overWindow)}</b>` : ""}</div>` : ""}
+      ${b.cheats.length ? `<div class="cb-cheatlist">${b.cheats.map(c => `<div class="cb-cheatrow"><span class="cc-nm" dir="auto">${esc(c.name)}</span><span class="cc-mt">${esc(dowName(c.dow, "short"))} · <b>−${n0(c.kcal)}</b></span></div>`).join("")}</div>` : ""}
+      ${todayLine}
+      <div class="tiny cb-note">${ready
+        ? tr("You've banked enough room for a cheat meal — enjoy it without breaking your week.")
+        : tr("Come in under target on your chosen days to bank calories for a cheat meal (a meal out is roughly 600–900 kcal).")}</div>
+      <div class="cb-acts">
+        <button class="btn sm sec" onclick="M.bankHistory()">${ic("chart", 14)} ${R.bankHistOpen ? tr("Hide history") : tr("History")}</button>
+      </div>
+      ${R.bankHistOpen ? bankHistoryListHTML() : ""}
+      <div class="tiny" style="color:var(--txt3);margin-top:8px">${tr("Only days you logged count — an empty day doesn't bank.")}</div>
     </div>
-    <div class="cb-strip" style="grid-template-columns:repeat(${b.days.length}, 1fr)">${strip}</div>
-    ${b.saved || b.used ? `<div class="cb-meta">${tr("Saved")} <b>${n0(b.saved)}</b>${b.cheatTotal ? ` · ${tr("Cheat meals")} <b>${n0(b.cheatTotal)}</b>` : ""}${b.overWindow ? ` · ${tr("Over target")} <b>${n0(b.overWindow)}</b>` : ""}</div>` : ""}
-    ${b.cheats.length ? `<div class="cb-cheatlist">${b.cheats.map(c => `<div class="cb-cheatrow"><span class="cc-nm" dir="auto">${esc(c.name)}</span><span class="cc-mt">${esc(dowName(c.dow, "short"))} · <b>−${n0(c.kcal)}</b></span></div>`).join("")}</div>` : ""}
-    ${todayLine}
-    <div class="tiny cb-note">${ready
-      ? tr("You've banked enough room for a cheat meal — enjoy it without breaking your week.")
-      : tr("Come in under target on your chosen days to bank calories for a cheat meal (a meal out is roughly 600–900 kcal).")}</div>
-    <div class="cb-acts">
-      <button class="btn sm sec" onclick="M.bankHistory()">${ic("chart", 14)} ${R.bankHistOpen ? tr("Hide history") : tr("History")}</button>
-    </div>
-    ${R.bankHistOpen ? bankHistoryListHTML() : ""}
-    <div class="tiny" style="color:var(--txt3);margin-top:8px">${tr("Only days you logged count — an empty day doesn't bank.")}</div>
   </div>`;
 }
 // Every week since the first logged day: net balance + the cheat meals that
@@ -4915,8 +4925,8 @@ function foodHTML(){
     <div class="bar"><i style="width:${wPct}%;background:var(--water)"></i></div>
   </div>
 
-  <div class="card fold open" id="addFoodCard">
-    <h3 onclick="this.parentElement.classList.toggle('open')">${ic(R.editFoodId ? "edit" : "plus", 16)} ${R.editFoodId ? t("Edit entry") : t("Log food")} <span class="chev">▶</span></h3>
+  <div class="card fold ${(reviewItems || R.editFoodId || R.logFoodOpen !== false) ? "open" : ""}" id="addFoodCard">
+    <h3 onclick="M.fold('logFoodOpen', this)">${ic(R.editFoodId ? "edit" : "plus", 16)} ${R.editFoodId ? t("Edit entry") : t("Log food")} <span class="chev">▶</span></h3>
     <div class="fold-body">
       ${R.editFoodId ? `<div class="edit-banner">${ic("edit", 14)} Editing a logged entry <button class="btn sm sec" onclick="M.foodEditCancel()">Cancel</button></div>` : ""}
       <div class="field ac-wrap"><label>${t("Food name")}</label>
@@ -4979,7 +4989,7 @@ function foodHTML(){
   </div>
 
   <div class="card fold ${R.mealsOpen ? "open" : ""}" id="mealsCard">
-    <h3 onclick="M.mealsToggle()">${ic("bookmark", 16)} ${t("Meals & shortcuts")}${S.meals.length ? ` (${S.meals.length})` : ""} <span class="chev">▶</span></h3>
+    <h3 onclick="M.fold('mealsOpen', this)">${ic("bookmark", 16)} ${t("Meals & shortcuts")}${S.meals.length ? ` (${S.meals.length})` : ""} <span class="chev">▶</span></h3>
     <div class="fold-body">
       <div class="row" style="margin-bottom:10px">
         <button class="btn sm sec" onclick="M.copyYesterday()">${ic("copy", 14)} ${t("Copy yesterday")}</button>
@@ -5230,7 +5240,7 @@ function foodReportCardHTML(){
   const {from, to} = foodRange();
   const s = foodRangeStats(from, to);
   return `<div class="card fold ${R.reportOpen ? "open" : ""}" id="reportCard">
-    <h3 onclick="M.reportToggle()">${ic("share", 16)} ${tr("Share food log")} <span class="chev">▶</span></h3>
+    <h3 onclick="M.fold('reportOpen', this)">${ic("share", 16)} ${tr("Share food log")} <span class="chev">▶</span></h3>
     <div class="fold-body">
       <div class="muted" style="margin-bottom:10px">${tr("Pick a date range, then share a clean summary image (great for WhatsApp), a spreadsheet (CSV), or a PDF.")}</div>
       <div class="row" style="gap:10px">
@@ -8753,8 +8763,8 @@ function settingsHTML(){
     <div class="tiny" style="margin-top:8px">${tr("Both values are on your Supabase project's API settings page. The anon key is safe to embed — row-level security (in the provided SQL) governs what it can do: read the shared foods and add new ones, nothing else.")}</div>
   </div>`; })()}
 
-  <div class="card fold" id="savedFoodsCard">
-    <h3 onclick="this.parentElement.classList.toggle('open')">${ic("bookmark", 16)} ${tr("Saved foods")} (${S.savedFoods.length}) <span class="chev">▶</span></h3>
+  <div class="card fold ${R.savedFoodsOpen ? "open" : ""}" id="savedFoodsCard">
+    <h3 onclick="M.fold('savedFoodsOpen', this)">${ic("bookmark", 16)} ${tr("Saved foods")} (${S.savedFoods.length}) <span class="chev">▶</span></h3>
     <div class="fold-body">
       ${S.savedFoods.length ? S.savedFoods.map((f, i) => `<div class="set-row">
         <div><div class="k" dir="auto">${esc(f.name)}</div><div class="desc">${f.amount ? esc(f.amount) + " · " : ""}${n0(f.kcal)} kcal · ${n1(f.p)}P · ${n1(f.c)}C · ${n1(f.f)}F</div></div>
@@ -9835,7 +9845,7 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
   openConv(id){ R.convId = id; R.sheet = null; render(); },
   openFoodLog(){ R.tab = "food"; R.homeCat = null; R.mealsOpen = false; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
   // ---- calorie bank: configurable window + history ----
-  bankEditToggle(){ R.bankEdit = !R.bankEdit; render(); },
+  bankEditToggle(){ R.bankEdit = !R.bankEdit; if (R.bankEdit) R.bankOpen = true; render(); },
   bankSetFrom(v){ const from = Math.max(0, Math.min(6, +v)); let to = (S.settings.bankTo == null ? 4 : +S.settings.bankTo); if (to < from) to = from; S.settings.bankFrom = from; S.settings.bankTo = to; save(); render(); },
   bankSetTo(v){ const to = Math.max(0, Math.min(6, +v)); let from = (S.settings.bankFrom == null ? 0 : +S.settings.bankFrom); if (from > to) from = to; S.settings.bankFrom = from; S.settings.bankTo = to; save(); render(); },
   bankHistory(){ R.bankHistOpen = !R.bankHistOpen; render(); },
@@ -10010,6 +10020,10 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
     if (confirm(`Delete the meal "${S.meals[i].name}"?`)){ S.meals.splice(i, 1); save(); render(); }
   },
   mealsToggle(){ R.mealsOpen = !R.mealsOpen; render(); },
+  // Collapse/expand a fold card WITHOUT a full re-render, and remember the state
+  // in R so a later render (triggered by another card) keeps it — fixes cards
+  // springing back open and the page jumping when a sibling card re-renders.
+  fold(key, el){ const card = el.closest(".fold"); if (!card) return; R[key] = card.classList.toggle("open"); },
   barcode: scanBarcode,
   quickWeight(){
     const v = num(($("#qw") || {}).value);
