@@ -993,7 +993,8 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
 .bars{display:flex;flex-direction:column;gap:10px}
 /* calorie bank */
 .cbank .cb-balance{display:flex;align-items:baseline;gap:9px;margin:2px 0 12px}
-.cbank .cb-bv{font-size:30px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1}
+.cbank .cb-bv{font-size:30px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1;direction:ltr}
+.cb-day .cb-dv,.cbh-bal{direction:ltr}
 .cbank .cb-balance.pos .cb-bv{color:var(--green)}
 .cbank .cb-balance.neg .cb-bv{color:var(--amber)}
 .cbank .cb-bl{font-size:12.5px;color:var(--txt2)}
@@ -1012,6 +1013,24 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
 .cb-meta b{color:var(--txt)}
 .cb-today{color:var(--txt2);margin-top:8px}
 .cb-note{color:var(--txt2);margin-top:8px;line-height:1.5}
+.cb-range-btn{margin-inline-start:auto;display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--txt2);background:var(--card2);border:1px solid var(--line2);border-radius:8px;padding:4px 9px}
+.cb-range-btn svg{color:var(--txt3)}
+.cb-range{display:flex;gap:10px;margin:2px 0 12px}
+.cb-range .field{flex:1;margin:0}
+.cb-acts{margin-top:12px}
+.cb-acts .btn{width:100%}
+.cbh{margin-top:12px;border-top:1px solid var(--line2);padding-top:12px}
+.cbh-summary{font-size:12.5px;color:var(--txt2);margin-bottom:10px}
+.cbh-summary b{color:var(--txt)}
+.cbh-row{padding:9px 0;border-bottom:1px solid var(--line2)}
+.cbh-row:last-child{border-bottom:0}
+.cbh-top{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.cbh-rng{font-size:13.5px;font-weight:600}
+.cbh-bal{font-size:15px;font-weight:800;font-variant-numeric:tabular-nums}
+.cbh-bal.pos{color:var(--green)} .cbh-bal.neg{color:var(--amber)}
+.cbh-sub{font-size:12px;color:var(--txt3);margin-top:2px}
+.cbh-cheats{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.cbh-cheat{font-size:11.5px;font-weight:600;color:var(--amber);background:color-mix(in srgb,var(--amber) 12%,transparent);border:1px solid color-mix(in srgb,var(--amber) 28%,transparent);border-radius:7px;padding:2px 7px;font-variant-numeric:tabular-nums}
 .bar-line{display:flex;flex-direction:column;gap:4px}
 .bar-top{display:flex;justify-content:space-between;font-size:13px}
 .bar-top .lab{font-weight:600}
@@ -1298,7 +1317,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.124";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.125";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1549,6 +1568,14 @@ const TR = {
     "Community food database":"قاعدة بيانات الطعام المجتمعية","Supabase project URL":"رابط مشروع Supabase","Supabase anon key":"مفتاح Supabase العام (anon)",
     "Confirm your lookup below":"أكّد نتيجة البحث بالأسفل",
     "Estimated maintenance":"سعرات الصيانة المُقدّرة","kcal/day upkeep":"سعرة/يوم للصيانة","Avg intake":"متوسط الاستهلاك","kg/week":"كغ/أسبوع","days logged":"أيام مُسجّلة",
+    "kcal so far — a cheat meal draws from the bank.": "سعرة حتى الآن — الوجبة الحرة تُخصم من البنك.",
+    "Cheat meals": "وجبات حرة",
+    "Come in under target on your chosen days to bank calories for a cheat meal (a meal out is roughly 600–900 kcal).": "ابقَ تحت هدفك في الأيام التي اخترتها لتدّخر سعرات لوجبة حرة (وجبة بالخارج تقارب 600–900 سعرة).",
+    "Hide history": "إخفاء السجل",
+    "No history yet — log a few days.": "لا سجل بعد — سجّل بضعة أيام.",
+    "this week": "هذا الأسبوع",
+    "No completed weeks yet.": "لا أسابيع مكتملة بعد.",
+    "Since you started": "منذ أن بدأت",
     "All": "الكل",
     "Lunch / Dinner": "غداء / عشاء",
     "Salads": "سلطات",
@@ -4683,66 +4710,134 @@ function insightsHTML(){
   </div>`;
 }
 
-/* ---------------- Calorie bank (Sun–Thu rollover) ----------------
+/* ---------------- Calorie bank (configurable weekly window) ----------------
    Days you finish UNDER your calorie target bank the leftover; days you go
-   over spend it back. The running balance across the Sunday→Thursday work
-   week is calorie "room" the user can spend on a cheat meal. Only completed,
-   logged days count — an unlogged day is unknown, not a deficit — and today
-   is shown live but not banked until it's done. */
-function calorieBank(){
+   OVER (a cheat meal) spend it back. The net balance across the user's chosen
+   window (default Sunday→Thursday) is calorie "room" for a cheat meal. Only
+   completed, logged days count — an unlogged day is unknown, not a deficit —
+   and today is shown live but not banked until it's done. History rolls the
+   same maths back over every week since the first logged day. */
+function bankWindow(){
+  let from = S.settings.bankFrom, to = S.settings.bankTo;
+  from = (from == null || from === "") ? 0 : Math.max(0, Math.min(6, +from));   // 0=Sun … 6=Sat
+  to   = (to   == null || to   === "") ? 4 : Math.max(0, Math.min(6, +to));
+  if (to < from) to = from;
+  return {from, to};
+}
+// Localised weekday name for a day index (0=Sun). Anchored to a known Sunday.
+function dowName(dow, style){
+  const ref = new Date(2024, 0, 7);                                            // 2024-01-07 is a Sunday
+  const dt = new Date(ref); dt.setDate(ref.getDate() + dow);
+  return dt.toLocaleDateString(uiLang() || "en", {weekday: style || "short"});
+}
+function calorieBank(offset){
+  offset = offset || 0;
   const tg = num((S.settings.targets || {}).kcal);
   if (!tg) return null;
+  const {from, to} = bankWindow();
   const today = todayStr();
   const now = new Date(today + "T00:00:00");
-  const sunday = new Date(now); sunday.setDate(now.getDate() - now.getDay());   // this week's Sunday
+  const sunday = new Date(now); sunday.setDate(now.getDate() - now.getDay() + offset * 7);
   const days = [];
-  for (let i = 0; i < 5; i++){                                                  // Sun..Thu
-    const dt = new Date(sunday); dt.setDate(sunday.getDate() + i);
+  for (let dow = from; dow <= to; dow++){
+    const dt = new Date(sunday); dt.setDate(sunday.getDate() + dow);
     const date = dt.toLocaleDateString("en-CA");
     const consumed = dayTotals(date).kcal;
-    days.push({date, consumed, logged: consumed > 0, isToday: date === today, isFuture: date > today, diff: tg - consumed});
+    days.push({date, dow, consumed, logged: consumed > 0, isToday: date === today, isFuture: date > today, diff: tg - consumed});
   }
   let saved = 0, used = 0, contribDays = 0;
   days.forEach(d => {
-    if (d.isFuture || d.isToday || !d.logged) return;                          // only completed, logged days bank
+    if (d.isFuture || d.isToday || !d.logged) return;                          // only completed, logged days settle
     contribDays++;
-    if (d.diff >= 0) saved += d.diff; else used += -d.diff;
+    if (d.diff >= 0) saved += d.diff; else used += -d.diff;                    // over target = a cheat meal, deducted
   });
-  return {tg, days, saved: Math.round(saved), used: Math.round(used), balance: Math.round(saved - used),
-    contribDays, today: days.find(d => d.isToday) || null};
+  return {tg, from, to, days, saved: Math.round(saved), used: Math.round(used), balance: Math.round(saved - used),
+    contribDays, today: days.find(d => d.isToday) || null,
+    startDate: days[0] && days[0].date, endDate: days.length ? days[days.length - 1].date : null};
+}
+// "12–16 Jul" style range, localised, month shown once when it doesn't change.
+function bankRange(a, b){
+  const da = new Date(a + "T00:00:00"), db = new Date(b + "T00:00:00"), loc = uiLang() || "en";
+  const day = d => d.toLocaleDateString(loc, {day: "numeric"});
+  const mon = d => d.toLocaleDateString(loc, {month: "short"});
+  return da.getMonth() === db.getMonth()
+    ? `${day(da)}–${day(db)} ${mon(db)}`                              // 19–23 Jul
+    : `${day(da)} ${mon(da)} – ${day(db)} ${mon(db)}`;               // 30 Jul – 3 Aug
+}
+function bankRangePickerHTML(){
+  const {from, to} = bankWindow();
+  const opts = sel => [0, 1, 2, 3, 4, 5, 6].map(d => `<option value="${d}" ${d === sel ? "selected" : ""}>${esc(dowName(d, "long"))}</option>`).join("");
+  return `<div class="cb-range">
+    <div class="field"><label>${tr("From")}</label><select onchange="M.bankSetFrom(this.value)">${opts(from)}</select></div>
+    <div class="field"><label>${tr("To")}</label><select onchange="M.bankSetTo(this.value)">${opts(to)}</select></div>
+  </div>`;
 }
 function calorieBankHTML(){
   const b = calorieBank();
   if (!b) return "";
-  if (!b.contribDays && !(b.today && b.today.logged)) return "";               // nothing this week yet
+  if (!b.contribDays && !(b.today && b.today.logged) && !S.foods.length) return "";   // nothing to show at all
   const ready = b.balance >= 600;                                              // ~ a cheat meal out
   const strip = b.days.map(d => {
-    const lab = new Date(d.date + "T00:00:00").toLocaleDateString(uiLang() || "en", {weekday: "short"});
     let val = "·", cls = "fut";
     if (d.isToday){ val = tr("now"); cls = "today"; }
     else if (d.isFuture){ val = "·"; cls = "fut"; }
     else if (!d.logged){ val = "—"; cls = "none"; }
     else { val = (d.diff >= 0 ? "+" : "−") + n0(Math.abs(d.diff)); cls = d.diff >= 0 ? "pos" : "neg"; }
-    return `<div class="cb-day ${cls}"><span class="cb-dl">${esc(lab)}</span><span class="cb-dv">${val}</span></div>`;
+    return `<div class="cb-day ${cls}"><span class="cb-dl">${esc(dowName(d.dow, "short"))}</span><span class="cb-dv">${val}</span></div>`;
   }).join("");
   const todayLine = b.today && b.today.logged
     ? (b.today.diff >= 0
         ? `<div class="tiny cb-today">${tr("Today: under by")} ${n0(b.today.diff)} ${tr("kcal so far — banks tonight if you finish here.")}</div>`
-        : `<div class="tiny cb-today">${tr("Today: over by")} ${n0(-b.today.diff)} ${tr("kcal so far.")}</div>`)
+        : `<div class="tiny cb-today">${tr("Today: over by")} ${n0(-b.today.diff)} ${tr("kcal so far — a cheat meal draws from the bank.")}</div>`)
     : "";
   return `<div class="card cbank">
-    <h3>${ic("wallet", 16)} ${tr("Calorie bank")} <span class="tiny" style="margin-inline-start:auto;font-weight:400">${tr("Sun–Thu")}</span></h3>
+    <h3>${ic("wallet", 16)} ${tr("Calorie bank")}
+      <button class="cb-range-btn" onclick="M.bankEditToggle()">${esc(dowName(b.from, "short"))}–${esc(dowName(b.to, "short"))} ${ic(R.bankEdit ? "x" : "edit", 12)}</button></h3>
+    ${R.bankEdit ? bankRangePickerHTML() : ""}
     <div class="cb-balance ${b.balance >= 0 ? "pos" : "neg"}">
       <div class="cb-bv">${b.balance >= 0 ? "+" : "−"}${n0(Math.abs(b.balance))}</div>
       <div class="cb-bl">${tr("kcal banked this week")}</div>
     </div>
-    <div class="cb-strip">${strip}</div>
-    ${b.saved || b.used ? `<div class="cb-meta">${tr("Saved")} <b>${n0(b.saved)}</b> · ${tr("Used")} <b>${n0(b.used)}</b></div>` : ""}
+    <div class="cb-strip" style="grid-template-columns:repeat(${b.days.length}, 1fr)">${strip}</div>
+    ${b.saved || b.used ? `<div class="cb-meta">${tr("Saved")} <b>${n0(b.saved)}</b> · ${tr("Cheat meals")} <b>${n0(b.used)}</b></div>` : ""}
     ${todayLine}
     <div class="tiny cb-note">${ready
       ? tr("You've banked enough room for a cheat meal — enjoy it without breaking your week.")
-      : tr("Come in under target Sun–Thu to bank calories for a cheat meal (a meal out is roughly 600–900 kcal).")}</div>
-    <div class="tiny" style="color:var(--txt3);margin-top:5px">${tr("Only days you logged count — an empty day doesn't bank.")}</div>
+      : tr("Come in under target on your chosen days to bank calories for a cheat meal (a meal out is roughly 600–900 kcal).")}</div>
+    <div class="cb-acts">
+      <button class="btn sm sec" onclick="M.bankHistory()">${ic("chart", 14)} ${R.bankHistOpen ? tr("Hide history") : tr("History")}</button>
+    </div>
+    ${R.bankHistOpen ? bankHistoryListHTML() : ""}
+    <div class="tiny" style="color:var(--txt3);margin-top:8px">${tr("Only days you logged count — an empty day doesn't bank.")}</div>
+  </div>`;
+}
+// Every week since the first logged day: net balance + the cheat meals that
+// drew it down. Skips weeks with no completed logged day.
+function bankHistoryListHTML(){
+  const dates = S.foods.map(f => f.date).filter(Boolean).sort();
+  if (!dates.length) return `<div class="tiny" style="color:var(--txt2);margin-top:10px">${tr("No history yet — log a few days.")}</div>`;
+  const first = new Date(dates[0] + "T00:00:00"), now = new Date(todayStr() + "T00:00:00");
+  const fSun = new Date(first); fSun.setDate(first.getDate() - first.getDay());
+  const nSun = new Date(now); nSun.setDate(now.getDate() - now.getDay());
+  const weeks = Math.max(0, Math.round((nSun - fSun) / (7 * 864e5)));
+  const rows = []; let totSaved = 0, totUsed = 0;
+  for (let w = 0; w >= -weeks && rows.length < 26; w--){
+    const b = calorieBank(w);
+    if (!b) break;
+    if (!b.days.some(d => d.logged && !d.isFuture && !d.isToday)) continue;    // no settled day this week
+    totSaved += b.saved; totUsed += b.used;
+    const cheats = b.days.filter(d => !d.isFuture && !d.isToday && d.logged && d.diff < 0);
+    rows.push(`<div class="cbh-row">
+      <div class="cbh-top"><span class="cbh-rng"><bdi dir="ltr">${esc(bankRange(b.startDate, b.endDate))}</bdi>${w === 0 ? ` · ${tr("this week")}` : ""}</span>
+        <span class="cbh-bal ${b.balance >= 0 ? "pos" : "neg"}">${b.balance >= 0 ? "+" : "−"}${n0(Math.abs(b.balance))}</span></div>
+      <div class="cbh-sub">${tr("Saved")} ${n0(b.saved)} · ${tr("Cheat meals")} ${n0(b.used)}</div>
+      ${cheats.length ? `<div class="cbh-cheats">${cheats.map(d => `<span class="cbh-cheat">${esc(dowName(d.dow, "short"))} −${n0(-d.diff)}</span>`).join("")}</div>` : ""}
+    </div>`);
+  }
+  if (!rows.length) return `<div class="tiny" style="color:var(--txt2);margin-top:10px">${tr("No completed weeks yet.")}</div>`;
+  return `<div class="cbh">
+    <div class="cbh-summary">${tr("Since you started")} · ${tr("Saved")} <b>${n0(totSaved)}</b> · ${tr("Cheat meals")} <b>${n0(totUsed)}</b></div>
+    ${rows.join("")}
   </div>`;
 }
 
@@ -9714,6 +9809,11 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
   sheetClose(){ R.sheet = null; render(); },
   openConv(id){ R.convId = id; R.sheet = null; render(); },
   openFoodLog(){ R.tab = "food"; R.homeCat = null; R.mealsOpen = false; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
+  // ---- calorie bank: configurable window + history ----
+  bankEditToggle(){ R.bankEdit = !R.bankEdit; render(); },
+  bankSetFrom(v){ const from = Math.max(0, Math.min(6, +v)); let to = (S.settings.bankTo == null ? 4 : +S.settings.bankTo); if (to < from) to = from; S.settings.bankFrom = from; S.settings.bankTo = to; save(); render(); },
+  bankSetTo(v){ const to = Math.max(0, Math.min(6, +v)); let from = (S.settings.bankFrom == null ? 0 : +S.settings.bankFrom); if (from > to) from = to; S.settings.bankFrom = from; S.settings.bankTo = to; save(); render(); },
+  bankHistory(){ R.bankHistOpen = !R.bankHistOpen; render(); },
   undoChatLog(cid, idx){
     const conv = S.convs.find(c => c.id === cid); if (!conv) return;
     const m = conv.msgs[idx]; if (!m || !m.logged) return;
