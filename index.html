@@ -1337,7 +1337,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.130";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.131";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1588,6 +1588,7 @@ const TR = {
     "Community food database":"قاعدة بيانات الطعام المجتمعية","Supabase project URL":"رابط مشروع Supabase","Supabase anon key":"مفتاح Supabase العام (anon)",
     "Confirm your lookup below":"أكّد نتيجة البحث بالأسفل",
     "Estimated maintenance":"سعرات الصيانة المُقدّرة","kcal/day upkeep":"سعرة/يوم للصيانة","Avg intake":"متوسط الاستهلاك","kg/week":"كغ/أسبوع","days logged":"أيام مُسجّلة",
+    "Scan a label or barcode, scale a portion, or build a cooked dish from its ingredients.": "امسح ملصقًا أو باركود، أو عدّل الكمية، أو ابنِ طبقًا مطبوخًا من مكوّناته.",
     "pieces": "قطع",
     "Total for": "الإجمالي لـ",
     "More ways to add this": "طرق أخرى لإضافته",
@@ -4830,7 +4831,7 @@ function calorieBankHTML(){
         ? `<div class="tiny cb-today">${tr("Today: under by")} ${n0(b.today.diff)} ${tr("kcal so far — banks tonight if you finish here.")}</div>`
         : `<div class="tiny cb-today">${tr("Today: over by")} ${n0(-b.today.diff)} ${tr("kcal so far — a cheat meal draws from the bank.")}</div>`)
     : "";
-  return `<div class="card fold cbank ${R.bankOpen === false ? "" : "open"}" id="cbankCard">
+  return `<div class="card fold cbank ${R.bankOpen === true ? "open" : ""}" id="cbankCard">
     <h3 onclick="M.fold('bankOpen', this)">${ic("wallet", 16)} ${tr("Calorie bank")}
       <span class="cb-hdr-bal ${b.balance >= 0 ? "pos" : "neg"}">${b.balance >= 0 ? "+" : "−"}${n0(Math.abs(b.balance))}</span>
       <button class="cb-range-btn" onclick="event.stopPropagation();M.bankEditToggle()">${esc(dowName(b.from, "short"))}–${esc(dowName(b.to, "short"))} ${ic(R.bankEdit ? "x" : "edit", 12)}</button>
@@ -4970,12 +4971,12 @@ function foodHTML(){
       </div>
       <button class="btn" style="width:100%;margin-bottom:12px" onclick="M.foodSave()">${R.editFoodId ? t("Update entry") : t("Save to log")}</button>
       `}
-      <div class="food-tools-wrap ${(R.foodToolsOpen || foodForm.scOpen || dishForm.open || findBusy || extractBusy || barcodeBusy) ? "open" : ""}">
+      <button class="btn sm sec" style="width:100%;margin-bottom:8px" onclick="M.findMacros()" ${findBusy ? "disabled" : ""}>${findBusy ? "Searching…" : ic("search", 15) + " " + t("Find macros")}</button>
+      <div class="food-tools-wrap ${(R.foodToolsOpen || foodForm.scOpen || dishForm.open || extractBusy || barcodeBusy) ? "open" : ""}">
         <button class="btn sm sec ft-toggle" style="width:100%" aria-expanded="${R.foodToolsOpen ? "true" : "false"}" onclick="M.foodTools(this)">${ic("plus", 16)} ${t("More ways to add this")} <span class="chev">▶</span></button>
         <div class="ft-body">
-          <div class="tiny" style="margin:2px 2px 8px;color:var(--txt2)">${t("Don't have the numbers? Search a food, scan a label or barcode, scale a portion, or build a cooked dish.")}</div>
+          <div class="tiny" style="margin:2px 2px 8px;color:var(--txt2)">${t("Scan a label or barcode, scale a portion, or build a cooked dish from its ingredients.")}</div>
           <div class="grid2" style="gap:8px">
-            <button class="btn sm sec" style="width:100%" onclick="M.findMacros()" ${findBusy ? "disabled" : ""}>${findBusy ? "Searching…" : ic("search", 15) + " " + t("Find macros")}</button>
             <button class="btn sm sec" style="width:100%" onclick="M.barcode()" ${barcodeBusy ? "disabled" : ""}>${barcodeBusy ? "Looking up…" : ic("barcode", 15) + " " + t("Barcode")}</button>
             <button class="btn sm sec" style="width:100%" onclick="M.extractPhoto()" ${extractBusy ? "disabled" : ""}>${extractBusy ? "Reading…" : ic("camera", 15) + " " + t("Snap food / label")}</button>
             <button class="btn sm sec" style="width:100%" onclick="M.scToggle()">${ic("sliders", 15)} ${t("Portion scaler")}</button>
