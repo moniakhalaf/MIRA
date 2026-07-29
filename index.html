@@ -1337,7 +1337,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.129";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.130";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1588,6 +1588,8 @@ const TR = {
     "Community food database":"قاعدة بيانات الطعام المجتمعية","Supabase project URL":"رابط مشروع Supabase","Supabase anon key":"مفتاح Supabase العام (anon)",
     "Confirm your lookup below":"أكّد نتيجة البحث بالأسفل",
     "Estimated maintenance":"سعرات الصيانة المُقدّرة","kcal/day upkeep":"سعرة/يوم للصيانة","Avg intake":"متوسط الاستهلاك","kg/week":"كغ/أسبوع","days logged":"أيام مُسجّلة",
+    "pieces": "قطع",
+    "Total for": "الإجمالي لـ",
     "More ways to add this": "طرق أخرى لإضافته",
     "Don't have the numbers? Search a food, scan a label or barcode, scale a portion, or build a cooked dish.": "لا تعرف الأرقام؟ ابحث عن طعام، أو امسح ملصقًا أو باركود، أو عدّل الكمية، أو ابنِ طبقًا مطبوخًا.",
     "Over target": "تجاوز الهدف",
@@ -4933,7 +4935,7 @@ function foodHTML(){
     <div class="bar"><i style="width:${wPct}%;background:var(--water)"></i></div>
   </div>
 
-  <div class="card fold ${(reviewItems || R.editFoodId || R.logFoodOpen !== false) ? "open" : ""}" id="addFoodCard">
+  <div class="card fold ${(reviewItems || R.editFoodId || R.logFoodOpen === true) ? "open" : ""}" id="addFoodCard">
     <h3 onclick="M.fold('logFoodOpen', this)">${ic(R.editFoodId ? "edit" : "plus", 16)} ${R.editFoodId ? t("Edit entry") : t("Log food")} <span class="chev">▶</span></h3>
     <div class="fold-body">
       ${R.editFoodId ? `<div class="edit-banner">${ic("edit", 14)} Editing a logged entry <button class="btn sm sec" onclick="M.foodEditCancel()">Cancel</button></div>` : ""}
@@ -6136,6 +6138,31 @@ async function scanBarcode(){
   });
 }
 
+// Safety net for photos of several identical items: the model sometimes emits
+// one entry PER piece (6 donuts → 6 cards). Collapse repeats of the same food
+// (same name + near-equal macros, non-label items) into a single entry whose
+// macros are the TOTAL for the count. Guarantees one card no matter what.
+function mergeIdenticalItems(items){
+  const out = [];
+  items.forEach(it => {
+    if (it.basis){ out.push(it); return; }                                     // labels have a basis → never merge
+    const key = (it.name || "").trim().toLowerCase();
+    const g = out.find(o => o.__sum && o.__key === key && Math.abs(o.__sum.kcal / o.__n - num(it.kcal)) <= Math.max(6, (o.__sum.kcal / o.__n) * 0.06));
+    if (g){
+      g.__n += 1;
+      g.__sum.kcal += num(it.kcal); g.__sum.p += num(it.p); g.__sum.c += num(it.c); g.__sum.f += num(it.f);
+      g.kcal = Math.round(g.__sum.kcal);
+      g.p = +g.__sum.p.toFixed(1); g.c = +g.__sum.c.toFixed(1); g.f = +g.__sum.f.toFixed(1);
+      g.amount = g.__n + " " + tr("pieces");
+      g.note = `${tr("Total for")} ${g.__n} ${tr("pieces")}`;
+    } else {
+      it.__key = key; it.__n = 1; it.__sum = {kcal: num(it.kcal), p: num(it.p), c: num(it.c), f: num(it.f)};
+      out.push(it);
+    }
+  });
+  out.forEach(o => { delete o.__key; delete o.__n; delete o.__sum; });
+  return out;
+}
 async function extractPhoto(){
   if (!S.settings.apiKey){ toast("Add your API key in Settings first."); return; }
   pickFile(async file => {
@@ -6146,7 +6173,7 @@ async function extractPhoto(){
         : {type: "image", source: {type: "base64", media_type: file.media_type, data: file.data}};
       const txt = await llmJsonCall(`You are MIRA's food photo analyst. The image is ONE of these — detect which and act accordingly:
 1) A PRINTED NUTRITION LABEL: use its values EXACTLY (conf "official"). The macros MUST correspond to "basis" of "unit": if the label gives values per reference amount, set "basis" to that number and "unit" to g/ml/serving/piece and put the per-basis macros in kcal/p/c/f (per 100 ml → basis 100, unit "ml"). If the package's total net quantity is printed (a 320 ml can, a 200 g bag), set "pkg" to that number in the SAME unit. Never guess a printed value you cannot read.
-2) A PHOTO OF ACTUAL FOOD (a plate, dish, snack, drink, meal): identify each food you can see — you know cuisines worldwide, including Gulf/Khaleeji (machboos, harees, luqaimat…), Levantine, Egyptian, pan-Arab and all international foods. Estimate the visible portion size from visual cues (plate/bowl size, cutlery, hand, packaging). For a mixed plate, list each component as its own item (e.g. rice, grilled chicken, salad) so the user can adjust or drop parts. Base macros on standard food-composition data (USDA and regional tables) for the estimated portion — conf "estimate", and state the identified dish and assumed portion in "note". Cooking method matters (grilled vs fried). Estimating from a photo is expected and welcome — do it for any recognizable food; only skip an item you genuinely cannot identify.
+2) A PHOTO OF ACTUAL FOOD (a plate, dish, snack, drink, meal): identify each food you can see — you know cuisines worldwide, including Gulf/Khaleeji (machboos, harees, luqaimat…), Levantine, Egyptian, pan-Arab and all international foods. Estimate the visible portion size from visual cues (plate/bowl size, cutlery, hand, packaging). For a mixed plate, list each DISTINCT component as its own item (e.g. rice, grilled chicken, salad) so the user can adjust or drop parts. BUT when several pieces of the SAME food are shown (e.g. 6 identical mini donuts, 4 identical kebabs, a handful of dates), return them as ONE single item — put the count in "amount" (e.g. "6 pieces") and give the macros for the WHOLE quantity together. Never output the same food as multiple separate entries. Base macros on standard food-composition data (USDA and regional tables) for the estimated portion — conf "estimate", and state the identified dish and assumed portion in "note". Cooking method matters (grilled vs fried). Estimating from a photo is expected and welcome — do it for any recognizable food; only skip an item you genuinely cannot identify.
 3) A MENU, RECEIPT OR APP SCREENSHOT listing foods: extract the items with estimated macros per typical serving (conf "estimate").
 Reply with ONLY a JSON array: [{"name":str,"amount":str,"kcal":num,"p":num,"c":num,"f":num,"conf":"official"|"estimate","note":str,"basis":num,"unit":str,"pkg":num}]. Omit basis/unit/pkg for estimated food photos (they are for labels). Energy consistent: kcal ≈ 4p+4c+9f.${replyLangNote()}`,
         [block, {type: "text", text: "Read this image. If it's a nutrition label, extract it exactly with the per-amount basis and package total. If it's a photo of actual food, identify the dishes and estimate portions and macros."}],
@@ -6166,6 +6193,7 @@ Reply with ONLY a JSON array: [{"name":str,"amount":str,"kcal":num,"p":num,"c":n
         }
         return it;
       });
+      reviewItems = mergeIdenticalItems(reviewItems);                          // collapse repeated identical pieces
       if (!reviewItems.length){ reviewItems = null; toast("Could not read any items from that file."); }
     } catch (e) { toast("Could not read the file: " + e.message, 4000); }
     extractBusy = false; render();
