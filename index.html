@@ -1237,6 +1237,34 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
   .sheet{max-width:560px;margin:0 auto;left:0;right:0}
 }
 
+/* ---------- Training programs & form demos ---------- */
+.prog-eyebrow{color:var(--acc);font-weight:650;letter-spacing:.3px;text-transform:uppercase;font-size:11px}
+.prog-today{border:1px solid color-mix(in srgb,var(--acc) 32%,var(--line2))}
+.prog-guided{border:1px solid color-mix(in srgb,var(--acc) 32%,var(--line2));background:var(--acc-soft)}
+.prog-ex{margin-bottom:6px}
+.prog-ex:last-child{margin-bottom:0}
+.prog-ex .demo-btn{width:32px;height:32px;min-width:32px;flex:0 0 auto}
+.prog-lbl{display:block;color:var(--txt2);font-weight:600;margin:10px 0 2px;text-transform:uppercase;letter-spacing:.3px;font-size:11px}
+.opt-row{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 2px}
+.prog-target{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--txt2);background:var(--bg2);border-radius:9px;padding:7px 10px;margin-bottom:8px}
+.prog-target.hit{color:var(--acc);background:var(--acc-soft)}
+.prog-target .prog-count{margin-inline-start:auto;font-variant-numeric:tabular-nums;font-weight:700}
+.prog-day{border:1px solid var(--line);border-radius:12px;margin-bottom:8px;overflow:hidden}
+.prog-day.open{border-color:var(--line2)}
+.prog-day-hd{display:flex;align-items:center;gap:10px;width:100%;padding:12px;background:var(--bg2);text-align:start}
+.prog-day-hd .svgi{color:var(--txt3);transition:transform .2s}
+.prog-day.open .prog-day-hd .svgi{transform:rotate(90deg)}
+.prog-day-body{padding:12px}
+.prog-next{color:var(--acc);font-weight:650}
+.lib-item{display:flex;gap:8px;align-items:stretch;margin-bottom:8px}
+.lib-item .feat-card{margin-bottom:0}
+.lib-demo{flex:0 0 auto;align-self:center}
+.demo-btn{background:var(--bg2);border:1px solid var(--line);color:var(--txt2)}
+.demo-step{display:flex;gap:10px;margin:9px 0;font-size:14px;line-height:1.5}
+.demo-step .n{flex:0 0 auto;width:22px;height:22px;border-radius:50%;background:var(--acc-soft);color:var(--acc);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:1px}
+.demo-miss{font-size:13.5px;color:var(--txt2);margin:6px 0;padding-inline-start:18px;position:relative;line-height:1.45}
+.demo-miss:before{content:"×";position:absolute;inset-inline-start:0;color:var(--red);font-weight:800}
+
 /* the floating + must never sit on top of the last card — give Home scroll clearance */
 .fab-clear{height:84px;flex:0 0 auto}
 
@@ -1337,7 +1365,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.131";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.132";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1588,6 +1616,7 @@ const TR = {
     "Community food database":"قاعدة بيانات الطعام المجتمعية","Supabase project URL":"رابط مشروع Supabase","Supabase anon key":"مفتاح Supabase العام (anon)",
     "Confirm your lookup below":"أكّد نتيجة البحث بالأسفل",
     "Estimated maintenance":"سعرات الصيانة المُقدّرة","kcal/day upkeep":"سعرة/يوم للصيانة","Avg intake":"متوسط الاستهلاك","kg/week":"كغ/أسبوع","days logged":"أيام مُسجّلة",
+    "Program":"برنامج","Program · tracking · coach":"برنامج · متابعة · مدرّب","Guided — following your program":"موجّه — وفق برنامجك","Week":"الأسبوع","Day":"اليوم","tick off each set against its target":"سجّل كل مجموعة مقابل هدفها","last":"آخر مرة","How-to":"طريقة الأداء","rest":"راحة","Set":"مجموعة","reps":"تكرارات","aim":"الهدف","Add set":"أضف مجموعة","Adding to":"إضافة إلى","Tap an exercise to add it to this program day.":"اختر تمريناً لإضافته إلى هذا اليوم من البرنامج.","Search exercises…":"ابحث عن التمارين…","yours":"خاص بك","No match. Add it with Add exercise or Find (AI).":"لا نتائج. أضِفه عبر «أضف تمرين» أو «بحث (ذكاء اصطناعي)».","×/week":"×/أسبوع","Block":"مرحلة","Block complete":"اكتملت المرحلة","sessions":"جلسات","Build your next block below.":"ابنِ مرحلتك التالية بالأسفل.","sessions done":"جلسات مكتملة","Today's session":"جلسة اليوم","Start guided workout":"ابدأ التمرين الموجّه","Progression":"التدرّج","Next block":"المرحلة التالية","MIRA reads what you actually lifted and builds a progressed next block — heavier where you're ready, adjusted where you stalled.":"تقرأ ميرا ما رفعته فعلياً وتبني مرحلة تالية متدرّجة — أثقل حيث أنت جاهز، ومعدّلة حيث توقّف تقدّمك.","Building…":"جارٍ البناء…","Rebuild next block from my results":"ابنِ المرحلة التالية من نتائجي","Delete program":"حذف البرنامج","Build a training program":"أنشئ برنامجاً تدريبياً","MIRA builds a followable, editable weekly plan from evidence-based templates (NSCA/ACSM) — matched to your goal, level and equipment. You can edit every exercise afterwards.":"تبني ميرا خطة أسبوعية قابلة للتنفيذ والتعديل من قوالب مبنيّة على الأدلة (NSCA/ACSM) — مطابِقة لهدفك ومستواك ومعدّاتك. يمكنك تعديل كل تمرين لاحقاً.","Experience":"المستوى","Where you train":"مكان التمرين","Days per week":"أيام في الأسبوع","Block length":"مدة المرحلة","Anything to tailor? (optional)":"أي تخصيص؟ (اختياري)","e.g. bad knee, focus glutes, only dumbbells":"مثال: ركبة مصابة، تركيز على المؤخرة، دمبل فقط","Building your program…":"جارٍ بناء برنامجك…","Generate my program":"أنشئ برنامجي","Uses your API key. The plan is guidance, not medical advice — stop anything that causes pain.":"يستخدم مفتاح API الخاص بك. الخطة إرشادية وليست نصيحة طبية — أوقف أي حركة تسبّب ألماً.","Weekly schedule":"الجدول الأسبوعي","Edit":"تعديل","Add a day":"أضف يوماً","next up":"التالي","exercises":"تمارين","Day name":"اسم اليوم","Reps":"التكرارات","Rest s":"راحة ث","Add exercise":"أضف تمرين","Delete day":"حذف اليوم","Looking up the form cues…":"جارٍ جلب إرشادات الأداء…","Setup":"الوضعية الابتدائية","How to do it":"خطوات الأداء","Common mistakes":"أخطاء شائعة","Breathing":"التنفّس","Watch video demos":"شاهد مقاطع توضيحية","Cues follow standard strength-and-conditioning guidance — verify with your coach if unsure.":"الإرشادات وفق مبادئ التدريب المعتمدة — راجع مدرّبك عند الشك.","Couldn't load cues. Tap below to search video demos.":"تعذّر تحميل الإرشادات. اضغط بالأسفل للبحث عن مقاطع توضيحية.","Added":"أُضيف","block complete":"اكتملت المرحلة","next":"التالي","Workout saved":"حُفظ التمرين","new best":"رقم قياسي جديد","Program ready":"البرنامج جاهز","Next block ready":"المرحلة التالية جاهزة","Delete this day?":"حذف هذا اليوم؟","Delete this program? Your logged workouts stay in History.":"حذف هذا البرنامج؟ تمارينك المسجّلة تبقى في السجل.","Build muscle":"بناء العضلات","Get stronger":"زيادة القوة","Lose fat":"خسارة الدهون","General fitness":"لياقة عامة","Beginner":"مبتدئ","Intermediate":"متوسط","Advanced":"متقدّم","At home":"في المنزل","At the gym":"في النادي",
     "Scan a label or barcode, scale a portion, or build a cooked dish from its ingredients.": "امسح ملصقًا أو باركود، أو عدّل الكمية، أو ابنِ طبقًا مطبوخًا من مكوّناته.",
     "pieces": "قطع",
     "Total for": "الإجمالي لـ",
@@ -2280,6 +2309,8 @@ const BLANK = () => ({
   exercises: [],      // user-added exercises {id, n, m, e, c, source}
   workouts: [],       // {id, date, name, items:[{name, muscle, sets:[{reps, weight}], note}], ts}
   routines: [],       // {id, name, items:[{name, muscle}]}
+  program: null,      // active training program {id,name,goal,level,place,daysPerWeek,weeks,phase,cursor,days:[{name,focus,exercises:[{name,muscle,sets,reps,rest,note}]}],progression,createdAt,startDate}
+  exDemos: {},        // exercise name -> cached form demo {setup, steps[], mistakes[], breathing, search, ts}
   supplements: [],    // {id, name, dose, timing}
   suppLog: {},        // date -> [suppId, ...] taken
   sleep: [],          // {id, date, hours, quality(1-5), note}
@@ -2361,6 +2392,8 @@ function migrateChats(){
   if (!Array.isArray(S.exercises)) S.exercises = [];
   if (!Array.isArray(S.workouts)) S.workouts = [];
   if (!Array.isArray(S.routines)) S.routines = [];
+  if (S.program && (!Array.isArray(S.program.days) || !S.program.days.length)) S.program = null;
+  if (!S.exDemos || typeof S.exDemos !== "object") S.exDemos = {};
   if (!Array.isArray(S.supplements)) S.supplements = [];
   if (!S.suppLog || typeof S.suppLog !== "object") S.suppLog = {};
   if (!Array.isArray(S.sleep)) S.sleep = [];
@@ -2644,13 +2677,20 @@ const R = {
   openDays: new Set([todayStr()]),
   mealsOpen: false,
   acFocus: false,
-  trainTab: "today",  // today | library | history | coach
+  trainTab: "today",  // today | program | library | history | coach
   trainWO: null,      // in-progress workout being logged
   libQuery: "",
   libMuscle: "All",
   exForm: {open: false, n: "", m: "Chest", e: "", c: ""},
   aiExBusy: false,
   progEx: "",
+  progForm: {goal: "Build muscle", level: "Beginner", place: "Gym", days: 4, weeks: 4, note: ""}, // new-program builder
+  progBusy: false,    // AI building/rebuilding a program
+  progEdit: false,    // program schedule in edit mode
+  progOpenDay: null,  // index of the schedule day expanded in the program view
+  progAddEx: null,    // {dayIdx} while picking an exercise to add to a program day
+  demoName: null,     // exercise name whose form demo sheet is open
+  demoBusy: false,    // AI generating a form demo
   coachPeriod: 30,
   plateOpen: false,
   healthTab: "supps",  // supps | sleep | habits | fasting | mood | review
@@ -6467,17 +6507,18 @@ function plateHTML(){
 
 /* ---------- Training view ---------- */
 function trainHTML(){
-  const tabs = [["today","Workout"],["library","Library"],["history","History"],["coach","Coach"]];
+  const tabs = [["today","Workout"],["program","Program"],["library","Library"],["history","History"],["coach","Coach"]];
   return `
     <button class="cat-back" onclick="M.trainBack()">${ic("back", 18)} ${tr("Fitness")}</button>
-    <div class="cat-title"><div class="ch-nm">${tr("Training")}</div><div class="ch-ds">${tr("Library · tracking · coach")}</div></div>
+    <div class="cat-title"><div class="ch-nm">${tr("Training")}</div><div class="ch-ds">${tr("Program · tracking · coach")}</div></div>
     <div class="chip-row seg-tabs">${tabs.map(([k, l]) =>
       `<button class="chip ${R.trainTab === k ? "on" : ""}" onclick="M.trainGo('${k}')">${tr(l)}</button>`).join("")}</div>
     <div style="margin-top:12px">${
       R.trainTab === "today" ? trainTodayHTML() :
+      R.trainTab === "program" ? trainProgramHTML() :
       R.trainTab === "library" ? trainLibHTML() :
       R.trainTab === "history" ? trainHistHTML() : trainCoachHTML()
-    }</div>`;
+    }</div>${R.demoName ? exDemoSheetHTML() : ""}`;
 }
 
 function trainTodayHTML(){
@@ -6543,6 +6584,9 @@ function trainTodayHTML(){
     ${S.workouts.length ? `<div class="muted" style="text-align:center;padding:4px">Past sessions and progress are in <b>History</b>.</div>` : ""}`;
   }
   return `
+    ${wo.program ? `<div class="card prog-guided"><div class="tiny prog-eyebrow">${ic("play", 12)} ${tr("Guided — following your program")}</div>
+      <div style="font-weight:600;margin-top:2px" dir="auto">${esc(wo.program.dayName || wo.name)}</div>
+      <div class="tiny">${tr("Week")} ${wo.program.week}/${wo.program.weeks} · ${tr("Day")} ${wo.program.day} · ${tr("tick off each set against its target")}</div></div>` : ""}
     <div class="card">
       <div class="wo-hd">
         <input id="woName" value="${esc(wo.name)}" oninput="R.trainWO.name=this.value" style="font-weight:600">
@@ -6561,21 +6605,26 @@ function trainTodayHTML(){
 }
 function exItemHTML(it, i){
   const last = lastPerf(it.name);
+  const tg = it.target;   // guided prescription {sets, reps, rest, note}
+  const lastW = last ? (last.split(",")[0].split("×")[0].trim()) : "";  // last session's first-set weight, as a kg hint
+  const done = it.sets.length, hitTarget = tg && done >= num(tg.sets);
   return `<div class="card">
     <div class="wo-hd" style="margin-bottom:8px">
-      <div><div style="font-weight:600" dir="auto">${esc(it.name)}</div>
-        <div class="tiny">${esc(it.muscle || "")}${last ? ` · last: ${last}` : ""}</div></div>
+      <div style="flex:1"><div style="font-weight:600" dir="auto">${esc(it.name)}</div>
+        <div class="tiny">${esc(it.muscle || "")}${last ? ` · ${tr("last")}: ${last}` : ""}</div></div>
+      <button class="icon-btn demo-btn" aria-label="${tr("How-to")}" data-n="${esc(it.name)}" onclick="M.exDemo(this.dataset.n)">${ic("book", 16)}</button>
       <button class="del" style="flex:0 0 auto;color:var(--txt3)" aria-label="Remove exercise" onclick="M.woDelEx(${i})">✕</button>
     </div>
+    ${tg ? `<div class="prog-target ${hitTarget ? "hit" : ""}">${ic("target", 13)} ${tr("Target")}: <b>${tg.sets}×${esc(String(tg.reps))}</b>${tg.rest ? ` · ${tr("rest")} ${tg.rest}s` : ""} <span class="prog-count">${done}/${tg.sets}${hitTarget ? " ✓" : ""}</span></div>` : ""}
     ${it.sets.length ? `<div class="set-list">${it.sets.map((s, j) =>
-      `<div class="set-row2"><span class="tiny">Set ${j + 1}</span><b>${n1(s.weight)} kg × ${s.reps}</b>
+      `<div class="set-row2"><span class="tiny">${tr("Set")} ${j + 1}</span><b>${n1(s.weight)} kg × ${s.reps}</b>
         <button class="del" aria-label="Remove set" onclick="M.woDelSet(${i},${j})">✕</button></div>`).join("")}</div>` : ""}
     <div class="grid3" style="margin-top:8px">
-      <input id="wr${i}" type="number" inputmode="numeric" placeholder="reps">
-      <input id="ww${i}" type="number" inputmode="decimal" placeholder="kg">
-      <button class="btn sm" onclick="M.woAddSet(${i})">Add set</button>
+      <input id="wr${i}" type="number" inputmode="numeric" placeholder="${tg ? tr("reps") + " (" + tr("aim") + " " + repLead(tg.reps) + ")" : tr("reps")}">
+      <input id="ww${i}" type="number" inputmode="decimal" placeholder="${lastW ? "kg (" + tr("last") + " " + lastW + ")" : "kg"}">
+      <button class="btn sm" onclick="M.woAddSet(${i})">${tr("Add set")}</button>
     </div>
-    <input class="ex-note" value="${esc(it.note || "")}" oninput="R.trainWO.items[${i}].note=this.value" placeholder="Note (optional)" dir="auto">
+    <input class="ex-note" value="${esc(it.note || "")}" oninput="R.trainWO.items[${i}].note=this.value" placeholder="${tr("Note (optional)")}" dir="auto">
   </div>`;
 }
 
@@ -6585,8 +6634,12 @@ function trainLibHTML(){
   R._libList = list;
   const muscles = ["All", ...MUSCLES];
   return `
+    ${R.progAddEx != null && S.program ? `<div class="card prog-guided"><div class="row" style="align-items:center">
+      <div style="flex:1"><b class="tiny">${ic("plus", 13)} ${tr("Adding to")} ${esc((S.program.days[R.progAddEx] || {}).name || tr("day"))}</b>
+        <div class="tiny" style="color:var(--txt2)">${tr("Tap an exercise to add it to this program day.")}</div></div>
+      <button class="btn sm sec" onclick="M.progAddExCancel()">${tr("Cancel")}</button></div></div>` : ""}
     <div class="card">
-      <input id="libSearch" placeholder="Search exercises…" value="${esc(R.libQuery)}" oninput="R.libQuery=this.value;render()" autocomplete="off">
+      <input id="libSearch" placeholder="${tr("Search exercises…")}" value="${esc(R.libQuery)}" oninput="R.libQuery=this.value;render()" autocomplete="off">
       <div class="chip-row" style="margin-top:10px">${muscles.map(m =>
         `<button class="chip ${R.libMuscle === m ? "on" : ""}" onclick="M.libMuscle('${m}')">${m}</button>`).join("")}</div>
       <div class="row" style="margin-top:10px">
@@ -6596,11 +6649,14 @@ function trainLibHTML(){
       ${R.exForm.open ? exAddFormHTML() : ""}
     </div>
     <div class="lib-list">
-      ${list.length ? list.map((x, i) => `<button class="feat-card" onclick="M.libPick(${i})">
-        <span class="fc-tx"><span class="fc-nm" dir="auto">${esc(x.n)}${x.user ? ` <span class="tiny">· yours</span>` : ""}</span>
-          <span class="fc-ds">${esc(x.m)}${x.e ? " · " + esc(x.e) : ""}</span></span>
-        <span class="fc-ar">${R.trainWO ? ic("plus", 17) : ic("chevR", 16)}</span>
-      </button>`).join("") : `<div class="muted" style="padding:6px 2px">No match. Add it with <b>Add exercise</b> or <b>Find (AI)</b>.</div>`}
+      ${list.length ? list.map((x, i) => `<div class="lib-item">
+        <button class="feat-card" style="flex:1;min-width:0" onclick="M.libPick(${i})">
+          <span class="fc-tx"><span class="fc-nm" dir="auto">${esc(x.n)}${x.user ? ` <span class="tiny">· ${tr("yours")}</span>` : ""}</span>
+            <span class="fc-ds">${esc(x.m)}${x.e ? " · " + esc(x.e) : ""}</span></span>
+          <span class="fc-ar">${R.trainWO || R.progAddEx ? ic("plus", 17) : ic("chevR", 16)}</span>
+        </button>
+        <button class="icon-btn demo-btn lib-demo" aria-label="${tr("How-to")}" data-n="${esc(x.n)}" onclick="M.exDemo(this.dataset.n)">${ic("book", 17)}</button>
+      </div>`).join("") : `<div class="muted" style="padding:6px 2px">${tr("No match. Add it with Add exercise or Find (AI).")}</div>`}
     </div>`;
 }
 function exAddFormHTML(){
@@ -6735,6 +6791,165 @@ function coachReport(days){
   L.push("");
   L.push(`— Generated by MIRA on ${new Date().toLocaleDateString("en-GB")}`);
   return L.join("\n");
+}
+
+/* =========================================================
+   Training programs — a followable, editable multi-week plan
+   MIRA builds from your goal, level and equipment; a guided
+   "start today's session" player; and a rebuild that reads
+   your logged results to progress the next block.
+   ========================================================= */
+const PROG_GOALS = ["Build muscle", "Get stronger", "Lose fat", "General fitness"];
+const PROG_LEVELS = ["Beginner", "Intermediate", "Advanced"];
+const PROG_PLACES = ["Gym", "Home"];
+/* "Home" already means the nav home screen in i18n — translate the training
+   location with its own, unambiguous keys. */
+const placeTr = pl => tr(pl === "Home" ? "At home" : "At the gym");
+
+const progLen = () => (S.program ? S.program.days.length : 0);          // sessions per week
+const progTotal = () => (S.program ? S.program.weeks * progLen() : 0);  // sessions in the block
+const progWeekOf = cur => Math.floor(cur / progLen());                  // 0-based week of a cursor
+const progDayOf = cur => cur % progLen();                              // 0-based day of a cursor
+const progDone = () => S.program && S.program.cursor >= progTotal();
+const progTodayDay = () => (S.program && !progDone() ? S.program.days[progDayOf(S.program.cursor)] : null);
+const repLead = r => { const m = String(r).match(/\d+/); return m ? m[0] : ""; };   // "8–10" → "8" for prefill
+/* the sessions logged against this program's current block, oldest first */
+function progSessions(){
+  const p = S.program; if (!p) return [];
+  return S.workouts.filter(w => w.program && w.program.id === p.id && w.program.phase === p.phase).sort((a, b) => a.ts - b.ts);
+}
+
+function trainProgramHTML(){
+  const p = S.program;
+  if (!p) return progBuildHTML();
+  const total = progTotal(), cur = Math.min(p.cursor, total);
+  const day = progTodayDay();
+  const pct = total ? Math.round(100 * cur / total) : 0;
+  return `
+    <div class="card">
+      <div class="wo-hd">
+        <div style="flex:1"><div style="font-weight:700;font-size:16px" dir="auto">${esc(p.name)}</div>
+          <div class="tiny">${tr(p.goal)} · ${tr(p.level)} · ${placeTr(p.place)} · ${p.days.length}${tr("×/week")}${p.phase > 1 ? ` · ${tr("Block")} ${p.phase}` : ""}</div></div>
+      </div>
+      <div class="rest-track" style="margin-top:12px"><i style="width:${pct}%"></i></div>
+      <div class="tiny" style="margin-top:6px">${progDone()
+        ? `<b>${tr("Block complete")}</b> — ${cur}/${total} ${tr("sessions")}. ${tr("Build your next block below.")}`
+        : `${tr("Week")} ${progWeekOf(cur) + 1}/${p.weeks} · ${tr("Day")} ${progDayOf(cur) + 1}/${p.days.length} · ${cur}/${total} ${tr("sessions done")}`}</div>
+    </div>
+    ${day ? `<div class="card prog-today">
+      <div class="tiny prog-eyebrow">${ic("play", 12)} ${tr("Today's session")}</div>
+      <h3 style="margin:6px 0 2px" dir="auto">${esc(day.name)}</h3>
+      ${day.focus ? `<div class="tiny" style="margin-bottom:10px">${esc(day.focus)}</div>` : ""}
+      ${day.exercises.map(ex => `<div class="set-row2 prog-ex">
+        <span dir="auto" style="flex:1">${esc(ex.name)}</span>
+        <b class="tiny" style="white-space:nowrap">${ex.sets}×${esc(String(ex.reps))}${ex.rest ? ` · ${ex.rest}s` : ""}</b>
+        <button class="icon-btn demo-btn" aria-label="${tr("How-to")}" data-n="${esc(ex.name)}" onclick="M.exDemo(this.dataset.n)">${ic("book", 15)}</button>
+      </div>`).join("")}
+      <button class="btn" style="margin-top:12px" onclick="M.progStart()">${ic("play", 15)} ${tr("Start guided workout")}</button>
+      ${p.progression ? `<div class="tiny" style="margin-top:10px;color:var(--txt2)">${ic("trend", 12)} ${tr("Progression")}: ${esc(p.progression)}</div>` : ""}
+    </div>` : ""}
+    ${(p.cursor > 0 || progDone()) ? `<div class="card">
+      <h3>${ic("refresh", 16)} ${tr("Next block")}</h3>
+      <div class="muted" style="margin-bottom:10px">${tr("MIRA reads what you actually lifted and builds a progressed next block — heavier where you're ready, adjusted where you stalled.")}</div>
+      <button class="btn sec" onclick="M.progRebuild()" ${R.progBusy ? "disabled" : ""}>${R.progBusy ? tr("Building…") : ic("target", 15) + " " + tr("Rebuild next block from my results")}</button>
+    </div>` : ""}
+    ${progScheduleHTML()}
+    <button class="btn sec danger" style="margin-top:4px;width:100%" onclick="M.progDelete()">${ic("trash", 15)} ${tr("Delete program")}</button>`;
+}
+
+/* the new-program builder */
+function progBuildHTML(){
+  const f = R.progForm;
+  const chip = (v, sel, on) => `<button class="chip ${sel === v ? "on" : ""}" onclick="${on}">${tr(v)}</button>`;
+  return `
+    <div class="card">
+      <h3>${ic("barbell", 16)} ${tr("Build a training program")}</h3>
+      <div class="muted" style="margin-bottom:12px">${tr("MIRA builds a followable, editable weekly plan from evidence-based templates (NSCA/ACSM) — matched to your goal, level and equipment. You can edit every exercise afterwards.")}</div>
+      <label class="tiny prog-lbl">${tr("Goal")}</label>
+      <div class="opt-row">${PROG_GOALS.map(g => chip(g, f.goal, `M.progField('goal','${g}')`)).join("")}</div>
+      <label class="tiny prog-lbl">${tr("Experience")}</label>
+      <div class="opt-row">${PROG_LEVELS.map(l => chip(l, f.level, `M.progField('level','${l}')`)).join("")}</div>
+      <label class="tiny prog-lbl">${tr("Where you train")}</label>
+      <div class="opt-row">${PROG_PLACES.map(pl => `<button class="chip ${f.place === pl ? "on" : ""}" onclick="M.progField('place','${pl}')">${placeTr(pl)}</button>`).join("")}</div>
+      <label class="tiny prog-lbl">${tr("Days per week")}</label>
+      <div class="opt-row">${[3, 4, 5, 6].map(d => `<button class="chip ${f.days === d ? "on" : ""}" onclick="M.progField('days',${d})">${d}</button>`).join("")}</div>
+      <label class="tiny prog-lbl">${tr("Block length")}</label>
+      <div class="opt-row">${[4, 6, 8].map(w => `<button class="chip ${f.weeks === w ? "on" : ""}" onclick="M.progField('weeks',${w})">${w} ${tr("weeks")}</button>`).join("")}</div>
+      <div class="field" style="margin-top:8px"><label>${tr("Anything to tailor? (optional)")}</label>
+        <input value="${esc(f.note)}" oninput="R.progForm.note=this.value" placeholder="${tr("e.g. bad knee, focus glutes, only dumbbells")}" dir="auto"></div>
+      <button class="btn" style="margin-top:6px;width:100%" onclick="M.progBuild()" ${R.progBusy ? "disabled" : ""}>${R.progBusy ? tr("Building your program…") : ic("target", 15) + " " + tr("Generate my program")}</button>
+      <div class="tiny" style="margin-top:8px;color:var(--txt2)">${tr("Uses your API key. The plan is guidance, not medical advice — stop anything that causes pain.")}</div>
+    </div>`;
+}
+
+/* the editable weekly schedule */
+function progScheduleHTML(){
+  const p = S.program;
+  return `<div class="card">
+    <div class="wo-hd" style="margin-bottom:8px">
+      <h3 style="flex:1;margin:0">${ic("list", 16)} ${tr("Weekly schedule")}</h3>
+      <button class="btn sm sec" onclick="M.progEditToggle()">${R.progEdit ? ic("check", 13) + " " + tr("Done") : ic("edit", 13) + " " + tr("Edit")}</button>
+    </div>
+    ${p.days.map((d, i) => progDayCardHTML(d, i)).join("")}
+    ${R.progEdit ? `<button class="btn sm sec" style="margin-top:4px" onclick="M.progAddDay()">${ic("plus", 14)} ${tr("Add a day")}</button>` : ""}
+  </div>`;
+}
+function progDayCardHTML(d, i){
+  const open = R.progOpenDay === i;
+  const cur = S.program.cursor, isToday = !progDone() && progDayOf(cur) === i;
+  return `<div class="prog-day ${open ? "open" : ""}">
+    <button class="prog-day-hd" onclick="M.progDayToggle(${i})">
+      <span style="flex:1;text-align:start"><b dir="auto">${esc(d.name)}</b>${isToday ? ` <span class="tiny prog-next">${tr("next up")}</span>` : ""}
+        <span class="tiny" style="display:block;color:var(--txt3)">${d.exercises.length} ${tr("exercises")}${d.focus ? " · " + esc(d.focus) : ""}</span></span>
+      ${ic("chevR", 16)}
+    </button>
+    ${open ? `<div class="prog-day-body">
+      ${R.progEdit ? `<div class="field" style="margin:4px 0 10px"><label>${tr("Day name")}</label>
+        <input value="${esc(d.name)}" oninput="M.progDayName(${i},this.value)" dir="auto"></div>` : ""}
+      ${d.exercises.map((ex, j) => R.progEdit ? `<div class="review-item">
+        <div class="wo-hd" style="margin-bottom:6px"><b style="flex:1;font-size:14px" dir="auto">${esc(ex.name)}</b>
+          <button class="icon-btn demo-btn" aria-label="${tr("How-to")}" data-n="${esc(ex.name)}" onclick="M.exDemo(this.dataset.n)">${ic("book", 15)}</button>
+          <button class="del" aria-label="${tr("Remove")}" onclick="M.progDelEx(${i},${j})">✕</button></div>
+        <div class="grid3">
+          <div class="field" style="margin:0"><label>${tr("Sets")}</label><input type="number" inputmode="numeric" value="${esc(ex.sets)}" oninput="M.progExField(${i},${j},'sets',this.value)"></div>
+          <div class="field" style="margin:0"><label>${tr("Reps")}</label><input value="${esc(ex.reps)}" oninput="M.progExField(${i},${j},'reps',this.value)"></div>
+          <div class="field" style="margin:0"><label>${tr("Rest s")}</label><input type="number" inputmode="numeric" value="${esc(ex.rest)}" oninput="M.progExField(${i},${j},'rest',this.value)"></div>
+        </div>
+      </div>` : `<div class="set-row2 prog-ex">
+        <span dir="auto" style="flex:1">${esc(ex.name)}</span>
+        <b class="tiny" style="white-space:nowrap">${ex.sets}×${esc(String(ex.reps))}${ex.rest ? ` · ${ex.rest}s` : ""}</b>
+        <button class="icon-btn demo-btn" aria-label="${tr("How-to")}" data-n="${esc(ex.name)}" onclick="M.exDemo(this.dataset.n)">${ic("book", 15)}</button>
+      </div>`).join("")}
+      ${R.progEdit ? `<div class="row" style="margin-top:8px">
+        <button class="btn sm sec" onclick="M.progAddExOpen(${i})">${ic("plus", 14)} ${tr("Add exercise")}</button>
+        <button class="btn sm sec danger" onclick="M.progDelDay(${i})">${ic("trash", 13)} ${tr("Delete day")}</button>
+      </div>` : ""}
+    </div>` : ""}
+  </div>`;
+}
+
+/* ---- exercise form demos (AI-generated, cached on-device) ---- */
+function exDemoSheetHTML(){
+  const name = R.demoName, d = S.exDemos[name];
+  const q = encodeURIComponent((d && d.search) || (name + " proper form technique"));
+  return `<div class="sheet-mask show" onclick="M.demoClose()"></div>
+  <div class="sheet show">
+    <div class="grab"></div>
+    <div class="wo-hd" style="margin-bottom:10px"><h3 style="flex:1;margin:0" dir="auto">${esc(name)}</h3>
+      <button class="icon-btn" aria-label="${tr("Close")}" onclick="M.demoClose()">${ic("x", 18)}</button></div>
+    ${R.demoBusy && !d ? `<div class="muted" style="padding:20px 4px;text-align:center">${tr("Looking up the form cues…")}</div>`
+    : d ? `
+      ${d.setup ? `<div class="tiny prog-lbl">${tr("Setup")}</div><div style="font-size:14px;line-height:1.5;margin-bottom:12px">${esc(d.setup)}</div>` : ""}
+      ${(d.steps || []).length ? `<div class="tiny prog-lbl">${tr("How to do it")}</div>
+        ${d.steps.map((s, i) => `<div class="demo-step"><span class="n">${i + 1}</span><span>${esc(s)}</span></div>`).join("")}` : ""}
+      ${(d.mistakes || []).length ? `<div class="tiny prog-lbl" style="margin-top:14px">${tr("Common mistakes")}</div>
+        <div style="margin-top:4px">${d.mistakes.map(m => `<div class="demo-miss">${esc(m)}</div>`).join("")}</div>` : ""}
+      ${d.breathing ? `<div class="tiny prog-lbl" style="margin-top:14px">${tr("Breathing")}</div><div style="font-size:14px;line-height:1.5">${esc(d.breathing)}</div>` : ""}
+      <a class="btn sec" style="margin-top:16px;width:100%;text-align:center" href="https://www.youtube.com/results?search_query=${q}" target="_blank" rel="noopener">${ic("play", 15)} ${tr("Watch video demos")}</a>
+      <div class="tiny" style="margin-top:8px;color:var(--txt2)">${tr("Cues follow standard strength-and-conditioning guidance — verify with your coach if unsure.")}</div>`
+    : `<div class="muted" style="padding:16px 4px">${tr("Couldn't load cues. Tap below to search video demos.")}</div>
+      <a class="btn sec" style="margin-top:8px;width:100%;text-align:center" href="https://www.youtube.com/results?search_query=${q}" target="_blank" rel="noopener">${ic("play", 15)} ${tr("Watch video demos")}</a>`}
+  </div>`;
 }
 </script>
 <script>
@@ -9225,15 +9440,26 @@ window.M = {
   },
   libPick(i){
     const x = R._libList && R._libList[i];
-    if (x) M.woAddExercise(x);
+    if (!x) return;
+    // adding to a program day rather than to a live workout
+    if (R.progAddEx != null && S.program && S.program.days[R.progAddEx]){
+      S.program.days[R.progAddEx].exercises.push({name: x.n, muscle: x.m, sets: 3, reps: "8-10", rest: 90, note: ""});
+      const d = R.progAddEx; R.progAddEx = null; R.trainTab = "program"; R.progOpenDay = d; R.progEdit = true;
+      save(); render(); toast(`${tr("Added")} ${x.n}`);
+      return;
+    }
+    M.woAddExercise(x);
   },
   libMuscle(m){ R.libMuscle = m; render(); },
   woAddSet(i){
     const r = num(($("#wr" + i) || {}).value), w = num(($("#ww" + i) || {}).value);
     if (r <= 0){ toast("Enter the reps."); return; }
-    R.trainWO.items[i].sets.push({reps: r, weight: w});
+    const it = R.trainWO.items[i];
+    it.sets.push({reps: r, weight: w});
     buzz();
-    if (S.settings.restLen > 0) startRest(S.settings.restLen); else render();
+    // a guided prescription carries its own rest; fall back to the global setting
+    const rest = (it.target && num(it.target.rest)) ? num(it.target.rest) : S.settings.restLen;
+    if (rest > 0) startRest(rest); else render();
   },
   restLen(delta){ S.settings.restLen = Math.max(0, Math.min(600, S.settings.restLen + delta)); save(); render(); },
   restStart(){ startRest(S.settings.restLen); },
@@ -9277,9 +9503,15 @@ window.M = {
       if (inNow > before) prs++;
     });
     S.workouts.push(wo);
-    R.trainWO = null; R.trainTab = "history";
+    // guided session: advance the program to the next scheduled day
+    let progMsg = "";
+    if (wo.program && S.program && S.program.id === wo.program.id && S.program.phase === wo.program.phase){
+      S.program.cursor = Math.min(progTotal(), S.program.cursor + 1);
+      progMsg = progDone() ? ` · ${tr("block complete")}` : ` · ${tr("next")}: ${(progTodayDay() || {}).name || ""}`;
+    }
+    R.trainWO = null; R.trainTab = wo.program ? "program" : "history";
     buzz(); save(); render();
-    toast(`Workout saved${prs ? ` · ${prs} new best${prs > 1 ? "s" : ""} 🎯` : ""} ✓`);
+    toast(`${tr("Workout saved")}${prs ? ` · ${prs} ${tr("new best")}${prs > 1 ? "s" : ""} 🎯` : ""}${progMsg} ✓`);
   },
   woDiscard(){ if (confirm("Discard this workout?")){ clearInterval(restIv); restIv = null; restEnd = 0; R.trainWO = null; render(); } },
   woHistDel(id){ if (confirm("Delete this workout from history?")){ S.workouts = S.workouts.filter(w => w.id !== id); save(); render(); } },
@@ -9312,6 +9544,116 @@ window.M = {
     } catch (e) { toast("Lookup failed: " + e.message, 4000); }
     R.aiExBusy = false; render();
   },
+  /* ---- training programs ---- */
+  progField(k, v){ R.progForm[k] = v; render(); },
+  async progBuild(){
+    if (R.progBusy) return;
+    if (!S.settings.apiKey){ toast("Add your API key in Settings first."); R.tab = "set"; render(); return; }
+    const f = R.progForm;
+    R.progBusy = true; render();
+    try {
+      const days = f.days;
+      const system = `You are MIRA's strength & conditioning coach. Build a followable weekly training program grounded in evidence-based practice (NSCA/ACSM). Reply with ONLY JSON, no prose, no code fence: {"name":str(short plan name),"progression":str(one sentence on how to progress week to week),"days":[{"name":str(e.g. "Push","Upper A","Full body"),"focus":str(main muscles, short),"exercises":[{"name":str,"muscle":one of ${JSON.stringify(MUSCLES)},"sets":num,"reps":str(rep range like "8-10", or a time like "30s"/"20 min" for holds/cardio),"rest":num(seconds),"note":str(optional short cue)}]}]}.
+Rules: exactly ${days} day objects. Order compound lifts first; 4-6 exercises per strength day. Equipment — "Gym": full equipment; "Home": bodyweight, dumbbells and bands only (no barbell/machines/cables). Level — Beginner: fewer sets, simpler lifts; Advanced: more volume and variety. Goal — Build muscle: hypertrophy 8-12 reps; Get stronger: 3-6 reps, heavier, longer rest (150-210s); Lose fat: shorter rest (45-75s), add a conditioning finisher; General fitness: balanced. Use common exercise names. Keep every string short.${replyLangNote()}`;
+      const user = `Goal: ${f.goal}. Level: ${f.level}. Trains at: ${f.place}. Days per week: ${days}. Block length: ${f.weeks} weeks.${f.note ? " Tailor to: " + f.note + "." : ""}`;
+      const txt = await llmJsonCall(system, user, 2000);
+      const j = tryParseJson(txt);
+      const dl = j && Array.isArray(j.days) ? j.days.filter(d => d && Array.isArray(d.exercises) && d.exercises.length) : [];
+      if (!dl.length){ toast("Couldn't build a program — try again.", 4000); R.progBusy = false; render(); return; }
+      S.program = {
+        id: uid(), name: (j.name || `${f.goal} plan`).trim(), goal: f.goal, level: f.level, place: f.place,
+        weeks: f.weeks, phase: 1, cursor: 0, progression: (j.progression || "").trim(),
+        createdAt: Date.now(), startDate: todayStr(),
+        days: dl.map(d => ({name: (d.name || "Day").trim(), focus: (d.focus || "").trim(),
+          exercises: d.exercises.map(ex => ({name: String(ex.name || "").trim(), muscle: MUSCLES.includes(ex.muscle) ? ex.muscle : "",
+            sets: num(ex.sets) || 3, reps: String(ex.reps || "8-10").trim(), rest: num(ex.rest) || 90, note: String(ex.note || "").trim()}))
+            .filter(ex => ex.name)}))
+      };
+      R.progBusy = false; R.progOpenDay = null; R.progEdit = false;
+      save(); render();
+      toast(`${tr("Program ready")}: ${S.program.name} ✓`, 3600);
+    } catch (e) { R.progBusy = false; render(); toast(e.status ? e.message : "Couldn't build the program — please try again.", 4200); }
+  },
+  async progRebuild(){
+    if (R.progBusy || !S.program) return;
+    if (!S.settings.apiKey){ toast("Add your API key in Settings first."); return; }
+    const p = S.program, sess = progSessions();
+    if (!sess.length){ toast("Log at least one session first — the next block is built from your results."); return; }
+    R.progBusy = true; render();
+    try {
+      const cur = {name: p.name, goal: p.goal, level: p.level, place: p.place,
+        days: p.days.map(d => ({name: d.name, exercises: d.exercises.map(ex => ({name: ex.name, sets: ex.sets, reps: ex.reps}))}))};
+      const logged = sess.map(w => `${(w.program && w.program.dayName) || w.name}: ` +
+        w.items.map(it => `${it.name} ${it.sets.map(s => `${n1(s.weight)}kg×${s.reps}`).join("/")}`).join("; ")).join("\n");
+      const system = `You are MIRA's strength & conditioning coach applying progressive overload / autoregulation. Given the user's current program and what they ACTUALLY logged this block, build the NEXT block. Where they met or beat the target, progress (add load, a rep, or a set). Where they missed or stalled across sessions, hold or slightly reduce, or swap one clearly-stalled lift for a close alternative. Keep the same number of days and the same overall structure unless a change is clearly warranted. Reply with ONLY JSON in the same schema: {"name":str,"progression":str,"days":[{"name":str,"focus":str,"exercises":[{"name":str,"muscle":one of ${JSON.stringify(MUSCLES)},"sets":num,"reps":str,"rest":num,"note":str}]}]}. Exactly ${p.days.length} days. Keep strings short.${replyLangNote()}`;
+      const user = `Current program: ${JSON.stringify(cur)}\n\nLogged this block (weight×reps per set):\n${logged}`;
+      const txt = await llmJsonCall(system, user, 2000);
+      const j = tryParseJson(txt);
+      const dl = j && Array.isArray(j.days) ? j.days.filter(d => d && Array.isArray(d.exercises) && d.exercises.length) : [];
+      if (!dl.length){ toast("Couldn't build the next block — try again.", 4000); R.progBusy = false; render(); return; }
+      p.phase = (p.phase || 1) + 1; p.cursor = 0; p.startDate = todayStr();
+      if (j.name) p.name = String(j.name).trim();
+      p.progression = (j.progression || p.progression || "").trim();
+      p.days = dl.map(d => ({name: (d.name || "Day").trim(), focus: (d.focus || "").trim(),
+        exercises: d.exercises.map(ex => ({name: String(ex.name || "").trim(), muscle: MUSCLES.includes(ex.muscle) ? ex.muscle : "",
+          sets: num(ex.sets) || 3, reps: String(ex.reps || "8-10").trim(), rest: num(ex.rest) || 90, note: String(ex.note || "").trim()}))
+          .filter(ex => ex.name)}));
+      R.progBusy = false; R.progOpenDay = null; R.progEdit = false;
+      save(); render();
+      toast(`${tr("Next block ready")} — ${tr("Block")} ${p.phase} ✓`, 3600);
+    } catch (e) { R.progBusy = false; render(); toast(e.status ? e.message : "Couldn't build the next block — please try again.", 4200); }
+  },
+  progStart(){
+    const p = S.program, day = progTodayDay();
+    if (!day){ toast(tr("Block complete") + " — " + tr("Build your next block below.")); return; }
+    R.trainWO = {id: uid(), date: todayStr(), name: `${p.name} — ${day.name}`,
+      program: {id: p.id, phase: p.phase, weeks: p.weeks, week: progWeekOf(p.cursor) + 1, day: progDayOf(p.cursor) + 1, dayIdx: progDayOf(p.cursor), dayName: day.name},
+      items: day.exercises.map(ex => ({name: ex.name, muscle: ex.muscle, sets: [], note: ex.note || "",
+        target: {sets: num(ex.sets) || 3, reps: ex.reps, rest: num(ex.rest) || 0}}))};
+    R.trainTab = "today"; render();
+    const c = $("#content"); if (c) c.scrollTop = 0;
+  },
+  progEditToggle(){ R.progEdit = !R.progEdit; render(); },
+  progDayToggle(i){ R.progOpenDay = R.progOpenDay === i ? null : i; render(); },
+  progDayName(i, v){ if (S.program.days[i]){ S.program.days[i].name = v; save(); } },
+  progExField(d, j, f, v){ const ex = S.program.days[d] && S.program.days[d].exercises[j]; if (!ex) return; ex[f] = (f === "reps") ? v : (num(v) || 0); save(); },
+  progDelEx(d, j){ S.program.days[d].exercises.splice(j, 1); save(); render(); },
+  progAddDay(){ S.program.days.push({name: `${tr("Day")} ${S.program.days.length + 1}`, focus: "", exercises: []}); R.progOpenDay = S.program.days.length - 1; save(); render(); },
+  progDelDay(i){
+    if (S.program.days.length <= 1){ toast("Keep at least one day."); return; }
+    if (!confirm(tr("Delete this day?"))) return;
+    S.program.days.splice(i, 1);
+    R.progOpenDay = null;
+    if (S.program.cursor > progTotal()) S.program.cursor = progTotal();
+    save(); render();
+  },
+  progAddExOpen(i){ R.progAddEx = i; R.trainTab = "library"; R.libQuery = ""; R.libMuscle = "All"; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
+  progAddExCancel(){ R.progAddEx = null; render(); },
+  progDelete(){
+    if (!confirm(tr("Delete this program? Your logged workouts stay in History."))) return;
+    S.program = null; R.progEdit = false; R.progOpenDay = null; R.progAddEx = null;
+    save(); render();
+  },
+  /* ---- exercise form demos ---- */
+  async exDemo(name){
+    name = String(name || "").trim(); if (!name) return;
+    R.demoName = name;
+    if (S.exDemos[name] || !S.settings.apiKey){ render(); return; }   // cached, or no key → sheet shows the video-search fallback
+    R.demoBusy = true; render();
+    try {
+      const txt = await llmJsonCall(`You are MIRA's exercise-technique reference. For the named exercise, give safe, accurate form following standard strength-and-conditioning guidance (NSCA/ACE). Reply with ONLY JSON: {"setup":str(one sentence starting position),"steps":[4-6 short imperative steps],"mistakes":[3-4 short common mistakes to avoid],"breathing":str(one short sentence),"search":str(a good YouTube search query for a demo)}. If it is not a real exercise, set "steps":[].${replyLangNote()}`,
+        `Exercise: ${name}`, 700);
+      const j = tryParseJson(txt);
+      if (j && (Array.isArray(j.steps) && j.steps.length || j.setup)){
+        S.exDemos[name] = {setup: String(j.setup || "").trim(), steps: (Array.isArray(j.steps) ? j.steps : []).map(s => String(s).trim()).filter(Boolean),
+          mistakes: (Array.isArray(j.mistakes) ? j.mistakes : []).map(s => String(s).trim()).filter(Boolean),
+          breathing: String(j.breathing || "").trim(), search: String(j.search || (name + " proper form technique")).trim(), ts: Date.now()};
+        save();
+      }
+    } catch (e) { /* the sheet falls back to a video-search link */ }
+    R.demoBusy = false; render();
+  },
+  demoClose(){ R.demoName = null; R.demoBusy = false; render(); },
   /* ---- health hub ---- */
   goHealth(sub){ R.tab = "health"; R.healthTab = sub || "supps"; R.homeCat = null; R.sheet = null; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
   healthBack(){ R.tab = "home"; R.homeSection = "health"; R.homeCat = null; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
