@@ -1365,7 +1365,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.132";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.133";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -5357,7 +5357,14 @@ function reviewHTML(){
           <span class="rv-unit">${esc(it.unit)}</span>
           ${it.pkg && it.pkg !== it.basis ? `<button class="rv-pack" onclick="M.reviewScale(${i}, ${it.pkg})">Whole pack (${n0(it.pkg)} ${esc(it.unit)})</button>` : ""}
           <div class="rv-note">Label shows values per <b>${n0(it.basis)} ${esc(it.unit)}</b> — the macros below scale to your amount.</div>
-        </div>` : ""}
+        </div>` : `<div class="rv-scale">
+          <label>Portion</label>
+          <input id="rvPor${i}" type="number" inputmode="decimal" step="0.25" min="0" value="${esc(it.mult != null ? it.mult : 1)}" oninput="M.reviewPortion(${i}, this.value)">
+          <span class="rv-unit">× ${esc(it.baseAmount || it.amount || "serving")}</span>
+          <button class="rv-pack" onclick="M.reviewPortion(${i}, 0.5)">Half</button>
+          <button class="rv-pack" onclick="M.reviewPortion(${i}, 1)">Whole</button>
+          <div class="rv-note">Only had part of it? Set the portion and the macros below scale to it.</div>
+        </div>`}
         <div class="grid4" style="margin-bottom:8px">
           <div class="field"><label>kcal</label><input id="rvK${i}" type="number" inputmode="decimal" value="${esc(it.kcal)}" oninput="reviewItems[${i}].kcal=this.value"></div>
           <div class="field"><label>P</label><input id="rvP${i}" type="number" inputmode="decimal" value="${esc(it.p)}" oninput="reviewItems[${i}].p=this.value"></div>
@@ -9291,7 +9298,7 @@ window.M = {
   qa(a){
     R.quickOpen = false;
     if (a === "water"){ const t = todayStr(); S.water[t] = (S.water[t] || 0) + 1; save(); render(); toast(`Water +1 glass · ${(S.water[t] * 0.25).toFixed(2)} L today`); return; }
-    if (a === "food"){ R.tab = "food"; R.homeCat = null; render(); const c = $("#content"); if (c) c.scrollTop = 0; return; }
+    if (a === "food"){ R.tab = "food"; R.homeCat = null; R.logFoodOpen = true; render(); const c = $("#content"); if (c) c.scrollTop = 0; const nm = $("#ffName"); if (nm) nm.focus(); return; }
     if (a === "workout"){ M.goTrain("today"); return; }
     if (a === "weight"){ R.tab = "body"; R.homeCat = null; render(); const c = $("#content"); if (c) c.scrollTop = 0; return; }
     if (a === "task"){ M.goWork("tasks"); return; }
@@ -10652,6 +10659,25 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
   },
   // Rescale an extracted label item to the amount the user actually had
   // (e.g. label is per 100 ml, they drank the whole 320 ml can).
+  // portion multiplier for found/searched items that have no per-unit label
+  // basis (e.g. "1 burger" from a menu listing) — had only half? scale it.
+  reviewPortion(i, val){
+    const it = reviewItems[i];
+    if (!it) return;
+    if (!it.baseMacros){ it.baseMacros = {kcal: num(it.kcal), p: num(it.p), c: num(it.c), f: num(it.f)}; it.baseAmount = it.amount || ""; }
+    const m = Math.max(0, parseFloat(val) || 0);
+    it.mult = m;
+    const b = it.baseMacros;
+    it.kcal = Math.round(b.kcal * m);
+    it.p = +(b.p * m).toFixed(1); it.c = +(b.c * m).toFixed(1); it.f = +(b.f * m).toFixed(1);
+    // scale the amount label: "1 burger" -> "0.5 burger"; otherwise "0.5 × burger"
+    const q = x => String(Math.round(x * 100) / 100);
+    const base = it.baseAmount || "", mm = base.match(/^\s*(\d+(?:\.\d+)?)\s*(.*)$/);
+    it.amount = mm ? (q(parseFloat(mm[1]) * m) + (mm[2] ? " " + mm[2] : "")) : (base ? q(m) + " × " + base : q(m));
+    // patch fields in place — a full render() mid-keystroke drops iOS keyboard focus
+    const set = (id, v) => { const el = document.getElementById(id + i); if (el && document.activeElement !== el) el.value = v; };
+    set("rvK", it.kcal); set("rvP", it.p); set("rvC", it.c); set("rvF", it.f); set("rvAmt", it.amount); set("rvPor", it.mult);
+  },
   reviewScale(i, val){
     const it = reviewItems[i];
     if (!it || !it.basis || !it.baseMacros) return;
