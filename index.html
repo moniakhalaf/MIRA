@@ -236,6 +236,13 @@ body.kb .fab{display:none}
 .sav-warn{margin-top:9px;color:var(--amber);display:flex;gap:6px;align-items:flex-start;line-height:1.45}
 .sav-warn svg{color:var(--amber);flex:0 0 auto;margin-top:1px}
 .budget-top b{color:var(--txt)}
+/* ---- fixed monthly expenses ---- */
+.fx-summary{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;background:var(--bg2);border-radius:12px;padding:12px 14px;margin-bottom:10px}
+.fx-amt{font-size:24px;font-weight:800;color:var(--acc);font-variant-numeric:tabular-nums;line-height:1.1}
+.fx-amt .fx-cur{font-size:13px;font-weight:600;color:var(--txt2)}
+.fx-left{text-align:end;flex:0 0 auto}
+.fx-left-v{font-size:19px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1}
+.fx-list .set-row:first-child{border-top:none}
 .save-proj{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
 .sp-cell{background:var(--card2);border:1px solid var(--line2);border-radius:11px;padding:11px 6px;text-align:center}
 .sp-cell .sp-v{font-size:17px;font-weight:700;color:var(--acc)}
@@ -1365,7 +1372,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.133";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.134";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1872,6 +1879,7 @@ const TR = {
     "Out this month": "الصادر هذا الشهر",
     "Net left": "المتبقّي الصافي",
     "Savings rate": "معدّل الادّخار",
+    "Fixed monthly expenses":"المصاريف الشهرية الثابتة","Loan, rent, gym, education — the same every month":"قرض، إيجار، نادٍ، تعليم — نفس المبلغ كل شهر","committed each month":"ملتزَم بها شهرياً","of income":"من الدخل","left after fixed":"المتبقّي بعد الثابتة","Add the payments you owe every month so they're always in your budget — no need to re-enter them.":"أضِف المدفوعات التي تلتزم بها شهرياً لتبقى دائماً ضمن ميزانيتك — دون الحاجة لإعادة إدخالها.","Add a fixed expense":"أضف مصروفاً ثابتاً","e.g. Car loan, gym membership, tuition":"مثال: قرض سيارة، اشتراك نادٍ، رسوم دراسية",
     "Where it goes": "أين يذهب المال",
     "Most goes to": "الأكثر يذهب إلى",
     "of spending": "من الإنفاق",
@@ -2330,7 +2338,7 @@ const BLANK = () => ({
   mood: [],           // {id, date, mood(1-5), energy(1-5), note}
   checkins: [],       // {id, date, mood(1-5), factors:[str], gratitude, journal, ts} — daily wellness check-in
   focusLog: [],       // {id, date, minutes, task}
-  budget: {income: 0, cats: []},   // cats: user's own custom expense categories
+  budget: {income: 0, cats: [], fixed: []},   // cats: user's own custom expense categories; fixed: fixed monthly commitments [{id,name,amount,cat}]
   expenses: [],       // {id, date, category, amount, note}
   dates: [],          // {id, title, date, recurring}
   reading: [],        // {id, title, kind, status}
@@ -2421,6 +2429,7 @@ function migrateChats(){
   if (S.budget.goalName === undefined) S.budget.goalName = "";
   if (S.budget.goalAmount === undefined) S.budget.goalAmount = 0;
   if (!Array.isArray(S.budget.cats)) S.budget.cats = [];
+  if (!Array.isArray(S.budget.fixed)) S.budget.fixed = [];
   if (S.budget.plan === undefined) S.budget.plan = null;   // AI savings plan {ts, headline, moves:[…], note}
   if (S.budget.saveRec === undefined) S.budget.saveRec = null;   // AI "how much to save" rec {ts, recommend, conservative, stretch, rationale, note}
   if (!Array.isArray(S.expenses)) S.expenses = [];
@@ -2732,6 +2741,7 @@ const R = {
   lifeTab: "trips",    // trips | bills | budget | compare | decide | lists
   tripId: null, compareId: null,
   billForm: {open: false, name: "", amount: "", cycle: "monthly", next: ""},
+  fixedForm: {open: false, name: "", amount: "", cat: "Loan"},   // add-a-fixed-monthly-expense form
   tripForm: {open: false, dest: "", start: "", end: "", budget: ""},
   decideForm: {open: false, title: "", options: "", decision: "", why: ""},
   cmpNew: "", optForm: {name: "", price: "", pros: "", cons: "", source: ""},
@@ -8152,18 +8162,64 @@ function donutSVG(entries, total){
     <text x="${cx}" y="${cy - 1}" text-anchor="middle" class="d-c" aria-hidden="true">${cur(total)}</text>
     <text x="${cx}" y="${cy + 15}" text-anchor="middle" class="d-l" aria-hidden="true">${tr("spent")}</text></svg>`;
 }
+/* Fixed monthly commitments — loan, rent, gym, education … the same amount
+   every month. Kept apart from one-off expenses and from renewal-dated bills;
+   always counted in the monthly budget so they never need re-entering. */
+const FIXED_CATS = ["Loan", "Rent / housing", "Gym / fitness", "Education", "Insurance",
+  "Bills & utilities", "Subscriptions", "Transport", "Family / kids", "Savings", "Other"];
+function fixedMonthly(){ return ((S.budget && S.budget.fixed) || []).reduce((a, f) => a + num(f.amount), 0); }
+function fixedCats(){
+  const custom = (S.budget && S.budget.cats) || [];
+  return [...FIXED_CATS.filter(c => c !== "Other"), ...custom.filter(c => !FIXED_CATS.includes(c)), "Other"];
+}
+function fixedHTML(){
+  const list = (S.budget.fixed || []), fx = fixedMonthly(), income = num(S.budget.income);
+  const pct = income > 0 ? Math.round(fx / income * 100) : null;
+  const f = R.fixedForm;
+  return `<div class="card">
+    <div class="wo-hd" style="margin-bottom:${list.length ? "12px" : "8px"}">
+      <div style="flex:1"><h3 style="margin:0">${ic("calendar", 16)} ${tr("Fixed monthly expenses")}</h3>
+        <div class="tiny" style="color:var(--txt2)">${tr("Loan, rent, gym, education — the same every month")}</div></div>
+    </div>
+    ${list.length ? `<div class="fx-summary">
+      <div><div class="fx-amt">${cur(fx)} <span class="fx-cur">${tr("KWD")}</span></div>
+        <div class="tiny">${tr("committed each month")}${pct != null ? ` · ${pct}% ${tr("of income")}` : ""}</div></div>
+      ${income > 0 ? `<div class="fx-left"><div class="fx-left-v" style="color:${income - fx >= 0 ? "var(--green)" : "var(--red)"}">${cur(income - fx)}</div><div class="tiny">${tr("left after fixed")}</div></div>` : ""}
+    </div>
+    <div class="fx-list">${[...list].sort((a, b) => num(b.amount) - num(a.amount)).map(x => `<div class="set-row">
+      <div><div class="k" dir="auto"><span class="bl-dot" style="background:${catColor(x.cat)};margin-inline-end:7px"></span>${esc(x.name)}</div>
+        <div class="desc">${esc(tr(x.cat || "Other"))}</div></div>
+      <span class="end"><b>${cur(x.amount)} ${tr("KWD")}</b>
+        <button class="btn sm danger" aria-label="${tr("Delete")}" onclick="M.fixedDel('${x.id}')">${ic("trash", 13)}</button></span>
+    </div>`).join("")}</div>` : `<div class="tiny" style="color:var(--txt2);margin-bottom:4px">${tr("Add the payments you owe every month so they're always in your budget — no need to re-enter them.")}</div>`}
+    <div class="fold ${f.open || !list.length ? "open" : ""}" style="margin-top:12px;border-top:1px solid var(--line);padding-top:10px">
+      <h3 style="font-size:14px" onclick="M.fixedFormToggle()">${ic("plus", 15)} ${tr("Add a fixed expense")} <span class="chev">▶</span></h3>
+      <div class="fold-body">
+        <div class="field"><label>${tr("Name")}</label><input value="${esc(f.name)}" oninput="R.fixedForm.name=this.value" placeholder="${tr("e.g. Car loan, gym membership, tuition")}" dir="auto"></div>
+        <div class="grid2" style="margin-bottom:10px">
+          <div class="field"><label>${tr("Amount (KWD)")}</label><input type="number" inputmode="decimal" value="${esc(f.amount)}" oninput="R.fixedForm.amount=this.value"></div>
+          <div class="field"><label>${tr("Category")}</label><select onchange="R.fixedForm.cat=this.value">${fixedCats().map(c => `<option value="${esc(c)}" ${f.cat === c ? "selected" : ""}>${esc(tr(c))}</option>`).join("")}</select></div>
+        </div>
+        <button class="btn sm" onclick="M.fixedSave()">${tr("Add")}</button>
+      </div>
+    </div>
+  </div>`;
+}
 function budgetHTML(){
   const ym = todayStr().slice(0, 7);
   const monthExp = S.expenses.filter(e => e.date.slice(0, 7) === ym);
   const spent = monthExp.reduce((a, e) => a + num(e.amount), 0);
   const billsMo = S.bills.reduce((a, b) => a + num(b.amount) * (BILL_CYCLES[b.cycle] || BILL_CYCLES.monthly).perMonth, 0);
+  const fx = fixedMonthly();
   const income = num(S.budget.income);
-  const totalOut = spent + billsMo;
+  const totalOut = spent + billsMo + fx;
   const net = income - totalOut;
   const saveRate = income > 0 ? Math.round(net / income * 100) : null;
   const catTot = {};
   monthExp.forEach(e => { catTot[e.category] = (catTot[e.category] || 0) + num(e.amount); });
   if (billsMo) catTot["Bills"] = (catTot["Bills"] || 0) + billsMo;
+  // fixed commitments show under their own category (loan/gym/education), not lumped
+  (S.budget.fixed || []).forEach(x => { const c = x.cat || "Other"; catTot[c] = (catTot[c] || 0) + num(x.amount); });
   const entries = Object.entries(catTot).sort((a, b) => b[1] - a[1]);
   const top = entries[0];
   const saveT = S.budget.saveTarget != null ? S.budget.saveTarget : Math.max(0, Math.round(net));
@@ -8179,6 +8235,8 @@ function budgetHTML(){
         <div class="rev-stat"><div class="rv">${saveRate != null ? saveRate + "%" : "—"}</div><div class="rl">${tr("Savings rate")}</div></div>
       </div>
     </div>
+
+    ${fixedHTML()}
 
     ${savingsBalanceHTML()}
 
@@ -8207,7 +8265,7 @@ function budgetHTML(){
       ${monthsToGoal ? `<div class="budget-top" style="margin-top:10px">${ic("check", 13)} ${tr("At")} ${cur(saveT)} ${tr("KWD/month you'll reach")} <b>${esc(S.budget.goalName || tr("your goal"))}</b> ${tr("in about")} <b>${monthsToGoal} ${monthsToGoal === 1 ? tr("month") : tr("months")}</b> (${fmtDate(new Date(Date.now() + monthsToGoal * 30 * 864e5).toLocaleDateString("en-CA"))}).</div>` : goalAmt > 0 ? `<div class="tiny" style="margin-top:8px;color:var(--txt2)">${tr("Set a monthly saving amount above to see when you'll reach it.")}</div>` : ""}
     </div>
 
-    ${savingsPlanHTML(income, net, billsMo)}
+    ${savingsPlanHTML(income, net, billsMo + fx)}
 
     <div class="card">
       <h3>${ic("plus", 16)} ${tr("Add expense")}</h3>
@@ -8252,13 +8310,14 @@ function budgetHTML(){
 function monthlyTrend(n){
   const income = num(S.budget.income);
   const billsMo = S.bills.reduce((a, b) => a + num(b.amount) * (BILL_CYCLES[b.cycle] || BILL_CYCLES.monthly).perMonth, 0);
+  const fx = fixedMonthly();
   const now = new Date(); now.setDate(1);
   const rows = [];
   for (let i = n - 1; i >= 0; i--){
     const dt = new Date(now.getFullYear(), now.getMonth() - i, 1);
     const ym = dt.toLocaleDateString("en-CA").slice(0, 7);
     const spent = S.expenses.filter(e => e.date.slice(0, 7) === ym).reduce((a, e) => a + num(e.amount), 0);
-    const out = spent + billsMo;
+    const out = spent + billsMo + fx;
     const saved = income - out;
     rows.push({ym, label: monLoc(dt, "short"),
       spent, bills: billsMo, out, income, saved, rate: income > 0 ? Math.round(saved / income * 100) : null});
@@ -8338,7 +8397,7 @@ function budgetNet(){
   const spent = S.expenses.filter(e => e.date.slice(0, 7) === ym).reduce((a, e) => a + num(e.amount), 0);
   const billsMo = S.bills.reduce((a, b) => a + num(b.amount) * (BILL_CYCLES[b.cycle] || BILL_CYCLES.monthly).perMonth, 0);
   const income = num(S.budget.income);
-  const totalOut = spent + billsMo;
+  const totalOut = spent + billsMo + fixedMonthly();
   return {income, totalOut, net: income - totalOut};
 }
 function savingsBodyHTML(){
@@ -9885,6 +9944,22 @@ Rules: exactly ${days} day objects. Order compound lifts first; 4-6 exercises pe
     buzz(); save(); render();
   },
   billDel(id){ S.bills = S.bills.filter(b => b.id !== id); save(); render(); },
+  /* ---- fixed monthly commitments ---- */
+  fixedFormToggle(){ R.fixedForm.open = !R.fixedForm.open; render(); },
+  fixedSave(){
+    const name = R.fixedForm.name.trim(), amt = num(R.fixedForm.amount);
+    if (!name){ toast("Name the fixed expense."); return; }
+    if (amt <= 0){ toast("Enter the monthly amount."); return; }
+    if (!Array.isArray(S.budget.fixed)) S.budget.fixed = [];
+    S.budget.fixed.unshift({id: uid(), name, amount: amt, cat: R.fixedForm.cat || "Other"});
+    R.fixedForm = {open: false, name: "", amount: "", cat: R.fixedForm.cat || "Loan"};
+    buzz(); save(); render();
+    toast(`${name} · ${cur(amt)} KWD/month added ✓`);
+  },
+  fixedDel(id){
+    if (!confirm("Remove this fixed monthly expense?")) return;
+    S.budget.fixed = (S.budget.fixed || []).filter(f => f.id !== id); save(); render();
+  },
   /* ---- budget ---- */
   expAdd(){
     const a = num(R.expForm.amount);
@@ -9918,16 +9993,17 @@ Rules: exactly ${days} day objects. Order compound lifts first; 4-6 exercises pe
     const monthExp = S.expenses.filter(e => e.date.slice(0, 7) === ym);
     const spent = monthExp.reduce((a, e) => a + num(e.amount), 0);
     const billsMo = S.bills.reduce((a, b) => a + num(b.amount) * (BILL_CYCLES[b.cycle] || BILL_CYCLES.monthly).perMonth, 0);
+    const fx = fixedMonthly();
     const income = num(S.budget.income);
-    const net = income - spent - billsMo;
-    if (!income && !spent && !billsMo){ toast("Add your income and a few expenses first."); return; }
+    const net = income - spent - billsMo - fx;
+    if (!income && !spent && !billsMo && !fx){ toast("Add your income and a few expenses first."); return; }
 
     const catTot = {}; monthExp.forEach(e => { catTot[e.category] = (catTot[e.category] || 0) + num(e.amount); });
     const cats = Object.entries(catTot).sort((a, b) => b[1] - a[1]).map(([c, v]) => `- ${c}: ${cur(v)} KWD`).join("\n") || "- (none logged yet)";
     // Fixed monthly payments, itemised — so MIRA can spot pricey subscriptions/loans.
-    const bills = S.bills.length
-      ? S.bills.map(b => `- ${b.name}: ${cur(num(b.amount) * (BILL_CYCLES[b.cycle] || BILL_CYCLES.monthly).perMonth)} KWD/month`).join("\n")
-      : "- (none listed)";
+    const billLines = S.bills.map(b => `- ${b.name}: ${cur(num(b.amount) * (BILL_CYCLES[b.cycle] || BILL_CYCLES.monthly).perMonth)} KWD/month`);
+    const fixedLines = (S.budget.fixed || []).map(x => `- ${x.name} (${x.cat}): ${cur(num(x.amount))} KWD/month`);
+    const bills = billLines.concat(fixedLines).join("\n") || "- (none listed)";
     const goal = num(S.budget.goalAmount) > 0
       ? `\nGoal: saving toward "${S.budget.goalName || "a goal"}" costing ${cur(S.budget.goalAmount)} KWD.` : "";
 
@@ -9948,7 +10024,7 @@ Rules: exactly ${days} day objects. Order compound lifts first; 4-6 exercises pe
       + `Income: ${cur(income)} KWD\n`
       + `Fixed recurring payments:\n${bills}\n`
       + `Spending this month by category:\n${cats}\n`
-      + `Total out (spending + fixed): ${cur(spent + billsMo)} KWD\n`
+      + `Total out (spending + fixed): ${cur(spent + billsMo + fx)} KWD\n`
       + `Net left over: ${cur(net)} KWD${goal}\n\n`
       + `Find the best ways for me to save more each month.`;
 
