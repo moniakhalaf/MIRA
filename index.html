@@ -1411,7 +1411,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.141";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.142";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -5438,12 +5438,16 @@ function acRender(q){
   const el = $("#acList");
   if (!el) return;
   const query = (q || "").trim().toLowerCase();
+  // Type-ahead only: with an empty field (e.g. right after "+ Log food" focuses
+  // it) show nothing, so the floating list never dumps every saved food over the
+  // form. Browsing the whole history is what "Pick from my foods" is for.
+  if (!query){ el.innerHTML = ""; return; }
   // Just picked this exact food → keep the list closed. Re-rendering the form
   // restores focus to the name field, which would otherwise re-open the list
   // showing the very item that was just chosen. Typing again clears the flag.
   if (R.acPickedName && query === R.acPickedName.trim().toLowerCase()){ el.innerHTML = ""; return; }
   const hits = S.savedFoods
-    .filter(f => !query || f.name.toLowerCase().includes(query))
+    .filter(f => f.name.toLowerCase().includes(query))
     .slice(0, 8);
   el.innerHTML = hits.length && document.activeElement === $("#ffName")
     ? `<div class="ac-list">${hits.map((f, i) =>
