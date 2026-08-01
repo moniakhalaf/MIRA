@@ -1114,16 +1114,16 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
 .myfoods.open .myf-toggle .chev{transform:rotate(90deg)}
 .myf-body{padding-top:9px}
 .myf-search{width:100%;margin-bottom:8px}
-.myf-list{border:1px solid var(--line2);border-radius:12px;overflow:hidden;max-height:280px;overflow-y:auto}
-.myf-row{display:flex;align-items:stretch;border-top:1px solid var(--line)}
+.myf-list{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--bg2)}
+.myf-row{display:flex;align-items:center;border-top:1px solid var(--line)}
 .myf-row:first-child{border-top:none}
-.myf-pick{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;padding:11px 13px;text-align:start;color:var(--txt)}
+.myf-pick{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;padding:9px 12px;text-align:start;color:var(--txt)}
 .myf-pick:active{background:var(--acc-soft)}
-.myf-nm{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.myf-m{color:var(--txt2);font-size:12px}
-.myf-del{flex:0 0 auto;width:44px;display:flex;align-items:center;justify-content:center;color:var(--txt3);border-inline-start:1px solid var(--line)}
-.myf-del:active{color:var(--red);background:color-mix(in srgb,var(--red) 10%,transparent)}
-.myf-more,.myf-empty{color:var(--txt3);text-align:center;padding:8px 4px 2px}
+.myf-nm{font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.myf-m{color:var(--txt2);font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.myf-del{flex:0 0 auto;width:36px;height:36px;margin-inline-end:5px;display:flex;align-items:center;justify-content:center;color:var(--txt3);border-radius:9px}
+.myf-del:active{color:var(--red);background:color-mix(in srgb,var(--red) 12%,transparent)}
+.myf-more,.myf-empty{color:var(--txt3);text-align:center;padding:10px 4px 3px;display:flex;align-items:center;justify-content:center;gap:5px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .grid3m{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
@@ -1293,6 +1293,18 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
 .demo-miss{font-size:13.5px;color:var(--txt2);margin:6px 0;padding-inline-start:18px;position:relative;line-height:1.45}
 .demo-miss:before{content:"×";position:absolute;inset-inline-start:0;color:var(--red);font-weight:800}
 
+/* ---------- Home category tiles (launcher grid) ---------- */
+.home-tiles{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-bottom:6px}
+.home-tile{position:relative;overflow:hidden;background:var(--card);border:1px solid var(--line);border-radius:16px;
+  padding:14px 14px 13px;text-align:start;display:flex;flex-direction:column;min-height:108px;box-shadow:var(--cardshadow);transition:transform .12s}
+.home-tile:active{transform:scale(.98)}
+.home-tile::before{content:"";position:absolute;inset-block:0;inset-inline-start:0;width:3px;background:var(--fc)}
+.home-tile .ht-ic{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;
+  background:color-mix(in srgb,var(--fc) 15%,transparent);color:var(--fc);margin-bottom:10px}
+.home-tile .ht-nm{font-size:14.5px;font-weight:650}
+.home-tile .ht-st{font-size:12px;color:var(--txt2);margin-top:2px}
+.home-tile .ht-st b{color:var(--txt);font-weight:700}
+
 /* the floating + must never sit on top of the last card — give Home scroll clearance */
 .fab-clear{height:84px;flex:0 0 auto}
 
@@ -1393,7 +1405,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.138";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.140";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1595,7 +1607,7 @@ const TR = {
     "This week":"هذا الأسبوع","Weight projection":"توقّع الوزن","estimate":"تقدير",
     "A new version is ready":"يتوفّر إصدار جديد","Reload":"إعادة التحميل","Dismiss":"إغلاق",
     "Remaining":"المتبقّي","Hydration":"الترطيب","Log food":"تسجيل الطعام","Edit entry":"تعديل الإدخال",
-    "Pick from my foods":"اختر من أطعمتي","Search my foods…":"ابحث في أطعمتي…","more — search to narrow":"أكثر — ابحث للتضييق","No match in your foods.":"لا تطابق في أطعمتك.","Removed from my foods":"أُزيل من أطعمتي",
+    "Your areas":"مجالاتك","Pick from my foods":"اختر من أطعمتي","Search my foods…":"ابحث في أطعمتي…","more — search to narrow":"أكثر — ابحث للتضييق","No match in your foods.":"لا تطابق في أطعمتك.","Removed from my foods":"أُزيل من أطعمتي",
     "Food name":"اسم الطعام","Meal":"الوجبة","Amount eaten":"الكمية المتناولة","Time":"الوقت",
     "Calories (kcal)":"السعرات (كيلوكالوري)","Protein g":"بروتين غ","Carbs g":"كربوهيدرات غ","Fat g":"دهون غ",
     "Save to log":"حفظ في السجل","Update entry":"تحديث الإدخال","Portion scaler":"محوّل الكمية",
@@ -3092,10 +3104,26 @@ function recentChatsHTML(){
         <span class="rch-ar">${ic("chevR", 15)}</span></button>`; }).join("")}
     </div>`;
 }
+const HOME_TILE_ICON = {work: "briefcase", health: "heart", fitness: "barbell", life: "compass"};
+function homeTilesHTML(){
+  const doms = dashDomains();
+  if (!doms.length) return "";
+  const tiles = doms.map(d => {
+    let st; try { st = (domDashTiles(d.id) || [])[0]; } catch (e) { st = null; }
+    const icon = HOME_TILE_ICON[d.id] || "grid";
+    return `<button class="home-tile" style="--fc:${d.color}" onclick="M.homeSection('${d.id}')">
+      <span class="ht-ic">${ic(icon, 20)}</span>
+      <span class="ht-nm">${esc(t(d.name))}</span>
+      <span class="ht-st">${st ? `<b>${st.v}</b> ${esc(st.l)}` : ""}</span>
+    </button>`;
+  }).join("");
+  return `<div class="dash-sec-h">${t("Your areas")}</div><div class="home-tiles">${tiles}</div>`;
+}
 function todayOverviewHTML(){
   const dash = homeDashHTML();
   return `
     ${dash || `<div class="today-empty">${ic("target", 18)}<div><b>${t("Your day starts here.")}</b><div class="muted" style="margin-top:3px">${t("Log something with the + button, pick an area above, or ask MIRA anything.")}</div></div></div>`}
+    ${homeTilesHTML()}
     ${(typeof achievementsHTML === "function") ? achievementsHTML() : ""}
     ${recentChatsHTML()}
     <button class="btn sec" style="margin-top:14px" onclick="M.tab('chat')">${ic("chat", 16)} ${t("Open chat")}</button>`;
@@ -5380,7 +5408,10 @@ function myFoodsHTML(){
   const q = (R.myFoodsQ || "").trim().toLowerCase();
   const all = S.savedFoods;
   const hits = (q ? all.filter(f => f.name.toLowerCase().includes(q)) : all);
-  const shown = hits.slice(0, 60);
+  // keep it short so it never becomes a long nested-scroll list inside the page —
+  // a compact set that flows naturally; the search narrows to anything else.
+  const cap = q ? 20 : 8;
+  const shown = hits.slice(0, cap);
   return `<div class="myfoods fold ${R.myFoodsOpen ? "open" : ""}">
     <button type="button" class="myf-toggle" onclick="M.myFoodsToggle()">${ic("list", 15)} ${t("Pick from my foods")} <span class="myf-n">${all.length}</span><span class="chev">▶</span></button>
     <div class="fold-body myf-body">
@@ -5389,9 +5420,9 @@ function myFoodsHTML(){
         <button type="button" class="myf-pick" onclick="M.acPick(${idx})">
           <span dir="auto" class="myf-nm">${esc(f.name)}</span>
           <span class="myf-m">${f.amount ? esc(f.amount) + " · " : ""}${n0(f.kcal)} kcal · ${n1(f.p)}P</span></button>
-        <button type="button" class="myf-del" aria-label="${t("Remove")}" onclick="M.savedFoodDel(${idx})">${ic("trash", 13)}</button>
+        <button type="button" class="myf-del" aria-label="${t("Remove")}" onclick="M.savedFoodDel(${idx})">${ic("trash", 14)}</button>
       </div>`; }).join("")}</div>
-      ${hits.length > shown.length ? `<div class="tiny myf-more">+ ${hits.length - shown.length} ${t("more — search to narrow")}</div>` : ""}`
+      ${hits.length > shown.length ? `<div class="tiny myf-more">${ic("search", 12)} ${hits.length - shown.length} ${t("more — search to narrow")}</div>` : ""}`
       : `<div class="tiny myf-empty">${t("No match in your foods.")}</div>`}
     </div>
   </div>`;
