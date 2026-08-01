@@ -1103,6 +1103,24 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
 .ac-list button:first-child{border-top:none}
 .ac-list button:active{background:var(--acc-soft)}
 .ac-list .m{color:var(--txt2);font-size:12px;white-space:nowrap}
+/* ---- "Pick from my foods" history list ---- */
+.myfoods{margin:-2px 0 12px}
+.myf-toggle{display:flex;align-items:center;gap:8px;width:100%;padding:10px 12px;background:var(--bg2);border:1px solid var(--line);border-radius:11px;color:var(--txt);font-size:13.5px;font-weight:600;text-align:start}
+.myf-toggle .myf-n{background:var(--acc-soft);color:var(--acc);font-size:11px;font-weight:700;padding:1px 8px;border-radius:99px}
+.myf-toggle .chev{margin-inline-start:auto;color:var(--txt3);transition:transform .2s}
+.myfoods.open .myf-toggle .chev{transform:rotate(90deg)}
+.myf-body{padding-top:9px}
+.myf-search{width:100%;margin-bottom:8px}
+.myf-list{border:1px solid var(--line2);border-radius:12px;overflow:hidden;max-height:280px;overflow-y:auto}
+.myf-row{display:flex;align-items:stretch;border-top:1px solid var(--line)}
+.myf-row:first-child{border-top:none}
+.myf-pick{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;padding:11px 13px;text-align:start;color:var(--txt)}
+.myf-pick:active{background:var(--acc-soft)}
+.myf-nm{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.myf-m{color:var(--txt2);font-size:12px}
+.myf-del{flex:0 0 auto;width:44px;display:flex;align-items:center;justify-content:center;color:var(--txt3);border-inline-start:1px solid var(--line)}
+.myf-del:active{color:var(--red);background:color-mix(in srgb,var(--red) 10%,transparent)}
+.myf-more,.myf-empty{color:var(--txt3);text-align:center;padding:8px 4px 2px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .grid3m{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
@@ -1372,7 +1390,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.134";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.135";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1566,6 +1584,7 @@ const TR = {
     "This week":"هذا الأسبوع","Weight projection":"توقّع الوزن","estimate":"تقدير",
     "A new version is ready":"يتوفّر إصدار جديد","Reload":"إعادة التحميل","Dismiss":"إغلاق",
     "Remaining":"المتبقّي","Hydration":"الترطيب","Log food":"تسجيل الطعام","Edit entry":"تعديل الإدخال",
+    "Pick from my foods":"اختر من أطعمتي","Search my foods…":"ابحث في أطعمتي…","more — search to narrow":"أكثر — ابحث للتضييق","No match in your foods.":"لا تطابق في أطعمتك.","Removed from my foods":"أُزيل من أطعمتي",
     "Food name":"اسم الطعام","Meal":"الوجبة","Amount eaten":"الكمية المتناولة","Time":"الوقت",
     "Calories (kcal)":"السعرات (كيلوكالوري)","Protein g":"بروتين غ","Carbs g":"كربوهيدرات غ","Fat g":"دهون غ",
     "Save to log":"حفظ في السجل","Update entry":"تحديث الإدخال","Portion scaler":"محوّل الكمية",
@@ -2686,6 +2705,8 @@ const R = {
   openDays: new Set([todayStr()]),
   mealsOpen: false,
   acFocus: false,
+  myFoodsOpen: false, // "Pick from my foods" history list open in the Log food card
+  myFoodsQ: "",       // filter for that history list
   trainTab: "today",  // today | program | library | history | coach
   trainWO: null,      // in-progress workout being logged
   libQuery: "",
@@ -4996,6 +5017,7 @@ function foodHTML(){
         <button class="in-mic" aria-label="Voice input" onmousedown="event.preventDefault()" onclick="M.voiceFood()">${ic("mic", 17)}</button>
         <div id="acList"></div>
       </div>
+      ${!reviewItems && S.savedFoods.length ? myFoodsHTML() : ""}
       <div class="field"><label>${t("Meal")}</label>
         <div class="seg">${FOOD_MEALS.map(([v, l]) => `<button class="${(foodForm.meal || mealFromTime(foodForm.time || nowHM())) === v ? "on" : ""}" onclick="M.foodMeal('${v}')">${t(l)}</button>`).join("")}</div></div>
       ${reviewItems && !R.editFoodId ? `
@@ -5330,6 +5352,30 @@ function foodReportCardHTML(){
   </div>`;
 }
 
+/* "Pick from my foods" — the full logged-food history as an openable list,
+   so you can add a past food without typing. Tapping fills the form (via
+   acPick), which sets up the amount adjuster so a food saved as e.g. 100 g
+   rescales its macros to the amount you're actually having. */
+function myFoodsHTML(){
+  const q = (R.myFoodsQ || "").trim().toLowerCase();
+  const all = S.savedFoods;
+  const hits = (q ? all.filter(f => f.name.toLowerCase().includes(q)) : all);
+  const shown = hits.slice(0, 60);
+  return `<div class="myfoods fold ${R.myFoodsOpen ? "open" : ""}">
+    <button type="button" class="myf-toggle" onclick="M.myFoodsToggle()">${ic("list", 15)} ${t("Pick from my foods")} <span class="myf-n">${all.length}</span><span class="chev">▶</span></button>
+    <div class="fold-body myf-body">
+      <input id="myfSearch" class="myf-search" placeholder="${t("Search my foods…")}" value="${esc(R.myFoodsQ || "")}" oninput="M.myFoodsSearch(this.value)" autocomplete="off">
+      ${shown.length ? `<div class="myf-list">${shown.map(f => { const idx = all.indexOf(f); return `<div class="myf-row">
+        <button type="button" class="myf-pick" onclick="M.acPick(${idx})">
+          <span dir="auto" class="myf-nm">${esc(f.name)}</span>
+          <span class="myf-m">${f.amount ? esc(f.amount) + " · " : ""}${n0(f.kcal)} kcal · ${n1(f.p)}P</span></button>
+        <button type="button" class="myf-del" aria-label="${t("Remove")}" onclick="M.savedFoodDel(${idx})">${ic("trash", 13)}</button>
+      </div>`; }).join("")}</div>
+      ${hits.length > shown.length ? `<div class="tiny myf-more">+ ${hits.length - shown.length} ${t("more — search to narrow")}</div>` : ""}`
+      : `<div class="tiny myf-empty">${t("No match in your foods.")}</div>`}
+    </div>
+  </div>`;
+}
 /* autocomplete */
 function acRender(q){
   const el = $("#acList");
@@ -10559,6 +10605,7 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
     Object.assign(foodForm, {name: f.name, amount: f.amount, kcal: f.kcal, p: f.p, c: f.c, f: f.f, conf: "user",
       portion, portG: portion ? portion.base : ""});
     R.acPickedName = f.name;                 // keep the suggestion list closed after picking
+    R.myFoodsOpen = false; R.myFoodsQ = "";  // collapse the "my foods" list so the filled form shows
     render();
     const el = $("#acList"); if (el) el.innerHTML = "";   // clear immediately (before any focus re-render)
     toast(portion ? tr("Filled ✓ — change the amount to rescale") : tr("Filled from saved foods ✓"));
@@ -10577,6 +10624,13 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
     const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
     set("ffK", foodForm.kcal); set("ffP", foodForm.p); set("ffC", foodForm.c); set("ffF", foodForm.f);
     set("ffAmount", foodForm.amount);
+  },
+  myFoodsToggle(){ R.myFoodsOpen = !R.myFoodsOpen; if (!R.myFoodsOpen) R.myFoodsQ = ""; render(); if (R.myFoodsOpen){ const s = $("#myfSearch"); if (s) s.focus(); } },
+  myFoodsSearch(v){ R.myFoodsQ = v; render(); },
+  savedFoodDel(i){
+    const f = S.savedFoods[i]; if (!f) return;
+    S.savedFoods.splice(i, 1); save(); render();
+    toast(`${tr("Removed from my foods")} ✓`);
   },
   scToggle(){ foodForm.scOpen = !foodForm.scOpen; render(); },
   scApply(){
