@@ -1114,7 +1114,13 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
 .myfoods.open .myf-toggle .chev{transform:rotate(90deg)}
 .myf-body{padding-top:9px}
 .myf-search{width:100%;margin-bottom:8px}
-.myf-list{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--bg2)}
+.myf-meta{font-size:11px;color:var(--txt3);font-weight:600;letter-spacing:.02em;margin:0 2px 7px;text-transform:uppercase}
+/* browse the whole history in a smooth, self-contained scroll area — momentum
+   scrolling on iOS, and overscroll-contain so it doesn't drag the page along */
+.myf-list{border:1px solid var(--line);border-radius:12px;background:var(--bg2);
+  max-height:min(56vh,430px);overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+.myf-list::-webkit-scrollbar{width:6px}
+.myf-list::-webkit-scrollbar-thumb{background:var(--line2);border-radius:3px}
 .myf-row{display:flex;align-items:center;border-top:1px solid var(--line)}
 .myf-row:first-child{border-top:none}
 .myf-pick{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;padding:9px 12px;text-align:start;color:var(--txt)}
@@ -1405,7 +1411,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.140";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.141";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1607,7 +1613,7 @@ const TR = {
     "This week":"هذا الأسبوع","Weight projection":"توقّع الوزن","estimate":"تقدير",
     "A new version is ready":"يتوفّر إصدار جديد","Reload":"إعادة التحميل","Dismiss":"إغلاق",
     "Remaining":"المتبقّي","Hydration":"الترطيب","Log food":"تسجيل الطعام","Edit entry":"تعديل الإدخال",
-    "Your areas":"مجالاتك","Pick from my foods":"اختر من أطعمتي","Search my foods…":"ابحث في أطعمتي…","more — search to narrow":"أكثر — ابحث للتضييق","No match in your foods.":"لا تطابق في أطعمتك.","Removed from my foods":"أُزيل من أطعمتي",
+    "Your areas":"مجالاتك","match":"تطابق","matches":"تطابقات","foods":"أطعمة","newest first":"الأحدث أولاً","Pick from my foods":"اختر من أطعمتي","Search my foods…":"ابحث في أطعمتي…","more — search to narrow":"أكثر — ابحث للتضييق","No match in your foods.":"لا تطابق في أطعمتك.","Removed from my foods":"أُزيل من أطعمتي",
     "Food name":"اسم الطعام","Meal":"الوجبة","Amount eaten":"الكمية المتناولة","Time":"الوقت",
     "Calories (kcal)":"السعرات (كيلوكالوري)","Protein g":"بروتين غ","Carbs g":"كربوهيدرات غ","Fat g":"دهون غ",
     "Save to log":"حفظ في السجل","Update entry":"تحديث الإدخال","Portion scaler":"محوّل الكمية",
@@ -5408,21 +5414,21 @@ function myFoodsHTML(){
   const q = (R.myFoodsQ || "").trim().toLowerCase();
   const all = S.savedFoods;
   const hits = (q ? all.filter(f => f.name.toLowerCase().includes(q)) : all);
-  // keep it short so it never becomes a long nested-scroll list inside the page —
-  // a compact set that flows naturally; the search narrows to anything else.
-  const cap = q ? 20 : 8;
-  const shown = hits.slice(0, cap);
+  // Show ALL of them — browse the whole history without searching. The list
+  // lives in its own smooth, contained scroll area (overscroll-behavior:contain
+  // stops it fighting the page), so a long history stays tidy.
+  const meta = q ? `${hits.length} ${hits.length === 1 ? t("match") : t("matches")}` : `${all.length} ${t("foods")} · ${t("newest first")}`;
   return `<div class="myfoods fold ${R.myFoodsOpen ? "open" : ""}">
     <button type="button" class="myf-toggle" onclick="M.myFoodsToggle()">${ic("list", 15)} ${t("Pick from my foods")} <span class="myf-n">${all.length}</span><span class="chev">▶</span></button>
     <div class="fold-body myf-body">
       <input id="myfSearch" class="myf-search" placeholder="${t("Search my foods…")}" value="${esc(R.myFoodsQ || "")}" oninput="M.myFoodsSearch(this.value)" autocomplete="off">
-      ${shown.length ? `<div class="myf-list">${shown.map(f => { const idx = all.indexOf(f); return `<div class="myf-row">
+      ${hits.length ? `<div class="myf-meta">${meta}</div>
+      <div class="myf-list">${hits.map(f => { const idx = all.indexOf(f); return `<div class="myf-row">
         <button type="button" class="myf-pick" onclick="M.acPick(${idx})">
           <span dir="auto" class="myf-nm">${esc(f.name)}</span>
           <span class="myf-m">${f.amount ? esc(f.amount) + " · " : ""}${n0(f.kcal)} kcal · ${n1(f.p)}P</span></button>
         <button type="button" class="myf-del" aria-label="${t("Remove")}" onclick="M.savedFoodDel(${idx})">${ic("trash", 14)}</button>
-      </div>`; }).join("")}</div>
-      ${hits.length > shown.length ? `<div class="tiny myf-more">${ic("search", 12)} ${hits.length - shown.length} ${t("more — search to narrow")}</div>` : ""}`
+      </div>`; }).join("")}</div>`
       : `<div class="tiny myf-empty">${t("No match in your foods.")}</div>`}
     </div>
   </div>`;
