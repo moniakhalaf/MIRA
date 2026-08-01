@@ -1411,7 +1411,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.142";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.143";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1927,6 +1927,7 @@ const TR = {
     "Out this month": "الصادر هذا الشهر",
     "Net left": "المتبقّي الصافي",
     "Savings rate": "معدّل الادّخار",
+    "Salary day (resets budget)":"يوم الراتب (يُصفّر الميزانية)","1 = calendar month":"1 = الشهر الميلادي","This pay cycle":"دورة الراتب الحالية","resets on day":"يُصفّر في يوم","This month":"هذا الشهر","Out this cycle":"المصروف في الدورة",
     "Fixed monthly expenses":"المصاريف الشهرية الثابتة","Loan, rent, gym, education — the same every month":"قرض، إيجار، نادٍ، تعليم — نفس المبلغ كل شهر","committed each month":"ملتزَم بها شهرياً","of income":"من الدخل","left after fixed":"المتبقّي بعد الثابتة","Add the payments you owe every month so they're always in your budget — no need to re-enter them.":"أضِف المدفوعات التي تلتزم بها شهرياً لتبقى دائماً ضمن ميزانيتك — دون الحاجة لإعادة إدخالها.","Add a fixed expense":"أضف مصروفاً ثابتاً","e.g. Car loan, gym membership, tuition":"مثال: قرض سيارة، اشتراك نادٍ، رسوم دراسية",
     "Where it goes": "أين يذهب المال",
     "Most goes to": "الأكثر يذهب إلى",
@@ -3065,7 +3066,7 @@ function widgetData(id){
   if (id === "focus"){ const n = (S.focusLog || []).filter(f => f.date === t).length; return {kind: "tile", icon: "timer", label: "Focus today", val: "" + n, sub: "pomodoros", onclick: "M.goWork('focus')"}; }
   if (id === "bill"){ const b = [...(S.bills || [])].filter(x => x.next && x.next >= t).sort((a, b) => a.next < b.next ? -1 : 1)[0]; const bn = b ? String(b.name || "Bill") : ""; return {kind: "tile", icon: "creditCard", label: "Next bill", val: b ? esc(bn.length > 16 ? bn.slice(0, 15) + "…" : bn) : "—", sub: b ? fmtDate(b.next) : "none due", onclick: "M.goLife('bills')"}; }
   if (id === "habits"){ const set = new Set(S.habitLog[t] || []); const tot = (S.habits || []).length; const done = (S.habits || []).filter(h => set.has(h.id)).length; return {kind: "tile", icon: "check", label: "Habits today", val: tot ? `${done}/${tot}` : "—", sub: tot ? (done === tot ? "all done" : "keep going") : "none set", onclick: "M.goHealth('supps')"}; }
-  if (id === "budget"){ const ym = t.slice(0, 7); const spent = (S.expenses || []).filter(e => e.date && e.date.slice(0, 7) === ym).reduce((a, e) => a + (+e.amount || 0), 0); const inc = (S.budget || {}).income || 0; return {kind: "tile", icon: "wallet", label: "Spent · month", val: (inc || spent) ? n0(spent) : "—", sub: inc ? `of ${n0(inc)}` : "this month", onclick: "M.goLife('budget')"}; }
+  if (id === "budget"){ const spent = (S.expenses || []).filter(e => e.date && (typeof inPeriod === "function" ? inPeriod(e.date) : e.date.slice(0, 7) === t.slice(0, 7))).reduce((a, e) => a + (+e.amount || 0), 0); const inc = (S.budget || {}).income || 0; const cyc = (typeof budgetCycleDay === "function" && budgetCycleDay() > 1); return {kind: "tile", icon: "wallet", label: cyc ? "Spent · cycle" : "Spent · month", val: (inc || spent) ? n0(spent) : "—", sub: inc ? `of ${n0(inc)}` : (cyc ? "this cycle" : "this month"), onclick: "M.goLife('budget')"}; }
   return null;
 }
 function homeDashHTML(){
@@ -3265,9 +3266,8 @@ function weekStats(){
   const avgMood = md.length ? md.reduce((a, e) => a + (+e.mood || 0), 0) / md.length : null;
   const avgEnergy = md.length ? md.reduce((a, e) => a + (+e.energy || 0), 0) / md.length : null;
 
-  // Budget (this calendar month)
-  const ym = t.slice(0, 7);
-  const spent = (S.expenses || []).filter(e => e.date && e.date.slice(0, 7) === ym).reduce((a, e) => a + (+e.amount || 0), 0);
+  // Budget (this pay cycle, or calendar month when cycleDay = 1)
+  const spent = (S.expenses || []).filter(e => e.date && (typeof inPeriod === "function" ? inPeriod(e.date) : e.date.slice(0, 7) === t.slice(0, 7))).reduce((a, e) => a + (+e.amount || 0), 0);
   const income = (S.budget || {}).income || 0;
 
   return {days, from, tg, nDaysFood, avgKcal: nDaysFood ? kcalSum / nDaysFood : null, avgP: nDaysFood ? pSum / nDaysFood : null, proteinHitDays,
@@ -8312,9 +8312,29 @@ function fixedHTML(){
     </div>
   </div>`;
 }
+/* ---- pay-cycle budgeting ----
+   Track from your salary day (e.g. the 25th) to the next, instead of the
+   calendar month — the budget rolls over when the new salary lands, not on
+   the 1st. cycleDay 1 keeps the classic calendar-month behaviour. */
+function budgetCycleDay(){ const d = num((S.budget || {}).cycleDay); return d >= 1 && d <= 28 ? Math.round(d) : 1; }
+function budgetPeriod(ref){
+  const day = budgetCycleDay();
+  const now = ref ? new Date(ref) : new Date(); now.setHours(0, 0, 0, 0);
+  let start = new Date(now.getFullYear(), now.getMonth(), day);
+  if (now.getDate() < day) start = new Date(now.getFullYear(), now.getMonth() - 1, day);
+  const end = new Date(start.getFullYear(), start.getMonth() + 1, day);
+  return {start, end, startStr: start.toLocaleDateString("en-CA"), endStr: end.toLocaleDateString("en-CA"), key: start.toLocaleDateString("en-CA")};
+}
+function inPeriod(dateStr, p){ p = p || budgetPeriod(); return dateStr >= p.startStr && dateStr < p.endStr; }
+function budgetPeriodLabel(p){
+  p = p || budgetPeriod();
+  const last = new Date(p.end.getTime() - 864e5);   // inclusive last day
+  const f = d => d.toLocaleDateString(uiLang() === "ar" ? "ar" : "en-GB", {day: "numeric", month: "short"});
+  return `<bdi dir="ltr">${f(p.start)} – ${f(last)}</bdi>`;
+}
 function budgetHTML(){
-  const ym = todayStr().slice(0, 7);
-  const monthExp = S.expenses.filter(e => e.date.slice(0, 7) === ym);
+  const per = budgetPeriod();
+  const monthExp = S.expenses.filter(e => inPeriod(e.date, per));
   const spent = monthExp.reduce((a, e) => a + num(e.amount), 0);
   const billsMo = S.bills.reduce((a, b) => a + num(b.amount) * (BILL_CYCLES[b.cycle] || BILL_CYCLES.monthly).perMonth, 0);
   const fx = fixedMonthly();
@@ -8335,9 +8355,13 @@ function budgetHTML(){
   const f = R.expForm;
   return `
     <div class="card">
-      <div class="field"><label>${tr("Monthly income (KWD)")}</label><input type="number" inputmode="decimal" value="${S.budget.income || ""}" oninput="S.budget.income=num(this.value);save()"></div>
+      <div class="grid2" style="margin-bottom:2px">
+        <div class="field"><label>${tr("Monthly income (KWD)")}</label><input type="number" inputmode="decimal" value="${S.budget.income || ""}" oninput="S.budget.income=num(this.value);save()"></div>
+        <div class="field"><label>${tr("Salary day (resets budget)")}</label><input type="number" inputmode="numeric" min="1" max="28" value="${S.budget.cycleDay && S.budget.cycleDay > 1 ? S.budget.cycleDay : ""}" placeholder="${tr("1 = calendar month")}" onchange="M.budgetCycleSet(this.value)"></div>
+      </div>
+      <div class="tiny" style="margin:0 2px 12px;color:var(--txt2)">${ic("calendar", 12)} ${budgetCycleDay() > 1 ? `${tr("This pay cycle")} · ${budgetPeriodLabel(per)} — ${tr("resets on day")} ${budgetCycleDay()}` : `${tr("This month")} · ${budgetPeriodLabel(per)}`}</div>
       <div class="rev-grid">
-        <div class="rev-stat"><div class="rv">${cur(totalOut)}</div><div class="rl">${tr("Out this month")}</div></div>
+        <div class="rev-stat"><div class="rv">${cur(totalOut)}</div><div class="rl">${budgetCycleDay() > 1 ? tr("Out this cycle") : tr("Out this month")}</div></div>
         <div class="rev-stat"><div class="rv" style="color:${net >= 0 ? "var(--green)" : "var(--red)"}">${cur(net)}</div><div class="rl">${tr("Net left")}</div></div>
         <div class="rev-stat"><div class="rv">${saveRate != null ? saveRate + "%" : "—"}</div><div class="rl">${tr("Savings rate")}</div></div>
       </div>
@@ -8394,11 +8418,11 @@ function budgetHTML(){
     </div>
 
     ${monthExp.length ? (() => {
-      const monthName = monLoc(new Date(), "long");
+      const heading = budgetCycleDay() > 1 ? budgetPeriodLabel(per) : monLoc(new Date(), "long");
       const sorted = [...monthExp].sort((a, b) => b.ts - a.ts);
       const shown = sorted.slice(0, 50);
       return `<div class="card fold ${R.expListOpen ? "open" : ""}">
-      <h3 onclick="M.expListToggle()">${ic("creditCard", 16)} ${monthName} ${tr("expenses")} <span class="exp-sum">${monthExp.length} · ${cur(spent)} ${tr("KWD")}</span><span class="chev">▶</span></h3>
+      <h3 onclick="M.expListToggle()">${ic("creditCard", 16)} ${heading} ${tr("expenses")} <span class="exp-sum">${monthExp.length} · ${cur(spent)} ${tr("KWD")}</span><span class="chev">▶</span></h3>
       <div class="fold-body">
       ${shown.map(e => `<div class="set-row">
         <div><div class="k"><span class="bl-dot" style="background:${catColor(e.category)};margin-inline-end:7px"></span>${esc(tr(e.category))}${e.note ? ` · ${esc(e.note)}` : ""}</div><div class="desc">${fmtDate(e.date)}</div></div>
@@ -8418,15 +8442,16 @@ function monthlyTrend(n){
   const income = num(S.budget.income);
   const billsMo = S.bills.reduce((a, b) => a + num(b.amount) * (BILL_CYCLES[b.cycle] || BILL_CYCLES.monthly).perMonth, 0);
   const fx = fixedMonthly();
-  const now = new Date(); now.setDate(1);
+  // walk back over pay-periods (which equal calendar months when cycleDay = 1)
+  const cur = budgetPeriod();
   const rows = [];
   for (let i = n - 1; i >= 0; i--){
-    const dt = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const ym = dt.toLocaleDateString("en-CA").slice(0, 7);
-    const spent = S.expenses.filter(e => e.date.slice(0, 7) === ym).reduce((a, e) => a + num(e.amount), 0);
+    const ref = new Date(cur.start.getFullYear(), cur.start.getMonth() - i, cur.start.getDate());
+    const p = budgetPeriod(ref);
+    const spent = S.expenses.filter(e => inPeriod(e.date, p)).reduce((a, e) => a + num(e.amount), 0);
     const out = spent + billsMo + fx;
     const saved = income - out;
-    rows.push({ym, label: monLoc(dt, "short"),
+    rows.push({ym: p.key, label: monLoc(p.start, "short"),
       spent, bills: billsMo, out, income, saved, rate: income > 0 ? Math.round(saved / income * 100) : null});
   }
   return rows;
@@ -8500,8 +8525,7 @@ function monthTrendHTML(){
 // own (typing in the balance patches #savBody in place — never the whole
 // card — so the number field keeps focus and the keyboard stays up).
 function budgetNet(){
-  const ym = todayStr().slice(0, 7);
-  const spent = S.expenses.filter(e => e.date.slice(0, 7) === ym).reduce((a, e) => a + num(e.amount), 0);
+  const spent = S.expenses.filter(e => inPeriod(e.date)).reduce((a, e) => a + num(e.amount), 0);
   const billsMo = S.bills.reduce((a, b) => a + num(b.amount) * (BILL_CYCLES[b.cycle] || BILL_CYCLES.monthly).perMonth, 0);
   const income = num(S.budget.income);
   const totalOut = spent + billsMo + fixedMonthly();
@@ -8512,7 +8536,7 @@ function savingsBodyHTML(){
   const bal = num(S.budget.savings);
   const has = S.budget.savings != null && S.budget.savings !== "";
   const active = income > 0 || totalOut > 0;          // a meaningful month to project
-  const banked = S.budget.savingsBankedMonth === todayStr().slice(0, 7); // net already folded in
+  const banked = S.budget.savingsBankedMonth === budgetPeriod().key; // net already folded in for this cycle
   const projected = bal + net;
   const flow = active && !banked ? `
     <div class="sav-flow ${net >= 0 ? "up" : "down"}">
@@ -10096,8 +10120,7 @@ Rules: exactly ${days} day objects. Order compound lifts first; 4-6 exercises pe
   // returns ranked "moves" (not a chat message) that render as tappable cards.
   async budgetPlan(){
     if (!S.settings.apiKey){ toast("Add your API key in Settings first."); R.tab = "set"; render(); return; }
-    const ym = todayStr().slice(0, 7);
-    const monthExp = S.expenses.filter(e => e.date.slice(0, 7) === ym);
+    const monthExp = S.expenses.filter(e => inPeriod(e.date));
     const spent = monthExp.reduce((a, e) => a + num(e.amount), 0);
     const billsMo = S.bills.reduce((a, b) => a + num(b.amount) * (BILL_CYCLES[b.cycle] || BILL_CYCLES.monthly).perMonth, 0);
     const fx = fixedMonthly();
@@ -10181,8 +10204,8 @@ Rules: exactly ${days} day objects. Order compound lifts first; 4-6 exercises pe
   savingsSet(v){
     // A blank field means "not set" (hide the projection); any number (incl. 0) is a real balance.
     S.budget.savings = v.trim() === "" ? "" : num(v);
-    // editing the balance by hand undoes an accidental "banked" lock for this month
-    if (S.budget.savingsBankedMonth === todayStr().slice(0, 7)) S.budget.savingsBankedMonth = null;
+    // editing the balance by hand undoes an accidental "banked" lock for this cycle
+    if (S.budget.savingsBankedMonth === budgetPeriod().key) S.budget.savingsBankedMonth = null;
     save();
     // Patch ONLY the projection region — never re-render the input itself, so the
     // number field keeps focus and the keyboard stays up (no flicker).
@@ -10192,9 +10215,14 @@ Rules: exactly ${days} day objects. Order compound lifts first; 4-6 exercises pe
   savingsBank(net){
     const bal = num(S.budget.savings) + num(net);
     S.budget.savings = Math.round(bal * 100) / 100;
-    S.budget.savingsBankedMonth = todayStr().slice(0, 7);   // once per month — no double counting
+    S.budget.savingsBankedMonth = budgetPeriod().key;   // once per cycle — no double counting
     save(); render();
     toast(num(net) >= 0 ? tr("Banked into your savings ✓") : tr("Deducted from your savings ✓"));
+  },
+  budgetCycleSet(v){
+    const d = Math.round(num(v));
+    S.budget.cycleDay = (d >= 2 && d <= 28) ? d : 1;   // 1 (or blank/invalid) = calendar month
+    save(); render();
   },
   expListToggle(){ R.expListOpen = !R.expListOpen; render(); },
   // Recommend a realistic monthly savings amount from the user's own multi-month
