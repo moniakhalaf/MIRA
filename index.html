@@ -16,39 +16,39 @@
 <style>
 :root{
   color-scheme:dark;
-  /* deep ink + champagne gold */
-  --bg:#0A0D13; --bg2:#10141C; --card:#141925; --card2:#1A2030;
-  --sheet-bg:#161B29;
-  --line:rgba(226,232,250,.07); --line2:rgba(226,232,250,.13);
-  --txt:#ECEEF3; --txt2:#9DA6BA; --txt3:#767F97;
-  --gold:#D2AC64; --gold-soft:rgba(210,172,100,.13);
-  --acc:#D2AC64; --acc-soft:rgba(210,172,100,.13);
-  --btn-ink:#12100B;
-  --green:#3DB48A; --amber:#DDA43F; --red:#DE6060;
-  --water:#5EA9DF; --water-ink:#BEE3FF;
-  --glass:rgba(10,13,19,.86);
-  --key:rgba(236,238,243,.05);
-  --code:rgba(236,238,243,.08);
-  --track:#10141C;
-  --lockbg:#131826;
-  --shadow:0 12px 36px rgba(0,0,0,.52);
+  /* deep ink + emerald signature (gold kept for the MIRA wordmark) */
+  --bg:#0A0E14; --bg2:#0F1620; --card:#141C27; --card2:#1B2634;
+  --sheet-bg:#151E29;
+  --line:rgba(226,236,250,.08); --line2:rgba(226,236,250,.14);
+  --txt:#EAF1F8; --txt2:#9DB0C2; --txt3:#63768A;
+  --gold:#D8B36B; --gold-soft:rgba(216,179,107,.13);
+  --acc:#33D69B; --acc-soft:rgba(51,214,155,.14);
+  --btn-ink:#04140D;
+  --green:#33D69B; --amber:#F0B24C; --red:#F0685F;
+  --water:#4CC4E0; --water-ink:#BEEFFA;
+  --glass:rgba(10,14,20,.86);
+  --key:rgba(236,241,248,.05);
+  --code:rgba(236,241,248,.08);
+  --track:#0F1620;
+  --lockbg:#101927;
+  --shadow:0 14px 40px rgba(0,0,0,.52);
   --cardshadow:0 1px 2px rgba(0,0,0,.22);
-  --radius:14px;
+  --radius:16px;
   --safe-top:env(safe-area-inset-top,0px);
   --safe-bot:env(safe-area-inset-bottom,0px);
   font-size:16px;
 }
 :root[data-theme="light"]{
   color-scheme:light;
-  /* warm alabaster + bronze ink */
-  --bg:#F4F3EF; --bg2:#FDFCFA; --card:#FFFFFF; --card2:#FFFFFF;
+  /* cool alabaster + emerald ink */
+  --bg:#F1F4F2; --bg2:#FBFDFC; --card:#FFFFFF; --card2:#F6F9F7;
   --sheet-bg:#FFFFFF;
-  --line:rgba(28,36,51,.09); --line2:rgba(28,36,51,.15);
-  --txt:#1F2735; --txt2:#5C6575; --txt3:#98A0AE;
-  --gold:#8E6E22; --gold-soft:rgba(142,110,34,.10);
-  --acc-soft:rgba(142,110,34,.10);
+  --line:rgba(20,40,34,.10); --line2:rgba(20,40,34,.16);
+  --txt:#14201C; --txt2:#4E6259; --txt3:#8B9C94;
+  --gold:#9A7A28; --gold-soft:rgba(154,122,40,.10);
+  --acc:#0FA46A; --acc-soft:rgba(15,164,106,.12);
   --btn-ink:#FFFFFF;
-  --green:#188C63; --amber:#A9761C; --red:#C24A4A;
+  --green:#0FA46A; --amber:#B07C1C; --red:#C24A4A;
   --water:#2F7FBE; --water-ink:#21689B;
   --glass:rgba(250,249,246,.9);
   --key:rgba(28,36,51,.05);
@@ -1390,7 +1390,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.135";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.136";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1533,18 +1533,26 @@ function fileToB64(file){
 
 /* ---------------- state ---------------- */
 const DEFAULT_DOMAINS = [
-  {id: "work",    name: "Work",    color: "#7396E2",
+  {id: "work",    name: "Work",    color: "#6E9BF6",
    desc: "Professional and knowledge work: emails, memos, proposals, prioritisation, meeting prep, academic support (argumentation, methodology, referencing). Deep SAP S/4HANA expertise across all modules — MM deepest, plus SD, FI, CO, PP, PM, QM, EWM, PS, HCM and RE-FX — with technical details verified against official SAP documentation and answers marked by S/4HANA release."},
-  {id: "health",  name: "Health",  color: "#46B892",
+  {id: "health",  name: "Health",  color: "#4CC4E0",
    desc: "Nutrition, sleep, recovery and supplementation, answered only from reputable evidence (peer-reviewed journals, WHO/NIH/EFSA) and cited. Exact macro and calorie arithmetic shown step by step. The user's own product-label values always override any database."},
-  {id: "fitness", name: "Fitness", color: "#DC8663",
+  {id: "fitness", name: "Fitness", color: "#F97362",
    desc: "Training programmes grounded in peer-reviewed sports science, and body-composition interpretation (InBody score, body-fat mass, skeletal-muscle mass, visceral-fat area, phase angle) with trends computed from the user's own logged data."},
-  {id: "life",    name: "Life",    color: "#A78FDB",
+  {id: "life",    name: "Life",    color: "#A78BFA",
    desc: "Everything else: purchases and comparisons, travel, technology, finance and legal information (presented as facts to decide from, not advice), and local practical matters — especially Kuwait / GCC. Same evidence standard as the professional modes."},
 ];
-const DOMAIN_COLORS = ["#7396E2","#46B892","#DC8663","#A78FDB","#56AEB8","#C9A34F","#CF84A7","#8FB56A"];
-/* old default accents → refined palette (existing installs pick up the new colours) */
-const COLOR_MIGRATE = {"#5B8DEF":"#7396E2","#34C48E":"#46B892","#F2704E":"#DC8663","#B07CF7":"#A78FDB","#4BC0C8":"#56AEB8","#E8A33D":"#C9A34F","#EF6BA0":"#CF84A7","#8AC44B":"#8FB56A"};
+const DOMAIN_COLORS = ["#6E9BF6","#4CC4E0","#F97362","#A78BFA","#45C4C0","#F5B851","#EC7BB0","#86C265"];
+/* old default accents → refined emerald-era palette (existing installs pick up the new colours) */
+const COLOR_MIGRATE = {
+  "#5B8DEF":"#6E9BF6","#7396E2":"#6E9BF6",
+  "#34C48E":"#4CC4E0","#46B892":"#4CC4E0",
+  "#F2704E":"#F97362","#DC8663":"#F97362",
+  "#B07CF7":"#A78BFA","#A78FDB":"#A78BFA",
+  "#4BC0C8":"#45C4C0","#56AEB8":"#45C4C0",
+  "#E8A33D":"#F5B851","#C9A34F":"#F5B851",
+  "#EF6BA0":"#EC7BB0","#CF84A7":"#EC7BB0",
+  "#8AC44B":"#86C265","#8FB56A":"#86C265"};
 const MODELS = [
   {id: "claude-sonnet-5",            name: "Claude Sonnet 5 (recommended)"},
   {id: "claude-opus-4-8",            name: "Claude Opus 4.8 (most capable)"},
@@ -2827,8 +2835,15 @@ function renderMain(){
   const workDom = R.tab === "work" ? S.domains.find(d => d.id === "work") : null;
   const lifeDom = R.tab === "life" ? S.domains.find(d => d.id === "life") : null;
   const accClr = R.tab === "chat" ? dom.color : catDom ? catDom.color : trainDom ? trainDom.color : healthDom ? healthDom.color : workDom ? workDom.color : lifeDom ? lifeDom.color : null;
-  document.documentElement.style.setProperty("--acc", accClr || "var(--gold)");
-  document.documentElement.style.setProperty("--acc-soft", accClr ? hexSoft(accClr) : "var(--gold-soft)");
+  // section screens take their category colour; everywhere else falls back to
+  // the emerald signature accent defined on :root (remove the inline override).
+  if (accClr){
+    document.documentElement.style.setProperty("--acc", accClr);
+    document.documentElement.style.setProperty("--acc-soft", hexSoft(accClr));
+  } else {
+    document.documentElement.style.removeProperty("--acc");
+    document.documentElement.style.removeProperty("--acc-soft");
+  }
   const sub = R.tab === "chat" ? `<span class="mode-dot"></span>${esc(dom.name)}`
     : R.tab === "home" ? esc(catDom ? catDom.name : t("Home"))
     : R.tab === "train" ? t("Training") : R.tab === "health" ? t("Health") : R.tab === "work" ? t("Work") : R.tab === "life" ? t("Life") : esc(t(tabTitle()));
@@ -3014,10 +3029,10 @@ function widgetData(id){
   const t = todayStr(), tg = S.settings.targets || {};
   const scoreColor = s => s >= 66 ? "#3bb273" : s >= 40 ? "var(--amber)" : "#e06b6b";
   if (id === "cal"){ const tot = dayTotals(t); return {kind: "ring", pct: tg.kcal ? tot.kcal / tg.kcal * 100 : 0, color: "var(--acc)", center: tg.kcal ? n0(Math.max(0, tg.kcal - tot.kcal)) : n0(tot.kcal), label: tg.kcal ? "Calories left" : "Calories", sub: tg.kcal ? `${n0(tot.kcal)} / ${n0(tg.kcal)}` : "today", onclick: "M.homeSection('health')"}; }
-  if (id === "protein"){ const tot = dayTotals(t); return {kind: "ring", pct: tg.protein ? tot.p / tg.protein * 100 : 0, color: "#3bb273", center: (tg.protein ? n0(Math.max(0, tg.protein - tot.p)) : n0(tot.p)) + "g", label: tg.protein ? "Protein left" : "Protein", sub: tg.protein ? `${n0(tot.p)} / ${n0(tg.protein)} g` : "today", onclick: "M.homeSection('health')"}; }
-  if (id === "carbs"){ const tot = dayTotals(t); return {kind: "ring", pct: tg.carbs ? tot.c / tg.carbs * 100 : 0, color: "#d8a24c", center: (tg.carbs ? n0(Math.max(0, tg.carbs - tot.c)) : n0(tot.c)) + "g", label: tg.carbs ? "Carbs left" : "Carbs", sub: tg.carbs ? `${n0(tot.c)} / ${n0(tg.carbs)} g` : "today", onclick: "M.homeSection('health')"}; }
-  if (id === "fat"){ const tot = dayTotals(t); return {kind: "ring", pct: tg.fat ? tot.f / tg.fat * 100 : 0, color: "#b57edc", center: (tg.fat ? n0(Math.max(0, tg.fat - tot.f)) : n0(tot.f)) + "g", label: tg.fat ? "Fat left" : "Fat", sub: tg.fat ? `${n0(tot.f)} / ${n0(tg.fat)} g` : "today", onclick: "M.homeSection('health')"}; }
-  if (id === "water"){ const ml = (S.water[t] || 0) * 250, goal = S.settings.waterGoal || 2500; return {kind: "ring", pct: ml / goal * 100, color: "#4c9fd8", center: (ml / 1000).toFixed(1).replace(/\.0$/, "") + "L", label: "Water", sub: `${Math.round(ml / goal * 100)}% of goal`, onclick: "M.homeSection('health')"}; }
+  if (id === "protein"){ const tot = dayTotals(t); return {kind: "ring", pct: tg.protein ? tot.p / tg.protein * 100 : 0, color: "#4CC4E0", center: (tg.protein ? n0(Math.max(0, tg.protein - tot.p)) : n0(tot.p)) + "g", label: tg.protein ? "Protein left" : "Protein", sub: tg.protein ? `${n0(tot.p)} / ${n0(tg.protein)} g` : "today", onclick: "M.homeSection('health')"}; }
+  if (id === "carbs"){ const tot = dayTotals(t); return {kind: "ring", pct: tg.carbs ? tot.c / tg.carbs * 100 : 0, color: "#F5B851", center: (tg.carbs ? n0(Math.max(0, tg.carbs - tot.c)) : n0(tot.c)) + "g", label: tg.carbs ? "Carbs left" : "Carbs", sub: tg.carbs ? `${n0(tot.c)} / ${n0(tg.carbs)} g` : "today", onclick: "M.homeSection('health')"}; }
+  if (id === "fat"){ const tot = dayTotals(t); return {kind: "ring", pct: tg.fat ? tot.f / tg.fat * 100 : 0, color: "#A78BFA", center: (tg.fat ? n0(Math.max(0, tg.fat - tot.f)) : n0(tot.f)) + "g", label: tg.fat ? "Fat left" : "Fat", sub: tg.fat ? `${n0(tot.f)} / ${n0(tg.fat)} g` : "today", onclick: "M.homeSection('health')"}; }
+  if (id === "water"){ const ml = (S.water[t] || 0) * 250, goal = S.settings.waterGoal || 2500; return {kind: "ring", pct: ml / goal * 100, color: "#4CC4E0", center: (ml / 1000).toFixed(1).replace(/\.0$/, "") + "L", label: "Water", sub: `${Math.round(ml / goal * 100)}% of goal`, onclick: "M.homeSection('health')"}; }
   if (id === "wellness"){ const c = (typeof todayCheckin === "function") ? todayCheckin() : null; const s = c ? checkinScore(c) : null; return {kind: "ring", pct: s || 0, color: s != null ? scoreColor(s) : "var(--txt3)", center: s != null ? "" + s : "—", label: "Wellness", sub: s != null ? "today's score" : "check in", onclick: "M.goWellness()"}; }
   if (id === "sleep"){ const l = [...(S.sleep || [])].sort((a, b) => a.date < b.date ? -1 : 1).pop(); return {kind: "tile", icon: "moon", label: "Last sleep", val: l ? l.hours + " h" : "—", sub: l ? fmtDate(l.date) : "not logged", onclick: "M.goHealth('sleep')"}; }
   if (id === "mood"){ const c = (typeof todayCheckin === "function") ? todayCheckin() : null; const f = c && c.mood ? MOOD_FACES.find(x => x.v === c.mood) : null; return {kind: "tile", icon: "smile", label: "Mood", val: f ? f.l : "—", sub: c && checkinScore(c) != null ? "score " + checkinScore(c) : "check in", onclick: "M.goWellness()"}; }
@@ -4958,16 +4973,18 @@ function bankHistoryListHTML(){
   </div>`;
 }
 
-function macroBar(label, val, target, unit){
+function macroBar(label, val, target, unit, color){
   if (!target) return "";
   const pct = Math.min(100, target ? (val / target) * 100 : 0);
   const done = val >= target, over = val > target * 1.1;
   const cls = over ? "over" : done ? "done" : "";
   const st = over ? "over" : done ? "✓" : "";
+  // each macro carries its own colour (matching the Home rings); overshoot still warns in red
+  const fill = over ? "var(--red)" : (color || "var(--acc)");
   return `<div class="bar-line ${cls}">
     <div class="bar-top"><span class="lab">${label}</span>
       <span class="val">${unit === "kcal" ? n0(val) : n1(val)} / ${n0(target)} ${unit} <span class="st">${st}</span></span></div>
-    <div class="bar"><i style="width:${pct}%"></i></div>
+    <div class="bar"><i style="width:${pct}%;background:${fill}"></i></div>
   </div>`;
 }
 
@@ -4988,10 +5005,10 @@ function foodHTML(){
   <div class="card">
     <h3>${ic("target", 16)} ${t("Today")} <span class="tiny" style="margin-inline-start:auto;font-weight:400">${new Date().toLocaleDateString("en-GB",{day:"numeric",month:"long"})}</span></h3>
     <div class="bars">
-      ${macroBar(t("Calories"), tot.kcal, tg.kcal, "kcal")}
-      ${macroBar(t("Protein"), tot.p, tg.protein, "g")}
-      ${macroBar(t("Carbs"), tot.c, tg.carbs, "g")}
-      ${macroBar(t("Fat"), tot.f, tg.fat, "g")}
+      ${macroBar(t("Calories"), tot.kcal, tg.kcal, "kcal", "var(--acc)")}
+      ${macroBar(t("Protein"), tot.p, tg.protein, "g", "#4CC4E0")}
+      ${macroBar(t("Carbs"), tot.c, tg.carbs, "g", "#F5B851")}
+      ${macroBar(t("Fat"), tot.f, tg.fat, "g", "#A78BFA")}
     </div>
     <div class="muted" style="margin-top:9px">${t("Remaining")}: <b>${n0(Math.max(0, tg.kcal - tot.kcal))} kcal</b> · <b>${n1(Math.max(0, tg.protein - tot.p))} g protein</b>${tg.carbs ? ` · ${n1(Math.max(0, tg.carbs - tot.c))} g carbs` : ""}${tg.fat ? ` · ${n1(Math.max(0, tg.fat - tot.f))} g fat` : ""}</div>
   </div>
