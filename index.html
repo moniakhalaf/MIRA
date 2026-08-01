@@ -555,7 +555,7 @@ body.kb .fab{display:none}
 .search-results .feat-card.search-nav .fc-nm{color:var(--acc)}
 .feat-card .fc-ic{
   width:42px;height:42px;flex:0 0 auto;border-radius:12px;display:flex;align-items:center;justify-content:center;
-  background:var(--acc-soft);color:var(--acc);
+  background:color-mix(in srgb,var(--fc,var(--acc)) 15%,transparent);color:var(--fc,var(--acc));
 }
 .feat-card .fc-tx{flex:1;display:flex;flex-direction:column;gap:2px;min-width:0}
 .feat-card .fc-nm{font-size:15px;font-weight:600}
@@ -1393,7 +1393,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.137";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.138";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -3168,7 +3168,7 @@ function catPageHTML(){
     <button class="btn cat-ask" onclick="M.enterMode('${d.id}')">${ic("chat", 17)} ${t("Ask")} ${esc(d.name)}</button>
     <div class="feat-list">
       ${feats.map(f => `<button class="feat-card" onclick="${f.on}">
-        <span class="fc-ic">${ic(f.icon, 20)}</span>
+        <span class="fc-ic" style="--fc:${d.color}">${ic(f.icon, 20)}</span>
         <span class="fc-tx"><span class="fc-nm">${esc(f.label)}</span><span class="fc-ds">${esc(f.desc)}</span></span>
         <span class="fc-ar">${ic("chevR", 16)}</span>
       </button>`).join("")}
@@ -3352,7 +3352,7 @@ function domainDashHTML(id){
   const feats = domFeatures(d);
   const groups = ["Track", "Plan", "Tools", "Ask MIRA"];
   const featCard = f => `<button class="feat-card" onclick="${f.on}">
-    <span class="fc-ic">${ic(f.icon, 20)}</span>
+    <span class="fc-ic" style="--fc:${d.color}">${ic(f.icon, 20)}</span>
     <span class="fc-tx"><span class="fc-nm">${esc(f.label)}</span><span class="fc-ds">${esc(f.desc)}</span></span>
     <span class="fc-ar">${ic("chevR", 16)}</span></button>`;
   const sections = groups.map(g => {
