@@ -1021,6 +1021,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
 .cb-day.none .cb-dv,.cb-day.fut .cb-dv{color:var(--txt3)}
 .cb-meta{font-size:12.5px;color:var(--txt2);margin-top:10px}
 .cb-meta b{color:var(--txt)}
+.cb-week-h{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--txt3);margin:14px 2px 8px}
 .cb-today{color:var(--txt2);margin-top:8px}
 .cb-note{color:var(--txt2);margin-top:8px;line-height:1.5}
 .cb-range-btn{margin-inline-start:auto;display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--txt2);background:var(--card2);border:1px solid var(--line2);border-radius:8px;padding:4px 9px}
@@ -1411,7 +1412,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.143";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.144";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1715,6 +1716,7 @@ const TR = {
     "Today: over by": "اليوم: أكثر بـ",
     "kcal so far.": "سعرة حتى الآن.",
     "Calorie bank": "بنك السعرات",
+    "kcal in your bank":"سعرة في بنكك","Banked":"مُدّخر","Your bank has room for a cheat meal — enjoy it, it draws from what you've saved.":"بنكك يتّسع لوجبة حرة — استمتعي بها، تُخصم مما ادّخرتِه.",
     "Sun–Thu": "الأحد–الخميس",
     "kcal banked this week": "سعرة مُدّخرة هذا الأسبوع",
     "Used": "مُستخدَم",
@@ -4919,6 +4921,35 @@ function calorieBank(offset){
     contribDays, today: days.find(d => d.isToday) || null,
     startDate: days[0] && days[0].date, endDate: days.length ? days[days.length - 1].date : null};
 }
+// The RUNNING bank: every completed day since you started, not just this week.
+// Under-target days on your chosen weekdays deposit; over-target days and any
+// cheat meal (on any day) withdraw. This is the pot a cheat meal draws from —
+// it carries over week to week instead of resetting.
+function calorieBankTotal(){
+  const tg = num((S.settings.targets || {}).kcal);
+  if (!tg) return null;
+  const {from, to} = bankWindow();
+  const today = todayStr();
+  const normalByDay = {}, cheats = [];
+  S.foods.forEach(f => {
+    if (!f.date || f.date > today) return;                                       // not the future
+    if (isCheat(f)) cheats.push({date: f.date, name: f.name || "Cheat meal", kcal: num(f.kcal), dow: new Date(f.date + "T00:00:00").getDay()});
+    else normalByDay[f.date] = (normalByDay[f.date] || 0) + num(f.kcal);
+  });
+  let saved = 0, over = 0, days = 0;
+  Object.keys(normalByDay).forEach(date => {
+    if (date >= today) return;                                                   // today is still in progress — banks tonight
+    const dow = new Date(date + "T00:00:00").getDay();
+    if (dow < from || dow > to) return;                                          // only your chosen weekdays deposit
+    days++;
+    const diff = tg - normalByDay[date];
+    if (diff >= 0) saved += diff; else over += -diff;
+  });
+  const cheatTotal = cheats.reduce((a, c) => a + c.kcal, 0);
+  cheats.sort((a, b) => a.date < b.date ? 1 : a.date > b.date ? -1 : 0);
+  return {tg, saved: Math.round(saved), over: Math.round(over), cheatTotal: Math.round(cheatTotal),
+    cheatCount: cheats.length, balance: Math.round(saved - over - cheatTotal), days, cheats};
+}
 // "12–16 Jul" style range, localised, month shown once when it doesn't change.
 function bankRange(a, b){
   const da = new Date(a + "T00:00:00"), db = new Date(b + "T00:00:00"), loc = uiLang() || "en";
@@ -4938,9 +4969,11 @@ function bankRangePickerHTML(){
 }
 function calorieBankHTML(){
   const b = calorieBank();
-  if (!b) return "";
-  if (!b.contribDays && !(b.today && b.today.logged) && !S.foods.length) return "";   // nothing to show at all
-  const ready = b.balance >= 600;                                              // ~ a cheat meal out
+  const T = calorieBankTotal();
+  if (!b || !T) return "";
+  if (!T.days && !T.cheatCount && !(b.today && b.today.logged) && !S.foods.length) return "";   // nothing to show at all
+  const bal = T.balance;                                                        // the RUNNING pot (carries over weeks)
+  const ready = bal >= 600;                                                     // ~ a cheat meal out
   const strip = b.days.map(d => {
     let val = "·", cls = "fut";
     if (d.isToday){ val = tr("now"); cls = "today"; }
@@ -4956,21 +4989,22 @@ function calorieBankHTML(){
     : "";
   return `<div class="card fold cbank ${R.bankOpen === true ? "open" : ""}" id="cbankCard">
     <h3 onclick="M.fold('bankOpen', this)">${ic("wallet", 16)} ${tr("Calorie bank")}
-      <span class="cb-hdr-bal ${b.balance >= 0 ? "pos" : "neg"}">${b.balance >= 0 ? "+" : "−"}${n0(Math.abs(b.balance))}</span>
+      <span class="cb-hdr-bal ${bal >= 0 ? "pos" : "neg"}">${bal >= 0 ? "+" : "−"}${n0(Math.abs(bal))}</span>
       <button class="cb-range-btn" onclick="event.stopPropagation();M.bankEditToggle()">${esc(dowName(b.from, "short"))}–${esc(dowName(b.to, "short"))} ${ic(R.bankEdit ? "x" : "edit", 12)}</button>
       <span class="chev">▶</span></h3>
     <div class="fold-body">
       ${R.bankEdit ? bankRangePickerHTML() : ""}
-      <div class="cb-balance ${b.balance >= 0 ? "pos" : "neg"}">
-        <div class="cb-bv">${b.balance >= 0 ? "+" : "−"}${n0(Math.abs(b.balance))}</div>
-        <div class="cb-bl">${tr("kcal banked this week")}</div>
+      <div class="cb-balance ${bal >= 0 ? "pos" : "neg"}">
+        <div class="cb-bv">${bal >= 0 ? "+" : "−"}${n0(Math.abs(bal))}</div>
+        <div class="cb-bl">${tr("kcal in your bank")}</div>
       </div>
+      ${T.saved || T.cheatTotal || T.over ? `<div class="cb-meta">${tr("Banked")} <b>+${n0(T.saved)}</b>${T.cheatTotal ? ` · ${tr("Cheat meals")} <b>−${n0(T.cheatTotal)}</b>` : ""}${T.over ? ` · ${tr("Over target")} <b>−${n0(T.over)}</b>` : ""}</div>` : ""}
+      <div class="cb-week-h">${tr("This week")}</div>
       <div class="cb-strip" style="grid-template-columns:repeat(${b.days.length}, 1fr)">${strip}</div>
-      ${b.saved || b.used ? `<div class="cb-meta">${tr("Saved")} <b>${n0(b.saved)}</b>${b.cheatTotal ? ` · ${tr("Cheat meals")} <b>${n0(b.cheatTotal)}</b>` : ""}${b.overWindow ? ` · ${tr("Over target")} <b>${n0(b.overWindow)}</b>` : ""}</div>` : ""}
-      ${b.cheats.length ? `<div class="cb-cheatlist">${b.cheats.map(c => `<div class="cb-cheatrow"><span class="cc-nm" dir="auto">${esc(c.name)}</span><span class="cc-mt">${esc(dowName(c.dow, "short"))} · <b>−${n0(c.kcal)}</b></span></div>`).join("")}</div>` : ""}
+      ${T.cheats.length ? `<div class="cb-cheatlist">${T.cheats.slice(0, 6).map(c => `<div class="cb-cheatrow"><span class="cc-nm" dir="auto">${esc(c.name)}</span><span class="cc-mt">${esc(new Date(c.date + "T00:00:00").toLocaleDateString(uiLang() || "en", {day: "numeric", month: "short"}))} · <b>−${n0(c.kcal)}</b></span></div>`).join("")}</div>` : ""}
       ${todayLine}
       <div class="tiny cb-note">${ready
-        ? tr("You've banked enough room for a cheat meal — enjoy it without breaking your week.")
+        ? tr("Your bank has room for a cheat meal — enjoy it, it draws from what you've saved.")
         : tr("Come in under target on your chosen days to bank calories for a cheat meal (a meal out is roughly 600–900 kcal).")}</div>
       <div class="cb-acts">
         <button class="btn sm sec" onclick="M.bankHistory()">${ic("chart", 14)} ${R.bankHistOpen ? tr("Hide history") : tr("History")}</button>
