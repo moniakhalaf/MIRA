@@ -1248,6 +1248,8 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
 .set-nav button:active{transform:scale(.95)}
 .set-nav button.on{color:var(--gold);border-color:var(--gold);background:var(--gold-soft)}
 .set-group-label{font-size:11.5px;font-weight:750;letter-spacing:.09em;text-transform:uppercase;color:var(--txt3);margin:20px 6px 9px;display:flex;align-items:center;gap:7px}
+.set-sub{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--txt3);margin:14px 2px 9px}
+.prog-code{width:100%;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;line-height:1.4;color:var(--txt2);word-break:break-all;resize:none;background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:9px 11px}
 .set-status{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--txt2);
   padding:4px 10px;border-radius:99px;background:var(--key)}
 .set-status .dot{width:8px;height:8px;border-radius:50%;background:var(--txt3);box-shadow:0 0 0 3px color-mix(in srgb,var(--txt3) 22%,transparent)}
@@ -1412,7 +1414,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.144";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.145";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1716,6 +1718,7 @@ const TR = {
     "Today: over by": "اليوم: أكثر بـ",
     "kcal so far.": "سعرة حتى الآن.",
     "Calorie bank": "بنك السعرات",
+    "weigh-ins":"قياسات وزن","Circle — progress sharing":"الدائرة — مشاركة التقدّم","Share only your weight and nutrition adherence with a coach or family — never your food diary, chat or budget. Private and on your device.":"شاركي وزنك والتزامك الغذائي فقط مع مدرّب أو العائلة — دون مذكّرة طعامك أو محادثاتك أو ميزانيتك. خاص وعلى جهازك.","Share my progress":"شارك تقدّمي","Hide":"إخفاء","Get my code":"احصل على رمزي","Copy code":"انسخ الرمز","Send this to whoever tracks you. Re-send it any time to update them.":"أرسلي هذا لمن يتابع تقدّمك. أعيدي إرساله في أي وقت للتحديث.","Follow someone":"تابِع شخصاً","Paste the code they sent you":"الصق الرمز الذي أرسلوه لك","Paste their progress code (starts with MIRA-PROGRESS)":"الصق رمز تقدّمهم (يبدأ بـ MIRA-PROGRESS)","Add / update":"إضافة / تحديث","People I follow":"الأشخاص الذين أتابعهم","Someone":"شخص","updated":"حُدّث","shared: weight + nutrition only":"المُشارَك: الوزن والتغذية فقط","Weight & body":"الوزن والجسم","Latest kg":"آخر كغ","Change kg":"التغيّر كغ","InBody":"إن بودي","No weigh-ins shared yet.":"لا قياسات وزن مُشارَكة بعد.","Nutrition adherence":"الالتزام الغذائي","Days logged":"أيام مُسجّلة","Avg kcal":"متوسط السعرات","On target":"ضمن الهدف","logged days":"أيام مُسجّلة","Last 14 logged days (kcal)":"آخر 14 يوماً مُسجّلاً (سعرات)","No nutrition logged yet.":"لا تغذية مُسجّلة بعد.","Remove from my circle":"إزالة من دائرتي","Circle":"الدائرة","Progress code copied ✓":"نُسخ رمز التقدّم ✓","Select the code and copy it.":"حدّد الرمز وانسخه.","That code didn't read — copy the whole thing and try again.":"تعذّرت قراءة الرمز — انسخه كاملاً وحاول مجدداً.","progress updated ✓":"حُدّث التقدّم ✓","Remove this person from your circle?":"إزالة هذا الشخص من دائرتك؟",
     "kcal in your bank":"سعرة في بنكك","Banked":"مُدّخر","Your bank has room for a cheat meal — enjoy it, it draws from what you've saved.":"بنكك يتّسع لوجبة حرة — استمتعي بها، تُخصم مما ادّخرتِه.",
     "Sun–Thu": "الأحد–الخميس",
     "kcal banked this week": "سعرة مُدّخرة هذا الأسبوع",
@@ -2397,6 +2400,7 @@ const BLANK = () => ({
   barcodeFixes: {},   // code -> {name, unit, serving, per100:{kcal,p,c,f}, ts} — user's own corrected barcode values
   foodFixes: {},      // name-key -> {name, per100:{kcal,p,c,f}, serving, ts} (or {name, amount, macros}) — user's own corrected searched-food values
   inbody: [],         // {id, date, weight, score, bfm, smm, vfa, pa}
+  followers: [],      // people you track — imported progress {id, name, ts, tg:{k,p}, weight:[{d,w,..}], nutrition:[{d,k,p}]}
 });
 
 /* ===== On-device encryption (envelope: a random data key wrapped by your
@@ -2451,6 +2455,7 @@ function migrateChats(){
   if (!Array.isArray(S.exercises)) S.exercises = [];
   if (!Array.isArray(S.workouts)) S.workouts = [];
   if (!Array.isArray(S.routines)) S.routines = [];
+  if (!Array.isArray(S.followers)) S.followers = [];
   if (S.program && (!Array.isArray(S.program.days) || !S.program.days.length)) S.program = null;
   if (!S.exDemos || typeof S.exDemos !== "object") S.exDemos = {};
   if (!Array.isArray(S.supplements)) S.supplements = [];
@@ -2739,6 +2744,10 @@ const R = {
   acFocus: false,
   myFoodsOpen: false, // "Pick from my foods" history list open in the Log food card
   myFoodsQ: "",       // filter for that history list
+  circleShareOpen: false, // "share my progress" code panel expanded
+  followerAddOpen: false, // paste-a-code panel expanded
+  followerId: null,   // follower whose detail sheet is open
+  circleImport: "",   // paste buffer for adding a follower
   trainTab: "today",  // today | program | library | history | coach
   trainWO: null,      // in-progress workout being logged
   libQuery: "",
@@ -2896,6 +2905,7 @@ function renderMain(){
     ${R.quickOpen ? quickAddHTML() : ""}
     ${R.widgetsOpen ? widgetSheetHTML() : ""}
     ${R.sheet === "chats" ? chatSheetHTML() : ""}
+    ${R.followerId ? followerSheetHTML() : ""}
     ${R.searchOpen ? searchHTML() : ""}
     <div class="tabbar">
       ${tabBtn("home", "home", t("Home"))}${tabBtn("chat", "chat", t("Chat"))}${tabBtn("insights", "trend", t("Insights"))}${tabBtn("set", "gear", t("Settings"))}
@@ -7962,6 +7972,120 @@ function groceryText(){
   const head = `Grocery list — ${planWeekLabel(R.planWeek || 0)} (MIRA)`;
   return head + "\n\n" + items.map(g => `• ${g.label}${g.count > 1 ? ` ×${g.count}` : ""}`).join("\n");
 }
+
+/* =========================================================
+   Circle — private progress sharing. Someone shares ONLY their
+   weight/body trend and nutrition adherence (never their food
+   diary, chat, budget or anything else). You add them by a code
+   and follow their progress. On-device today; the same compact
+   payload will auto-sync once a Supabase project is connected.
+   ========================================================= */
+const PROG_PREFIX = "MIRA-PROGRESS-1:";
+function progressPayload(){
+  // per-day nutrition adherence for days actually logged — totals only, no food names
+  const dates = [...new Set((S.foods || []).map(f => f.date).filter(Boolean))].sort();
+  const nutrition = [];
+  dates.forEach(d => { const t = dayTotals(d); if (t.kcal > 0) nutrition.push({d, k: Math.round(t.kcal), p: Math.round(t.p)}); });
+  const weight = (S.inbody || []).filter(e => e.weight).map(e => ({d: e.date, w: +e.weight,
+    score: e.score ? +e.score : null, bf: e.bfm ? +e.bfm : null, smm: e.smm ? +e.smm : null}))
+    .sort((a, b) => a.d < b.d ? -1 : 1);
+  const tg = S.settings.targets || {};
+  return {v: 1, name: (S.settings.name || "").trim(), ts: Date.now(),
+    tg: {k: num(tg.kcal) || null, p: num(tg.protein) || null}, weight, nutrition};
+}
+function encodeProgress(obj){
+  try { return PROG_PREFIX + btoa(unescape(encodeURIComponent(JSON.stringify(obj)))); } catch (e){ return ""; }
+}
+function decodeProgress(str){
+  str = String(str || "").trim();
+  const i = str.indexOf(PROG_PREFIX);
+  if (i >= 0) str = str.slice(i + PROG_PREFIX.length).trim();
+  try {
+    const o = JSON.parse(decodeURIComponent(escape(atob(str))));
+    if (o && o.v && (Array.isArray(o.weight) || Array.isArray(o.nutrition))) return o;
+  } catch (e) {}
+  return null;
+}
+function followerStats(f){
+  const nut = f.nutrition || [], n = nut.length;
+  const tgK = f.tg && f.tg.k, tgP = f.tg && f.tg.p;
+  const avgK = n ? Math.round(nut.reduce((a, x) => a + num(x.k), 0) / n) : 0;
+  const avgP = n ? Math.round(nut.reduce((a, x) => a + num(x.p), 0) / n) : 0;
+  const onTarget = (tgK && n) ? nut.filter(x => num(x.k) >= tgK * 0.9 && num(x.k) <= tgK * 1.1).length : 0;
+  const w = f.weight || [], wFirst = w[0], wLast = w[w.length - 1];
+  const wChange = (wFirst && wLast) ? +(num(wLast.w) - num(wFirst.w)).toFixed(1) : null;
+  return {days: n, avgK, avgP, tgK, tgP, onTarget, wFirst, wLast, wChange, hasWeight: w.length >= 1};
+}
+function circleHTML(){
+  const p = progressPayload();
+  const mine = `${p.weight.length} ${tr("weigh-ins")} · ${p.nutrition.length} ${tr("days logged")}`;
+  const share = R.circleShareOpen ? encodeProgress(p) : "";
+  return `<div class="card" id="setCircle">
+    <h3>${ic("users", 16)} ${tr("Circle — progress sharing")}</h3>
+    <div class="tiny" style="margin-bottom:12px;color:var(--txt2)">${tr("Share only your weight and nutrition adherence with a coach or family — never your food diary, chat or budget. Private and on your device.")}</div>
+    <div class="set-row" style="padding-top:0">
+      <div><div class="k">${ic("share", 14)} ${tr("Share my progress")}</div><div class="desc">${esc(mine)}</div></div>
+      <span class="end"><button class="btn sm" onclick="M.circleShareToggle()">${R.circleShareOpen ? tr("Hide") : tr("Get my code")}</button></span>
+    </div>
+    ${R.circleShareOpen ? `<div class="review-item" style="margin-top:8px">
+      <textarea id="progCode" class="prog-code" readonly rows="3" onclick="this.select()">${esc(share)}</textarea>
+      <div class="row" style="margin-top:8px">
+        <button class="btn sm" onclick="M.circleCopy()">${ic("copy", 14)} ${tr("Copy code")}</button>
+        <button class="btn sm sec" onclick="M.circleShareFile()">${ic("share", 14)} ${tr("Share")}</button>
+      </div>
+      <div class="tiny" style="margin-top:8px;color:var(--txt2)">${tr("Send this to whoever tracks you. Re-send it any time to update them.")}</div>
+    </div>` : ""}
+    <div class="set-row">
+      <div><div class="k">${ic("plus", 14)} ${tr("Follow someone")}</div><div class="desc">${tr("Paste the code they sent you")}</div></div>
+      <span class="end"><button class="btn sm sec" onclick="M.followerAddToggle()">${R.followerAddOpen ? tr("Cancel") : tr("Add")}</button></span>
+    </div>
+    ${R.followerAddOpen ? `<div class="review-item" style="margin-top:8px">
+      <textarea id="progPaste" class="prog-code" rows="3" placeholder="${tr("Paste their progress code (starts with MIRA-PROGRESS)")}" oninput="R.circleImport=this.value"></textarea>
+      <button class="btn sm" style="margin-top:8px" onclick="M.followerImport()">${ic("check", 14)} ${tr("Add / update")}</button>
+    </div>` : ""}
+    ${S.followers.length ? `<div class="set-sub">${tr("People I follow")}</div>
+      ${S.followers.map(f => { const s = followerStats(f); return `<button class="feat-card" style="--fc:var(--acc)" onclick="M.followerOpen('${f.id}')">
+        <span class="fc-ic">${ic("user", 18)}</span>
+        <span class="fc-tx"><span class="fc-nm" dir="auto">${esc(f.name || tr("Someone"))}</span>
+          <span class="fc-ds">${s.hasWeight && s.wLast ? `${n1(s.wLast.w)} kg${s.wChange != null && s.wChange !== 0 ? ` (${s.wChange > 0 ? "+" : ""}${s.wChange})` : ""} · ` : ""}${s.days} ${tr("days logged")}</span></span>
+        <span class="fc-ar">${ic("chevR", 16)}</span></button>`; }).join("")}` : ""}
+  </div>`;
+}
+function followerSheetHTML(){
+  const f = S.followers.find(x => x.id === R.followerId);
+  if (!f) return "";
+  const s = followerStats(f);
+  const w = f.weight || [];
+  const wSvg = w.length >= 2 ? lineSVG(w.map(e => ({v: num(e.w)})), {color: "#4CC4E0"}) : "";
+  const kSvg = (f.nutrition || []).length >= 2 ? barsSVG(f.nutrition.slice(-14).map(x => num(x.k)), {color: "var(--acc)", target: s.tgK || 0}) : "";
+  const onPct = s.days ? Math.round(s.onTarget / s.days * 100) : 0;
+  return `<div class="sheet-mask show" onclick="M.followerClose()"></div>
+  <div class="sheet show">
+    <div class="grab"></div>
+    <div class="wo-hd" style="margin-bottom:12px"><h3 style="flex:1;margin:0" dir="auto">${esc(f.name || tr("Someone"))}</h3>
+      <button class="icon-btn" aria-label="${tr("Close")}" onclick="M.followerClose()">${ic("x", 18)}</button></div>
+    <div class="tiny" style="color:var(--txt2);margin:-6px 0 14px">${tr("updated")} ${fmtDate(new Date(f.ts).toLocaleDateString("en-CA"))} · ${tr("shared: weight + nutrition only")}</div>
+
+    <div class="cb-week-h">${tr("Weight & body")}</div>
+    ${s.hasWeight ? `<div class="rev-grid" style="margin-bottom:10px">
+        <div class="rev-stat"><div class="rv">${n1(s.wLast.w)}</div><div class="rl">${tr("Latest kg")}</div></div>
+        <div class="rev-stat"><div class="rv" style="color:${(s.wChange || 0) <= 0 ? "var(--green)" : "var(--amber)"}">${s.wChange == null ? "—" : (s.wChange > 0 ? "+" : "") + s.wChange}</div><div class="rl">${tr("Change kg")}</div></div>
+        <div class="rev-stat"><div class="rv">${s.wLast.score || "—"}</div><div class="rl">${tr("InBody")}</div></div>
+      </div>${wSvg}` : `<div class="muted" style="padding:6px 2px 10px">${tr("No weigh-ins shared yet.")}</div>`}
+
+    <div class="cb-week-h" style="margin-top:16px">${tr("Nutrition adherence")}</div>
+    ${s.days ? `<div class="rev-grid" style="margin-bottom:10px">
+        <div class="rev-stat"><div class="rv">${s.days}</div><div class="rl">${tr("Days logged")}</div></div>
+        <div class="rev-stat"><div class="rv">${n0(s.avgK)}</div><div class="rl">${tr("Avg kcal")}${s.tgK ? ` / ${n0(s.tgK)}` : ""}</div></div>
+        <div class="rev-stat"><div class="rv">${n0(s.avgP)}</div><div class="rl">${tr("Avg protein")}${s.tgP ? ` / ${n0(s.tgP)}` : ""}</div></div>
+      </div>
+      ${s.tgK ? `<div class="budget-top">${ic("check", 13)} ${tr("On target")} <b>${s.onTarget}/${s.days}</b> ${tr("logged days")} (${onPct}%)</div>` : ""}
+      ${kSvg ? `<div class="tiny" style="margin:10px 2px 3px;color:var(--txt3)">${tr("Last 14 logged days (kcal)")}</div>${kSvg}` : ""}`
+      : `<div class="muted" style="padding:6px 2px">${tr("No nutrition logged yet.")}</div>`}
+
+    <button class="btn sec danger" style="width:100%;margin-top:16px" onclick="M.followerDel('${f.id}')">${ic("trash", 15)} ${tr("Remove from my circle")}</button>
+  </div>`;
+}
 </script>
 <script>
 "use strict";
@@ -9174,7 +9298,7 @@ function settingsHTML(){
   const themeName = (THEMES.find(t => t[0] === (st.theme || "dark")) || [,"Dark"])[1];
   const langRow = LANGUAGES.find(l => l[0] === st.lang);
   const langLabel = (!st.lang || st.lang === "match") ? tr("Match what I write") : (langRow ? langRow[2] : st.lang);
-  const nav = [["setProfile","Profile"],["setLanguage","Language"],["setAppearance","Appearance"],["setNutrition","Nutrition"],["setDomains","Domains"],["setAI","Assistant"],["setSecurity","Privacy"]];
+  const nav = [["setProfile","Profile"],["setCircle","Circle"],["setLanguage","Language"],["setAppearance","Appearance"],["setNutrition","Nutrition"],["setDomains","Domains"],["setAI","Assistant"],["setSecurity","Privacy"]];
   return `
   <div class="set-hero">
     <span class="set-avatar">${esc(initial)}</span>
@@ -9199,6 +9323,9 @@ function settingsHTML(){
     <div class="field" style="margin-bottom:0"><label>${tr("Answer depth")}</label>
       <div class="seg">${[["short","Short"],["balanced","Balanced"],["detailed","Detailed"]].map(([v, l]) => `<button class="${st.depth === v ? "on" : ""}" onclick="M.set('depth','${v}')">${tr(l)}</button>`).join("")}</div></div>
   </div>
+
+  <div class="set-group-label">${tr("Circle")}</div>
+  ${circleHTML()}
 
   <div class="set-group-label">${tr("Language")}</div>
   <div class="card" id="setLanguage">
@@ -10896,6 +11023,46 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
     if (!S.settings.community) S.settings.community = {url: "", key: ""};
     S.settings.community[field] = (v || "").trim();
     save();
+  },
+  /* ---- Circle: private progress sharing ---- */
+  circleShareToggle(){ R.circleShareOpen = !R.circleShareOpen; render(); },
+  async circleCopy(){
+    const code = encodeProgress(progressPayload());
+    try { await navigator.clipboard.writeText(code); buzz(); toast(tr("Progress code copied ✓")); }
+    catch (e){ const el = $("#progCode"); if (el){ el.focus(); el.select(); } toast(tr("Select the code and copy it.")); }
+  },
+  async circleShareFile(){
+    const code = encodeProgress(progressPayload());
+    const nm = (S.settings.name || "me").replace(/[^\w]+/g, "-").toLowerCase();
+    if (navigator.share){
+      try {
+        const file = new File([code], `mira-progress-${nm}.txt`, {type: "text/plain"});
+        if (navigator.canShare && navigator.canShare({files: [file]})){ await navigator.share({files: [file], title: "MIRA progress"}); return; }
+        await navigator.share({title: "MIRA progress", text: code}); return;
+      } catch (e){ if (e.name === "AbortError") return; }
+    }
+    M.circleCopy();
+  },
+  followerAddToggle(){ R.followerAddOpen = !R.followerAddOpen; R.circleImport = ""; render(); },
+  followerImport(){
+    const raw = R.circleImport || (($("#progPaste") || {}).value || "");
+    const o = decodeProgress(raw);
+    if (!o){ toast(tr("That code didn't read — copy the whole thing and try again."), 4200); return; }
+    const name = (o.name || "").trim();
+    const rec = {id: uid(), name, ts: o.ts || Date.now(), tg: o.tg || {},
+      weight: Array.isArray(o.weight) ? o.weight : [], nutrition: Array.isArray(o.nutrition) ? o.nutrition : []};
+    const ex = name ? S.followers.findIndex(f => (f.name || "").trim().toLowerCase() === name.toLowerCase()) : -1;
+    if (ex >= 0){ rec.id = S.followers[ex].id; S.followers[ex] = rec; } else S.followers.unshift(rec);
+    R.followerAddOpen = false; R.circleImport = "";
+    save(); render();
+    toast(`${name || tr("Someone")} · ${tr("progress updated ✓")}`);
+  },
+  followerOpen(id){ R.followerId = id; render(); },
+  followerClose(){ R.followerId = null; render(); },
+  followerDel(id){
+    if (!confirm(tr("Remove this person from your circle?"))) return;
+    S.followers = S.followers.filter(f => f.id !== id);
+    R.followerId = null; save(); render();
   },
   // Share a reviewed food to the community database (per 100 g).
   async reviewShare(i){
