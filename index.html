@@ -1414,7 +1414,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.145";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.146";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -10908,8 +10908,13 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
   foodEdit(id){
     const f = S.foods.find(x => x.id === id); if (!f) return;
     R.editFoodId = id; R.tab = "food"; R.homeCat = null;
+    // Set up the amount rescaler from the entry itself, so changing the amount
+    // updates the macros (e.g. 150 g / 247 kcal → 200 g rescales everything).
+    const pp = parsePortion(f.amount);
+    const portion = pp && num(f.kcal) > 0 ? {base: pp.base, unit: pp.unit, k: num(f.kcal), p: num(f.p), c: num(f.c), f: num(f.f)} : null;
     Object.assign(foodForm, {name: f.name, amount: f.amount || "", time: entryTime(f), meal: entryMeal(f),
-      kcal: String(f.kcal ?? ""), p: String(f.p ?? ""), c: String(f.c ?? ""), f: String(f.f ?? ""), conf: f.conf || "user", scOpen: false, portion: null, portG: ""});
+      kcal: String(f.kcal ?? ""), p: String(f.p ?? ""), c: String(f.c ?? ""), f: String(f.f ?? ""), conf: f.conf || "user", scOpen: false,
+      portion, portG: portion ? portion.base : ""});
     render();
     const card = $("#addFoodCard"); if (card){ card.classList.add("open"); card.scrollIntoView({behavior: "smooth", block: "start"}); }
   },
