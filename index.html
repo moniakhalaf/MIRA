@@ -921,6 +921,65 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
 .wr-tile.empty .wr-v{color:var(--txt2)}
 .wr-s{font-size:11.5px;color:var(--txt2);line-height:1.35}
 .wr-ai{margin-top:6px}
+/* ---- Weekly performance report ---- */
+.review-card.perf-entry .rc-ring{position:relative;width:46px;height:46px;min-width:46px;display:grid;place-items:center}
+.review-card.perf-entry .rc-ring .ring-svg{width:46px;height:46px}
+.review-card.perf-entry .rc-ring b{position:absolute;font-size:14px;font-weight:800;font-variant-numeric:tabular-nums}
+.perf-hero{display:flex;align-items:center;gap:16px;padding:16px 18px;border-radius:18px;margin:2px 0 16px;
+  background:linear-gradient(135deg,var(--acc-soft),transparent 72%);border:1px solid var(--line)}
+.perf-ring{position:relative;width:82px;height:82px;flex:0 0 auto;display:grid;place-items:center}
+.perf-ring-c{position:absolute;font-size:26px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1}
+.perf-hx{min-width:0;flex:1}
+.perf-grade{font-size:18px;font-weight:750;line-height:1.15}
+.perf-sub{font-size:12.5px;color:var(--txt2);margin-top:3px}
+.perf-meta{display:inline-flex;align-items:center;gap:5px;margin-top:8px;font-size:11px;font-weight:600;color:var(--txt2);padding:3px 9px;border-radius:99px;background:color-mix(in srgb,var(--txt3) 12%,transparent)}
+.perf-meta svg{color:var(--acc)}
+.rep-sec{margin-bottom:16px}
+.rep-h{display:flex;align-items:center;gap:8px;font-weight:700;font-size:13px;letter-spacing:.02em;color:var(--txt);margin:0 2px 11px}
+.rep-h svg{color:var(--acc)}
+.rep-h-sub{margin-inline-start:auto;font-size:11px;font-weight:600;color:var(--txt3);text-transform:uppercase;letter-spacing:.05em}
+/* target scorecard rows */
+.tg-row{display:flex;gap:12px;align-items:flex-start;padding:13px 14px;background:var(--card);border:1px solid var(--line2);border-radius:14px;margin-bottom:8px}
+.tg-row.empty{opacity:.62}
+.tg-ic{width:32px;height:32px;min-width:32px;border-radius:9px;display:grid;place-items:center;background:var(--acc-soft);color:var(--acc)}
+.tg-row.empty .tg-ic{background:var(--key);color:var(--txt3)}
+.tg-main{flex:1;min-width:0}
+.tg-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.tg-lb{font-size:14px;font-weight:650;color:var(--txt)}
+.tg-pill{font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:99px;white-space:nowrap;letter-spacing:.02em}
+.tg-pill.good{color:var(--acc);background:var(--acc-soft)}
+.tg-pill.mid{color:var(--amber);background:color-mix(in srgb,var(--amber) 16%,transparent)}
+.tg-pill.bad{color:#e06b6b;background:rgba(224,107,107,.14)}
+.tg-pill.none{color:var(--txt3);background:var(--key)}
+.tg-val{font-size:12.5px;color:var(--txt2);margin:3px 0 0;line-height:1.35}
+.tg-val .tg-tg{color:var(--txt3)}
+.tg-bar{height:6px;border-radius:99px;background:var(--key);overflow:hidden;margin-top:9px}
+.tg-bar span{display:block;height:100%;border-radius:99px;transition:width .5s ease}
+/* habit consistency rows */
+.hb-row{display:flex;align-items:center;gap:12px;padding:8px 2px}
+.hb-name{flex:0 0 38%;max-width:38%;font-size:13px;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hb-track{flex:1;height:8px;border-radius:99px;background:var(--key);overflow:hidden}
+.hb-fill{display:block;height:100%;border-radius:99px;transition:width .5s ease}
+.hb-n{flex:0 0 auto;font-size:12px;font-weight:700;color:var(--txt2);font-variant-numeric:tabular-nums;min-width:30px;text-align:end}
+/* fitness highlights */
+.fit-chips{display:flex;flex-wrap:wrap;gap:8px}
+.fit-chip{display:flex;flex-direction:column;align-items:center;gap:1px;padding:9px 14px;border-radius:12px;background:var(--card);border:1px solid var(--line2);font-size:11px;color:var(--txt2)}
+.fit-chip b{font-size:18px;font-weight:750;color:var(--txt);font-variant-numeric:tabular-nums}
+.fit-prs{margin-top:10px;font-size:12.5px;color:var(--txt);line-height:1.4;background:var(--acc-soft);border-radius:11px;padding:10px 12px;display:flex;gap:7px;align-items:flex-start}
+.fit-prs svg{flex:0 0 auto;margin-top:1px;color:var(--acc)}
+.fit-prs b{font-weight:700}
+/* wins & watch-outs */
+.rep-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.rep-list li{position:relative;padding-inline-start:20px;font-size:13px;color:var(--txt);line-height:1.4}
+.rep-list li::before{position:absolute;inset-inline-start:0;top:0;font-size:12px}
+.rep-list.good li::before{content:"▲";color:var(--acc)}
+.rep-list.warn{margin-top:8px}
+.rep-list.warn li::before{content:"●";color:var(--amber);font-size:9px;top:3px}
+/* also this week mini */
+.rep-mini{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.rep-mini-t{display:flex;flex-direction:column;gap:2px;padding:11px 13px;background:var(--card);border:1px solid var(--line2);border-radius:12px}
+.rep-mini-t span{font-size:11.5px;color:var(--txt2)}
+.rep-mini-t b{font-size:15px;font-weight:700;color:var(--txt)}
 .dash-chips{display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:2px 1px 12px;scrollbar-width:none}
 .dash-chips::-webkit-scrollbar{display:none}
 .dash-chips .mode-chip{flex:0 0 auto}
@@ -1467,7 +1526,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.151";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.152";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1808,6 +1867,37 @@ const TR = {
     "Filled from saved foods ✓": "تمّت التعبئة من الأطعمة المحفوظة ✓",
     "Weekly review": "المراجعة الأسبوعية",
     "Your last 7 days across work, health, fitness & life": "آخر 7 أيام في العمل والصحة واللياقة والحياة",
+    "Weekly performance report": "تقرير الأداء الأسبوعي",
+    "Your last 7 days — habits, targets & fitness": "آخر 7 أيام — العادات والأهداف واللياقة",
+    "targets on track": "أهداف ضمن المسار",
+    "Targets & goals": "الأهداف والغايات",
+    "Not enough data yet": "لا توجد بيانات كافية بعد",
+    "Excellent week": "أسبوع ممتاز",
+    "On track": "ضمن المسار",
+    "Building momentum": "يبني زخماً",
+    "Needs focus": "يحتاج تركيزاً",
+    "No data": "لا بيانات",
+    "Off target": "خارج الهدف",
+    "not logged this week": "لم يُسجَّل هذا الأسبوع",
+    "Habit consistency": "انتظام العادات",
+    "Fitness highlights": "أبرز اللياقة",
+    "session": "جلسة",
+    "kg volume": "كغ حجم",
+    "avg fast": "متوسط الصيام",
+    "new personal best": "رقم شخصي جديد",
+    "new personal bests": "أرقام شخصية جديدة",
+    "Wins & watch-outs": "المكاسب والتنبيهات",
+    "Also this week": "أيضاً هذا الأسبوع",
+    "Log a few days to unlock your score.": "سجّل بضعة أيام لفتح نتيجتك.",
+    "Ask MIRA to explain my week": "اطلب من ميرا شرح أسبوعي",
+    "Every number is from what you actually logged. Blank rows mean nothing was recorded — not zero progress.": "كل رقم من واقع ما سجّلته فعلاً. الصفوف الفارغة تعني عدم التسجيل — وليست تقدماً صفرياً.",
+    "kcal avg": "متوسط سعرة",
+    "over target": "فوق الهدف",
+    "at or under target": "عند الهدف أو دونه",
+    "no target set": "لا هدف محدّد",
+    "week": "أسبوع",
+    "night": "ليلة",
+    "nights": "ليالٍ",
     "Not logged this week": "لم يُسجَّل هذا الأسبوع",
     "Workouts": "التمارين",
     "Total sets": "إجمالي المجموعات",
@@ -3376,60 +3466,182 @@ function weekStats(){
     md: md.length, avgMood, avgEnergy, spent, income};
 }
 
-function weekReviewCardHTML(){
+/* Turn the week's aggregates into a target-by-target scorecard with an honest
+   overall performance score. Only targets that have logged data are scored. */
+function weekPerf(){
   const s = weekStats();
+  const tg = s.tg;
+  const rows = [];
+  const add = (key, icon, label, has, valTxt, targetTxt, adherence, note) =>
+    rows.push({key, icon, label, has: !!has, valTxt, targetTxt, note: note || "",
+      adherence: has && adherence != null ? Math.max(0, Math.min(100, Math.round(adherence))) : null});
+
+  // Calories — closeness to target (being at/under counts as on-target for a loss goal)
+  if (tg.kcal && s.nDaysFood){
+    const over = s.avgKcal > tg.kcal;
+    const dev = Math.abs(s.avgKcal - tg.kcal) / tg.kcal;
+    const adh = over ? Math.max(0, 100 - dev * 100 * 1.5) : Math.max(60, 100 - dev * 100 * 0.5);
+    add("kcal", "flame", tr("Calories"), true, `${n0(s.avgKcal)} ${tr("kcal avg")}`, `${tr("target")} ${n0(tg.kcal)}`, adh, over ? tr("over target") : tr("at or under target"));
+  } else add("kcal", "flame", tr("Calories"), false, "", tg.kcal ? `${tr("target")} ${n0(tg.kcal)}` : tr("no target set"), null);
+
+  // Protein — share of logged days that hit the target
+  if (tg.protein && s.nDaysFood){
+    add("protein", "flask", tr("Protein"), true, `${s.proteinHitDays}/${s.nDaysFood} ${tr("days")}`, `${tr("target")} ${n0(tg.protein)} g`, s.proteinHitDays / s.nDaysFood * 100, `${tr("avg")} ${n0(s.avgP)} g`);
+  } else add("protein", "flask", tr("Protein"), false, "", tg.protein ? `${tr("target")} ${n0(tg.protein)} g` : tr("no target set"), null);
+
+  // Hydration
+  if (s.waterDaysLogged){
+    add("water", "droplet", tr("Hydration"), true, `${s.waterHitDays}/${s.waterDaysLogged} ${tr("days")}`, `${n0(S.settings.waterGoal)} ml/${tr("day")}`, s.waterHitDays / s.waterDaysLogged * 100, tr("days met water goal"));
+  } else add("water", "droplet", tr("Hydration"), false, "", "", null);
+
+  // Workouts — sessions vs a weekly target (program frequency, else 3)
+  {
+    const target = (S.program && typeof progLen === "function" && progLen()) ? progLen() : 3;
+    const has = s.ws > 0 || !!S.program;
+    add("train", "activity", tr("Workouts"), has, `${s.trainDays}/${target} ${tr("days")}`, `${target}×/${tr("week")}`, Math.min(100, s.trainDays / target * 100), `${s.ws} ${tr("sessions")} · ${s.sets} ${tr("sets")}`);
+  }
+
+  // Sleep — vs a 7 h reference
+  if (s.avgSleep != null){
+    add("sleep", "moon", tr("Sleep"), true, `${Math.round(s.avgSleep * 10) / 10} h ${tr("avg")}`, `7 h`, Math.min(100, s.avgSleep / 7 * 100), `${tr("over")} ${s.sl} ${s.sl === 1 ? tr("night") : tr("nights")}`);
+  } else add("sleep", "moon", tr("Sleep"), false, "", "", null);
+
+  // Habits — check-in completion across the week
+  if (s.habTotal){
+    add("habits", "check", tr("Habits"), true, `${Math.round(s.habDone / s.habTotal * 100)}%`, `${s.habDone}/${s.habTotal} ${tr("check-ins")}`, s.habDone / s.habTotal * 100, "");
+  } else add("habits", "check", tr("Habits"), false, "", "", null);
+
+  const scoredRows = rows.filter(r => r.has && r.adherence != null);
+  const score = scoredRows.length ? Math.round(scoredRows.reduce((a, r) => a + r.adherence, 0) / scoredRows.length) : null;
+  const onTarget = scoredRows.filter(r => r.adherence >= 85).length;
+
+  // days with any activity logged (for the completeness meter)
+  let loggedDays = 0;
+  s.days.forEach(d => {
+    const any = (S.foods || []).some(f => f.date === d) || (S.workouts || []).some(w => w.date === d) ||
+      (S.sleep || []).some(e => e.date === d) || (S.water[d]) || (S.habitLog[d] || []).length ||
+      (S.mood || []).some(e => e.date === d) || (S.checkins || []).some(c => c.date === d);
+    if (any) loggedDays++;
+  });
+
+  return {s, rows, score, scoredN: scoredRows.length, onTarget, loggedDays};
+}
+function weekHabitRows(){
+  const days = last7Dates();
+  return (S.habits || []).map(h => {
+    let n = 0; days.forEach(d => { if ((S.habitLog[d] || []).includes(h.id)) n++; });
+    return {name: h.name, n, pct: Math.round(n / 7 * 100)};
+  });
+}
+function weekPRs(){
+  if (typeof bestE1RM !== "function" || typeof e1rm !== "function") return [];
+  const from = last7Dates()[0];
+  const map = {};
+  (S.workouts || []).filter(w => w.date >= from).forEach(w => (w.items || []).forEach(it => {
+    const now = Math.max(...(it.sets || []).map(e1rm), 0);
+    if (!now) return;
+    const before = bestE1RM(it.name, x => x.ts && x.ts < w.ts);
+    if (before > 0 && now > before && (!map[it.name] || now > map[it.name])) map[it.name] = now;
+  }));
+  return Object.keys(map).map(name => ({name, e1rm: Math.round(map[name])}));
+}
+function weekReviewCardHTML(){
+  const p = weekPerf(); const s = p.s;
   const anything = s.nDaysFood || s.ws || s.sl || s.fasts || s.totalTasks || s.habTotal || s.focusN || s.md || s.waterDaysLogged || s.spent || s.income;
   if (!anything) return "";   // nothing to review yet
-  return `<button class="review-card" onclick="M.openReview()">
-    <span class="rc-ic">${ic("calendar", 20)}</span>
-    <span class="rc-tx"><span class="rc-nm">${tr("Weekly review")}</span><span class="rc-ds">${tr("Your last 7 days across work, health, fitness & life")}</span></span>
+  const sc = p.score;
+  const col = sc == null ? "var(--txt3)" : sc >= 70 ? "var(--acc)" : sc >= 55 ? "var(--amber)" : "#e06b6b";
+  return `<button class="review-card perf-entry" onclick="M.openReview()">
+    <span class="rc-ring">${ringSVG(sc || 0, col)}<b style="color:${col}">${sc == null ? "—" : sc}</b></span>
+    <span class="rc-tx"><span class="rc-nm">${tr("Weekly performance report")}</span><span class="rc-ds">${sc == null ? tr("Your last 7 days — habits, targets & fitness") : `${p.onTarget}/${p.scoredN} ${tr("targets on track")} · ${p.loggedDays}/7 ${tr("days logged")}`}</span></span>
     <span class="rc-ar">${ic("chevR", 16)}</span>
   </button>`;
 }
 
 function weeklyReviewHTML(){
-  const s = weekStats();
+  const p = weekPerf(); const s = p.s;
   const rng = `${fmtDate(s.from)} – ${fmtDate(todayStr())}`;
-  const pct = (a, b) => b ? Math.round(a / b * 100) : 0;
-  // tile: value present -> normal; null -> honest "not logged"
   const dayW = (n, one, many) => n + " " + (n === 1 ? tr(one) : tr(many));
-  const tile = (label, val, sub, has) => `<div class="wr-tile ${has ? "" : "empty"}">
-    <div class="wr-l">${label}</div>
-    <div class="wr-v">${has ? val : "—"}</div>
-    <div class="wr-s">${has ? sub : tr("Not logged this week")}</div></div>`;
-  const sec = (title, color, tiles) => `<div class="wr-sec"><div class="wr-h"><span class="wr-dot" style="background:${color}"></span>${title}</div><div class="wr-grid">${tiles.join("")}</div></div>`;
+  const sc = p.score;
+  const col = sc == null ? "var(--txt3)" : sc >= 70 ? "var(--acc)" : sc >= 55 ? "var(--amber)" : "#e06b6b";
+  const grade = sc == null ? tr("Not enough data yet") : sc >= 85 ? tr("Excellent week") : sc >= 70 ? tr("On track") : sc >= 55 ? tr("Building momentum") : tr("Needs focus");
 
-  const fitness = sec(tr("Fitness"), "#e8863d", [
-    tile(tr("Workouts"), `${s.ws}`, `${dayW(s.trainDays, "active day", "active days")}`, s.ws > 0),
-    tile(tr("Total sets"), `${s.sets}`, tr("logged across sessions"), s.sets > 0),
-    tile(tr("Fasts"), `${s.fasts}`, s.avgFast != null ? `${tr("avg")} ${(Math.round(s.avgFast * 10) / 10)} h` : "", s.fasts > 0),
-  ]);
-  const health = sec(tr("Health"), "#3bb273", [
-    tile(tr("Avg calories"), s.avgKcal != null ? n0(s.avgKcal) : "", `${tr("over")} ${dayW(s.nDaysFood, "logged day", "logged days")}${s.tg.kcal ? ` · ${tr("target")} ${n0(s.tg.kcal)}` : ""}`, s.avgKcal != null),
-    tile(tr("Avg protein"), s.avgP != null ? n0(s.avgP) + " g" : "", s.tg.protein ? `${tr("hit target")} ${s.proteinHitDays}/${s.nDaysFood} ${tr("days")}` : `${tr("over")} ${s.nDaysFood} ${tr("days")}`, s.avgP != null),
-    tile(tr("Hydration"), s.waterDaysLogged ? `${s.waterHitDays}/${s.waterDaysLogged}` : "", tr("days met water goal"), s.waterDaysLogged > 0),
-    tile(tr("Sleep"), s.avgSleep != null ? (Math.round(s.avgSleep * 10) / 10) + " h" : "", `${tr("avg over")} ${dayW(s.sl, "night", "nights")}`, s.avgSleep != null),
-    tile(tr("Mood"), s.avgMood != null ? (Math.round(s.avgMood * 10) / 10) + "/5" : "", s.avgEnergy != null ? `${tr("energy")} ${(Math.round(s.avgEnergy * 10) / 10)}/5` : "", s.avgMood != null),
-  ]);
-  const work = sec(tr("Work"), "#4c7fe0", [
-    tile(tr("Open tasks"), `${s.openN}`, s.overdueN ? `${s.overdueN} ${tr("overdue")}` : tr("none overdue"), s.totalTasks > 0),
-    tile(tr("Focus sessions"), `${s.focusN}`, tr("pomodoros this week"), s.focusN > 0),
-  ]);
-  const life = sec(tr("Life"), "#b57edc", [
-    tile(tr("Habits"), s.habTotal ? pct(s.habDone, s.habTotal) + "%" : "", `${s.habDone}/${s.habTotal} ${tr("check-ins")}`, s.habTotal > 0),
-    tile(tr("Spending"), (s.income || s.spent) ? n0(s.spent) : "", s.income ? `${tr("of")} ${n0(s.income)} ${tr("income (this month)")}` : tr("this month"), (s.income || s.spent) > 0),
-  ]);
+  // Target scorecard rows
+  const pillFor = r => {
+    if (!r.has || r.adherence == null) return `<span class="tg-pill none">${tr("No data")}</span>`;
+    const cls = r.adherence >= 85 ? "good" : r.adherence >= 60 ? "mid" : "bad";
+    const lb = r.adherence >= 85 ? tr("On target") : r.adherence >= 60 ? tr("Close") : tr("Off target");
+    return `<span class="tg-pill ${cls}">${lb}</span>`;
+  };
+  const barCol = a => a >= 85 ? "var(--acc)" : a >= 60 ? "var(--amber)" : "#e06b6b";
+  const targetRow = r => `<div class="tg-row ${r.has ? "" : "empty"}">
+    <span class="tg-ic">${ic(r.icon, 16)}</span>
+    <div class="tg-main">
+      <div class="tg-top"><span class="tg-lb">${r.label}</span>${pillFor(r)}</div>
+      <div class="tg-val" dir="auto">${r.has ? esc(r.valTxt) : "—"}${r.targetTxt ? ` <span class="tg-tg">· ${esc(r.targetTxt)}</span>` : (r.has ? "" : ` <span class="tg-tg">· ${tr("not logged this week")}</span>`)}</div>
+      ${r.has && r.adherence != null ? `<div class="tg-bar"><span style="width:${r.adherence}%;background:${barCol(r.adherence)}"></span></div>` : ""}
+    </div></div>`;
+
+  // Habit consistency
+  const habits = weekHabitRows();
+  const habitSec = habits.length ? `<div class="rep-sec"><div class="rep-h">${ic("check", 15)} ${tr("Habit consistency")}<span class="rep-h-sub">${tr("this week")}</span></div>
+    ${habits.map(h => `<div class="hb-row">
+      <span class="hb-name" dir="auto">${esc(h.name)}</span>
+      <span class="hb-track"><span class="hb-fill" style="width:${h.pct}%;background:${h.pct >= 70 ? "var(--acc)" : h.pct >= 40 ? "var(--amber)" : "var(--line2)"}"></span></span>
+      <span class="hb-n">${h.n}/7</span>
+    </div>`).join("")}</div>` : "";
+
+  // Fitness highlights
+  const vol = (S.workouts || []).filter(w => w.date >= s.from).reduce((a, w) => a + (typeof woVolume === "function" ? woVolume(w) : 0), 0);
+  const prs = weekPRs();
+  const fitSec = (s.ws > 0) ? `<div class="rep-sec"><div class="rep-h">${ic("activity", 15)} ${tr("Fitness highlights")}</div>
+    <div class="fit-chips">
+      <div class="fit-chip"><b>${s.ws}</b>${s.ws === 1 ? tr("session") : tr("sessions")}</div>
+      <div class="fit-chip"><b>${s.sets}</b>${tr("sets")}</div>
+      ${vol > 0 ? `<div class="fit-chip"><b>${n0(vol)}</b>${tr("kg volume")}</div>` : ""}
+      <div class="fit-chip"><b>${s.trainDays}</b>${dayW(s.trainDays, "active day", "active days").replace(s.trainDays + " ", "")}</div>
+      ${s.avgFast != null ? `<div class="fit-chip"><b>${Math.round(s.avgFast * 10) / 10}h</b>${tr("avg fast")}</div>` : ""}
+    </div>
+    ${prs.length ? `<div class="fit-prs">${ic("award", 14)} <b>${prs.length} ${prs.length === 1 ? tr("new personal best") : tr("new personal bests")}</b> — ${prs.slice(0, 3).map(x => `${esc(x.name)} (${x.e1rm}kg)`).join(", ")}${prs.length > 3 ? "…" : ""}</div>` : ""}</div>` : "";
+
+  // Wins & watch-outs (data-derived)
+  const wins = p.rows.filter(r => r.has && r.adherence != null && r.adherence >= 85);
+  const watch = p.rows.filter(r => r.has && r.adherence != null && r.adherence < 60);
+  const winWatch = (wins.length || watch.length) ? `<div class="rep-sec"><div class="rep-h">${ic("target", 15)} ${tr("Wins & watch-outs")}</div>
+    ${wins.length ? `<ul class="rep-list good">${wins.map(r => `<li>${r.label} — ${esc(r.valTxt)}</li>`).join("")}</ul>` : ""}
+    ${watch.length ? `<ul class="rep-list warn">${watch.map(r => `<li>${r.label} — ${esc(r.valTxt || r.targetTxt)}</li>`).join("")}</ul>` : ""}</div>` : "";
+
+  // Compact life & work strip
+  const other = [];
+  if (s.avgMood != null) other.push([tr("Mood"), `${Math.round(s.avgMood * 10) / 10}/5`]);
+  if (s.focusN) other.push([tr("Focus"), `${s.focusN}`]);
+  if (s.totalTasks) other.push([tr("Open tasks"), `${s.openN}${s.overdueN ? " · " + s.overdueN + " " + tr("overdue") : ""}`]);
+  if (s.income || s.spent) other.push([tr("Spending"), `${n0(s.spent)}${s.income ? " / " + n0(s.income) : ""}`]);
+  const otherSec = other.length ? `<div class="rep-sec"><div class="rep-h">${ic("compass", 15)} ${tr("Also this week")}</div>
+    <div class="rep-mini">${other.map(([l, v]) => `<div class="rep-mini-t"><span>${l}</span><b dir="auto">${v}</b></div>`).join("")}</div></div>` : "";
 
   return `
     <button class="cat-back" aria-label="${tr("Back to Insights")}" onclick="M.reviewBack()">${ic("back", 18)} ${tr("Insights")}</button>
     <div class="cat-title">
-      <div class="ch-nm">${tr("Weekly review")}</div>
+      <div class="ch-nm">${tr("Weekly performance report")}</div>
       <div class="ch-ds">${rng}</div>
     </div>
-    <div class="wr-note">${ic("check", 13)} ${tr("Every number below is from what you actually logged. Blank tiles mean nothing was recorded — not zero progress.")}</div>
-    ${fitness}${health}${work}${life}
-    <button class="btn wr-ai" onclick="M.genReview()">${ic("chat", 17)} ${tr("Ask MIRA for my weekly review")}</button>
-    <div class="tiny" style="text-align:center;margin-top:9px;color:var(--txt2)">${tr("MIRA reads these figures and gives you wins, watch-outs and next-week priorities — grounded in your data.")}</div>`;
+    <div class="perf-hero">
+      <div class="perf-ring">${ringSVG(sc || 0, col)}<span class="perf-ring-c" style="color:${col}">${sc == null ? "—" : sc}</span></div>
+      <div class="perf-hx">
+        <div class="perf-grade" style="color:${col}">${grade}</div>
+        <div class="perf-sub">${sc == null ? tr("Log a few days to unlock your score.") : `${p.onTarget} ${tr("of")} ${p.scoredN} ${tr("targets on track")}`}</div>
+        <div class="perf-meta">${ic("check", 12)} ${p.loggedDays}/7 ${tr("days logged")}</div>
+      </div>
+    </div>
+    <div class="rep-sec"><div class="rep-h">${ic("target", 15)} ${tr("Targets & goals")}</div>
+      ${p.rows.map(targetRow).join("")}</div>
+    ${habitSec}
+    ${fitSec}
+    ${winWatch}
+    ${otherSec}
+    <button class="btn wr-ai" onclick="M.genReview()">${ic("chat", 17)} ${tr("Ask MIRA to explain my week")}</button>
+    <div class="wr-note" style="margin-top:12px">${ic("check", 13)} ${tr("Every number is from what you actually logged. Blank rows mean nothing was recorded — not zero progress.")}</div>`;
 }
 
 /* ---------------- Dashboard tab (per-domain) ---------------- */
