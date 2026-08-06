@@ -580,6 +580,14 @@ body.kb .fab{display:none}
 .wo-hd{display:flex;align-items:center;gap:8px}
 .pr-badge{background:rgba(52,196,142,.16);color:var(--green);border-radius:20px;padding:2px 9px;font-size:11px;font-weight:700}
 .ex-note{margin-top:8px;font-size:13px;min-height:38px;padding:8px 10px}
+.superset{position:relative;border-inline-start:3px solid var(--acc);border-radius:12px;background:var(--acc-soft);padding:8px 8px 2px;margin-bottom:12px}
+.superset .ss-hd{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;letter-spacing:.02em;color:var(--acc);padding:2px 4px 8px}
+.superset .ss-hd span{font-weight:600;color:var(--txt2);letter-spacing:0}
+.superset .ss-card{margin-bottom:8px;background:var(--bg1)}
+.ss-badge{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:19px;padding:0 5px;margin-inline-end:2px;border-radius:6px;background:var(--acc);color:#04150e;font-size:11px;font-weight:800;vertical-align:1px}
+.ss-link{color:var(--txt3)}
+.ss-link.on{color:var(--acc);background:var(--acc-soft)}
+.ss-tag{display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:16px;padding:0 4px;border-radius:5px;background:var(--acc-soft);color:var(--acc);font-size:10px;font-weight:800;margin-inline-end:3px}
 .rest-bar .rest-top{display:flex;justify-content:space-between;align-items:center;font-size:14px;font-weight:600}
 .rest-bar .rest-top span:last-child{font-variant-numeric:tabular-nums;font-size:17px;color:var(--acc)}
 .rest-track{height:8px;border-radius:5px;background:var(--track);overflow:hidden;margin-top:8px}
@@ -1434,7 +1442,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.148";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.149";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1534,6 +1542,7 @@ const I = {
   alert: '<path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
   wind: '<path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2"/>',
   users: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+  link: '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
 };
 const ic = (n, s = 18) => `<svg class="svgi" width="${s}" height="${s}" viewBox="0 0 24 24">${I[n]}</svg>`;
 
@@ -1980,6 +1989,11 @@ const TR = {
     "Add a custom category": "أضف فئة مخصّصة",
     "New category — e.g. Tabby, Mob bill, DBA payment": "فئة جديدة — مثال: تابي، فاتورة موبايل، دفعة DBA",
     "Note (optional)": "ملاحظة (اختياري)",
+    "Superset": "سوبرست",
+    "no rest between · rest after the group": "بلا راحة بينهما · الراحة بعد المجموعة",
+    "Superset with the exercise above": "اربطه بالتمرين الذي فوقه (سوبرست)",
+    "Break this superset": "فكّ هذا السوبرست",
+    "Next in the superset": "التالي في السوبرست",
     "expenses": "مصاريف",
     "more this month": "المزيد هذا الشهر",
     "No expenses logged this month": "لا مصاريف مُسجّلة هذا الشهر",
@@ -6834,7 +6848,7 @@ function trainTodayHTML(){
     </div>
     ${R.plateOpen ? plateHTML() : ""}
     ${restControlHTML()}
-    ${wo.items.map((it, i) => exItemHTML(it, i)).join("")}
+    ${woItemsHTML(wo.items)}
     <button class="btn sec" style="margin-bottom:12px" onclick="M.trainGo('library')">${ic("plus", 15)} Add exercise</button>
     <div class="row" style="margin-bottom:10px">
       <button class="btn" style="flex:1.6" onclick="M.woFinish()">${ic("check", 16)} Finish & save</button>
@@ -6842,15 +6856,55 @@ function trainTodayHTML(){
     </div>
     ${wo.items.length ? `<button class="btn sec" onclick="M.routineSave()">${ic("bookmark", 15)} Save as routine</button>` : ""}`;
 }
-function exItemHTML(it, i){
+/* group consecutive items sharing a non-empty group id into supersets (runs of ≥2).
+   Returns per-item meta: {super, letter, pos, len, first, last}. */
+function woGroupMeta(items){
+  const meta = items.map(() => ({super: false}));
+  let superIdx = 0, i = 0;
+  while (i < items.length){
+    const g = items[i].group;
+    let j = i;
+    if (g) while (j + 1 < items.length && items[j + 1].group === g) j++;
+    const len = j - i + 1;
+    if (g && len >= 2){
+      const letter = String.fromCharCode(65 + (superIdx++ % 26));
+      for (let k = i; k <= j; k++) meta[k] = {super: true, letter, pos: k - i + 1, len, first: k === i, last: k === j};
+    }
+    i = j + 1;
+  }
+  return meta;
+}
+/* render the live workout's exercises, wrapping supersets in a labelled block */
+function woItemsHTML(items){
+  const meta = woGroupMeta(items);
+  let html = "", i = 0;
+  while (i < items.length){
+    const m = meta[i];
+    if (m.super && m.first){
+      let j = i;
+      while (j < items.length && meta[j].super && meta[j].letter === m.letter) j++;
+      const inner = items.slice(i, j).map((it, off) => exItemHTML(it, i + off, meta[i + off])).join("");
+      html += `<div class="superset"><div class="ss-hd">${ic("link", 13)} ${tr("Superset")} ${m.letter} · <span>${tr("no rest between · rest after the group")}</span></div>${inner}</div>`;
+      i = j;
+    } else {
+      html += exItemHTML(items[i], i, m);
+      i++;
+    }
+  }
+  return html;
+}
+function exItemHTML(it, i, m){
+  m = m || {super: false};
   const last = lastPerf(it.name);
   const tg = it.target;   // guided prescription {sets, reps, rest, note}
   const lastW = last ? (last.split(",")[0].split("×")[0].trim()) : "";  // last session's first-set weight, as a kg hint
   const done = it.sets.length, hitTarget = tg && done >= num(tg.sets);
-  return `<div class="card">
+  const linked = i > 0 && R.trainWO && R.trainWO.items[i - 1] && it.group && R.trainWO.items[i - 1].group === it.group;
+  return `<div class="card${m.super ? " ss-card" : ""}">
     <div class="wo-hd" style="margin-bottom:8px">
-      <div style="flex:1"><div style="font-weight:600" dir="auto">${esc(it.name)}</div>
+      <div style="flex:1"><div style="font-weight:600" dir="auto">${m.super ? `<span class="ss-badge">${m.letter}${m.pos}</span> ` : ""}${esc(it.name)}</div>
         <div class="tiny">${esc(it.muscle || "")}${last ? ` · ${tr("last")}: ${last}` : ""}</div></div>
+      ${i > 0 ? `<button class="icon-btn ss-link${linked ? " on" : ""}" aria-label="${linked ? tr("Break this superset") : tr("Superset with the exercise above")}" title="${linked ? tr("Break this superset") : tr("Superset with the exercise above")}" onclick="M.woSuperset(${i})">${ic("link", 16)}</button>` : ""}
       <button class="icon-btn demo-btn" aria-label="${tr("How-to")}" data-n="${esc(it.name)}" onclick="M.exDemo(this.dataset.n)">${ic("book", 16)}</button>
       <button class="del" style="flex:0 0 auto;color:var(--txt3)" aria-label="Remove exercise" onclick="M.woDelEx(${i})">✕</button>
     </div>
@@ -6934,7 +6988,7 @@ function trainHistHTML(){
           <div><div style="font-weight:600" dir="auto">${esc(w.name)}</div><div class="tiny">${sub}</div></div>
           <button class="del" style="flex:0 0 auto;color:var(--txt3)" aria-label="Delete workout" onclick="M.woHistDel('${w.id}')">✕</button>
         </div>
-        ${(w.items || []).map(it => `<div class="tiny" style="margin:3px 0" dir="auto"><b>${esc(it.name)}</b> — ${it.sets.map(s => `${n1(s.weight)}×${s.reps}`).join(", ") || "no sets"}</div>`).join("")}
+        ${(() => { const hm = woGroupMeta(w.items || []); return (w.items || []).map((it, hi) => { const m = hm[hi]; return `<div class="tiny" style="margin:3px 0" dir="auto">${m.super ? `<span class="ss-tag">${m.letter}${m.pos}</span> ` : ""}<b>${esc(it.name)}</b> — ${it.sets.map(s => `${n1(s.weight)}×${s.reps}`).join(", ") || "no sets"}</div>`; }).join(""); })()}
       </div>`;
     }).join("") : `<div class="card" style="text-align:center;padding:26px 16px">
       <div style="color:var(--txt3);margin-bottom:8px">${ic("barbell", 28)}</div>
@@ -9861,7 +9915,7 @@ window.M = {
   woRepeat(id){
     const past = (S.workouts || []).find(w => w.id === id); if (!past) return;
     R.trainWO = {id: uid(), date: todayStr(), name: past.name || "Workout",
-      items: (past.items || []).map(x => ({name: x.name, muscle: x.muscle, sets: (x.sets || []).map(s => ({reps: s.reps, weight: s.weight})), note: ""}))};
+      items: (past.items || []).map(x => ({name: x.name, muscle: x.muscle, group: x.group || null, sets: (x.sets || []).map(s => ({reps: s.reps, weight: s.weight})), note: ""}))};
     R.trainTab = "today"; render();
     toast(`Repeating ${past.name || "last session"} — beat your last numbers.`);
   },
@@ -9887,12 +9941,28 @@ window.M = {
   woAddSet(i){
     const r = num(($("#wr" + i) || {}).value), w = num(($("#ww" + i) || {}).value);
     if (r <= 0){ toast("Enter the reps."); return; }
-    const it = R.trainWO.items[i];
+    const items = R.trainWO.items, it = items[i];
     it.sets.push({reps: r, weight: w});
     buzz();
+    // inside a superset, move straight to the next exercise instead of resting — full rest waits until the last of the group
+    const next = it.group && items[i + 1] && items[i + 1].group === it.group ? items[i + 1] : null;
+    if (next){ render(); toast(`${tr("Next in the superset")}: ${next.name}`, 1600); return; }
     // a guided prescription carries its own rest; fall back to the global setting
     const rest = (it.target && num(it.target.rest)) ? num(it.target.rest) : S.settings.restLen;
     if (rest > 0) startRest(rest); else render();
+  },
+  woSuperset(i){
+    const items = R.trainWO && R.trainWO.items; if (!items || i <= 0) return;
+    const cur = items[i], prev = items[i - 1];
+    if (cur.group && cur.group === prev.group){
+      // break the chain here: this exercise and any that follow in the same group become independent again
+      const g = cur.group;
+      for (let k = i; k < items.length && items[k].group === g; k++) items[k].group = null;
+    } else {
+      const g = prev.group || uid();
+      prev.group = g; cur.group = g;
+    }
+    render();
   },
   restLen(delta){ S.settings.restLen = Math.max(0, Math.min(600, S.settings.restLen + delta)); save(); render(); },
   restStart(){ startRest(S.settings.restLen); },
@@ -9904,14 +9974,14 @@ window.M = {
     if (!wo || !wo.items.length){ toast("Add exercises first."); return; }
     const name = prompt("Name this routine (e.g. Push Day):", wo.name || "");
     if (!name || !name.trim()) return;
-    S.routines.unshift({id: uid(), name: name.trim(), items: wo.items.map(it => ({name: it.name, muscle: it.muscle}))});
+    S.routines.unshift({id: uid(), name: name.trim(), items: wo.items.map(it => ({name: it.name, muscle: it.muscle, group: it.group || null}))});
     save(); render();
     toast(`Routine saved: ${name.trim()} ✓`);
   },
   routineStart(i){
     const r = S.routines[i];
     if (!r) return;
-    R.trainWO = {id: uid(), date: todayStr(), name: r.name, items: r.items.map(x => ({name: x.name, muscle: x.muscle, sets: [], note: ""}))};
+    R.trainWO = {id: uid(), date: todayStr(), name: r.name, items: r.items.map(x => ({name: x.name, muscle: x.muscle, group: x.group || null, sets: [], note: ""}))};
     R.trainTab = "today"; render();
     toast(`Started ${r.name}`);
   },
