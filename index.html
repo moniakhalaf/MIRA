@@ -1067,6 +1067,21 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
 .bar-top .st{font-weight:700}
 .bar-line.done .st{color:var(--green)}
 .bar-line.over .st{color:var(--amber)}
+/* ---- micronutrients (fibre / sugar / sodium) ---- */
+.micr-strip{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}
+.micr-chip{font-size:12px;color:var(--txt2);background:var(--bg2);border:1px solid var(--line);border-radius:99px;padding:4px 11px}
+.micr-chip b{color:var(--txt);font-weight:700}
+.micr-chip .micr-goal{color:var(--txt3)}
+.micr-chip.good{border-color:color-mix(in srgb,var(--green) 40%,transparent)}.micr-chip.good b{color:var(--green)}
+.micr-chip.over{border-color:color-mix(in srgb,var(--red) 45%,transparent)}.micr-chip.over b{color:var(--red)}
+.micr-wrap>.micr-body{display:none}
+.micr-wrap.open>.micr-body{display:block;margin-top:10px}
+.micr-toggle{display:flex;align-items:center;gap:8px;width:100%;padding:10px 12px;background:var(--bg2);border:1px solid var(--line);border-radius:11px;color:var(--txt2);font-size:13px;font-weight:600;text-align:start}
+.micr-toggle .micr-opt{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--txt3);background:var(--card2);padding:1px 7px;border-radius:99px}
+.micr-toggle .chev{margin-inline-start:auto;color:var(--txt3);transition:transform .2s}
+.micr-wrap.open .micr-toggle .chev{transform:rotate(90deg)}
+.rv-micros{font-size:12px;color:var(--txt2);display:flex;align-items:center;gap:5px;margin:-2px 0 8px}
+.rv-micros b{color:var(--txt);font-weight:650}
 .glasses{display:flex;flex-wrap:wrap;gap:4px;margin:10px 0 10px}
 .glass{
   width:40px;height:40px;padding:5px;display:flex;align-items:center;justify-content:center;
@@ -1414,7 +1429,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.146";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.147";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1637,6 +1652,7 @@ const TR = {
     "Direct":"مباشر","Balanced":"متوازن","Encouraging":"مُشجِّع","Answer depth":"عمق الإجابة","Short":"مختصر","Detailed":"مفصّل",
     "MIRA replies in":"تردّ ميرا بـ","Match what I write":"طابِق ما أكتبه","Appearance":"المظهر","Nutrition & body":"التغذية والجسم",
     "Daily targets":"الأهداف اليومية","Calories kcal":"السعرات كيلوكالوري","Carbs g (optional)":"كربوهيدرات غ (اختياري)","Fat g (optional)":"دهون غ (اختياري)",
+    "fiber":"ألياف","sugar":"سكر","sodium":"صوديوم","Fiber, sugar & sodium":"الألياف والسكر والصوديوم","Fiber g":"ألياف غ","Sugar g":"سكر غ","Sodium mg":"صوديوم ملغ","Fiber goal g (optional)":"هدف الألياف غ (اختياري)","e.g. 30":"مثال: 30","Sodium limit mg (optional)":"حد الصوديوم ملغ (اختياري)","e.g. 2300":"مثال: 2300",
     "Water goal ml":"هدف الماء مل","Goal weight kg":"الوزن المستهدف كغ","Saved foods":"الأطعمة المحفوظة","Forget":"نسيان",
     "Your domains":"مجالاتك","Domains":"المجالات","Remove":"إزالة","New domain (any subject)":"مجال جديد (أي موضوع)","Add":"إضافة",
     "Assistant":"المساعد","API & model":"مفتاح API والنموذج","Connected":"متصل","No key":"لا يوجد مفتاح","Anthropic API key":"مفتاح Anthropic API",
@@ -2343,7 +2359,7 @@ const BLANK = () => ({
     apiKey: "", model: "claude-sonnet-5", pinHash: null, webSearch: true, usdaKey: "",
     theme: "dark", account: null,
     encOn: false, faceAuto: true, autoLockMin: 0,   // on-device encryption + auto-lock
-    targets: {kcal: 2000, protein: 120, carbs: 0, fat: 0},
+    targets: {kcal: 2000, protein: 120, carbs: 0, fat: 0, fiber: 0, sodium: 0},
     waterGoal: 2500,
     goalWeight: 0,
     coachPace: 0.5,        // adaptive-targets pace: % bodyweight change per week
@@ -4089,8 +4105,9 @@ function onbDone(){
 /* ---------------- live-data context + system prompt ---------------- */
 function dayFoods(date){ return S.foods.filter(f => f.date === date); }
 function dayTotals(date){
-  return dayFoods(date).reduce((a, f) => ({kcal: a.kcal + f.kcal, p: a.p + f.p, c: a.c + f.c, f: a.f + f.f}),
-    {kcal: 0, p: 0, c: 0, f: 0});
+  return dayFoods(date).reduce((a, f) => ({kcal: a.kcal + (+f.kcal || 0), p: a.p + (+f.p || 0), c: a.c + (+f.c || 0), f: a.f + (+f.f || 0),
+    fiber: a.fiber + (+f.fiber || 0), sugar: a.sugar + (+f.sugar || 0), sodium: a.sodium + (+f.sodium || 0)}),
+    {kcal: 0, p: 0, c: 0, f: 0, fiber: 0, sugar: 0, sodium: 0});
 }
 function liveContext(){
   const t = todayStr();
@@ -4777,9 +4794,9 @@ function sanity(m){
 }
 
 /* ---------------- nutrition tab ---------------- */
-const foodForm = {name: "", amount: "", time: "", meal: "", kcal: "", p: "", c: "", f: "", conf: "user",
+const foodForm = {name: "", amount: "", time: "", meal: "", kcal: "", p: "", c: "", f: "", fiber: "", sugar: "", sodium: "", conf: "user",
   scOpen: false, scBase: "100", scBaseUnit: "g", scK: "", scP: "", scC: "", scF: "", scEat: "",
-  portion: null, portG: ""};
+  micrOpen: false, portion: null, portG: ""};
 // Pull a scalable quantity out of a saved amount string ("72 g", "250 ml",
 // "3 pieces") — prefers an explicit weight/volume so gram-logged foods rescale
 // precisely; falls back to the first counted quantity. Returns null when there
@@ -5068,6 +5085,26 @@ function macroBar(label, val, target, unit, color){
     <div class="bar"><i style="width:${pct}%;background:${fill}"></i></div>
   </div>`;
 }
+// Daily "beyond macros" strip: fibre, sugar, sodium. Shows when any is logged
+// or a goal/limit is set. Fibre has an aim (≥), sodium a limit (≤).
+function microStripHTML(tot){
+  const tg = S.settings.targets || {};
+  const fibGoal = num(tg.fiber), sodLimit = num(tg.sodium);
+  const has = (tot.fiber || tot.sugar || tot.sodium) > 0;
+  if (!has && !fibGoal && !sodLimit) return "";
+  const fmt = (v, u) => u === "mg" ? n0(v) : n1(v);
+  const chip = (label, val, unit, opt) => {
+    let cls = "", tail = "";
+    if (opt && opt.goal){ tail = ` / ${fmt(opt.goal, unit)}`; if (val >= opt.goal) cls = "good"; }
+    else if (opt && opt.limit){ tail = ` / ${fmt(opt.limit, unit)}`; if (val > opt.limit) cls = "over"; }
+    return `<span class="micr-chip ${cls}"><b>${fmt(val, unit)}</b>${unit} ${label}${tail ? `<span class="micr-goal">${tail}</span>` : ""}</span>`;
+  };
+  return `<div class="micr-strip">
+    ${chip(tr("fiber"), tot.fiber, "g", fibGoal ? {goal: fibGoal} : null)}
+    ${chip(tr("sugar"), tot.sugar, "g", null)}
+    ${chip(tr("sodium"), tot.sodium, "mg", sodLimit ? {limit: sodLimit} : null)}
+  </div>`;
+}
 
 function foodHTML(){
   const today = todayStr();   // NB: keep this named `today` — the global t() is the translator
@@ -5092,6 +5129,7 @@ function foodHTML(){
       ${macroBar(t("Fat"), tot.f, tg.fat, "g", "#A78BFA")}
     </div>
     <div class="muted" style="margin-top:9px">${t("Remaining")}: <b>${n0(Math.max(0, tg.kcal - tot.kcal))} kcal</b> · <b>${n1(Math.max(0, tg.protein - tot.p))} g protein</b>${tg.carbs ? ` · ${n1(Math.max(0, tg.carbs - tot.c))} g carbs` : ""}${tg.fat ? ` · ${n1(Math.max(0, tg.fat - tot.f))} g fat` : ""}</div>
+    ${microStripHTML(tot)}
   </div>
 
   ${calorieBankHTML()}
@@ -5138,6 +5176,16 @@ function foodHTML(){
         <div class="field"><label>${t("Protein g")}</label><input id="ffP" type="number" inputmode="decimal" value="${esc(foodForm.p)}" oninput="foodForm.p=this.value"></div>
         <div class="field"><label>${t("Carbs g")}</label><input id="ffC" type="number" inputmode="decimal" value="${esc(foodForm.c)}" oninput="foodForm.c=this.value"></div>
         <div class="field"><label>${t("Fat g")}</label><input id="ffF" type="number" inputmode="decimal" value="${esc(foodForm.f)}" oninput="foodForm.f=this.value"></div>
+      </div>
+      <div class="micr-wrap ${foodForm.micrOpen ? "open" : ""}" style="margin-bottom:12px">
+        <button class="micr-toggle" onclick="M.micrToggle()">${ic("droplet", 14)} ${t("Fiber, sugar & sodium")} <span class="micr-opt">${t("optional")}</span><span class="chev">▶</span></button>
+        <div class="micr-body">
+          <div class="grid3m">
+            <div class="field"><label>${t("Fiber g")}</label><input id="ffFiber" type="number" inputmode="decimal" value="${esc(foodForm.fiber)}" oninput="foodForm.fiber=this.value"></div>
+            <div class="field"><label>${t("Sugar g")}</label><input id="ffSugar" type="number" inputmode="decimal" value="${esc(foodForm.sugar)}" oninput="foodForm.sugar=this.value"></div>
+            <div class="field"><label>${t("Sodium mg")}</label><input id="ffSodium" type="number" inputmode="decimal" value="${esc(foodForm.sodium)}" oninput="foodForm.sodium=this.value"></div>
+          </div>
+        </div>
       </div>
       <button class="btn" style="width:100%;margin-bottom:12px" onclick="M.foodSave()">${R.editFoodId ? t("Update entry") : t("Save to log")}</button>
       `}
@@ -5532,6 +5580,7 @@ function reviewHTML(){
           <div class="field"><label>C</label><input id="rvC${i}" type="number" inputmode="decimal" value="${esc(it.c)}" oninput="reviewItems[${i}].c=this.value"></div>
           <div class="field"><label>F</label><input id="rvF${i}" type="number" inputmode="decimal" value="${esc(it.f)}" oninput="reviewItems[${i}].f=this.value"></div>
         </div>
+        ${(num(it.fiber) || num(it.sugar) || num(it.sodium)) ? `<div class="rv-micros">${ic("droplet", 12)} ${tr("fiber")} <b>${n1(num(it.fiber))}g</b> · ${tr("sugar")} <b>${n1(num(it.sugar))}g</b> · ${tr("sodium")} <b>${n0(num(it.sodium))}mg</b></div>` : ""}
         <div class="row">
           <span class="badge ${it.conf}">${it.conf}</span>
           <span class="tiny" style="flex:1">${esc(it.note || "")}</span>
@@ -5552,36 +5601,41 @@ function foodSaveDirect(){
   let nm = foodForm.name.trim(), amt = foodForm.amount.trim();
   if (!nm && amt){ nm = amt; amt = ""; }
   const it = {name: nm, amount: amt, time: foodForm.time, meal: foodForm.meal,
-    kcal: foodForm.kcal, p: foodForm.p, c: foodForm.c, f: foodForm.f, conf: foodForm.conf || "user"};
+    kcal: foodForm.kcal, p: foodForm.p, c: foodForm.c, f: foodForm.f,
+    fiber: foodForm.fiber, sugar: foodForm.sugar, sodium: foodForm.sodium, conf: foodForm.conf || "user"};
   if (!it.name){ toast("Give the food a name."); return; }
   const s = sanity(it);
   if (s.errors.length){ toast(s.errors[0], 4200); return; }
   if (s.warnings.length) toast(s.warnings[0], 3600);
+  const clearForm = {name: "", amount: "", time: "", meal: "", kcal: "", p: "", c: "", f: "", fiber: "", sugar: "", sodium: "", conf: "user", scOpen: false, micrOpen: false, portion: null, portG: ""};
   if (R.editFoodId){
     const f = S.foods.find(x => x.id === R.editFoodId);
     if (f){
       const time = (it.time || "").trim() || nowHM();
       Object.assign(f, {name: it.name.trim(), amount: (it.amount || "").trim(), time, meal: it.meal || mealFromTime(time),
-        kcal: num(it.kcal), p: num(it.p), c: num(it.c), f: num(it.f), conf: it.conf || "user"});
+        kcal: num(it.kcal), p: num(it.p), c: num(it.c), f: num(it.f),
+        fiber: num(it.fiber) || 0, sugar: num(it.sugar) || 0, sodium: num(it.sodium) || 0, conf: it.conf || "user"});
     }
     R.editFoodId = null;
-    Object.assign(foodForm, {name: "", amount: "", time: "", meal: "", kcal: "", p: "", c: "", f: "", conf: "user", scOpen: false, portion: null, portG: ""});
+    Object.assign(foodForm, clearForm);
     save(); render();
     toast(f ? "Entry updated ✓" : "That entry no longer exists.");
     return;
   }
   logFood(it);
-  Object.assign(foodForm, {name: "", amount: "", time: "", meal: "", kcal: "", p: "", c: "", f: "", conf: "user", scOpen: false, portion: null, portG: ""});
+  Object.assign(foodForm, clearForm);
   render();
 }
 function logFood(it){
   const time = (it.time || "").trim() || nowHM();
   S.foods.push({id: uid(), date: todayStr(), name: it.name.trim(), amount: (it.amount || "").trim(),
     time, meal: it.meal || mealFromTime(time),
-    kcal: num(it.kcal), p: num(it.p), c: num(it.c), f: num(it.f), conf: it.conf || "user", ts: Date.now()});
+    kcal: num(it.kcal), p: num(it.p), c: num(it.c), f: num(it.f),
+    fiber: num(it.fiber) || 0, sugar: num(it.sugar) || 0, sodium: num(it.sodium) || 0, conf: it.conf || "user", ts: Date.now()});
   const key = it.name.trim().toLowerCase();
   const ex = S.savedFoods.findIndex(f => f.name.toLowerCase() === key);
-  const saved = {name: it.name.trim(), amount: (it.amount || "").trim(), kcal: num(it.kcal), p: num(it.p), c: num(it.c), f: num(it.f)};
+  const saved = {name: it.name.trim(), amount: (it.amount || "").trim(), kcal: num(it.kcal), p: num(it.p), c: num(it.c), f: num(it.f),
+    fiber: num(it.fiber) || 0, sugar: num(it.sugar) || 0, sodium: num(it.sodium) || 0};
   if (ex >= 0) S.savedFoods[ex] = saved; else S.savedFoods.unshift(saved);
   if (S.savedFoods.length > 400) S.savedFoods.pop();
   R.openDays.add(todayStr());
@@ -5772,7 +5826,7 @@ async function usdaSearch(query, key){
   if (!res.ok) throw new Error("usda " + res.status);
   const j = await res.json();
   return (j.foods || []).map(f => {
-    const per = {kcal: 0, p: 0, c: 0, f: 0};
+    const per = {kcal: 0, p: 0, c: 0, f: 0, fiber: 0, sugar: 0, sodium: 0};
     (f.foodNutrients || []).forEach(n => {
       const no = String(n.nutrientNumber || (n.nutrient && n.nutrient.number) || "");
       const nm = String(n.nutrientName || (n.nutrient && n.nutrient.name) || "").toLowerCase();
@@ -5782,9 +5836,12 @@ async function usdaSearch(query, key){
       else if (no === "203" || no === "1003" || nm === "protein") per.p = v;
       else if (no === "205" || no === "1005" || nm.includes("carbohydrate")) per.c = v;
       else if (no === "204" || no === "1004" || nm.includes("total lipid") || nm === "fat") per.f = v;
+      else if (no === "291" || no === "1079" || nm.includes("fiber") || nm.includes("fibre")) per.fiber = v;
+      else if (no === "269" || no === "2000" || nm.includes("sugars")) per.sugar = v;
+      else if (no === "307" || no === "1093" || nm === "sodium, na" || nm === "sodium") per.sodium = v;  // mg per 100 g
     });
     return {name: f.description || "", brand: f.brandOwner || f.brandName || "", src: "USDA", type: f.dataType || "",
-      per100: {kcal: num(per.kcal), p: num(per.p), c: num(per.c), f: num(per.f)}};
+      per100: {kcal: num(per.kcal), p: num(per.p), c: num(per.c), f: num(per.f), fiber: num(per.fiber), sugar: num(per.sugar), sodium: num(per.sodium)}};
   }).filter(x => x.name && (x.per100.kcal > 0 || x.per100.p > 0 || x.per100.c > 0));
 }
 
@@ -5799,9 +5856,12 @@ async function offSearch(query){
   return (j.products || []).map(p => {
     const nu = p.nutriments || {};
     const kcal = nu["energy-kcal_100g"] != null ? nu["energy-kcal_100g"] : (nu["energy_100g"] ? nu["energy_100g"] / 4.184 : 0);
+    // OFF gives sodium (or salt) in grams per 100 g → convert to mg
+    const sodMg = nu.sodium_100g != null ? num(nu.sodium_100g) * 1000 : (nu.salt_100g != null ? num(nu.salt_100g) * 400 : 0);
     return {name: [p.brands, p.product_name].filter(Boolean).join(" — ") || p.product_name || "",
       brand: p.brands || "", src: "OpenFoodFacts",
-      per100: {kcal: Math.round(num(kcal)), p: num(nu.proteins_100g), c: num(nu.carbohydrates_100g), f: num(nu.fat_100g)}};
+      per100: {kcal: Math.round(num(kcal)), p: num(nu.proteins_100g), c: num(nu.carbohydrates_100g), f: num(nu.fat_100g),
+        fiber: num(nu.fiber_100g), sugar: num(nu.sugars_100g), sodium: Math.round(sodMg)}};
   }).filter(x => x.name && (x.per100.kcal > 0 || x.per100.p > 0));
 }
 
@@ -5928,9 +5988,11 @@ function dbCandidatesToReview(cands, hadGrams){
       const verify = off ? " Check it against the pack." : " Set how much you had below.";
       return {name: x.name, amount: n0(had) + " g",
         kcal: Math.round(base.kcal * k), p: +(base.p * k).toFixed(1), c: +(base.c * k).toFixed(1), f: +(base.f * k).toFixed(1),
+        fiber: +(num(base.fiber) * k).toFixed(1), sugar: +(num(base.sugar) * k).toFixed(1), sodium: Math.round(num(base.sodium) * k),
         conf,
         note: src + (x.brand ? " · " + x.brand : "") + " — per 100 g." + verify,
-        basis: 100, unit: "g", pkg: 0, baseMacros: {kcal: num(base.kcal), p: num(base.p), c: num(base.c), f: num(base.f)},
+        basis: 100, unit: "g", pkg: 0,
+        baseMacros: {kcal: num(base.kcal), p: num(base.p), c: num(base.c), f: num(base.f), fiber: num(base.fiber), sugar: num(base.sugar), sodium: num(base.sodium)},
         had: String(had), communityId: community ? x.id : null};
     });
 }
@@ -9363,6 +9425,10 @@ function settingsHTML(){
       <div class="field"><label>${tr("Carbs g (optional)")}</label><input type="number" inputmode="numeric" value="${st.targets.carbs || ""}" oninput="S.settings.targets.carbs=num(this.value);save()"></div>
       <div class="field"><label>${tr("Fat g (optional)")}</label><input type="number" inputmode="numeric" value="${st.targets.fat || ""}" oninput="S.settings.targets.fat=num(this.value);save()"></div>
     </div>
+    <div class="grid2" style="margin-bottom:10px">
+      <div class="field"><label>${tr("Fiber goal g (optional)")}</label><input type="number" inputmode="numeric" value="${st.targets.fiber || ""}" placeholder="${tr("e.g. 30")}" oninput="S.settings.targets.fiber=num(this.value);save()"></div>
+      <div class="field"><label>${tr("Sodium limit mg (optional)")}</label><input type="number" inputmode="numeric" value="${st.targets.sodium || ""}" placeholder="${tr("e.g. 2300")}" oninput="S.settings.targets.sodium=num(this.value);save()"></div>
+    </div>
     <div class="grid2">
       <div class="field" style="margin-bottom:0"><label>${tr("Water goal ml")}</label><input type="number" inputmode="numeric" value="${st.waterGoal || ""}" oninput="S.settings.waterGoal=Math.max(250,num(this.value));save()"></div>
       <div class="field" style="margin-bottom:0"><label>${tr("Goal weight kg")}</label><input type="number" inputmode="decimal" value="${st.goalWeight || ""}" placeholder="optional" oninput="S.settings.goalWeight=num(this.value);save()"></div>
@@ -10851,8 +10917,11 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
     if (!f) return;
     // Remember the saved portion so a different amount re-scales the macros.
     const pp = parsePortion(f.amount);
-    const portion = pp && num(f.kcal) > 0 ? {base: pp.base, unit: pp.unit, k: num(f.kcal), p: num(f.p), c: num(f.c), f: num(f.f)} : null;
-    Object.assign(foodForm, {name: f.name, amount: f.amount, kcal: f.kcal, p: f.p, c: f.c, f: f.f, conf: "user",
+    const portion = pp && num(f.kcal) > 0 ? {base: pp.base, unit: pp.unit, k: num(f.kcal), p: num(f.p), c: num(f.c), f: num(f.f),
+      fib: num(f.fiber), sug: num(f.sugar), sod: num(f.sodium)} : null;
+    Object.assign(foodForm, {name: f.name, amount: f.amount, kcal: f.kcal, p: f.p, c: f.c, f: f.f,
+      fiber: f.fiber ? String(f.fiber) : "", sugar: f.sugar ? String(f.sugar) : "", sodium: f.sodium ? String(f.sodium) : "",
+      micrOpen: !!(num(f.fiber) || num(f.sugar) || num(f.sodium)), conf: "user",
       portion, portG: portion ? portion.base : ""});
     R.acPickedName = f.name;                 // keep the suggestion list closed after picking
     R.myFoodsOpen = false; R.myFoodsQ = "";  // collapse the "my foods" list so the filled form shows
@@ -10869,10 +10938,14 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
     foodForm.p = g > 0 ? rnd(pt.p * r) : "";
     foodForm.c = g > 0 ? rnd(pt.c * r) : "";
     foodForm.f = g > 0 ? rnd(pt.f * r) : "";
+    foodForm.fiber = g > 0 && pt.fib ? rnd(pt.fib * r) : (pt.fib ? "" : foodForm.fiber);
+    foodForm.sugar = g > 0 && pt.sug ? rnd(pt.sug * r) : (pt.sug ? "" : foodForm.sugar);
+    foodForm.sodium = g > 0 && pt.sod ? Math.round(pt.sod * r) : (pt.sod ? "" : foodForm.sodium);
     foodForm.amount = g > 0 ? (+g + (pt.unit ? " " + pt.unit : "")) : "";
     // write straight to the inputs so the number field keeps focus (no re-render)
     const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
     set("ffK", foodForm.kcal); set("ffP", foodForm.p); set("ffC", foodForm.c); set("ffF", foodForm.f);
+    set("ffFiber", foodForm.fiber); set("ffSugar", foodForm.sugar); set("ffSodium", foodForm.sodium);
     set("ffAmount", foodForm.amount);
   },
   myFoodsToggle(){ R.myFoodsOpen = !R.myFoodsOpen; if (!R.myFoodsOpen) R.myFoodsQ = ""; render(); if (R.myFoodsOpen){ const s = $("#myfSearch"); if (s) s.focus(); } },
@@ -10882,6 +10955,7 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
     S.savedFoods.splice(i, 1); save(); render();
     toast(`${tr("Removed from my foods")} ✓`);
   },
+  micrToggle(){ foodForm.micrOpen = !foodForm.micrOpen; render(); },
   scToggle(){ foodForm.scOpen = !foodForm.scOpen; render(); },
   scApply(){
     const base = num(foodForm.scBase), eat = num(foodForm.scEat);
@@ -10911,10 +10985,13 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
     // Set up the amount rescaler from the entry itself, so changing the amount
     // updates the macros (e.g. 150 g / 247 kcal → 200 g rescales everything).
     const pp = parsePortion(f.amount);
-    const portion = pp && num(f.kcal) > 0 ? {base: pp.base, unit: pp.unit, k: num(f.kcal), p: num(f.p), c: num(f.c), f: num(f.f)} : null;
+    const portion = pp && num(f.kcal) > 0 ? {base: pp.base, unit: pp.unit, k: num(f.kcal), p: num(f.p), c: num(f.c), f: num(f.f),
+      fib: num(f.fiber), sug: num(f.sugar), sod: num(f.sodium)} : null;
+    const hasMicros = num(f.fiber) || num(f.sugar) || num(f.sodium);
     Object.assign(foodForm, {name: f.name, amount: f.amount || "", time: entryTime(f), meal: entryMeal(f),
-      kcal: String(f.kcal ?? ""), p: String(f.p ?? ""), c: String(f.c ?? ""), f: String(f.f ?? ""), conf: f.conf || "user", scOpen: false,
-      portion, portG: portion ? portion.base : ""});
+      kcal: String(f.kcal ?? ""), p: String(f.p ?? ""), c: String(f.c ?? ""), f: String(f.f ?? ""),
+      fiber: f.fiber ? String(f.fiber) : "", sugar: f.sugar ? String(f.sugar) : "", sodium: f.sodium ? String(f.sodium) : "",
+      conf: f.conf || "user", scOpen: false, micrOpen: !!hasMicros, portion, portG: portion ? portion.base : ""});
     render();
     const card = $("#addFoodCard"); if (card){ card.classList.add("open"); card.scrollIntoView({behavior: "smooth", block: "start"}); }
   },
@@ -11089,12 +11166,13 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
   reviewPortion(i, val){
     const it = reviewItems[i];
     if (!it) return;
-    if (!it.baseMacros){ it.baseMacros = {kcal: num(it.kcal), p: num(it.p), c: num(it.c), f: num(it.f)}; it.baseAmount = it.amount || ""; }
+    if (!it.baseMacros){ it.baseMacros = {kcal: num(it.kcal), p: num(it.p), c: num(it.c), f: num(it.f), fiber: num(it.fiber), sugar: num(it.sugar), sodium: num(it.sodium)}; it.baseAmount = it.amount || ""; }
     const m = Math.max(0, parseFloat(val) || 0);
     it.mult = m;
     const b = it.baseMacros;
     it.kcal = Math.round(b.kcal * m);
     it.p = +(b.p * m).toFixed(1); it.c = +(b.c * m).toFixed(1); it.f = +(b.f * m).toFixed(1);
+    it.fiber = +(num(b.fiber) * m).toFixed(1); it.sugar = +(num(b.sugar) * m).toFixed(1); it.sodium = Math.round(num(b.sodium) * m);
     // scale the amount label: "1 burger" -> "0.5 burger"; otherwise "0.5 × burger"
     const q = x => String(Math.round(x * 100) / 100);
     const base = it.baseAmount || "", mm = base.match(/^\s*(\d+(?:\.\d+)?)\s*(.*)$/);
@@ -11113,6 +11191,7 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
     it.p = +(it.baseMacros.p * k).toFixed(1);
     it.c = +(it.baseMacros.c * k).toFixed(1);
     it.f = +(it.baseMacros.f * k).toFixed(1);
+    it.fiber = +(num(it.baseMacros.fiber) * k).toFixed(1); it.sugar = +(num(it.baseMacros.sugar) * k).toFixed(1); it.sodium = Math.round(num(it.baseMacros.sodium) * k);
     it.amount = (had ? n0(had) : "0") + " " + it.unit;
     // Patch the affected fields in place — a full render() here would rebuild the
     // DOM mid-keystroke, drop keyboard focus and make the page jump on iOS.
