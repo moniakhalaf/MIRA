@@ -1141,6 +1141,26 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
 .micr-chip .micr-goal{color:var(--txt3)}
 .micr-chip.good{border-color:color-mix(in srgb,var(--green) 40%,transparent)}.micr-chip.good b{color:var(--green)}
 .micr-chip.over{border-color:color-mix(in srgb,var(--red) 45%,transparent)}.micr-chip.over b{color:var(--red)}
+/* ---- Nutrition coach card ---- */
+.food-coach .fc-head{display:flex;align-items:center;gap:8px}
+.food-coach .fc-head h3{margin:0}
+.aim-seg{display:flex;gap:6px;background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:4px;margin:12px 0 4px}
+.aim-seg button{flex:1;padding:8px 6px;border-radius:9px;font-size:12.5px;font-weight:650;color:var(--txt2);background:transparent;border:none;transition:background .15s,color .15s}
+.aim-seg button.on{background:var(--acc);color:var(--btn-ink);box-shadow:0 2px 8px -3px color-mix(in srgb,var(--acc) 60%,transparent)}
+.fc-verdict{display:flex;flex-wrap:wrap;gap:7px;margin:13px 0 0}
+.vchip{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;padding:5px 11px;border-radius:99px;border:1px solid var(--line)}
+.vchip.good{color:var(--green);background:color-mix(in srgb,var(--green) 12%,transparent);border-color:color-mix(in srgb,var(--green) 34%,transparent)}
+.vchip.under{color:var(--amber);background:color-mix(in srgb,var(--amber) 13%,transparent);border-color:color-mix(in srgb,var(--amber) 34%,transparent)}
+.vchip.over{color:var(--red);background:rgba(224,107,107,.12);border-color:color-mix(in srgb,var(--red) 38%,transparent)}
+.fc-quality{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
+.qtag{font-size:11px;font-weight:600;padding:3px 9px;border-radius:7px;background:var(--bg2);color:var(--txt2)}
+.qtag.good{color:var(--green);background:color-mix(in srgb,var(--green) 12%,transparent)}
+.qtag.warn{color:var(--amber);background:color-mix(in srgb,var(--amber) 13%,transparent)}
+.fc-tips{list-style:none;margin:14px 0 4px;padding:0;display:flex;flex-direction:column;gap:11px}
+.fc-tips li{display:flex;gap:10px;align-items:flex-start;font-size:13px;line-height:1.45;color:var(--txt)}
+.fc-tips li svg{flex:0 0 auto;margin-top:1px;color:var(--acc);width:16px;height:16px}
+.fc-ai{width:100%;margin-top:14px}
+.fc-note{color:var(--txt3);margin-top:9px;text-align:center}
 .micr-wrap>.micr-body{display:none}
 .micr-wrap.open>.micr-body{display:block;margin-top:10px}
 .micr-toggle{display:flex;align-items:center;gap:8px;width:100%;padding:10px 12px;background:var(--bg2);border:1px solid var(--line);border-radius:11px;color:var(--txt2);font-size:13px;font-weight:600;text-align:start}
@@ -1526,7 +1546,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.152";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.153";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -2026,6 +2046,44 @@ const TR = {
     "Your wellness score averages": "متوسط درجة عافيتك",
     "on nights of 7 h+ sleep vs": "في ليالي النوم 7 ساعات+ مقابل",
     "after shorter nights.": "بعد الليالي الأقصر.",
+    "Nutrition coach": "مدرّب التغذية",
+    "Maintain": "المحافظة",
+    "You're": "أنت",
+    "kcal over target. A steady 300–500 kcal daily deficit is what drives fat loss — trim the most calorie-dense extra.": "سعرة فوق الهدف. عجز يومي ثابت بمقدار 300–500 سعرة هو ما يقود خسارة الدهون — قلّل أكثر الإضافات كثافةً بالسعرات.",
+    "kcal under. Eating far too little can stall fat loss and cost muscle — eat closer to your target.": "سعرة دون الهدف. الأكل القليل جداً قد يوقف خسارة الدهون ويكلّفك عضلاً — كُل أقرب إلى هدفك.",
+    "Calories are in a good range for fat loss — consistency here is what moves the scale.": "السعرات ضمن نطاق جيد لخسارة الدهون — الانتظام هنا هو ما يحرّك الميزان.",
+    "Protein is": "البروتين",
+    "g short. In a deficit, high protein protects muscle — add lean protein (chicken, fish, Greek yogurt, whey).": "غ ناقص. في العجز، البروتين العالي يحمي العضلات — أضف بروتيناً قليل الدهون (دجاج، سمك، زبادي يوناني، واي).",
+    "Protein is on point — great for holding muscle while you lose fat.": "البروتين ممتاز — رائع للحفاظ على العضلات أثناء خسارة الدهون.",
+    "Fiber is low — vegetables and whole grains keep you fuller on fewer calories.": "الألياف منخفضة — الخضار والحبوب الكاملة تُبقيك أكثر شبعاً بسعرات أقل.",
+    "Pair this with resistance training 3–4×/week so the weight you lose is fat, not muscle.": "اقرن ذلك بتمارين المقاومة 3–4 مرّات أسبوعياً ليكون ما تخسره دهوناً لا عضلاً.",
+    "kcal below a surplus. Muscle needs a small surplus (~200–400 kcal) — add a calorie-dense snack (nuts, oats, dairy).": "سعرة دون الفائض. بناء العضلات يحتاج فائضاً صغيراً (~200–400 سعرة) — أضف وجبة خفيفة عالية السعرات (مكسرات، شوفان، ألبان).",
+    "You're well over target — a large surplus adds fat faster than muscle; keep it modest.": "أنت فوق الهدف كثيراً — الفائض الكبير يضيف دهوناً أسرع من العضل؛ أبقِه معتدلاً.",
+    "Calories are in a good muscle-building range.": "السعرات ضمن نطاق جيد لبناء العضلات.",
+    "g short — aim for about 1.6–2.2 g per kg of bodyweight to maximise muscle growth.": "غ ناقص — استهدف نحو 1.6–2.2 غ لكل كغ من وزن الجسم لتعظيم نمو العضلات.",
+    "Protein is on point for building muscle.": "البروتين ممتاز لبناء العضلات.",
+    "Carbs fuel hard training — top them up, especially around your workouts.": "الكربوهيدرات وقود التمارين الشاقة — عزّزها، خاصةً حول تمارينك.",
+    "Progressive resistance training is the real muscle trigger — the surplus only supports it.": "تمارين المقاومة المتدرّجة هي المحرّك الحقيقي للعضلات — الفائض يدعمها فقط.",
+    "kcal over": "سعرة فوق",
+    "kcal under": "سعرة دون",
+    "nudge back toward target to hold your weight.": "عُد تدريجياً نحو الهدف للحفاظ على وزنك.",
+    "Calories are on target for maintenance.": "السعرات على الهدف للمحافظة على الوزن.",
+    "g short — keep it high to protect muscle and stay full.": "غ ناقص — أبقِه عالياً لحماية العضلات والشعور بالشبع.",
+    "Protein is on point.": "البروتين ممتاز.",
+    "Add fiber from veg and whole grains for steadier energy and fullness.": "أضف الألياف من الخضار والحبوب الكاملة لطاقة أثبت وشبع أطول.",
+    "Sodium is over your limit — go easy on salt, sauces and processed foods.": "الصوديوم فوق حدّك — خفّف الملح والصلصات والأطعمة المصنّعة.",
+    "Set your daily calorie & macro targets in Settings to get a personalised read on your food and goal.": "حدّد أهداف سعراتك وماكروزك اليومية في الإعدادات لتحصل على قراءة مخصّصة لطعامك وهدفك.",
+    "Set targets": "تحديد الأهداف",
+    "Nothing logged yet today — add a meal and MIRA will tell you how it tracks against your": "لا شيء مُسجّل اليوم بعد — أضف وجبة وستخبرك ميرا كيف تتوافق مع هدف",
+    "goal.": "الخاص بك.",
+    "high protein": "بروتين عالٍ",
+    "protein low": "بروتين منخفض",
+    "good fiber": "ألياف جيدة",
+    "low fiber": "ألياف منخفضة",
+    "high sugar": "سكر عالٍ",
+    "high sodium": "صوديوم عالٍ",
+    "Ask MIRA for a tailored plan": "اطلب من ميرا خطة مخصّصة",
+    "General guidance from your logged data — not medical advice.": "إرشاد عام من بياناتك المُسجّلة — وليس نصيحة طبية.",
     "You average": "متوسطك",
     "g protein on training days vs": "غ بروتين في أيام التدريب مقابل",
     "g on rest days.": "غ في أيام الراحة.",
@@ -5390,6 +5448,118 @@ function microStripHTML(tot){
   </div>`;
 }
 
+/* The user's nutrition aim — explicit setting first, else inferred from goal
+   weight vs current trend weight, else parsed from their free-text goal. */
+const AIM_LABEL = {lose: "Lose fat", maintain: "Maintain", gain: "Build muscle"};
+function nutritionAim(){
+  const ex = S.settings.nutritionAim;
+  if (ex === "lose" || ex === "gain" || ex === "maintain") return ex;
+  const gw = +(S.settings.goalWeight || 0);
+  const tw = (typeof trendWeightData === "function") ? trendWeightData() : null;
+  const cur = tw ? tw.scale : 0;
+  if (gw && cur){ if (gw < cur - 0.5) return "lose"; if (gw > cur + 0.5) return "gain"; return "maintain"; }
+  const g = (S.settings.goal || "").toLowerCase();
+  if (/lose|fat|lean|cut|slim|deficit|weight loss/.test(g)) return "lose";
+  if (/gain|muscle|bulk|mass|strength|grow/.test(g)) return "gain";
+  return "maintain";
+}
+// per-macro hit state vs target: good / under / over (protein is never "over")
+function macroState(val, target, kind){
+  if (!target) return null;
+  const pct = val / target * 100;
+  if (kind === "protein") return pct >= 90 ? "good" : "under";
+  return pct > 110 ? "over" : pct < 90 ? "under" : "good";
+}
+// goal-aware, data-derived tips (max 4). Numbers come from today's real gaps.
+function foodTips(aim, tot, tg){
+  const tips = [];
+  const kcalDiff = tg.kcal ? Math.round(tot.kcal - tg.kcal) : 0;    // + = over
+  const protShort = tg.protein ? Math.round(tg.protein - tot.p) : 0; // + = short
+  const fibGoal = num(tg.fiber), sodLimit = num(tg.sodium);
+  const push = (icon, text) => tips.push({icon, text});
+  if (aim === "lose"){
+    if (tg.kcal && kcalDiff > 100) push("flame", `${tr("You're")} ${n0(kcalDiff)} ${tr("kcal over target. A steady 300–500 kcal daily deficit is what drives fat loss — trim the most calorie-dense extra.")}`);
+    else if (tg.kcal && kcalDiff < -400) push("alert", `${tr("You're")} ${n0(-kcalDiff)} ${tr("kcal under. Eating far too little can stall fat loss and cost muscle — eat closer to your target.")}`);
+    else if (tg.kcal) push("check", tr("Calories are in a good range for fat loss — consistency here is what moves the scale."));
+    if (tg.protein && protShort > 10) push("flask", `${tr("Protein is")} ${n0(protShort)} ${tr("g short. In a deficit, high protein protects muscle — add lean protein (chicken, fish, Greek yogurt, whey).")}`);
+    else if (tg.protein) push("flask", tr("Protein is on point — great for holding muscle while you lose fat."));
+    if (fibGoal && tot.fiber < fibGoal * 0.6) push("smile", tr("Fiber is low — vegetables and whole grains keep you fuller on fewer calories."));
+    push("activity", tr("Pair this with resistance training 3–4×/week so the weight you lose is fat, not muscle."));
+  } else if (aim === "gain"){
+    if (tg.kcal && kcalDiff < -100) push("flame", `${tr("You're")} ${n0(-kcalDiff)} ${tr("kcal below a surplus. Muscle needs a small surplus (~200–400 kcal) — add a calorie-dense snack (nuts, oats, dairy).")}`);
+    else if (tg.kcal && kcalDiff > 500) push("alert", tr("You're well over target — a large surplus adds fat faster than muscle; keep it modest."));
+    else if (tg.kcal) push("check", tr("Calories are in a good muscle-building range."));
+    if (tg.protein && protShort > 10) push("flask", `${tr("Protein is")} ${n0(protShort)} ${tr("g short — aim for about 1.6–2.2 g per kg of bodyweight to maximise muscle growth.")}`);
+    else if (tg.protein) push("flask", tr("Protein is on point for building muscle."));
+    if (tg.carbs && tot.c < tg.carbs * 0.8) push("food", tr("Carbs fuel hard training — top them up, especially around your workouts."));
+    push("activity", tr("Progressive resistance training is the real muscle trigger — the surplus only supports it."));
+  } else {
+    if (tg.kcal && Math.abs(kcalDiff) > 200) push("flame", `${tr("You're")} ${kcalDiff > 0 ? n0(kcalDiff) + " " + tr("kcal over") : n0(-kcalDiff) + " " + tr("kcal under")} — ${tr("nudge back toward target to hold your weight.")}`);
+    else if (tg.kcal) push("check", tr("Calories are on target for maintenance."));
+    if (tg.protein && protShort > 10) push("flask", `${tr("Protein is")} ${n0(protShort)} ${tr("g short — keep it high to protect muscle and stay full.")}`);
+    else if (tg.protein) push("flask", tr("Protein is on point."));
+    if (fibGoal && tot.fiber < fibGoal * 0.6) push("smile", tr("Add fiber from veg and whole grains for steadier energy and fullness."));
+  }
+  if (sodLimit && tot.sodium > sodLimit) push("alert", tr("Sodium is over your limit — go easy on salt, sauces and processed foods."));
+  return tips.slice(0, 4);
+}
+function foodCoachPrompt(){
+  const today = todayStr(), tot = dayTotals(today), tg = S.settings.targets || {}, aim = nutritionAim();
+  const items = dayFoods(today).map(f => `${f.name}${f.amount ? ` (${f.amount})` : ""}: ${n0(f.kcal)}kcal ${n1(f.p)}P/${n1(f.c)}C/${n1(f.f)}F`).join("; ");
+  return `[NUTRITION COACH] My goal is to ${AIM_LABEL[aim].toLowerCase()}. Today I ate: ${items || "nothing yet"}. Totals: ${n0(tot.kcal)} kcal, ${n1(tot.p)}g protein, ${n1(tot.c)}g carbs, ${n1(tot.f)}g fat${tg.kcal ? `, against targets ${n0(tg.kcal)} kcal / ${n0(tg.protein)}g protein${tg.carbs ? ` / ${n0(tg.carbs)}g carbs` : ""}${tg.fat ? ` / ${n0(tg.fat)}g fat` : ""}` : ""}. Assess my food choices and give me 3 specific, practical ways to improve today and tomorrow to reach my goal. Be concise and evidence-based.`;
+}
+// Nutrition coach: did I hit each macro, a quick read of today's food, and
+// guidance tailored to my aim (lose fat / maintain / build muscle).
+function foodCoachHTML(today, tot, tg){
+  tg = tg || {};
+  const aim = nutritionAim();
+  const seg = [["lose", "Lose fat"], ["maintain", "Maintain"], ["gain", "Build muscle"]].map(([k, l]) =>
+    `<button class="${aim === k ? "on" : ""}" onclick="M.setAim('${k}')">${tr(l)}</button>`).join("");
+  const head = `<div class="fc-head"><h3>${ic("award", 16)} ${t("Nutrition coach")}</h3></div>
+    <div class="aim-seg">${seg}</div>`;
+
+  if (!tg.kcal){
+    return `<div class="card food-coach">${head}
+      <div class="muted" style="margin-top:12px">${t("Set your daily calorie & macro targets in Settings to get a personalised read on your food and goal.")}</div>
+      <button class="btn sm sec" style="margin-top:10px" onclick="M.goTab('set');setTimeout(()=>M.setJump('setNutrition'),60)">${ic("target", 14)} ${t("Set targets")}</button></div>`;
+  }
+  if (!tot.kcal){
+    return `<div class="card food-coach">${head}
+      <div class="muted" style="margin-top:12px">${t("Nothing logged yet today — add a meal and MIRA will tell you how it tracks against your")} ${tr(AIM_LABEL[aim]).toLowerCase()} ${t("goal.")}</div></div>`;
+  }
+
+  // per-macro verdict
+  const states = {
+    cal: macroState(tot.kcal, tg.kcal, "cal"), p: macroState(tot.p, tg.protein, "protein"),
+    c: macroState(tot.c, tg.carbs, "cal"), f: macroState(tot.f, tg.fat, "cal"),
+  };
+  const sym = s => s === "good" ? "✓" : s === "under" ? "↓" : "↑";
+  const vchip = (label, s) => s ? `<span class="vchip ${s}">${label} ${sym(s)}</span>` : "";
+  const verdict = `<div class="fc-verdict">
+    ${vchip(t("Calories"), states.cal)}${vchip(t("Protein"), states.p)}${vchip(t("Carbs"), states.c)}${vchip(t("Fat"), states.f)}</div>`;
+
+  // quick food-quality read
+  const fibGoal = num(tg.fiber), sodLimit = num(tg.sodium);
+  const q = [];
+  if (tg.protein) q.push(tot.p >= tg.protein * 0.9 ? {g: 1, t: tr("high protein")} : {g: 0, t: tr("protein low")});
+  if (fibGoal) q.push(tot.fiber >= fibGoal * 0.8 ? {g: 1, t: tr("good fiber")} : {g: 0, t: tr("low fiber")});
+  if (tot.sugar > 50) q.push({g: 0, t: tr("high sugar")});
+  if (sodLimit && tot.sodium > sodLimit) q.push({g: 0, t: tr("high sodium")});
+  const quality = q.length ? `<div class="fc-quality">${q.map(x => `<span class="qtag ${x.g ? "good" : "warn"}">${x.t}</span>`).join("")}</div>` : "";
+
+  const tips = foodTips(aim, tot, tg);
+  const tipList = `<ul class="fc-tips">${tips.map(x => `<li>${ic(x.icon, 15)}<span>${x.text}</span></li>`).join("")}</ul>`;
+
+  return `<div class="card food-coach">
+    ${head}
+    ${verdict}
+    ${quality}
+    ${tipList}
+    <button class="btn sec fc-ai" onclick="M.foodCoachAsk()">${ic("chat", 15)} ${t("Ask MIRA for a tailored plan")}</button>
+    <div class="tiny fc-note">${t("General guidance from your logged data — not medical advice.")}</div>
+  </div>`;
+}
+
 function foodHTML(){
   const today = todayStr();   // NB: keep this named `today` — the global t() is the translator
   const tot = dayTotals(today);
@@ -5415,6 +5585,8 @@ function foodHTML(){
     <div class="muted" style="margin-top:9px">${t("Remaining")}: <b>${n0(Math.max(0, tg.kcal - tot.kcal))} kcal</b> · <b>${n1(Math.max(0, tg.protein - tot.p))} g protein</b>${tg.carbs ? ` · ${n1(Math.max(0, tg.carbs - tot.c))} g carbs` : ""}${tg.fat ? ` · ${n1(Math.max(0, tg.fat - tot.f))} g fat` : ""}</div>
     ${microStripHTML(tot)}
   </div>
+
+  ${foodCoachHTML(today, tot, tg)}
 
   ${calorieBankHTML()}
 
@@ -10070,6 +10242,17 @@ window.M = {
     await sendChat();
   },
 
+  setAim(k){ S.settings.nutritionAim = k; save(); render(); },
+  async foodCoachAsk(){
+    if (!S.settings.apiKey){ toast("Add your API key in Settings first."); R.tab = "set"; render(); return; }
+    R.homeCat = null; R.sheet = null; R.quickOpen = false;
+    R.mode = (S.domains.find(d => d.id === "health") || S.domains[0] || {}).id || "work";
+    R.tab = "chat"; R.convId = null; R.deepSolve = false;
+    render();
+    const ta = $("#chatIn");
+    if (ta) ta.value = foodCoachPrompt();
+    await sendChat();
+  },
   /* ---- global search ---- */
   searchOpen(){ R.searchOpen = true; R.searchQ = ""; render(); const el = $("#globalSearch"); if (el) el.focus(); },
   searchClose(){ R.searchOpen = false; R.searchQ = ""; render(); },
