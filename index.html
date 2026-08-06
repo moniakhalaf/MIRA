@@ -1262,21 +1262,41 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
 .set-row .end{margin-inline-start:auto;display:flex;align-items:center;gap:8px}
 .dom-color{width:16px;height:16px;border-radius:50%}
 /* ---- Settings: sectioned, best-in-class layout ---- */
-.set-hero{display:flex;align-items:center;gap:15px;padding:18px;margin-bottom:6px;border:1px solid var(--line);border-radius:20px;
-  background:linear-gradient(135deg,var(--gold-soft),transparent 70%)}
+.set-hero{display:flex;align-items:center;gap:15px;padding:17px 18px;margin-bottom:8px;border:1px solid var(--line);border-radius:22px;
+  background:linear-gradient(135deg,var(--gold-soft),transparent 72%)}
 .set-avatar{width:56px;height:56px;border-radius:50%;flex:0 0 auto;display:grid;place-items:center;
-  font-size:24px;font-weight:800;color:var(--btn-ink);background:linear-gradient(150deg,var(--gold),color-mix(in srgb,var(--gold) 70%,#fff))}
+  font-size:24px;font-weight:800;color:var(--btn-ink);background:linear-gradient(150deg,var(--gold),color-mix(in srgb,var(--gold) 70%,#fff));
+  box-shadow:0 0 0 4px color-mix(in srgb,var(--gold) 16%,transparent)}
+.set-hero-tx{min-width:0;flex:1}
 .set-hero-nm{font-size:19px;font-weight:750;line-height:1.15}
-.set-hero-sub{font-size:12.5px;color:var(--txt2);margin-top:3px}
-.set-nav{position:sticky;top:0;z-index:6;display:flex;gap:8px;overflow-x:auto;padding:11px 0;margin:2px 0 4px;
+.set-hero-sub{font-size:12.5px;color:var(--txt2);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.set-hero-chip{display:inline-flex;align-items:center;gap:5px;margin-top:9px;padding:3px 9px;border-radius:99px;
+  font-size:10.5px;font-weight:650;color:var(--txt2);background:color-mix(in srgb,var(--txt3) 12%,transparent)}
+.set-hero-chip .svgi{width:11px;height:11px;color:var(--green)}
+.set-hero-edit{flex:0 0 auto;width:38px;height:38px;border-radius:12px;display:grid;place-items:center;color:var(--txt2);
+  background:var(--card);border:1px solid var(--line2)}
+.set-hero-edit:active{transform:scale(.94)}
+.set-nav{position:sticky;top:0;z-index:6;display:flex;gap:7px;overflow-x:auto;padding:10px 0;margin:2px 0 4px;
   background:var(--bg);-webkit-overflow-scrolling:touch;scrollbar-width:none}
 .set-nav::-webkit-scrollbar{display:none}
-.set-nav button{flex:0 0 auto;padding:7px 15px;border-radius:99px;border:1px solid var(--line2);background:var(--card);
-  color:var(--txt2);font-size:12.5px;font-weight:600;white-space:nowrap;display:inline-flex;align-items:center;gap:6px;transition:transform .12s,color .12s,border-color .12s}
-.set-nav button:active{transform:scale(.95)}
+.set-nav button{flex:0 0 auto;padding:6px 13px;border-radius:99px;border:1px solid var(--line);background:var(--bg2);
+  color:var(--txt2);font-size:12px;font-weight:600;white-space:nowrap;display:inline-flex;align-items:center;gap:6px;transition:transform .12s,color .12s,border-color .12s,background .12s}
+.set-nav button:active{transform:scale(.95);color:var(--gold);border-color:var(--gold);background:var(--gold-soft)}
 .set-nav button.on{color:var(--gold);border-color:var(--gold);background:var(--gold-soft)}
-.set-group-label{font-size:11.5px;font-weight:750;letter-spacing:.09em;text-transform:uppercase;color:var(--txt3);margin:20px 6px 9px;display:flex;align-items:center;gap:7px}
+.set-group-label{font-size:11px;font-weight:750;letter-spacing:.1em;text-transform:uppercase;color:var(--txt3);margin:22px 6px 10px;display:flex;align-items:center;gap:8px}
+.set-group-label::before{content:"";width:3px;height:12px;border-radius:2px;background:var(--acc);opacity:.85}
 .set-sub{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--txt3);margin:14px 2px 9px}
+/* icon tile inside a settings card header */
+.set-ic{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:9px;flex:0 0 auto;
+  background:var(--acc-soft);color:var(--acc);margin-inline-end:2px}
+.set-ic .svgi{width:16px;height:16px}
+.card-h-row h3 .set-ic,.card h3 .set-ic{vertical-align:middle}
+.set-count{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:20px;padding:0 6px;border-radius:99px;
+  font-size:11.5px;font-weight:700;color:var(--txt2);background:var(--key);margin-inline-start:2px}
+.set-foot{text-align:center;padding:20px 0 16px}
+.set-foot-wm{font-family:Georgia,"Times New Roman",serif;font-size:20px;font-weight:700;letter-spacing:.22em;color:var(--gold);opacity:.85;margin-bottom:8px;padding-inline-start:.22em}
+.set-foot-sub{font-size:11.5px;color:var(--txt3);line-height:1.55;max-width:320px;margin:0 auto}
+.set-foot-badge{display:inline-block;margin-top:11px;padding:4px 12px;border-radius:99px;font-size:11px;font-weight:650;color:var(--txt2);background:var(--bg2);border:1px solid var(--line)}
 .prog-code{width:100%;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;line-height:1.4;color:var(--txt2);word-break:break-all;resize:none;background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:9px 11px}
 .set-status{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--txt2);
   padding:4px 10px;border-radius:99px;background:var(--key)}
@@ -1442,7 +1462,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.149";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.150";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1671,6 +1691,8 @@ const TR = {
     "Your domains":"مجالاتك","Domains":"المجالات","Remove":"إزالة","New domain (any subject)":"مجال جديد (أي موضوع)","Add":"إضافة",
     "Assistant":"المساعد","API & model":"مفتاح API والنموذج","Connected":"متصل","No key":"لا يوجد مفتاح","Anthropic API key":"مفتاح Anthropic API",
     "Model":"النموذج","Live web search":"البحث المباشر على الويب","On":"تشغيل","Off":"إيقاف","Privacy & data":"الخصوصية والبيانات",
+    "Account":"الحساب","Sharing":"المشاركة","Preferences":"التفضيلات","App lock":"قفل التطبيق","Edit profile":"تعديل الملف الشخصي","Private · on this device":"خاص · على هذا الجهاز",
+    "My Integrated Reasoning Assistant · standalone edition":"مساعد الاستدلال المتكامل · إصدار مستقل","Every fact checked against trusted sources, or honestly labelled an estimate.":"كل معلومة مُتحقَّق منها من مصادر موثوقة، أو موسومة بصدق كتقدير.","Build":"إصدار",
     "Security":"الأمان","PIN on":"الرمز مفعّل","No PIN":"لا يوجد رمز","Change PIN":"تغيير الرمز","Set PIN":"تعيين رمز","Remove PIN":"إزالة الرمز",
     "Encryption":"التشفير","Encrypted":"مشفّر","Encrypt my data":"تشفير بياناتي","Cancel":"إلغاء","Backup & data":"النسخ الاحتياطي والبيانات",
     "Export backup":"تصدير نسخة احتياطية","Restore backup":"استعادة نسخة احتياطية","Erase everything on this device":"محو كل شيء على هذا الجهاز",
@@ -8146,7 +8168,7 @@ function circleHTML(){
   const mine = `${p.weight.length} ${tr("weigh-ins")} · ${p.nutrition.length} ${tr("days logged")}`;
   const share = R.circleShareOpen ? encodeProgress(p) : "";
   return `<div class="card" id="setCircle">
-    <h3>${ic("users", 16)} ${tr("Circle — progress sharing")}</h3>
+    <h3><span class="set-ic">${ic("users", 16)}</span> ${tr("Circle — progress sharing")}</h3>
     <div class="tiny" style="margin-bottom:12px;color:var(--txt2)">${tr("Share only your weight and nutrition adherence with a coach or family — never your food diary, chat or budget. Private and on your device.")}</div>
     <div class="set-row" style="padding-top:0">
       <div><div class="k">${ic("share", 14)} ${tr("Share my progress")}</div><div class="desc">${esc(mine)}</div></div>
@@ -9427,16 +9449,18 @@ function settingsHTML(){
   return `
   <div class="set-hero">
     <span class="set-avatar">${esc(initial)}</span>
-    <div style="min-width:0">
+    <div class="set-hero-tx">
       <div class="set-hero-nm" dir="auto">${esc(st.name || tr("Welcome"))}</div>
       <div class="set-hero-sub" dir="auto">${esc(heroSub)}</div>
+      <div class="set-hero-chip">${ic("lock", 11)} ${tr("Private · on this device")}</div>
     </div>
+    <button class="set-hero-edit" aria-label="${tr("Edit profile")}" title="${tr("Edit profile")}" onclick="M.setJump('setProfile')">${ic("edit", 17)}</button>
   </div>
   <div class="set-nav">${nav.map(([id, l]) => `<button onclick="M.setJump('${id}')">${tr(l)}</button>`).join("")}</div>
 
-  <div class="set-group-label">${tr("You")}</div>
+  <div class="set-group-label">${tr("Account")}</div>
   <div class="card" id="setProfile">
-    <h3>${ic("user", 16)} ${tr("Profile")}</h3>
+    <h3><span class="set-ic">${ic("user", 16)}</span> ${tr("Profile")}</h3>
     ${FEATURES.emailSignup && st.account && st.account.email ? `<div class="set-row" style="padding-top:0">
       <div><div class="k">${esc(st.account.email)}</div><div class="desc">Account on this device — sync arrives with the hosted backend</div></div>
     </div>` : ""}
@@ -9449,12 +9473,12 @@ function settingsHTML(){
       <div class="seg">${[["short","Short"],["balanced","Balanced"],["detailed","Detailed"]].map(([v, l]) => `<button class="${st.depth === v ? "on" : ""}" onclick="M.set('depth','${v}')">${tr(l)}</button>`).join("")}</div></div>
   </div>
 
-  <div class="set-group-label">${tr("Circle")}</div>
+  <div class="set-group-label">${tr("Sharing")}</div>
   ${circleHTML()}
 
-  <div class="set-group-label">${tr("Language")}</div>
+  <div class="set-group-label">${tr("Preferences")}</div>
   <div class="card" id="setLanguage">
-    <div class="card-h-row"><h3>${ic("globe", 16)} ${tr("Language")}</h3><span class="set-status">${esc(langLabel)}</span></div>
+    <div class="card-h-row"><h3><span class="set-ic">${ic("globe", 16)}</span> ${tr("Language")}</h3><span class="set-status">${esc(langLabel)}</span></div>
     <div class="field" style="margin:10px 0 0"><label>${tr("MIRA replies in")}</label>
       <select onchange="M.set('lang',this.value)">
         <option value="match" ${(st.lang || "match") === "match" ? "selected" : ""}>${tr("Match what I write")}</option>
@@ -9463,9 +9487,8 @@ function settingsHTML(){
       <div class="tiny" style="margin-top:8px">MIRA writes all its replies, suggestions, macro lookups and reviews in this language. Choose <b>Match what I write</b> to switch language mid-conversation. Menu labels stay in English for now.</div></div>
   </div>
 
-  <div class="set-group-label">${tr("Appearance")}</div>
   <div class="card" id="setAppearance">
-    <div class="card-h-row"><h3>${ic("sun", 16)} ${tr("Appearance")}</h3><span class="set-status">${esc(themeName)}</span></div>
+    <div class="card-h-row"><h3><span class="set-ic">${ic("sun", 16)}</span> ${tr("Appearance")}</h3><span class="set-status">${esc(themeName)}</span></div>
     <div class="theme-grid" style="margin-top:12px">${THEMES.map(([v, l, c]) => `
       <button class="theme-swatch ${(st.theme || "dark") === v ? "on" : ""}" onclick="M.theme('${v}')" aria-label="${l} theme">
         <span class="ts-prev" style="background:${c.bg}">
@@ -9479,7 +9502,7 @@ function settingsHTML(){
 
   <div class="set-group-label">${tr("Nutrition & body")}</div>
   <div class="card" id="setNutrition">
-    <h3>${ic("target", 16)} ${tr("Daily targets")}</h3>
+    <h3><span class="set-ic">${ic("target", 16)}</span> ${tr("Daily targets")}</h3>
     <div class="grid2" style="margin-bottom:10px">
       <div class="field"><label>${tr("Calories kcal")}</label><input type="number" inputmode="numeric" value="${st.targets.kcal || ""}" oninput="S.settings.targets.kcal=num(this.value);save()"></div>
       <div class="field"><label>${tr("Protein g")}</label><input type="number" inputmode="numeric" value="${st.targets.protein || ""}" oninput="S.settings.targets.protein=num(this.value);save()"></div>
@@ -9504,7 +9527,7 @@ function settingsHTML(){
 
   ${(() => { const cm = st.community || {}; const on = !!(cm.url && cm.key); return `
   <div class="card" id="setCommunity">
-    <div class="card-h-row"><h3>${ic("database", 16)} ${tr("Community food database")}</h3>
+    <div class="card-h-row"><h3><span class="set-ic">${ic("database", 16)}</span> ${tr("Community food database")}</h3>
       <span class="set-status ${on ? "on" : ""}"><span class="dot"></span>${on ? tr("Connected") : tr("Off")}</span></div>
     <div class="muted" style="margin:12px 0 10px">${tr("An optional shared library, MyFitnessPal-style: foods people contribute become searchable in \"Find macros\" for everyone using your MIRA. Community entries are always labelled as community-submitted — never shown as verified data. It needs a free Supabase project (the runbook and SQL are in the repo's docs folder).")}</div>
     <div class="field"><label>${tr("Supabase project URL")}</label><input value="${esc(cm.url || "")}" placeholder="https://xxxx.supabase.co" autocomplete="off" oninput="M.communitySet('url',this.value)"></div>
@@ -9513,7 +9536,7 @@ function settingsHTML(){
   </div>`; })()}
 
   <div class="card fold ${R.savedFoodsOpen ? "open" : ""}" id="savedFoodsCard">
-    <h3 onclick="M.fold('savedFoodsOpen', this)">${ic("bookmark", 16)} ${tr("Saved foods")} (${S.savedFoods.length}) <span class="chev">▶</span></h3>
+    <h3 onclick="M.fold('savedFoodsOpen', this)"><span class="set-ic">${ic("bookmark", 16)}</span> ${tr("Saved foods")} <span class="set-count">${S.savedFoods.length}</span> <span class="chev">▶</span></h3>
     <div class="fold-body">
       ${S.savedFoods.length ? S.savedFoods.map((f, i) => `<div class="set-row">
         <div><div class="k" dir="auto">${esc(f.name)}</div><div class="desc">${f.amount ? esc(f.amount) + " · " : ""}${n0(f.kcal)} kcal · ${n1(f.p)}P · ${n1(f.c)}C · ${n1(f.f)}F</div></div>
@@ -9522,9 +9545,9 @@ function settingsHTML(){
     </div>
   </div>
 
-  <div class="set-group-label">${tr("Your domains")}</div>
+  <div class="set-group-label">${tr("Domains")}</div>
   <div class="card" id="setDomains">
-    <h3>${ic("grid", 16)} ${tr("Domains")}</h3>
+    <h3><span class="set-ic">${ic("grid", 16)}</span> ${tr("Domains")}</h3>
     ${S.domains.map((d, i) => `<div class="set-row">
       <span class="dom-color" style="background:${d.color}"></span>
       <span class="k">${esc(d.name)}</span>
@@ -9539,7 +9562,7 @@ function settingsHTML(){
 
   <div class="set-group-label">${tr("Assistant")}</div>
   <div class="card" id="setAI">
-    <div class="card-h-row"><h3>${ic("key", 16)} ${tr("API & model")}</h3>
+    <div class="card-h-row"><h3><span class="set-ic">${ic("key", 16)}</span> ${tr("API & model")}</h3>
       <span class="set-status ${st.apiKey ? "on" : ""}"><span class="dot"></span>${st.apiKey ? tr("Connected") : tr("No key")}</span></div>
     <div class="field" style="margin-top:12px"><label>${tr("Anthropic API key")}</label>
       <input type="password" value="${esc(st.apiKey)}" placeholder="sk-ant-…" autocomplete="off" oninput="S.settings.apiKey=this.value.trim();save()">
@@ -9556,7 +9579,7 @@ function settingsHTML(){
 
   <div class="set-group-label">${tr("Privacy & data")}</div>
   <div class="card" id="setSecurity">
-    <div class="card-h-row"><h3>${ic("lock", 16)} ${tr("Security")}</h3>
+    <div class="card-h-row"><h3><span class="set-ic">${ic("lock", 16)}</span> ${tr("App lock")}</h3>
       <span class="set-status ${st.pinHash ? "on" : ""}"><span class="dot"></span>${st.pinHash ? tr("PIN on") : tr("No PIN")}</span></div>
     <div class="muted" style="margin:12px 0 10px">${st.pinHash ? "PIN lock is on. The PIN is stored only as a hash, never as readable digits." : "No PIN set. Add a 4-digit PIN to gate entry to MIRA."}</div>
     <div class="row">
@@ -9567,7 +9590,7 @@ function settingsHTML(){
   </div>
 
   <div class="card" id="setEncrypt">
-    <div class="card-h-row"><h3>${ic("key", 16)} ${tr("Encryption")}</h3>
+    <div class="card-h-row"><h3><span class="set-ic">${ic("key", 16)}</span> ${tr("Encryption")}</h3>
       <span class="set-status ${st.encOn ? "on" : ""}"><span class="dot"></span>${st.encOn ? tr("Encrypted") : tr("Off")}</span></div>
     ${st.encOn ? `
       <div class="muted" style="margin:12px 0 10px">Your data is <b>encrypted at rest</b> on this device (AES-GCM). It can only be read with your passphrase${R._enc && R._enc.prf ? " or Face ID" : ""}.</div>
@@ -9601,7 +9624,7 @@ function settingsHTML(){
     const overdue = age === null || age >= 14;
     const ageTxt = age === null ? "Never backed up" : age === 0 ? "Backed up today" : `Last backup ${age} day${age === 1 ? "" : "s"} ago`;
     return `<div class="card" id="setBackup">
-    <div class="card-h-row"><h3>${ic("database", 16)} ${tr("Backup & data")}</h3>
+    <div class="card-h-row"><h3><span class="set-ic">${ic("database", 16)}</span> ${tr("Backup & data")}</h3>
       <span class="set-status ${overdue ? "" : "on"}"><span class="dot" ${overdue ? `style="background:var(--amber);box-shadow:0 0 0 3px color-mix(in srgb,var(--amber) 22%,transparent)"` : ""}></span>${esc(ageTxt)}</span></div>
     <div class="muted" style="margin:12px 0 10px">Logs, targets, saved foods, chats and settings live only in this browser${overdue ? " — and browsers can clear that storage. Export a backup so nothing is lost" : ""}. ${overdue ? "" : "Export a backup so nothing is lost across reinstalls or devices."}</div>
     <div class="stor-meter"><span style="width:${si.pct}%;${si.pct >= 80 ? "background:var(--amber)" : ""}"></span></div>
@@ -9614,10 +9637,11 @@ function settingsHTML(){
   </div>`;
   })()}
 
-  <div class="tiny" style="text-align:center;padding:6px 0 14px">
-    MIRA — My Integrated Reasoning Assistant · standalone edition<br>
-    ${esc(modelName)} · Every fact checked against trusted sources, or honestly labelled an estimate.<br>
-    <b>Build ${BUILD}</b>
+  <div class="set-foot">
+    <div class="set-foot-wm">MIRA</div>
+    <div class="set-foot-sub">${tr("My Integrated Reasoning Assistant · standalone edition")}</div>
+    <div class="set-foot-sub">${esc(modelName)} · ${tr("Every fact checked against trusted sources, or honestly labelled an estimate.")}</div>
+    <div class="set-foot-badge">${tr("Build")} ${BUILD}</div>
   </div>`;
 }
 
