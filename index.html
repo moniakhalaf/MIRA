@@ -1108,6 +1108,11 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
 .meal-h:first-child{border-top:none}
 .meal-h .mh-sum{font-weight:600;letter-spacing:0;text-transform:none;color:var(--txt3);font-size:11.5px}
 .day-items .food-it + .meal-h{border-top:1px solid var(--line2)}
+.day-copy{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;padding:10px;font-size:12.5px;font-weight:650;color:var(--acc);background:var(--acc-soft);border-bottom:1px solid var(--line)}
+.day-copy:active{filter:brightness(.94)}
+.meal-h .meal-copy{margin-inline-start:auto;width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:7px;color:var(--txt3)}
+.meal-h .meal-copy:active{color:var(--acc);background:var(--acc-soft)}
+.meal-h .meal-copy + .mh-sum{margin-inline-start:9px}
 .food-it .nm{font-size:14.5px;font-weight:500}
 .food-it .meta{font-size:12px;color:var(--txt2)}
 .food-it .del{margin-inline-start:auto;color:var(--txt3);font-size:17px;min-width:40px;min-height:40px;display:flex;align-items:center;justify-content:center;border-radius:9px}
@@ -1429,7 +1434,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.147";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.148";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1901,6 +1906,10 @@ const TR = {
     "Patterns & streaks": "الأنماط والتتابعات",
     "Associations from your own logs — patterns to notice, not medical advice. They appear only once there's enough data.": "ارتباطات من تسجيلاتك — أنماط للملاحظة، وليست نصيحة طبية. تظهر فقط عند توفّر بيانات كافية.",
     "Nothing logged.": "لا شيء مُسجّل.",
+    "Copy this day to today": "انسخ هذا اليوم إلى اليوم",
+    "Copy to today": "انسخ إلى اليوم",
+    "Copied": "تم النسخ",
+    "to today": "إلى اليوم",
     "Food log": "سجلّ الطعام",
     "No food logged in this range.": "لا طعام مُسجّل في هذه الفترة.",
     "Daily average:": "المتوسط اليومي:",
@@ -5256,11 +5265,11 @@ function foodHTML(){
         <span class="chev">▶</span><span class="dt">${fmtDate(d)}</span>
         <span class="sum">${n0(dt.kcal)} kcal · ${n1(dt.p)}P · ${n1(dt.c)}C · ${n1(dt.f)}F</span>
       </button>
-      ${open ? `<div class="day-items">${items.length ? FOOD_MEALS.map(([mk, ml]) => {
+      ${open ? `<div class="day-items">${d !== todayStr() && items.length ? `<button class="day-copy" onclick="M.copyDayToToday('${d}')">${ic("copy", 14)} ${t("Copy this day to today")}</button>` : ""}${items.length ? FOOD_MEALS.map(([mk, ml]) => {
         const mi = items.filter(f => entryMeal(f) === mk).sort((a, b) => { const ta = entryTime(a), tb = entryTime(b); return ta < tb ? -1 : ta > tb ? 1 : (a.ts || 0) - (b.ts || 0); });
         if (!mi.length) return "";
         const mt = mi.reduce((a, x) => ({k: a.k + num(x.kcal), p: a.p + num(x.p)}), {k: 0, p: 0});
-        return `<div class="meal-h"><span>${esc(t(ml))}</span><span class="mh-sum">${n0(mt.k)} kcal · ${n1(mt.p)}P</span></div>${mi.map(foodItemHTML).join("")}`;
+        return `<div class="meal-h"><span>${esc(t(ml))}</span>${d !== todayStr() ? `<button class="meal-copy" aria-label="${t("Copy to today")}" title="${t("Copy to today")}" onclick="M.copyMealToToday('${d}','${mk}')">${ic("copy", 13)}</button>` : ""}<span class="mh-sum">${n0(mt.k)} kcal · ${n1(mt.p)}P</span></div>${mi.map(foodItemHTML).join("")}`;
       }).join("") : `<div class="food-it"><span class="muted">${tr("Nothing logged.")}</span></div>`}</div>` : ""}
     </div>`;
   }).join("")}`;
@@ -10969,6 +10978,24 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
     foodForm.scOpen = false;
     render();
     toast(`Scaled to ${eat}/${base} ✓`);
+  },
+  // Copy a past day (or one of its meals) into today — "same as yesterday".
+  copyDayToToday(date){
+    const items = dayFoods(date); if (!items.length) return;
+    const today = todayStr();
+    let base = Date.now();
+    items.forEach(f => S.foods.push({...f, id: uid(), date: today, ts: base++}));
+    R.openDays.add(today); save(); render();
+    toast(`${tr("Copied")} ${items.length} ${items.length === 1 ? tr("item") : tr("items")} ${tr("to today")} ✓`);
+  },
+  copyMealToToday(date, mk){
+    const items = dayFoods(date).filter(f => entryMeal(f) === mk); if (!items.length) return;
+    const today = todayStr();
+    let base = Date.now();
+    items.forEach(f => S.foods.push({...f, id: uid(), date: today, ts: base++}));
+    R.openDays.add(today); save(); render();
+    const label = (FOOD_MEALS.find(([k]) => k === mk) || [])[1] || "";
+    toast(`${tr("Copied")} ${tr(label)} ${tr("to today")} ✓`);
   },
   foodSave: foodSaveDirect,
   foodDel(id){
