@@ -1546,7 +1546,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.153";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.156";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1758,6 +1758,7 @@ const TR = {
     "Breakfast":"فطور","Lunch":"غداء","Dinner":"عشاء","Snack":"وجبة خفيفة",
     "Meals & shortcuts":"الوجبات والاختصارات","Copy yesterday":"نسخ الأمس","Save today as meal":"حفظ اليوم كوجبة",
     "I cooked this":"طبختُ هذا","Dish name":"اسم الطبق","Servings it makes":"عدد الحصص الناتجة",
+    "Snap the ingredients or their labels":"صوّر المكوّنات أو ملصقاتها","Read":"قرأتُ","ingredient":"مكوّن","ingredients":"مكوّنات","with macros":"مع الماكروز","now tap Get macros":"الآن اضغط «احسب الماكروز»",
     "Servings I ate":"الحصص التي أكلتُها","Get macros from ingredients":"احسب الماكروز من المكوّنات",
     "Whole dish":"الطبق كامل","Per serving":"لكل حصة","Your portion":"حصّتك","Log my portion":"سجّل حصّتي",
     "Save as recipe":"حفظ كوصفة","Ingredient":"مكوّن","Cook & log from these ingredients":"اطبخ وسجّل من هذه المكوّنات",
@@ -6583,6 +6584,7 @@ function dishHTML(){
     <div class="tiny" style="margin-bottom:8px">${t("List what went into the pot with the grams of each — MIRA prices every ingredient from standard food-composition data and sums the whole dish. Then log by grams.")}</div>
     <div class="field"><label>${t("Dish name")}</label><input value="${esc(dishForm.name)}" dir="auto" placeholder="e.g. Chicken machboos" oninput="dishForm.name=this.value"></div>
     <label class="tiny" style="display:block;margin-bottom:5px">${t("Ingredients & amounts, raw as they went in — include cooking oil, butter or ghee.")}</label>
+    <button class="btn sm sec" style="width:100%;margin-bottom:8px" onclick="M.dishPhoto()" ${dishBusy ? "disabled" : ""}>${dishBusy ? "Reading…" : ic("camera", 14) + " " + t("Snap the ingredients or their labels")}</button>
     ${dishForm.ings.map((g, i) => `
     <div class="row" style="margin-bottom:6px">
       <input value="${esc(g.n)}" dir="auto" placeholder="${t("Ingredient")} — e.g. basmati rice" oninput="dishForm.ings[${i}].n=this.value">
@@ -6637,6 +6639,47 @@ async function dishMacros(){
     toast(e.status ? e.message : "Couldn't work out the ingredient macros — try again, or simplify the amounts.", 4500);
   }
   dishBusy = false; render();
+}
+
+/* "I cooked this" from a photo: read the ingredients (and their macros, if the
+   image shows labels or a written table) straight into the dish builder. */
+async function dishPhoto(){
+  if (!S.settings.apiKey){ toast("Add your API key in Settings first."); return; }
+  pickFile(async file => {
+    dishBusy = true; render();
+    try {
+      const block = file.kind === "pdf"
+        ? {type: "document", source: {type: "base64", media_type: "application/pdf", data: file.data}}
+        : {type: "image", source: {type: "base64", media_type: file.media_type, data: file.data}};
+      const txt = await llmJsonCall(`You are MIRA's home-cooking ingredient reader. The image (or PDF) shows the ingredients that went into a home-cooked dish. It could be: the raw ingredients laid out; the packages or NUTRITION LABELS of those ingredients; a handwritten or printed recipe / ingredient list; or a list that already includes macros per ingredient. Extract EACH ingredient as one item, with the amount that went into the dish.
+- If macros ARE shown for an ingredient (a label or a written table): return them for the amount used. If an amount is written next to it, scale the label (per 100 g / per serving) to that amount; if only a label is shown with no amount, use the label's serving size as the amount and its printed macros.
+- If macros are NOT shown for an ingredient: still return the ingredient and its amount, but set kcal, p, c, f to 0 — MIRA will price it from composition tables.
+You know worldwide and Arab/Gulf cuisines, Arabic script and transliteration, and kitchen units (tbsp, tsp, cup, حبة, ملعقة, كوب). Reply with ONLY a JSON array, one object per ingredient in order: [{"name":str,"amount":str,"kcal":num,"p":num,"c":num,"f":num,"note":str}]. When macros are given, per item kcal ≈ 4p+4c+9f. Use 0 for any macro you cannot read.${replyLangNote()}`,
+        [block, {type: "text", text: "Read the ingredients of my home-cooked dish from this image. List each ingredient with the amount used, and include its macros when the image shows them (labels or a written table); otherwise set the macros to 0."}],
+        1900);
+      let arr;
+      try { arr = tryParseJson(txt); }
+      catch (e) { arr = salvageObjects(txt).filter(o => o.name); if (!arr.length) throw e; }
+      const items = (Array.isArray(arr) ? arr : [arr]).filter(o => o && o.name).map(o => {
+        const kc = num(o.kcal), p = num(o.p), c = num(o.c), f = num(o.f);
+        return {name: String(o.name), amount: String(o.amount || ""), kcal: kc, p, c, f, note: String(o.note || ""), has: (kc > 0 || p > 0 || c > 0 || f > 0)};
+      });
+      if (!items.length) throw new Error("no items");
+      dishForm.ings = items.map(o => ({n: o.name, a: o.amount}));
+      const withM = items.filter(o => o.has);
+      if (withM.length && withM.length >= Math.ceil(items.length * 0.6)){
+        // the photo carried the macros — build the priced breakdown straight away
+        dishForm.res = {items: items.map(o => ({name: o.name, amount: o.amount, kcal: o.kcal, p: o.p, c: o.c, f: o.f, note: o.note}))};
+        toast(`${tr("Read")} ${items.length} ${items.length === 1 ? tr("ingredient") : tr("ingredients")} ${tr("with macros")} ✓`);
+      } else {
+        dishForm.res = null;
+        toast(`${tr("Read")} ${items.length} ${items.length === 1 ? tr("ingredient") : tr("ingredients")} — ${tr("now tap Get macros")} ✓`);
+      }
+    } catch (e) {
+      toast(e.status ? e.message : "Couldn't read the ingredients from that image — try a clearer photo, or type them in.", 4500);
+    }
+    dishBusy = false; render();
+  });
 }
 
 function dishLogPortion(){
@@ -11565,6 +11608,7 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
     render();
   },
   dishMacros,
+  dishPhoto,
   dishLog: dishLogPortion,
   dishRecipe: dishSaveToRecipes,
   dishScale: dishScalePatch,
