@@ -1546,7 +1546,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.156";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.157";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -6654,7 +6654,7 @@ async function dishPhoto(){
       const txt = await llmJsonCall(`You are MIRA's home-cooking ingredient reader. The image (or PDF) shows the ingredients that went into a home-cooked dish. It could be: the raw ingredients laid out; the packages or NUTRITION LABELS of those ingredients; a handwritten or printed recipe / ingredient list; or a list that already includes macros per ingredient. Extract EACH ingredient as one item, with the amount that went into the dish.
 - If macros ARE shown for an ingredient (a label or a written table): return them for the amount used. If an amount is written next to it, scale the label (per 100 g / per serving) to that amount; if only a label is shown with no amount, use the label's serving size as the amount and its printed macros.
 - If macros are NOT shown for an ingredient: still return the ingredient and its amount, but set kcal, p, c, f to 0 — MIRA will price it from composition tables.
-You know worldwide and Arab/Gulf cuisines, Arabic script and transliteration, and kitchen units (tbsp, tsp, cup, حبة, ملعقة, كوب). Reply with ONLY a JSON array, one object per ingredient in order: [{"name":str,"amount":str,"kcal":num,"p":num,"c":num,"f":num,"note":str}]. When macros are given, per item kcal ≈ 4p+4c+9f. Use 0 for any macro you cannot read.${replyLangNote()}`,
+You know worldwide and Arab/Gulf cuisines, Arabic script and transliteration, and kitchen units (tbsp, tsp, cup, حبة, ملعقة, كوب). When a label states a serving size, also return "servingG" — the grams (or ml) in ONE serving; use 0 if there is no serving size. Reply with ONLY a JSON array, one object per ingredient in order: [{"name":str,"amount":str,"kcal":num,"p":num,"c":num,"f":num,"servingG":num,"note":str}]. When macros are given, per item kcal ≈ 4p+4c+9f. Use 0 for any macro you cannot read.${replyLangNote()}`,
         [block, {type: "text", text: "Read the ingredients of my home-cooked dish from this image. List each ingredient with the amount used, and include its macros when the image shows them (labels or a written table); otherwise set the macros to 0."}],
         1900);
       let arr;
@@ -6662,7 +6662,7 @@ You know worldwide and Arab/Gulf cuisines, Arabic script and transliteration, an
       catch (e) { arr = salvageObjects(txt).filter(o => o.name); if (!arr.length) throw e; }
       const items = (Array.isArray(arr) ? arr : [arr]).filter(o => o && o.name).map(o => {
         const kc = num(o.kcal), p = num(o.p), c = num(o.c), f = num(o.f);
-        return {name: String(o.name), amount: String(o.amount || ""), kcal: kc, p, c, f, note: String(o.note || ""), has: (kc > 0 || p > 0 || c > 0 || f > 0)};
+        return {name: String(o.name), amount: String(o.amount || ""), kcal: kc, p, c, f, servingG: num(o.servingG), note: String(o.note || ""), has: (kc > 0 || p > 0 || c > 0 || f > 0)};
       });
       if (!items.length) throw new Error("no items");
       dishForm.ings = items.map(o => ({n: o.name, a: o.amount}));
@@ -6670,6 +6670,15 @@ You know worldwide and Arab/Gulf cuisines, Arabic script and transliteration, an
       if (withM.length && withM.length >= Math.ceil(items.length * 0.6)){
         // the photo carried the macros — build the priced breakdown straight away
         dishForm.res = {items: items.map(o => ({name: o.name, amount: o.amount, kcal: o.kcal, p: o.p, c: o.c, f: o.f, note: o.note}))};
+        // a single labelled item carries a serving size — prefill it so you can log
+        // one serving in a tap, or edit the grams to the exact portion you had
+        if (items.length === 1 && !num(dishForm.perServingG)){
+          const sg = num(items[0].servingG) || amountToGrams(items[0].amount) || 0;
+          if (sg > 0){
+            dishForm.perServingG = String(Math.round(sg));
+            if (!num(dishForm.ateG)) dishForm.ateG = String(Math.round(sg));   // default to one serving — editable to the exact portion you had
+          }
+        }
         toast(`${tr("Read")} ${items.length} ${items.length === 1 ? tr("ingredient") : tr("ingredients")} ${tr("with macros")} ✓`);
       } else {
         dishForm.res = null;
