@@ -1197,9 +1197,12 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
 .day-items .food-it + .meal-h{border-top:1px solid var(--line2)}
 .day-copy{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;padding:10px;font-size:12.5px;font-weight:650;color:var(--acc);background:var(--acc-soft);border-bottom:1px solid var(--line)}
 .day-copy:active{filter:brightness(.94)}
-.meal-h .meal-copy{margin-inline-start:auto;width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:7px;color:var(--txt3)}
-.meal-h .meal-copy:active{color:var(--acc);background:var(--acc-soft)}
-.meal-h .meal-copy + .mh-sum{margin-inline-start:9px}
+.meal-h .meal-save,.meal-h .meal-copy{width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:7px;color:var(--txt3)}
+.meal-h .meal-save{margin-inline-start:auto}
+.meal-h .meal-copy{margin-inline-start:2px}
+.meal-h .meal-copy:first-of-type{margin-inline-start:auto}
+.meal-h .meal-save:active,.meal-h .meal-copy:active{color:var(--acc);background:var(--acc-soft)}
+.meal-h .meal-save + .mh-sum,.meal-h .meal-copy + .mh-sum{margin-inline-start:9px}
 .food-it .nm{font-size:14.5px;font-weight:500}
 .food-it .meta{font-size:12px;color:var(--txt2)}
 .food-it .del{margin-inline-start:auto;color:var(--txt3);font-size:17px;min-width:40px;min-height:40px;display:flex;align-items:center;justify-content:center;border-radius:9px}
@@ -1563,7 +1566,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.159";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.160";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1778,6 +1781,7 @@ const TR = {
     "Snap the ingredients or their labels":"صوّر المكوّنات أو ملصقاتها","Read":"قرأتُ","ingredient":"مكوّن","ingredients":"مكوّنات","with macros":"مع الماكروز","now tap Get macros":"الآن اضغط «احسب الماكروز»",
     "Grams added":"الغرامات المُضافة","— set the grams you added":"— حدّد الغرامات التي أضفتها",
     "Snap a label":"صوّر ملصقاً","Add a recipe":"أضف وصفة","Add a saved recipe to this dish":"أضف وصفة محفوظة إلى هذا الطبق","from your recipe":"من وصفتك","Those are already priced — just set the grams you added.":"هذه محسوبة مسبقاً — فقط حدّد الغرامات التي أضفتها.",
+    "Combine into a dish":"ادمج في طبق","Combine into a dish & save as recipe":"ادمج في طبق واحفظه كوصفة","Combined":"دُمج","— name it and Save as recipe":"— سمِّه واحفظه كوصفة","Loaded — adjust each ingredient's grams, then Save as recipe.":"تم التحميل — عدّل غرامات كل مكوّن ثم احفظه كوصفة.",
     "kcal":"سعرة","serving":"حصة",
     "Servings I ate":"الحصص التي أكلتُها","Get macros from ingredients":"احسب الماكروز من المكوّنات",
     "Whole dish":"الطبق كامل","Per serving":"لكل حصة","Your portion":"حصّتك","Log my portion":"سجّل حصّتي",
@@ -5737,7 +5741,7 @@ function foodHTML(){
         const mi = items.filter(f => entryMeal(f) === mk).sort((a, b) => { const ta = entryTime(a), tb = entryTime(b); return ta < tb ? -1 : ta > tb ? 1 : (a.ts || 0) - (b.ts || 0); });
         if (!mi.length) return "";
         const mt = mi.reduce((a, x) => ({k: a.k + num(x.kcal), p: a.p + num(x.p)}), {k: 0, p: 0});
-        return `<div class="meal-h"><span>${esc(t(ml))}</span>${d !== todayStr() ? `<button class="meal-copy" aria-label="${t("Copy to today")}" title="${t("Copy to today")}" onclick="M.copyMealToToday('${d}','${mk}')">${ic("copy", 13)}</button>` : ""}<span class="mh-sum">${n0(mt.k)} kcal · ${n1(mt.p)}P</span></div>${mi.map(foodItemHTML).join("")}`;
+        return `<div class="meal-h"><span>${esc(t(ml))}</span>${mi.length > 1 ? `<button class="meal-save" aria-label="${t("Combine into a dish")}" title="${t("Combine into a dish & save as recipe")}" onclick="M.mealToDish('${d}','${mk}')">${ic("book", 13)}</button>` : ""}${d !== todayStr() ? `<button class="meal-copy" aria-label="${t("Copy to today")}" title="${t("Copy to today")}" onclick="M.copyMealToToday('${d}','${mk}')">${ic("copy", 13)}</button>` : ""}<span class="mh-sum">${n0(mt.k)} kcal · ${n1(mt.p)}P</span></div>${mi.map(foodItemHTML).join("")}`;
       }).join("") : `<div class="food-it"><span class="muted">${tr("Nothing logged.")}</span></div>`}</div>` : ""}
     </div>`;
   }).join("")}`;
@@ -6788,7 +6792,8 @@ function dishSaveToRecipes(){
   saveRecipe({name: dishForm.name.trim() || "Home-cooked dish", servings, tags: ["home-cooked"],
     per: {kcal: Math.round(t.kcal / servings), p: +(t.p / servings).toFixed(1), c: +(t.c / servings).toFixed(1), f: +(t.f / servings).toFixed(1)},
     cookedWeight: ref > 0 ? Math.round(ref) : 0,
-    ingredients: dishForm.res.items.map(x => { const amt = x.basisG > 0 ? `${n0(dishItemG(x))} g` : x.amount; return x.name + (amt ? ` — ${amt}` : ""); })});
+    ingredients: dishForm.res.items.map(x => { const amt = x.basisG > 0 ? `${n0(dishItemG(x))} g` : x.amount; return x.name + (amt ? ` — ${amt}` : ""); }),
+    components: dishForm.res.items.map(x => ({name: x.name, amount: x.basisG > 0 ? `${n0(dishItemG(x))} g` : x.amount, kcal: num(x.kcal), p: num(x.p), c: num(x.c), f: num(x.f), basisG: x.basisG || 0, base: x.base || null, addedG: x.basisG > 0 ? num(x.addedG) : 0, src: x.src || "logged"}))});
   save(); render();
   toast("Saved to your recipe box ✓");
 }
@@ -8344,6 +8349,14 @@ function saveRecipe(j){
     per: {kcal: num(per.kcal), p: num(per.p), c: num(per.c), f: num(per.f)},
     cookedWeight: num(j.cookedWeight) > 0 ? Math.round(num(j.cookedWeight)) : 0,
     ingredients: (Array.isArray(j.ingredients) ? j.ingredients : []).map(x => String(x)).filter(Boolean),
+    // priced per-ingredient components (from the dish builder) — kept so the recipe
+    // can be reopened and each ingredient's grams adjusted with live macros
+    components: (Array.isArray(j.components) ? j.components : []).map(x => ({
+      name: String(x.name || ""), amount: String(x.amount || ""),
+      kcal: num(x.kcal), p: num(x.p), c: num(x.c), f: num(x.f),
+      basisG: num(x.basisG) || 0,
+      base: (x.base && typeof x.base === "object") ? {kcal: num(x.base.kcal), p: num(x.base.p), c: num(x.base.c), f: num(x.base.f)} : null,
+      addedG: num(x.addedG) || 0, src: String(x.src || "")})).filter(x => x.name),
     steps: (Array.isArray(j.steps) ? j.steps : []).map(x => String(x)).filter(Boolean),
     source: String(j.source || "").trim(), healthNote: String(j.healthNote || "").trim(), ts: Date.now()};
   S.recipes.unshift(r);
@@ -11732,6 +11745,26 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
     render();
     toast(`${tr("Added")} ${r.name} ✓`);
   },
+  // Take a whole logged meal and drop its items into the dish builder as editable
+  // priced components — adjust each ingredient's grams, add more, then save as a recipe.
+  mealToDish(date, mk){
+    const items = dayFoods(date).filter(f => entryMeal(f) === mk); if (!items.length) return;
+    const resItems = items.map(f => {
+      const kc = num(f.kcal), p = num(f.p), c = num(f.c), ff = num(f.f), basisG = amountToGrams(f.amount) || 0;
+      const it = {name: f.name, amount: f.amount || "", kcal: kc, p, c, f: ff, note: "", src: "logged"};
+      if (basisG > 0){ it.basisG = basisG; it.base = {kcal: kc, p, c, f: ff}; it.addedG = basisG; }
+      return it;
+    });
+    dishForm.name = "";
+    dishForm.ings = resItems.map(x => ({n: x.name, a: x.basisG ? n0(dishItemG(x)) + " g" : x.amount}));
+    dishForm.res = {items: resItems};
+    dishForm.cookedG = ""; dishForm.perServingG = ""; dishForm.ateG = "";
+    dishForm.open = true; R.dishRecipeList = false;
+    R.tab = "food"; R.homeCat = null; R.reviewOpen = false; R.logFoodOpen = true;
+    render();
+    setTimeout(() => { const el = $("#addFoodCard"); if (el){ el.classList.add("open"); el.scrollIntoView({behavior: "smooth", block: "start"}); } }, 60);
+    toast(`${tr("Combined")} ${resItems.length} ${resItems.length === 1 ? tr("item") : tr("items")} ${tr("— name it and Save as recipe")} ✓`, 4500);
+  },
   dishLog: dishLogPortion,
   dishRecipe: dishSaveToRecipes,
   dishScale: dishScalePatch,
@@ -12058,6 +12091,26 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
   // recipe, or when the stored per-serving macros predate a change.
   recipeToDish(id){
     const r = S.recipes.find(x => x.id === id); if (!r) return;
+    // recipes saved from the dish builder keep per-ingredient components — reload
+    // them intact so each ingredient's grams stays editable with live macros
+    if (r.components && r.components.length){
+      const items = r.components.map(x => {
+        const it = {name: x.name, amount: x.amount, kcal: num(x.kcal), p: num(x.p), c: num(x.c), f: num(x.f), note: "", src: x.src || "recipe"};
+        if (num(x.basisG) > 0 && x.base){ it.basisG = num(x.basisG); it.base = {kcal: num(x.base.kcal), p: num(x.base.p), c: num(x.base.c), f: num(x.base.f)}; it.addedG = num(x.addedG) || num(x.basisG); }
+        return it;
+      });
+      dishForm.name = r.name;
+      dishForm.ings = items.map(x => ({n: x.name, a: x.basisG ? n0(dishItemG(x)) + " g" : x.amount}));
+      dishForm.res = {items};
+      dishForm.cookedG = r.cookedWeight ? String(r.cookedWeight) : "";
+      dishForm.perServingG = (r.cookedWeight && r.servings) ? String(Math.round(r.cookedWeight / r.servings)) : "";
+      dishForm.ateG = ""; dishForm.open = true; R.dishRecipeList = false;
+      R.recipeId = null; R.tab = "food"; R.homeCat = null; R.logFoodOpen = true;
+      render();
+      setTimeout(() => { const el = $("#addFoodCard"); if (el){ el.classList.add("open"); el.scrollIntoView({behavior: "smooth", block: "start"}); } }, 60);
+      toast(tr("Loaded — adjust each ingredient's grams, then Save as recipe."), 4500);
+      return;
+    }
     const rows = (r.ingredients || []).map(line => {
       const s = String(line);
       // recipes saved from this builder store "name — amount"; split on the
