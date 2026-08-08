@@ -1280,6 +1280,12 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
 .dish-line.ing .dl-amt{order:2;flex:0 0 auto;font-style:normal;color:var(--txt3);font-size:11.5px}
 .dish-line.ing .dl-m{order:3;flex-basis:100%;text-align:end;white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--txt3);font-size:11.5px}
 [dir="rtl"] .dish-line.ing .dl-m{text-align:start}
+.dish-rec-list{display:flex;flex-direction:column;gap:6px;max-height:min(46vh,320px);overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.dish-rec{display:flex;align-items:center;gap:10px;width:100%;text-align:start;padding:10px 12px;border-radius:11px;background:var(--bg1);border:1px solid var(--line2)}
+.dish-rec:active{background:var(--acc-soft);border-color:var(--acc)}
+.dish-rec .dr-nm{flex:1;min-width:0;font-size:13.5px;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dish-rec .dr-mac{flex:0 0 auto;font-size:11.5px;color:var(--txt3);font-variant-numeric:tabular-nums}
+.dish-rec .dr-add{flex:0 0 auto;color:var(--acc);display:flex}
 .dish-weigh{margin-top:11px;padding-top:11px;border-top:1px solid var(--line2)}
 .dish-weigh input:disabled{opacity:.5}
 /* undo snackbar */
@@ -1557,7 +1563,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.158";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.159";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1771,6 +1777,8 @@ const TR = {
     "I cooked this":"طبختُ هذا","Dish name":"اسم الطبق","Servings it makes":"عدد الحصص الناتجة",
     "Snap the ingredients or their labels":"صوّر المكوّنات أو ملصقاتها","Read":"قرأتُ","ingredient":"مكوّن","ingredients":"مكوّنات","with macros":"مع الماكروز","now tap Get macros":"الآن اضغط «احسب الماكروز»",
     "Grams added":"الغرامات المُضافة","— set the grams you added":"— حدّد الغرامات التي أضفتها",
+    "Snap a label":"صوّر ملصقاً","Add a recipe":"أضف وصفة","Add a saved recipe to this dish":"أضف وصفة محفوظة إلى هذا الطبق","from your recipe":"من وصفتك","Those are already priced — just set the grams you added.":"هذه محسوبة مسبقاً — فقط حدّد الغرامات التي أضفتها.",
+    "kcal":"سعرة","serving":"حصة",
     "Servings I ate":"الحصص التي أكلتُها","Get macros from ingredients":"احسب الماكروز من المكوّنات",
     "Whole dish":"الطبق كامل","Per serving":"لكل حصة","Your portion":"حصّتك","Log my portion":"سجّل حصّتي",
     "Save as recipe":"حفظ كوصفة","Ingredient":"مكوّن","Cook & log from these ingredients":"اطبخ وسجّل من هذه المكوّنات",
@@ -6597,6 +6605,23 @@ function dishMineText(){
   return `${n0(ate)} g — ${n0(t.kcal * k)} kcal · ${n1(t.p * k)}P · ${n1(t.c * k)}C · ${n1(t.f * k)}F`;
 }
 
+// Picker to assemble a dish from your saved recipes — each pick drops the whole
+// recipe in as one priced component with an editable grams-added.
+function dishRecipePickHTML(){
+  const rs = S.recipes || [];
+  if (!rs.length) return "";
+  return `<div class="review-item dish-recpick" style="margin:0 0 8px">
+    <b class="tiny" style="display:block;margin-bottom:7px">${ic("book", 13)} ${t("Add a saved recipe to this dish")}</b>
+    <div class="dish-rec-list">
+      ${rs.map(r => `<button class="dish-rec" onclick="M.dishAddRecipe('${r.id}')">
+        <span class="dr-nm" dir="auto">${esc(r.name)}</span>
+        <span class="dr-mac">${n0((r.per && r.per.kcal) || 0)} ${t("kcal")}/${t("serving")}</span>
+        <span class="dr-add">${ic("plus", 16)}</span></button>`).join("")}
+    </div>
+    <button class="btn sm sec" style="width:100%;margin-top:8px" onclick="M.dishPickRecipes()">${t("Done")}</button>
+  </div>`;
+}
+
 function dishHTML(){
   const res = dishForm.res;
   const dt = res ? dishTotals() : null;
@@ -6606,7 +6631,11 @@ function dishHTML(){
     <div class="tiny" style="margin-bottom:8px">${t("List what went into the pot with the grams of each — MIRA prices every ingredient from standard food-composition data and sums the whole dish. Then log by grams.")}</div>
     <div class="field"><label>${t("Dish name")}</label><input value="${esc(dishForm.name)}" dir="auto" placeholder="e.g. Chicken machboos" oninput="dishForm.name=this.value"></div>
     <label class="tiny" style="display:block;margin-bottom:5px">${t("Ingredients & amounts, raw as they went in — include cooking oil, butter or ghee.")}</label>
-    <button class="btn sm sec" style="width:100%;margin-bottom:8px" onclick="M.dishPhoto()" ${dishBusy ? "disabled" : ""}>${dishBusy ? "Reading…" : ic("camera", 14) + " " + t("Snap the ingredients or their labels")}</button>
+    <div class="grid2" style="gap:8px;margin-bottom:8px">
+      <button class="btn sm sec" style="width:100%" onclick="M.dishPhoto()" ${dishBusy ? "disabled" : ""}>${dishBusy ? "Reading…" : ic("camera", 14) + " " + t("Snap a label")}</button>
+      <button class="btn sm sec" style="width:100%" onclick="M.dishPickRecipes()" ${(S.recipes || []).length ? "" : "disabled"}>${ic("book", 14)} ${t("Add a recipe")}</button>
+    </div>
+    ${R.dishRecipeList ? dishRecipePickHTML() : ""}
     ${dishForm.ings.map((g, i) => `
     <div class="row" style="margin-bottom:6px">
       <input value="${esc(g.n)}" dir="auto" placeholder="${t("Ingredient")} — e.g. basmati rice" oninput="dishForm.ings[${i}].n=this.value">
@@ -6652,8 +6681,13 @@ function dishHTML(){
 }
 
 async function dishMacros(){
-  const ings = dishForm.ings.map(g => ({n: (g.n || "").trim(), a: (g.a || "").trim()})).filter(g => g.n);
-  if (!ings.length){ toast("Add at least one ingredient first."); return; }
+  // keep components that are already priced (snapped labels, added recipes) —
+  // only ask the AI to price the raw ingredients you typed in.
+  const keep = ((dishForm.res && dishForm.res.items) || []).filter(x => x.src);
+  const keepNames = new Set(keep.map(x => String(x.name || "").trim().toLowerCase()));
+  const ings = dishForm.ings.map(g => ({n: (g.n || "").trim(), a: (g.a || "").trim()}))
+    .filter(g => g.n && !keepNames.has(g.n.toLowerCase()));
+  if (!ings.length){ toast(keep.length ? tr("Those are already priced — just set the grams you added.") : "Add at least one ingredient first."); return; }
   if (!S.settings.apiKey){ toast("Add your API key in Settings first."); return; }
   dishBusy = true; render();
   try {
@@ -6668,7 +6702,7 @@ async function dishMacros(){
       return it;
     });
     if (!items.length) throw new Error("no items");
-    dishForm.res = {items};
+    dishForm.res = {items: keep.concat(items)};   // preserve snapped/recipe components, add the newly-priced ones
   } catch (e) {
     toast(e.status ? e.message : "Couldn't work out the ingredient macros — try again, or simplify the amounts.", 4500);
   }
@@ -6704,7 +6738,7 @@ You know worldwide and Arab/Gulf cuisines, Arabic script and transliteration, an
       const newItems = read.map(o => {
         const basisG = amountToGrams(o.amount) || num(o.servingG) || 0;
         const it = {name: o.name, amount: o.amount, kcal: o.kcal, p: o.p, c: o.c, f: o.f, note: o.note};
-        if (o.has && basisG > 0){ it.basisG = basisG; it.base = {kcal: o.kcal, p: o.p, c: o.c, f: o.f}; it.addedG = basisG; }
+        if (o.has && basisG > 0){ it.basisG = basisG; it.base = {kcal: o.kcal, p: o.p, c: o.c, f: o.f}; it.addedG = basisG; it.src = "label"; }
         return it;
       });
       // APPEND — a second photo adds ingredients, it never wipes the first
@@ -6754,7 +6788,7 @@ function dishSaveToRecipes(){
   saveRecipe({name: dishForm.name.trim() || "Home-cooked dish", servings, tags: ["home-cooked"],
     per: {kcal: Math.round(t.kcal / servings), p: +(t.p / servings).toFixed(1), c: +(t.c / servings).toFixed(1), f: +(t.f / servings).toFixed(1)},
     cookedWeight: ref > 0 ? Math.round(ref) : 0,
-    ingredients: dishForm.res.items.map(x => x.name + (x.amount ? ` — ${x.amount}` : ""))});
+    ingredients: dishForm.res.items.map(x => { const amt = x.basisG > 0 ? `${n0(dishItemG(x))} g` : x.amount; return x.name + (amt ? ` — ${amt}` : ""); })});
   save(); render();
   toast("Saved to your recipe box ✓");
 }
@@ -11674,6 +11708,29 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
     dishForm.res.items.splice(i, 1);
     if (!dishForm.res.items.length) dishForm.res = null;
     render();
+  },
+  dishPickRecipes(){ R.dishRecipeList = !R.dishRecipeList; render(); },
+  dishAddRecipe(id){
+    const r = (S.recipes || []).find(x => x.id === id); if (!r) return;
+    const per = r.per || {}, servings = Math.max(1, num(r.servings) || 1), cw = num(r.cookedWeight);
+    const whole = {kcal: num(per.kcal) * servings, p: num(per.p) * servings, c: num(per.c) * servings, f: num(per.f) * servings};
+    const item = {name: r.name, note: tr("from your recipe"), src: "recipe"};
+    if (cw > 0){
+      // whole recipe as the basis — editable grams-added rescale it
+      item.basisG = cw; item.base = whole; item.addedG = cw;
+      item.amount = n0(cw) + " g"; item.kcal = whole.kcal; item.p = whole.p; item.c = whole.c; item.f = whole.f;
+    } else {
+      // no cooked weight stored — drop in one serving (fixed)
+      item.amount = "1 " + tr("serving"); item.kcal = num(per.kcal); item.p = num(per.p); item.c = num(per.c); item.f = num(per.f);
+    }
+    const prevRows = (dishForm.ings || []).filter(g => (g.n || "").trim() || (g.a || "").trim());
+    dishForm.ings = prevRows.concat([{n: r.name, a: item.amount}]);
+    const prevItems = (dishForm.res && dishForm.res.items) || [];
+    dishForm.res = {items: prevItems.concat([item])};
+    if (!dishForm.name.trim()) dishForm.name = r.name;
+    R.dishRecipeList = false;
+    render();
+    toast(`${tr("Added")} ${r.name} ✓`);
   },
   dishLog: dishLogPortion,
   dishRecipe: dishSaveToRecipes,
