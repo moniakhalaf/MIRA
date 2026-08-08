@@ -1566,7 +1566,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.160";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.161";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -6765,6 +6765,18 @@ You know worldwide and Arab/Gulf cuisines, Arabic script and transliteration, an
   });
 }
 
+// Collapse the "I cooked this" builder back to a clean, closed state so the
+// user can pick another way to log food. Clears the working ingredients and
+// results, folds the builder away and hides the recipe picker — but leaves the
+// outer food-tools card open so the other logging options stay one tap away.
+function dishCollapse(){
+  dishForm.open = false;
+  dishForm.name = ""; dishForm.cookedG = ""; dishForm.perServingG = ""; dishForm.ateG = "";
+  dishForm.ings = [{n: "", a: ""}, {n: "", a: ""}, {n: "", a: ""}];
+  dishForm.res = null;
+  R.dishRecipeList = false;
+}
+
 function dishLogPortion(){
   if (!dishForm.res) return;
   const t = dishTotals(), ref = dishRefG();
@@ -6779,7 +6791,7 @@ function dishLogPortion(){
     conf: "estimate",
     note: `Built from ${dishForm.res.items.length} ingredients — whole dish ≈ ${n0(t.kcal)} kcal · ${n1(t.p)}P · ${n1(t.c)}C · ${n1(t.f)}F${ref > 0 ? ` (${ref} g)` : ""}.`,
   }];
-  dishForm.open = false;
+  dishCollapse();
   render();
   const z = $("#reviewZone"); if (z) z.scrollIntoView({behavior: "smooth", block: "nearest"});
 }
@@ -6794,6 +6806,7 @@ function dishSaveToRecipes(){
     cookedWeight: ref > 0 ? Math.round(ref) : 0,
     ingredients: dishForm.res.items.map(x => { const amt = x.basisG > 0 ? `${n0(dishItemG(x))} g` : x.amount; return x.name + (amt ? ` — ${amt}` : ""); }),
     components: dishForm.res.items.map(x => ({name: x.name, amount: x.basisG > 0 ? `${n0(dishItemG(x))} g` : x.amount, kcal: num(x.kcal), p: num(x.p), c: num(x.c), f: num(x.f), basisG: x.basisG || 0, base: x.base || null, addedG: x.basisG > 0 ? num(x.addedG) : 0, src: x.src || "logged"}))});
+  dishCollapse();
   save(); render();
   toast("Saved to your recipe box ✓");
 }
