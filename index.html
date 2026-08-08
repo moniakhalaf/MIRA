@@ -1269,6 +1269,17 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
 .dish-line span:last-child{white-space:nowrap;unicode-bidi:plaintext}
 .dish-line.tot{color:var(--txt);font-weight:600;border-bottom:none;padding:6px 0 0}
 .dish-line.tot span:first-child{font-weight:500;color:var(--txt2)}
+/* editable per-ingredient line: [✕] name … [grams] on top, macros beneath */
+.dish-line.ing{flex-wrap:wrap;align-items:center;gap:8px;padding:8px 0}
+.dish-line.ing .dl-x{order:0;flex:0 0 auto;width:22px;height:22px;border-radius:6px;color:var(--txt3);font-size:12px;display:grid;place-items:center;background:transparent}
+.dish-line.ing .dl-x:active{color:var(--red);background:var(--acc-soft)}
+.dish-line.ing .dl-nm{order:1;flex:1 1 auto;min-width:0;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dish-line.ing .dl-g{order:2;flex:0 0 auto;display:inline-flex;align-items:center;gap:3px}
+.dish-line.ing .dl-g input{width:58px;padding:5px 8px;font-size:12.5px;text-align:end;border-radius:8px}
+.dish-line.ing .dl-g b{font-size:11px;color:var(--txt3);font-weight:600}
+.dish-line.ing .dl-amt{order:2;flex:0 0 auto;font-style:normal;color:var(--txt3);font-size:11.5px}
+.dish-line.ing .dl-m{order:3;flex-basis:100%;text-align:end;white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--txt3);font-size:11.5px}
+[dir="rtl"] .dish-line.ing .dl-m{text-align:start}
 .dish-weigh{margin-top:11px;padding-top:11px;border-top:1px solid var(--line2)}
 .dish-weigh input:disabled{opacity:.5}
 /* undo snackbar */
@@ -1546,7 +1557,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.157";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.158";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1759,6 +1770,7 @@ const TR = {
     "Meals & shortcuts":"الوجبات والاختصارات","Copy yesterday":"نسخ الأمس","Save today as meal":"حفظ اليوم كوجبة",
     "I cooked this":"طبختُ هذا","Dish name":"اسم الطبق","Servings it makes":"عدد الحصص الناتجة",
     "Snap the ingredients or their labels":"صوّر المكوّنات أو ملصقاتها","Read":"قرأتُ","ingredient":"مكوّن","ingredients":"مكوّنات","with macros":"مع الماكروز","now tap Get macros":"الآن اضغط «احسب الماكروز»",
+    "Grams added":"الغرامات المُضافة","— set the grams you added":"— حدّد الغرامات التي أضفتها",
     "Servings I ate":"الحصص التي أكلتُها","Get macros from ingredients":"احسب الماكروز من المكوّنات",
     "Whole dish":"الطبق كامل","Per serving":"لكل حصة","Your portion":"حصّتك","Log my portion":"سجّل حصّتي",
     "Save as recipe":"حفظ كوصفة","Ingredient":"مكوّن","Cook & log from these ingredients":"اطبخ وسجّل من هذه المكوّنات",
@@ -6542,15 +6554,25 @@ IMPORTANT — coverage: almost every real, identifiable food HAS a reasonable, u
 }
 
 /* ---------------- "I cooked this": dish built from ingredients ---------------- */
+// grams of this ingredient that went into the dish (editable when it carries a basis)
+function dishItemG(x){ return (x && x.basisG > 0) ? num(x.addedG) : (amountToGrams(x && x.amount) || 0); }
+// macros contributed by this ingredient — scaled from its per-basis figures when
+// it has a basis (a snapped label or a parsed amount), else the fixed figures.
+function dishItemMacros(x){
+  if (x && x.basisG > 0 && x.base){ const k = num(x.addedG) / x.basisG;
+    return {kcal: x.base.kcal * k, p: x.base.p * k, c: x.base.c * k, f: x.base.f * k}; }
+  return {kcal: num(x.kcal), p: num(x.p), c: num(x.c), f: num(x.f)};
+}
+const dishMacroLine = m => `${n0(m.kcal)} kcal · ${n1(m.p)}P · ${n1(m.c)}C · ${n1(m.f)}F`;
 function dishTotals(){
   const t = {kcal: 0, p: 0, c: 0, f: 0};
-  ((dishForm.res && dishForm.res.items) || []).forEach(x => { t.kcal += num(x.kcal); t.p += num(x.p); t.c += num(x.c); t.f += num(x.f); });
+  ((dishForm.res && dishForm.res.items) || []).forEach(x => { const m = dishItemMacros(x); t.kcal += m.kcal; t.p += m.p; t.c += m.c; t.f += m.f; });
   return t;
 }
-// Total weight from the ingredient amounts (grams the user typed). This is the
-// dish's reference weight, so per-gram macros come straight from what went in.
+// Total weight from the grams that went in (per-ingredient amount added). This is
+// the dish's reference weight, so per-gram macros come straight from what went in.
 function dishRawGrams(){
-  let g = 0; ((dishForm.res && dishForm.res.items) || []).forEach(x => { const v = amountToGrams(x.amount); if (v) g += v; });
+  let g = 0; ((dishForm.res && dishForm.res.items) || []).forEach(x => { g += dishItemG(x); });
   return Math.round(g);
 }
 // The weight the per-gram is measured against: the cooked weight if the user
@@ -6597,8 +6619,16 @@ function dishHTML(){
     </div>
     ${res ? `
     <div class="dish-break">
-      ${res.items.map(x => `<div class="dish-line"><span dir="auto">${esc(x.name)}${x.amount ? ` <i>${esc(x.amount)}</i>` : ""}</span><span>${n0(x.kcal)} kcal · ${n1(x.p)}P · ${n1(x.c)}C · ${n1(x.f)}F</span></div>`).join("")}
-      <div class="dish-line tot"><span>${t("Whole dish")}${dishRefG() ? ` · ${dishRefG()} g` : ""}</span><span>${n0(dt.kcal)} kcal · ${n1(dt.p)}P · ${n1(dt.c)}C · ${n1(dt.f)}F</span></div>
+      ${res.items.map((x, i) => {
+        const amtCtl = x.basisG > 0
+          ? `<span class="dl-g"><input type="number" inputmode="decimal" min="0" value="${n0(num(x.addedG))}" aria-label="${t("Grams added")}" oninput="M.dishItemAmt(${i},this.value)"><b>g</b></span>`
+          : (x.amount ? `<i class="dl-amt">${esc(x.amount)}</i>` : "");
+        return `<div class="dish-line ing">
+          <button class="dl-x" aria-label="${t("Remove")}" onclick="M.dishItemDel(${i})">✕</button>
+          <span class="dl-nm" dir="auto">${esc(x.name)}</span>${amtCtl}
+          <span class="dl-m" id="dishItemM${i}">${dishMacroLine(dishItemMacros(x))}</span></div>`;
+      }).join("")}
+      <div class="dish-line tot"><span id="dishWholeLbl">${t("Whole dish")}${dishRefG() ? ` · ${dishRefG()} g` : ""}</span><span id="dishWhole">${dishMacroLine(dt)}</span></div>
       <div class="dish-line tot"><span>${t("Per 100 g")}</span><span id="dishPer100">${dishPer100Text()}</span></div>
       <div class="dish-line tot"><span>${t("Per serving")}</span><span id="dishServe">${dishServeText()}</span></div>
       <div class="dish-line tot"><span>${t("Your portion")}</span><span id="dishMine">${dishMineText()}</span></div>
@@ -6631,8 +6661,12 @@ async function dishMacros(){
       `You are MIRA's home-cooking nutrition analyst. The user cooked a dish and lists the ingredients that went into it. For EACH ingredient, give the macros for the STATED amount using standard food-composition data (USDA, McCance & Widdowson, regional Middle-East tables). You know worldwide and Arab/Gulf cuisines and understand Arabic script, transliteration and kitchen units (tbsp, tsp, cup, حبة, ملعقة, كوب). Rules: amounts are raw/as-purchased unless stated cooked; ALL cooking fat added to the pot counts (for deep-frying, count the typically-absorbed amount and say so in the note); water and cooking losses do not change macros; if an amount is missing, assume a typical amount for this dish and put the assumption in "amount". Reply with ONLY a JSON array, one object per ingredient in the SAME order as given: [{"name":str,"amount":str(amount actually counted),"kcal":num,"p":num,"c":num,"f":num,"note":str(short basis or assumption, may be "")}]. Per item kcal ≈ 4p+4c+9f.${replyLangNote()}`,
       `Dish: ${dishForm.name.trim() || "(unnamed home-cooked dish)"}\nIngredients as they went into the pot:\n${ings.map(g => `- ${g.n}${g.a ? ` — ${g.a}` : ""}`).join("\n")}`,
       Math.min(3000, 500 + ings.length * 140));
-    const items = arr.filter(o => o && o.name).map(o => ({name: String(o.name), amount: String(o.amount || ""),
-      kcal: num(o.kcal), p: num(o.p), c: num(o.c), f: num(o.f), note: String(o.note || "")}));
+    const items = arr.filter(o => o && o.name).map(o => {
+      const kc = num(o.kcal), p = num(o.p), c = num(o.c), f = num(o.f), basisG = amountToGrams(o.amount) || 0;
+      const it = {name: String(o.name), amount: String(o.amount || ""), kcal: kc, p, c, f, note: String(o.note || "")};
+      if (basisG > 0){ it.basisG = basisG; it.base = {kcal: kc, p, c, f}; it.addedG = basisG; }   // editable grams that rescale this line
+      return it;
+    });
     if (!items.length) throw new Error("no items");
     dishForm.res = {items};
   } catch (e) {
@@ -6660,30 +6694,32 @@ You know worldwide and Arab/Gulf cuisines, Arabic script and transliteration, an
       let arr;
       try { arr = tryParseJson(txt); }
       catch (e) { arr = salvageObjects(txt).filter(o => o.name); if (!arr.length) throw e; }
-      const items = (Array.isArray(arr) ? arr : [arr]).filter(o => o && o.name).map(o => {
+      const read = (Array.isArray(arr) ? arr : [arr]).filter(o => o && o.name).map(o => {
         const kc = num(o.kcal), p = num(o.p), c = num(o.c), f = num(o.f);
         return {name: String(o.name), amount: String(o.amount || ""), kcal: kc, p, c, f, servingG: num(o.servingG), note: String(o.note || ""), has: (kc > 0 || p > 0 || c > 0 || f > 0)};
       });
-      if (!items.length) throw new Error("no items");
-      dishForm.ings = items.map(o => ({n: o.name, a: o.amount}));
-      const withM = items.filter(o => o.has);
-      if (withM.length && withM.length >= Math.ceil(items.length * 0.6)){
-        // the photo carried the macros — build the priced breakdown straight away
-        dishForm.res = {items: items.map(o => ({name: o.name, amount: o.amount, kcal: o.kcal, p: o.p, c: o.c, f: o.f, note: o.note}))};
-        // a single labelled item carries a serving size — prefill it so you can log
-        // one serving in a tap, or edit the grams to the exact portion you had
-        if (items.length === 1 && !num(dishForm.perServingG)){
-          const sg = num(items[0].servingG) || amountToGrams(items[0].amount) || 0;
-          if (sg > 0){
-            dishForm.perServingG = String(Math.round(sg));
-            if (!num(dishForm.ateG)) dishForm.ateG = String(Math.round(sg));   // default to one serving — editable to the exact portion you had
-          }
-        }
-        toast(`${tr("Read")} ${items.length} ${items.length === 1 ? tr("ingredient") : tr("ingredients")} ${tr("with macros")} ✓`);
-      } else {
-        dishForm.res = null;
-        toast(`${tr("Read")} ${items.length} ${items.length === 1 ? tr("ingredient") : tr("ingredients")} — ${tr("now tap Get macros")} ✓`);
+      if (!read.length) throw new Error("no items");
+      // turn each read ingredient into a priced line that carries its own basis,
+      // so its grams-added stay editable and rescale the macros from the label
+      const newItems = read.map(o => {
+        const basisG = amountToGrams(o.amount) || num(o.servingG) || 0;
+        const it = {name: o.name, amount: o.amount, kcal: o.kcal, p: o.p, c: o.c, f: o.f, note: o.note};
+        if (o.has && basisG > 0){ it.basisG = basisG; it.base = {kcal: o.kcal, p: o.p, c: o.c, f: o.f}; it.addedG = basisG; }
+        return it;
+      });
+      // APPEND — a second photo adds ingredients, it never wipes the first
+      const prevRows = (dishForm.ings || []).filter(g => (g.n || "").trim() || (g.a || "").trim());
+      dishForm.ings = prevRows.concat(newItems.map(o => ({n: o.name, a: o.basisG ? n0(o.addedG) + " g" : o.amount})));
+      const prevItems = (dishForm.res && dishForm.res.items) || [];
+      dishForm.res = {items: prevItems.concat(newItems)};
+      // a lone labelled item carries a serving size — prefill it so you can log one
+      // serving in a tap, or edit the grams to the exact portion you had
+      if (dishForm.res.items.length === 1 && !num(dishForm.perServingG)){
+        const sg = num(read[0].servingG) || amountToGrams(read[0].amount) || 0;
+        if (sg > 0){ dishForm.perServingG = String(Math.round(sg)); if (!num(dishForm.ateG)) dishForm.ateG = String(Math.round(sg)); }
       }
+      const n = newItems.length;
+      toast(`${tr("Added")} ${n} ${n === 1 ? tr("ingredient") : tr("ingredients")} ${tr("— set the grams you added")} ✓`);
     } catch (e) {
       toast(e.status ? e.message : "Couldn't read the ingredients from that image — try a clearer photo, or type them in.", 4500);
     }
@@ -6732,6 +6768,15 @@ function dishScalePatch(){
   if (p100) p100.textContent = dishPer100Text();
   if (serve) serve.textContent = dishServeText();
   if (mine) mine.textContent = dishMineText();
+}
+// After a per-ingredient grams edit: refresh the whole-dish line + all derived
+// lines in place, so the grams input keeps focus (and the iOS keyboard stays up).
+function dishWholePatch(){
+  if (!dishForm.res) return;
+  const dt = dishTotals();
+  const w = $("#dishWhole"); if (w) w.textContent = dishMacroLine(dt);
+  const wl = $("#dishWholeLbl"); if (wl) wl.textContent = tr("Whole dish") + (dishRefG() ? ` · ${dishRefG()} g` : "");
+  dishScalePatch();
 }
 
 // Build a review item (with an inline serving scaler) from an OpenFoodFacts
@@ -11618,6 +11663,18 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
   },
   dishMacros,
   dishPhoto,
+  dishItemAmt(i, val){
+    const x = dishForm.res && dishForm.res.items[i]; if (!x || !(x.basisG > 0)) return;
+    x.addedG = num(val);
+    const el = $("#dishItemM" + i); if (el) el.textContent = dishMacroLine(dishItemMacros(x));
+    dishWholePatch();   // refresh whole-dish + per-100/serving/portion in place (keep focus)
+  },
+  dishItemDel(i){
+    if (!dishForm.res) return;
+    dishForm.res.items.splice(i, 1);
+    if (!dishForm.res.items.length) dishForm.res = null;
+    render();
+  },
   dishLog: dishLogPortion,
   dishRecipe: dishSaveToRecipes,
   dishScale: dishScalePatch,
