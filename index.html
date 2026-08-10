@@ -1571,7 +1571,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.165";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.166";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1798,6 +1798,7 @@ const TR = {
     "Add your API key so MIRA can price the new ingredient — or remove it.":"أضِف مفتاح الـAPI لتحسب ميرا المكوّن الجديد — أو احذفه.",
     "is already in the dish":"موجود في الطبق بالفعل","already in the dish":"موجودة في الطبق بالفعل","skipped":"تم تخطّي",
     "Those are already in the dish — nothing new added.":"هذه موجودة في الطبق بالفعل — لم تُضَف أي مكوّنات جديدة.",
+    "Loaded — removed a duplicate ingredient. Review, then Update recipe.":"تم التحميل — أُزيل مكوّن مكرّر. راجِع ثم حدّث الوصفة.",
     "add ingredients by typing or snapping a label, adjust grams, then Update recipe.":"أضف مكوّنات بالكتابة أو بتصوير الملصق، عدّل الغرامات، ثم حدّث الوصفة.",
     "Edit ingredients — add by typing or photo":"تعديل المكوّنات — أضف بالكتابة أو بالصورة",
     "Add ingredients by typing or snapping a label, tweak grams, then Update recipe — or Log my portion.":"أضف مكوّنات بالكتابة أو بتصوير ملصق، عدّل الغرامات، ثم حدّث الوصفة — أو سجّل حصّتي.",
@@ -6710,6 +6711,15 @@ function dishPendingIngs(){
   const have = (dishForm.res && dishForm.res.items) || [];
   return dishForm.ings.map(g => ({n: (g.n || "").trim(), a: (g.a || "").trim()}))
     .filter(g => g.n && !have.some(x => sameIng(x.name, g.n)));
+}
+
+// Drop duplicate ingredient lines (same food, kept first) — used when a recipe
+// saved before the duplicate-guard is reopened, so a doubled ingredient collapses
+// back to one instead of being counted twice. Returns {items, removed}.
+function dishDedupeItems(list){
+  const items = [], dups = [];
+  (list || []).forEach(it => { if (items.some(x => sameIng(x.name, it.name))) dups.push(it.name); else items.push(it); });
+  return {items, removed: dups.length};
 }
 
 function dishHTML(){
@@ -11862,9 +11872,16 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
     render();
   },
   dishRow(i, d){
-    if (d > 0) dishForm.ings.push({n: "", a: ""});
-    else if (dishForm.ings.length > 1) dishForm.ings.splice(i, 1);
+    if (d > 0){ dishForm.ings.push({n: "", a: ""}); render(); return; }
+    const removed = dishForm.ings[i];
+    if (dishForm.ings.length > 1) dishForm.ings.splice(i, 1);
     else dishForm.ings[0] = {n: "", a: ""};
+    // also drop this ingredient's priced line so the totals go down with it —
+    // removing an ingredient should remove it from the dish, not just the input.
+    if (removed && (removed.n || "").trim() && dishForm.res){
+      const idx = dishForm.res.items.findIndex(x => sameIng(x.name, removed.n));
+      if (idx >= 0){ dishForm.res.items.splice(idx, 1); if (!dishForm.res.items.length) dishForm.res = null; }
+    }
     render();
   },
   dishMacros,
@@ -12260,11 +12277,13 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
     // recipes saved from the dish builder keep per-ingredient components — reload
     // them intact so each ingredient's grams stays editable with live macros
     if (r.components && r.components.length){
-      const items = r.components.map(x => {
+      const built = r.components.map(x => {
         const it = {name: x.name, amount: x.amount, kcal: num(x.kcal), p: num(x.p), c: num(x.c), f: num(x.f), note: "", src: x.src || "recipe"};
         if (num(x.basisG) > 0 && x.base){ it.basisG = num(x.basisG); it.base = {kcal: num(x.base.kcal), p: num(x.base.p), c: num(x.base.c), f: num(x.base.f)}; it.addedG = num(x.addedG) || num(x.basisG); }
         return it;
       });
+      // collapse any duplicate ingredient saved before the duplicate-guard existed
+      const dd = dishDedupeItems(built), items = dd.items;
       dishForm.name = r.name;
       dishForm.ings = items.map(x => ({n: x.name, a: x.basisG ? n0(dishItemG(x)) + " g" : x.amount}));
       dishForm.res = {items};
@@ -12274,7 +12293,7 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
       R.recipeId = null; R.tab = "food"; R.homeCat = null; R.logFoodOpen = true;
       render();
       setTimeout(() => { const el = $("#addFoodCard"); if (el){ el.classList.add("open"); el.scrollIntoView({behavior: "smooth", block: "start"}); } }, 60);
-      toast(tr("Loaded — add or adjust ingredients, then Update recipe."), 4500);
+      toast(dd.removed ? `${tr("Loaded — removed a duplicate ingredient. Review, then Update recipe.")}` : tr("Loaded — add or adjust ingredients, then Update recipe."), 4500);
       return;
     }
     const rows = (r.ingredients || []).map(line => {
