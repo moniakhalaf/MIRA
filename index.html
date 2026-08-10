@@ -1571,7 +1571,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.164";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.165";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1796,6 +1796,8 @@ const TR = {
     "Add macros for new ingredients":"أضِف ماكروز المكوّنات الجديدة",
     "New ingredients aren't counted yet — tap “Add macros”, or just save and MIRA adds them automatically.":"المكوّنات الجديدة غير محتسبة بعد — اضغط «أضِف الماكروز»، أو احفظ وستضيفها ميرا تلقائيًا.",
     "Add your API key so MIRA can price the new ingredient — or remove it.":"أضِف مفتاح الـAPI لتحسب ميرا المكوّن الجديد — أو احذفه.",
+    "is already in the dish":"موجود في الطبق بالفعل","already in the dish":"موجودة في الطبق بالفعل","skipped":"تم تخطّي",
+    "Those are already in the dish — nothing new added.":"هذه موجودة في الطبق بالفعل — لم تُضَف أي مكوّنات جديدة.",
     "add ingredients by typing or snapping a label, adjust grams, then Update recipe.":"أضف مكوّنات بالكتابة أو بتصوير الملصق، عدّل الغرامات، ثم حدّث الوصفة.",
     "Edit ingredients — add by typing or photo":"تعديل المكوّنات — أضف بالكتابة أو بالصورة",
     "Add ingredients by typing or snapping a label, tweak grams, then Update recipe — or Log my portion.":"أضف مكوّنات بالكتابة أو بتصوير ملصق، عدّل الغرامات، ثم حدّث الوصفة — أو سجّل حصّتي.",
@@ -6674,14 +6676,40 @@ function dishRecipePickHTML(){
   </div>`;
 }
 
+// Normalized identity key for an ingredient name, so the SAME food is recognized
+// across typing, snapped labels and recipes even when the wording differs — brand
+// text, plurals, "whole wheat", macaroni vs pasta. This is what stops the same
+// ingredient being added twice (the classic cause of a doubled calorie count).
+const ING_SYN = [[/\b(macaroni|spaghetti|penne|fusilli|farfalle|vermicelli|noodles?)\b/g, "pasta"]];
+const ING_STOP = new Set(["whole","wheat","organic","fresh","raw","cooked","full","fat","reduced","low","light","skimmed","kd","cow","brand","natureland","the","of","and"]);
+// Significant, normalized tokens of an ingredient name — brand text and generic
+// words stripped, plurals folded, macaroni/spaghetti/… mapped to "pasta".
+function ingTokens(name){
+  let s = String(name || "").toLowerCase();
+  s = s.replace(/\([^)]*\)/g, " ");            // drop parentheticals (brand / notes)
+  s = s.replace(/[^\p{L}\p{N}\s]/gu, " ");     // strip punctuation and dashes
+  ING_SYN.forEach(([re, to]) => { s = s.replace(re, to); });
+  return s.split(/\s+/).filter(w => w && !ING_STOP.has(w)).map(w => w.replace(/s$/, ""));
+}
+// Same food? True when the significant tokens of one name are all contained in
+// the other — so "whole wheat pasta" ≡ "Kuwait Flour Mills Whole Wheat Macaroni",
+// yet "cottage cheese" ≠ "cheddar cheese" and "olive oil" ≠ "vegetable oil".
+function sameIng(a, b){
+  const ta = ingTokens(a), tb = ingTokens(b);
+  if (!ta.length || !tb.length) return String(a || "").trim().toLowerCase() === String(b || "").trim().toLowerCase();
+  const A = new Set(ta), B = new Set(tb);
+  const subset = (x, y) => [...x].every(t => y.has(t));
+  return subset(A, B) || subset(B, A);
+}
+
 // Typed ingredient rows whose macros aren't in the priced breakdown yet — i.e.
-// ingredients the user just added. Matched by name (case-insensitive) against
-// whatever is already in dishForm.res, so re-pricing is additive and never
-// disturbs a line whose grams you already adjusted.
+// ingredients the user just added. Matched by food identity against whatever is
+// already in dishForm.res, so re-pricing is additive, never disturbs a line whose
+// grams you already adjusted, and won't re-add a food that's already priced.
 function dishPendingIngs(){
-  const have = new Set(((dishForm.res && dishForm.res.items) || []).map(x => String(x.name || "").trim().toLowerCase()));
+  const have = (dishForm.res && dishForm.res.items) || [];
   return dishForm.ings.map(g => ({n: (g.n || "").trim(), a: (g.a || "").trim()}))
-    .filter(g => g.n && !have.has(g.n.toLowerCase()));
+    .filter(g => g.n && !have.some(x => sameIng(x.name, g.n)));
 }
 
 function dishHTML(){
@@ -6806,19 +6834,26 @@ You know worldwide and Arab/Gulf cuisines, Arabic script and transliteration, an
         if (o.has && basisG > 0){ it.basisG = basisG; it.base = {kcal: o.kcal, p: o.p, c: o.c, f: o.f}; it.addedG = basisG; it.src = "label"; }
         return it;
       });
-      // APPEND — a second photo adds ingredients, it never wipes the first
-      const prevRows = (dishForm.ings || []).filter(g => (g.n || "").trim() || (g.a || "").trim());
-      dishForm.ings = prevRows.concat(newItems.map(o => ({n: o.name, a: o.basisG ? n0(o.addedG) + " g" : o.amount})));
+      // APPEND — a second photo adds ingredients, it never wipes the first — but
+      // skip any ingredient already in the dish so nothing gets counted twice.
       const prevItems = (dishForm.res && dishForm.res.items) || [];
-      dishForm.res = {items: prevItems.concat(newItems)};
+      const taken = prevItems.slice();
+      const fresh = [], skipped = [];
+      newItems.forEach(it => { if (taken.some(x => sameIng(x.name, it.name))) { skipped.push(it.name); } else { taken.push(it); fresh.push(it); } });
+      if (fresh.length){
+        const prevRows = (dishForm.ings || []).filter(g => (g.n || "").trim() || (g.a || "").trim());
+        dishForm.ings = prevRows.concat(fresh.map(o => ({n: o.name, a: o.basisG ? n0(o.addedG) + " g" : o.amount})));
+        dishForm.res = {items: prevItems.concat(fresh)};
+      }
       // a lone labelled item carries a serving size — prefill it so you can log one
       // serving in a tap, or edit the grams to the exact portion you had
-      if (dishForm.res.items.length === 1 && !num(dishForm.perServingG)){
+      if (dishForm.res && dishForm.res.items.length === 1 && !num(dishForm.perServingG)){
         const sg = num(read[0].servingG) || amountToGrams(read[0].amount) || 0;
         if (sg > 0){ dishForm.perServingG = String(Math.round(sg)); if (!num(dishForm.ateG)) dishForm.ateG = String(Math.round(sg)); }
       }
-      const n = newItems.length;
-      toast(`${tr("Added")} ${n} ${n === 1 ? tr("ingredient") : tr("ingredients")} ${tr("— set the grams you added")} ✓`);
+      const n = fresh.length;
+      if (!n){ toast(tr("Those are already in the dish — nothing new added.")); }
+      else { toast(`${tr("Added")} ${n} ${n === 1 ? tr("ingredient") : tr("ingredients")}${skipped.length ? ` · ${tr("skipped")} ${skipped.length} ${tr("already in the dish")}` : ""} ${tr("— set the grams you added")} ✓`); }
     } catch (e) {
       toast(e.status ? e.message : "Couldn't read the ingredients from that image — try a clearer photo, or type them in.", 4500);
     }
@@ -11860,9 +11895,14 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
       // no cooked weight stored — drop in one serving (fixed)
       item.amount = "1 " + tr("serving"); item.kcal = num(per.kcal); item.p = num(per.p); item.c = num(per.c); item.f = num(per.f);
     }
+    const prevItems = (dishForm.res && dishForm.res.items) || [];
+    if (prevItems.some(x => sameIng(x.name, r.name))){   // already in the dish — don't double it
+      R.dishRecipeList = false; render();
+      toast(`${r.name} ${tr("is already in the dish")} ✓`);
+      return;
+    }
     const prevRows = (dishForm.ings || []).filter(g => (g.n || "").trim() || (g.a || "").trim());
     dishForm.ings = prevRows.concat([{n: r.name, a: item.amount}]);
-    const prevItems = (dishForm.res && dishForm.res.items) || [];
     dishForm.res = {items: prevItems.concat([item])};
     if (!dishForm.name.trim()) dishForm.name = r.name;
     R.dishRecipeList = false;
