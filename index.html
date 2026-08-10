@@ -1568,7 +1568,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.162";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.163";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1789,6 +1789,7 @@ const TR = {
     "Whole dish":"الطبق كامل","Per serving":"لكل حصة","Your portion":"حصّتك","Log my portion":"سجّل حصّتي",
     "Save as recipe":"حفظ كوصفة","Ingredient":"مكوّن","Cook & log from these ingredients":"اطبخ وسجّل من هذه المكوّنات",
     "Update recipe":"تحديث الوصفة","Edit recipe ingredients":"تعديل مكوّنات الوصفة","Editing":"تعديل",
+    "energy corrected for consistency":"صُحِّحت السعرات لتتسق مع المغذّيات",
     "add ingredients by typing or snapping a label, adjust grams, then Update recipe.":"أضف مكوّنات بالكتابة أو بتصوير الملصق، عدّل الغرامات، ثم حدّث الوصفة.",
     "Edit ingredients — add by typing or photo":"تعديل المكوّنات — أضف بالكتابة أو بالصورة",
     "Add ingredients by typing or snapping a label, tweak grams, then Update recipe — or Log my portion.":"أضف مكوّنات بالكتابة أو بتصوير ملصق، عدّل الغرامات، ثم حدّث الوصفة — أو سجّل حصّتي.",
@@ -6485,6 +6486,37 @@ function dbCandidatesToReview(cands, hadGrams){
     });
 }
 
+// ---- Energy-consistency (Atwater) reconciliation for ESTIMATES ----
+// A food's energy is, physically, kcal ≈ 4·protein + 4·carbs + 9·fat (fibre a
+// little less). When an ESTIMATE's stated calories drift from what its own
+// macros imply, the row is internally inconsistent — precisely the error a
+// manual cross-check (Claude/ChatGPT) flags. We trust the macros (they're the
+// physically grounded quantity) and pull kcal back onto them, but only once the
+// gap passes a tolerance, so the small legitimate gaps from fibre, sugar
+// alcohols, alcohol or rounding are never "corrected". Values transcribed from
+// a source — nutrition labels, USDA/OpenFoodFacts, venue-published "official"
+// figures — are left EXACTLY as read and must not be passed through here.
+function atwaterKcal(p, c, f){ return 4 * Math.max(0, num(p)) + 4 * Math.max(0, num(c)) + 9 * Math.max(0, num(f)); }
+function reconcileEstimate(o){
+  if (!o) return o;
+  const p = Math.max(0, num(o.p)), c = Math.max(0, num(o.c)), f = Math.max(0, num(o.f));
+  o.p = +p.toFixed(1); o.c = +c.toFixed(1); o.f = +f.toFixed(1);
+  const aw = atwaterKcal(p, c, f), stated = num(o.kcal);
+  if (aw > 0){
+    const tol = Math.max(20, aw * 0.15);   // 15%, or 20 kcal on small items
+    if (stated <= 0 || Math.abs(stated - aw) > tol){
+      o.kcal = Math.round(aw);
+      o.__energyFixed = true;
+      o.note = (o.note ? o.note + " · " : "") + tr("energy corrected for consistency");
+    } else {
+      o.kcal = Math.round(stated);
+    }
+  } else {
+    o.kcal = Math.max(0, Math.round(stated));
+  }
+  return o;
+}
+
 async function findMacros(){
   // Be forgiving about which field the food went in: if "Food name" is empty
   // but the user typed something in "Amount eaten", treat that as the food.
@@ -6540,7 +6572,7 @@ async function findMacros(){
   }
   try {
     const txt = await llmJsonCall(`You are MIRA's nutrition lookup with broad food knowledge across cuisines: Gulf/Khaleeji (machboos/majboos, harees, jireesh, balaleet, luqaimat, thareed, madhrooba, gabout, khubz), Levantine (mansaf, mujadara, tabbouleh, fattoush, kibbeh, shawarma, manakish, labneh), Egyptian (koshari, ful medames, ta'meya, molokhia), Iraqi/Yemeni/North-African, and the full range of international foods — Western, Indian/South-Asian, East & Southeast Asian, Mediterranean, Latin, fast food and packaged products. Understand Arabic script AND transliteration, and account for cooking method (مشوي grilled / مقلي deep-fried / مسلوق boiled / محشي stuffed / roasted / air-fried). CRITICAL: air-fried / air-fryer / "no oil" foods use little or no added oil — treat them like roasted/baked (only a light oil spray if any), NOT like deep-fried; e.g. air-fried potato is far lower in fat and calories than french fries fried in oil. For a dish, reconstruct from its typical ingredients; for a combination the user names (e.g. "dates + walnuts"), sum the components.
-IMPORTANT — coverage: almost every real, identifiable food HAS a reasonable, useful macro estimate from standard food-composition data (USDA, McCance & Widdowson, regional tables). Default to giving a clearly-labelled **"estimate"** for any recognizable food or dish, at a sensible standard serving if no amount is given. Reserve **"unavailable"** ONLY for input that is genuinely unidentifiable (gibberish, not a food) — never refuse a real food just because exact figures aren't published.${S.settings.webSearch ? ` You have web search: for a specific branded/restaurant item, check the venue's or manufacturer's OFFICIALLY published nutrition first, then fall back to an estimate.` : ""} Confidence: "official" ONLY if the venue or manufacturer actually publishes these values${S.settings.webSearch ? " (verified via search or known)" : " and you know them"}; otherwise "estimate". Never invent official figures, but a good estimate is expected and welcome. After any research, end your reply with ONLY a JSON object: {"name":str,"amount":str,"kcal":num,"p":num,"c":num,"f":num,"conf":"official"|"estimate"|"unavailable","note":str(short, includes the basis/serving assumed)}. Energy must be consistent: kcal ≈ 4p+4c+9f.${replyLangNote()}`,
+IMPORTANT — coverage: almost every real, identifiable food HAS a reasonable, useful macro estimate from standard food-composition data (USDA, McCance & Widdowson, regional tables). Default to giving a clearly-labelled **"estimate"** for any recognizable food or dish, at a sensible standard serving if no amount is given. Reserve **"unavailable"** ONLY for input that is genuinely unidentifiable (gibberish, not a food) — never refuse a real food just because exact figures aren't published.${S.settings.webSearch ? ` You have web search: for a specific branded/restaurant item, check the venue's or manufacturer's OFFICIALLY published nutrition first, then fall back to an estimate.` : ""} Confidence: "official" ONLY if the venue or manufacturer actually publishes these values${S.settings.webSearch ? " (verified via search or known)" : " and you know them"}; otherwise "estimate". Never invent official figures, but a good estimate is expected and welcome. After any research, end your reply with ONLY a JSON object: {"name":str,"amount":str,"kcal":num,"p":num,"c":num,"f":num,"conf":"official"|"estimate"|"unavailable","note":str(short, includes the basis/serving assumed AND the standard reference food you based it on)}. Ground every estimate in a specific standard reference food (USDA FoodData Central / McCance & Widdowson / a regional composition table) rather than guessing, and name it briefly in "note". Energy MUST be internally consistent: before answering, verify kcal ≈ 4·p + 4·c + 9·f and, if it does not hold within ~10%, correct the macros so it does.${replyLangNote()}`,
       `Food: ${name}${userAmount ? ` — amount: ${userAmount} (return macros for THIS amount, and echo it back in "amount")` : ""}`,
       1600,
       S.settings.webSearch ? {tools: [{type: "web_search_20250305", name: "web_search", max_uses: 3}]} : undefined);
@@ -6564,6 +6596,9 @@ IMPORTANT — coverage: almost every real, identifiable food HAS a reasonable, u
       // gets replaced by the model's default serving; fall back to the model's only if empty.
       reviewItems = [{name: j.name || name, amount: userAmount || j.amount || "", kcal: j.kcal, p: j.p, c: j.c, f: j.f,
         conf: j.conf === "official" ? "official" : "estimate", note: j.note || ""}];
+      // venue-/manufacturer-published figures are transcribed, not derived —
+      // only sanity-check the energy of our own estimates.
+      if (reviewItems[0].conf === "estimate") reconcileEstimate(reviewItems[0]);
       tagSearchOrigin(reviewItems, searchName);
     }
   } catch (e) {
@@ -6704,10 +6739,11 @@ async function dishMacros(){
   dishBusy = true; render();
   try {
     const arr = await llmJsonArray(
-      `You are MIRA's home-cooking nutrition analyst. The user cooked a dish and lists the ingredients that went into it. For EACH ingredient, give the macros for the STATED amount using standard food-composition data (USDA, McCance & Widdowson, regional Middle-East tables). You know worldwide and Arab/Gulf cuisines and understand Arabic script, transliteration and kitchen units (tbsp, tsp, cup, حبة, ملعقة, كوب). Rules: amounts are raw/as-purchased unless stated cooked; ALL cooking fat added to the pot counts (for deep-frying, count the typically-absorbed amount and say so in the note); water and cooking losses do not change macros; if an amount is missing, assume a typical amount for this dish and put the assumption in "amount". Reply with ONLY a JSON array, one object per ingredient in the SAME order as given: [{"name":str,"amount":str(amount actually counted),"kcal":num,"p":num,"c":num,"f":num,"note":str(short basis or assumption, may be "")}]. Per item kcal ≈ 4p+4c+9f.${replyLangNote()}`,
+      `You are MIRA's home-cooking nutrition analyst. The user cooked a dish and lists the ingredients that went into it. For EACH ingredient, give the macros for the STATED amount using standard food-composition data (USDA, McCance & Widdowson, regional Middle-East tables). You know worldwide and Arab/Gulf cuisines and understand Arabic script, transliteration and kitchen units (tbsp, tsp, cup, حبة, ملعقة, كوب). Rules: amounts are raw/as-purchased unless stated cooked; ALL cooking fat added to the pot counts (for deep-frying, count the typically-absorbed amount and say so in the note); water and cooking losses do not change macros; if an amount is missing, assume a typical amount for this dish and put the assumption in "amount". Reply with ONLY a JSON array, one object per ingredient in the SAME order as given: [{"name":str,"amount":str(amount actually counted),"kcal":num,"p":num,"c":num,"f":num,"note":str(short basis or assumption, may be "")}]. Base each ingredient on a specific standard reference food (USDA FoodData Central / McCance & Widdowson / regional tables), not a guess. Per item, energy MUST be internally consistent: verify kcal ≈ 4·p + 4·c + 9·f and correct the macros if it does not hold within ~10%.${replyLangNote()}`,
       `Dish: ${dishForm.name.trim() || "(unnamed home-cooked dish)"}\nIngredients as they went into the pot:\n${ings.map(g => `- ${g.n}${g.a ? ` — ${g.a}` : ""}`).join("\n")}`,
       Math.min(3000, 500 + ings.length * 140));
     const items = arr.filter(o => o && o.name).map(o => {
+      reconcileEstimate(o);   // keep each ingredient's kcal consistent with its own macros
       const kc = num(o.kcal), p = num(o.p), c = num(o.c), f = num(o.f), basisG = amountToGrams(o.amount) || 0;
       const it = {name: String(o.name), amount: String(o.amount || ""), kcal: kc, p, c, f, note: String(o.note || "")};
       if (basisG > 0){ it.basisG = basisG; it.base = {kcal: kc, p, c, f}; it.addedG = basisG; }   // editable grams that rescale this line
@@ -7064,13 +7100,15 @@ async function extractPhoto(){
 1) A PRINTED NUTRITION LABEL: use its values EXACTLY (conf "official"). The macros MUST correspond to "basis" of "unit": if the label gives values per reference amount, set "basis" to that number and "unit" to g/ml/serving/piece and put the per-basis macros in kcal/p/c/f (per 100 ml → basis 100, unit "ml"). If the package's total net quantity is printed (a 320 ml can, a 200 g bag), set "pkg" to that number in the SAME unit. Never guess a printed value you cannot read.
 2) A PHOTO OF ACTUAL FOOD (a plate, dish, snack, drink, meal): identify each food you can see — you know cuisines worldwide, including Gulf/Khaleeji (machboos, harees, luqaimat…), Levantine, Egyptian, pan-Arab and all international foods. Estimate the visible portion size from visual cues (plate/bowl size, cutlery, hand, packaging). For a mixed plate, list each DISTINCT component as its own item (e.g. rice, grilled chicken, salad) so the user can adjust or drop parts. BUT when several pieces of the SAME food are shown (e.g. 6 identical mini donuts, 4 identical kebabs, a handful of dates), return them as ONE single item — put the count in "amount" (e.g. "6 pieces") and give the macros for the WHOLE quantity together. Never output the same food as multiple separate entries. Base macros on standard food-composition data (USDA and regional tables) for the estimated portion — conf "estimate", and state the identified dish and assumed portion in "note". Cooking method matters (grilled vs fried). Estimating from a photo is expected and welcome — do it for any recognizable food; only skip an item you genuinely cannot identify.
 3) A MENU, RECEIPT OR APP SCREENSHOT listing foods: extract the items with estimated macros per typical serving (conf "estimate").
-Reply with ONLY a JSON array: [{"name":str,"amount":str,"kcal":num,"p":num,"c":num,"f":num,"conf":"official"|"estimate","note":str,"basis":num,"unit":str,"pkg":num}]. Omit basis/unit/pkg for estimated food photos (they are for labels). Energy consistent: kcal ≈ 4p+4c+9f.${replyLangNote()}`,
+Reply with ONLY a JSON array: [{"name":str,"amount":str,"kcal":num,"p":num,"c":num,"f":num,"conf":"official"|"estimate","note":str,"basis":num,"unit":str,"pkg":num}]. Omit basis/unit/pkg for estimated food photos (they are for labels). For ESTIMATED items, energy MUST be internally consistent: verify kcal ≈ 4·p + 4·c + 9·f and correct the macros if it does not hold within ~10% (labels are transcribed exactly and are exempt).${replyLangNote()}`,
         [block, {type: "text", text: "Read this image. If it's a nutrition label, extract it exactly with the per-amount basis and package total. If it's a photo of actual food, identify the dishes and estimate portions and macros."}],
         1600);
       let arr;
       try { arr = tryParseJson(txt); }
       catch (e) { arr = salvageObjects(txt).filter(o => o.name); if (!arr.length) throw e; }
       reviewItems = (Array.isArray(arr) ? arr : [arr]).map(j => {
+        // reconcile only estimated foods; a printed label is transcribed as-is
+        if (j && j.conf !== "official") reconcileEstimate(j);
         const it = {name: j.name || "Item", amount: j.amount || "", kcal: j.kcal, p: j.p, c: j.c, f: j.f,
           conf: j.conf === "official" ? "official" : "estimate", note: j.note || ""};
         const basis = num(j.basis), unit = String(j.unit || "").trim().toLowerCase();
