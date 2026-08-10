@@ -1268,6 +1268,9 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
 /* "I cooked this" ingredient breakdown */
 .dish-editbar{display:flex;gap:6px;align-items:flex-start;background:var(--acc-soft);color:var(--acc);border:1px solid var(--acc);border-radius:9px;padding:8px 10px;font-size:12px;font-weight:600;line-height:1.35;margin:2px 0 8px}
 .dish-editbar svg{flex:0 0 auto;margin-top:1px}
+.dish-pending{display:flex;gap:6px;align-items:flex-start;background:color-mix(in srgb, var(--amber) 15%, transparent);color:var(--amber);border:1px solid var(--amber);border-radius:9px;padding:7px 10px;font-size:12px;font-weight:600;line-height:1.35;margin:10px 0 2px}
+.dish-pending svg{flex:0 0 auto;margin-top:1px}
+.btn.attn{box-shadow:0 0 0 2px color-mix(in srgb, var(--amber) 55%, transparent)}
 .dish-break{margin-top:12px;border-top:1px solid var(--line2);padding-top:4px}
 .dish-line{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:4.5px 0;border-bottom:1px dashed var(--line);font-size:12.5px;color:var(--txt2)}
 .dish-line i{font-style:normal;color:var(--txt3);font-size:11.5px}
@@ -1568,7 +1571,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.163";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.164";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1790,6 +1793,9 @@ const TR = {
     "Save as recipe":"حفظ كوصفة","Ingredient":"مكوّن","Cook & log from these ingredients":"اطبخ وسجّل من هذه المكوّنات",
     "Update recipe":"تحديث الوصفة","Edit recipe ingredients":"تعديل مكوّنات الوصفة","Editing":"تعديل",
     "energy corrected for consistency":"صُحِّحت السعرات لتتسق مع المغذّيات",
+    "Add macros for new ingredients":"أضِف ماكروز المكوّنات الجديدة",
+    "New ingredients aren't counted yet — tap “Add macros”, or just save and MIRA adds them automatically.":"المكوّنات الجديدة غير محتسبة بعد — اضغط «أضِف الماكروز»، أو احفظ وستضيفها ميرا تلقائيًا.",
+    "Add your API key so MIRA can price the new ingredient — or remove it.":"أضِف مفتاح الـAPI لتحسب ميرا المكوّن الجديد — أو احذفه.",
     "add ingredients by typing or snapping a label, adjust grams, then Update recipe.":"أضف مكوّنات بالكتابة أو بتصوير الملصق، عدّل الغرامات، ثم حدّث الوصفة.",
     "Edit ingredients — add by typing or photo":"تعديل المكوّنات — أضف بالكتابة أو بالصورة",
     "Add ingredients by typing or snapping a label, tweak grams, then Update recipe — or Log my portion.":"أضف مكوّنات بالكتابة أو بتصوير ملصق، عدّل الغرامات، ثم حدّث الوصفة — أو سجّل حصّتي.",
@@ -6668,9 +6674,20 @@ function dishRecipePickHTML(){
   </div>`;
 }
 
+// Typed ingredient rows whose macros aren't in the priced breakdown yet — i.e.
+// ingredients the user just added. Matched by name (case-insensitive) against
+// whatever is already in dishForm.res, so re-pricing is additive and never
+// disturbs a line whose grams you already adjusted.
+function dishPendingIngs(){
+  const have = new Set(((dishForm.res && dishForm.res.items) || []).map(x => String(x.name || "").trim().toLowerCase()));
+  return dishForm.ings.map(g => ({n: (g.n || "").trim(), a: (g.a || "").trim()}))
+    .filter(g => g.n && !have.has(g.n.toLowerCase()));
+}
+
 function dishHTML(){
   const res = dishForm.res;
   const dt = res ? dishTotals() : null;
+  const pend = dishPendingIngs();
   return `
   <div class="review-item" style="margin-top:12px">
     <b style="font-size:14px">${ic("flame", 14)} ${dishForm.editId ? t("Edit recipe ingredients") : t("I cooked this")}</b>
@@ -6691,8 +6708,9 @@ function dishHTML(){
     </div>`).join("")}
     <div class="row" style="margin-top:2px">
       <button class="btn sm sec" style="flex:0 0 auto" onclick="M.dishRow(-1,1)">${ic("plus", 14)} ${t("Ingredient")}</button>
-      <button class="btn sm" style="flex:1" onclick="M.dishMacros()" ${dishBusy ? "disabled" : ""}>${dishBusy ? "Working out macros…" : ic("search", 14) + " " + t("Get macros from ingredients")}</button>
+      <button class="btn sm ${res && pend.length ? "attn" : ""}" style="flex:1" onclick="M.dishMacros()" ${dishBusy ? "disabled" : ""}>${dishBusy ? "Working out macros…" : ic("search", 14) + " " + (res && pend.length ? t("Add macros for new ingredients") : t("Get macros from ingredients"))}</button>
     </div>
+    ${res && pend.length ? `<div class="dish-pending">${ic("info", 13)} ${tr("New ingredients aren't counted yet — tap “Add macros”, or just save and MIRA adds them automatically.")}</div>` : ""}
     ${res ? `
     <div class="dish-break">
       ${res.items.map((x, i) => {
@@ -6728,13 +6746,12 @@ function dishHTML(){
 }
 
 async function dishMacros(){
-  // keep components that are already priced (snapped labels, added recipes) —
-  // only ask the AI to price the raw ingredients you typed in.
-  const keep = ((dishForm.res && dishForm.res.items) || []).filter(x => x.src);
-  const keepNames = new Set(keep.map(x => String(x.name || "").trim().toLowerCase()));
-  const ings = dishForm.ings.map(g => ({n: (g.n || "").trim(), a: (g.a || "").trim()}))
-    .filter(g => g.n && !keepNames.has(g.n.toLowerCase()));
-  if (!ings.length){ toast(keep.length ? tr("Those are already priced — just set the grams you added.") : "Add at least one ingredient first."); return; }
+  // Additive pricing: keep EVERYTHING already in the breakdown (snapped labels,
+  // added recipes, and ingredients priced earlier — with any grams you edited)
+  // and only ask the AI to price the ingredients you just added.
+  const existing = (dishForm.res && dishForm.res.items) || [];
+  const ings = dishPendingIngs();
+  if (!ings.length){ toast(existing.length ? tr("Those are already priced — just set the grams you added.") : "Add at least one ingredient first."); return; }
   if (!S.settings.apiKey){ toast("Add your API key in Settings first."); return; }
   dishBusy = true; render();
   try {
@@ -6750,7 +6767,7 @@ async function dishMacros(){
       return it;
     });
     if (!items.length) throw new Error("no items");
-    dishForm.res = {items: keep.concat(items)};   // preserve snapped/recipe components, add the newly-priced ones
+    dishForm.res = {items: existing.concat(items)};   // append the newly-priced ingredients to everything already there
   } catch (e) {
     toast(e.status ? e.message : "Couldn't work out the ingredient macros — try again, or simplify the amounts.", 4500);
   }
@@ -6821,7 +6838,26 @@ function dishCollapse(){
   R.dishRecipeList = false;
 }
 
-function dishLogPortion(){
+// Make sure every ingredient you typed is priced into the totals before we log
+// or save — so a just-added ingredient (e.g. whole-wheat pasta) is never left
+// out of the macros. Prices any pending ingredients first; returns false (and
+// warns) only when it genuinely can't (no API key with nothing yet priced).
+async function dishEnsurePriced(){
+  const pend = dishPendingIngs();
+  if (!pend.length) return true;
+  if (!S.settings.apiKey){
+    // if we already have some priced items, let the save proceed with them;
+    // otherwise there is nothing to log at all.
+    if (dishForm.res && dishForm.res.items.length){ toast(tr("Add your API key so MIRA can price the new ingredient — or remove it."), 4200); return false; }
+    toast("Add your API key in Settings first."); return false;
+  }
+  await dishMacros();                       // prices & appends the pending ingredients
+  return dishPendingIngs().length === 0;    // succeeded only if nothing is left unpriced
+}
+
+async function dishLogPortion(){
+  if (!dishForm.res && !dishPendingIngs().length) return;
+  if (!(await dishEnsurePriced())) return;
   if (!dishForm.res) return;
   const t = dishTotals(), ref = dishRefG();
   let amount, k;
@@ -6840,7 +6876,9 @@ function dishLogPortion(){
   const z = $("#reviewZone"); if (z) z.scrollIntoView({behavior: "smooth", block: "nearest"});
 }
 
-function dishSaveToRecipes(){
+async function dishSaveToRecipes(){
+  if (!dishForm.res && !dishPendingIngs().length) return;
+  if (!(await dishEnsurePriced())) return;
   if (!dishForm.res) return;
   const t = dishTotals(), ref = dishRefG(), gps = num(dishForm.perServingG);
   // servings derived from grams-per-serving over the reference weight; else 1
