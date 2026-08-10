@@ -1268,6 +1268,10 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
 /* "I cooked this" ingredient breakdown */
 .dish-editbar{display:flex;gap:6px;align-items:flex-start;background:var(--acc-soft);color:var(--acc);border:1px solid var(--acc);border-radius:9px;padding:8px 10px;font-size:12px;font-weight:600;line-height:1.35;margin:2px 0 8px}
 .dish-editbar svg{flex:0 0 auto;margin-top:1px}
+.dish-cook-est{display:flex;flex-wrap:wrap;gap:6px;align-items:center;background:var(--acc-soft);color:var(--txt2);border:1px solid var(--line2);border-radius:9px;padding:8px 10px;font-size:11.5px;line-height:1.4;margin-top:8px}
+.dish-cook-est svg{flex:0 0 auto;color:var(--acc)}
+.dish-cook-est b{color:var(--txt)}
+.dish-cook-est .dce-use{margin-inline-start:auto;flex:0 0 auto;background:var(--acc);color:var(--acc-ink,#04231a);border:none;border-radius:7px;padding:5px 11px;font-size:12px;font-weight:700}
 .dish-pending{display:flex;gap:6px;align-items:flex-start;background:color-mix(in srgb, var(--amber) 15%, transparent);color:var(--amber);border:1px solid var(--amber);border-radius:9px;padding:7px 10px;font-size:12px;font-weight:600;line-height:1.35;margin:10px 0 2px}
 .dish-pending svg{flex:0 0 auto;margin-top:1px}
 .btn.attn{box-shadow:0 0 0 2px color-mix(in srgb, var(--amber) 55%, transparent)}
@@ -1571,7 +1575,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.166";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.167";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1799,6 +1803,10 @@ const TR = {
     "is already in the dish":"موجود في الطبق بالفعل","already in the dish":"موجودة في الطبق بالفعل","skipped":"تم تخطّي",
     "Those are already in the dish — nothing new added.":"هذه موجودة في الطبق بالفعل — لم تُضَف أي مكوّنات جديدة.",
     "Loaded — removed a duplicate ingredient. Review, then Update recipe.":"تم التحميل — أُزيل مكوّن مكرّر. راجِع ثم حدّث الوصفة.",
+    "cooked ≈ ":"مطبوخ ≈ ","(est.)":"(تقديري)","Use it":"استخدمه",
+    "MIRA estimates this dish cooks down to":"تُقدّر ميرا أن هذا الطبق يصبح بعد الطهي",
+    "(pasta & rice soak up water; meats lose ~25%). Used for per-gram until you weigh it.":"(المعكرونة والأرز يمتصّان الماء؛ واللحوم تفقد ~25%). يُستخدم لحساب الغرام حتى تزنه.",
+    "Per-gram uses your weighed cooked weight if you enter one, otherwise MIRA's cooked estimate. Weighing the finished dish is the most accurate.":"يُحسب لكل غرام بالوزن المطبوخ إن أدخلته، وإلا فبتقدير ميرا للوزن المطبوخ. وزن الطبق النهائي هو الأدق.",
     "add ingredients by typing or snapping a label, adjust grams, then Update recipe.":"أضف مكوّنات بالكتابة أو بتصوير الملصق، عدّل الغرامات، ثم حدّث الوصفة.",
     "Edit ingredients — add by typing or photo":"تعديل المكوّنات — أضف بالكتابة أو بالصورة",
     "Add ingredients by typing or snapping a label, tweak grams, then Update recipe — or Log my portion.":"أضف مكوّنات بالكتابة أو بتصوير ملصق، عدّل الغرامات، ثم حدّث الوصفة — أو سجّل حصّتي.",
@@ -6638,9 +6646,43 @@ function dishRawGrams(){
   let g = 0; ((dishForm.res && dishForm.res.items) || []).forEach(x => { g += dishItemG(x); });
   return Math.round(g);
 }
-// The weight the per-gram is measured against: the cooked weight if the user
-// weighed the finished dish, otherwise the summed ingredient grams.
-function dishRefG(){ return num(dishForm.cookedG) > 0 ? num(dishForm.cookedG) : dishRawGrams(); }
+// Cooking-yield factors (cooked weight ÷ raw weight) from standard references —
+// USDA's Table of Cooking Yields / retention factors. Dry pasta, rice and pulses
+// ABSORB water (factor > 1); meats and leafy greens LOSE water (< 1); fats, sugar,
+// salt and ready sauces stay about the same. This lets MIRA estimate a dish's
+// COOKED weight from its raw ingredients, so the per-gram macros of the finished
+// dish are right even before you put it on a scale. When the AI prices a dish it
+// returns a method-aware yield per ingredient; this table is the offline fallback.
+const COOK_YIELD = [
+  [/\b(pasta|macaroni|spaghetti|penne|noodle|vermicelli|lasagne|orzo|fusilli|farfalle)\b/, 2.2],
+  [/\b(rice|basmati)\b/, 2.6], [/\b(couscous|bulgur|burghul|freekeh)\b/, 2.8], [/\b(quinoa)\b/, 2.7],
+  [/\b(lentil|chickpea|bean|pulse|dal|daal|adas)\b/, 2.4], [/\b(oat|oatmeal)\b/, 2.0],
+  [/\b(chicken|turkey)\b/, 0.72], [/\b(beef|lamb|mutton|mince|steak|meat|kofta|kebab|kabab)\b/, 0.70],
+  [/\b(fish|salmon|tuna|shrimp|prawn|seafood)\b/, 0.80], [/\b(egg)\b/, 0.9],
+  [/\b(spinach|kale|chard|arugula|rocket|molokhia)\b/, 0.5],
+  [/\b(oil|butter|ghee|sugar|salt|spice|honey|flour|syrup)\b/, 1.0],
+];
+function localCookYield(name){
+  const s = String(name || "").toLowerCase();
+  for (const [re, y] of COOK_YIELD){ if (re.test(s)) return y; }
+  return 1;
+}
+function dishItemCookedFactor(x){ const cf = num(x && x.cookedFactor); return cf > 0 ? cf : localCookYield(x && x.name); }
+// Estimated cooked weight of the whole dish, summed from each raw ingredient × its yield.
+function dishCookedEstimate(){
+  let g = 0; ((dishForm.res && dishForm.res.items) || []).forEach(x => { g += dishItemG(x) * dishItemCookedFactor(x); });
+  return Math.round(g);
+}
+// The weight the per-gram is measured against: the cooked weight you entered if
+// you weighed the finished dish; otherwise MIRA's estimated cooked weight (from
+// cooking yields); otherwise the summed raw ingredient grams.
+function dishRefG(){
+  if (num(dishForm.cookedG) > 0) return num(dishForm.cookedG);
+  const est = dishCookedEstimate();
+  return est > 0 ? est : dishRawGrams();
+}
+// True when the reference weight is MIRA's cooked estimate, not a number you typed.
+function dishRefIsEstimate(){ return !(num(dishForm.cookedG) > 0) && dishCookedEstimate() > 0; }
 function dishPer100Text(){
   const ref = dishRefG(); if (!(ref > 0)) return "—";
   const t = dishTotals(), k = 100 / ref;
@@ -6760,19 +6802,20 @@ function dishHTML(){
           <span class="dl-nm" dir="auto">${esc(x.name)}</span>${amtCtl}
           <span class="dl-m" id="dishItemM${i}">${dishMacroLine(dishItemMacros(x))}</span></div>`;
       }).join("")}
-      <div class="dish-line tot"><span id="dishWholeLbl">${t("Whole dish")}${dishRefG() ? ` · ${dishRefG()} g` : ""}</span><span id="dishWhole">${dishMacroLine(dt)}</span></div>
+      <div class="dish-line tot"><span id="dishWholeLbl">${t("Whole dish")}${dishRefG() ? ` · ${dishRefG()} g${dishRefIsEstimate() ? " " + t("(est.)") : ""}` : ""}</span><span id="dishWhole">${dishMacroLine(dt)}</span></div>
       <div class="dish-line tot"><span>${t("Per 100 g")}</span><span id="dishPer100">${dishPer100Text()}</span></div>
       <div class="dish-line tot"><span>${t("Per serving")}</span><span id="dishServe">${dishServeText()}</span></div>
       <div class="dish-line tot"><span>${t("Your portion")}</span><span id="dishMine">${dishMineText()}</span></div>
     </div>
     <div class="dish-weigh">
-      <div class="field"><label>${t("Cooked weight (g) — optional")}</label><input type="number" inputmode="decimal" min="0" value="${esc(dishForm.cookedG)}" placeholder="${dishRawGrams() ? t("ingredients ≈ ") + dishRawGrams() + " g" : t("weigh the finished dish")}" oninput="dishForm.cookedG=this.value;M.dishScale()"></div>
+      <div class="field"><label>${t("Cooked weight (g) — optional")}</label><input type="number" inputmode="decimal" min="0" value="${esc(dishForm.cookedG)}" placeholder="${dishCookedEstimate() ? t("cooked ≈ ") + dishCookedEstimate() + " g" : (dishRawGrams() ? t("ingredients ≈ ") + dishRawGrams() + " g" : t("weigh the finished dish"))}" oninput="dishForm.cookedG=this.value;M.dishScale()"></div>
+      ${dishRefIsEstimate() ? `<div class="dish-cook-est">${ic("info", 13)} ${t("MIRA estimates this dish cooks down to")} <b>≈ ${dishCookedEstimate()} g</b> ${t("(pasta & rice soak up water; meats lose ~25%). Used for per-gram until you weigh it.")} <button class="dce-use" onclick="M.dishUseCookedEstimate()">${t("Use it")}</button></div>` : ""}
       <div class="grid2" style="margin-top:8px">
         <div class="field"><label>${t("Grams per serving")}</label><input type="number" inputmode="decimal" min="0" value="${esc(dishForm.perServingG)}" placeholder="e.g. 250" oninput="dishForm.perServingG=this.value;M.dishScale()"></div>
         <div class="field"><label>${t("Grams I ate")}</label><input type="number" inputmode="decimal" min="0" value="${esc(dishForm.ateG)}" placeholder="${num(dishForm.perServingG) > 0 ? "1 serving = " + n0(num(dishForm.perServingG)) : ""}" oninput="dishForm.ateG=this.value;M.dishScale()"></div>
       </div>
       ${num(dishForm.perServingG) > 0 ? `<button class="btn sm sec" style="margin-top:8px" onclick="M.dishAteServing()">${t("I ate one serving")} (${n0(num(dishForm.perServingG))} g)</button>` : ""}
-      <div class="tiny" style="color:var(--txt3);margin-top:7px">${t("Per-gram uses the cooked weight if you weighed it, otherwise the ingredient total. Cooked usually weighs a little less (water loss).")}</div>
+      <div class="tiny" style="color:var(--txt3);margin-top:7px">${t("Per-gram uses your weighed cooked weight if you enter one, otherwise MIRA's cooked estimate. Weighing the finished dish is the most accurate.")}</div>
     </div>
     <div class="row" style="margin-top:10px">
       <button class="btn sm" style="flex:1" onclick="M.dishLog()">${t("Log my portion")}</button>
@@ -6794,13 +6837,14 @@ async function dishMacros(){
   dishBusy = true; render();
   try {
     const arr = await llmJsonArray(
-      `You are MIRA's home-cooking nutrition analyst. The user cooked a dish and lists the ingredients that went into it. For EACH ingredient, give the macros for the STATED amount using standard food-composition data (USDA, McCance & Widdowson, regional Middle-East tables). You know worldwide and Arab/Gulf cuisines and understand Arabic script, transliteration and kitchen units (tbsp, tsp, cup, حبة, ملعقة, كوب). Rules: amounts are raw/as-purchased unless stated cooked; ALL cooking fat added to the pot counts (for deep-frying, count the typically-absorbed amount and say so in the note); water and cooking losses do not change macros; if an amount is missing, assume a typical amount for this dish and put the assumption in "amount". Reply with ONLY a JSON array, one object per ingredient in the SAME order as given: [{"name":str,"amount":str(amount actually counted),"kcal":num,"p":num,"c":num,"f":num,"note":str(short basis or assumption, may be "")}]. Base each ingredient on a specific standard reference food (USDA FoodData Central / McCance & Widdowson / regional tables), not a guess. Per item, energy MUST be internally consistent: verify kcal ≈ 4·p + 4·c + 9·f and correct the macros if it does not hold within ~10%.${replyLangNote()}`,
+      `You are MIRA's home-cooking nutrition analyst. The user cooked a dish and lists the ingredients that went into it. For EACH ingredient, give the macros for the STATED amount using standard food-composition data (USDA, McCance & Widdowson, regional Middle-East tables). You know worldwide and Arab/Gulf cuisines and understand Arabic script, transliteration and kitchen units (tbsp, tsp, cup, حبة, ملعقة, كوب). Rules: amounts are raw/as-purchased unless stated cooked; ALL cooking fat added to the pot counts (for deep-frying, count the typically-absorbed amount and say so in the note); water and cooking losses do not change macros; if an amount is missing, assume a typical amount for this dish and put the assumption in "amount". Also return "yield" for each ingredient: the cooked-to-raw WEIGHT ratio for how it is cooked in THIS dish, from standard USDA cooking-yield / retention factors — dry pasta/rice/pulses absorb water (≈2.2–2.8), meats and leafy greens lose water (≈0.5–0.75), oils/sugar/salt/ready sauces ≈1. Reply with ONLY a JSON array, one object per ingredient in the SAME order as given: [{"name":str,"amount":str(amount actually counted),"kcal":num,"p":num,"c":num,"f":num,"yield":num,"note":str(short basis or assumption, may be "")}]. Base each ingredient on a specific standard reference food (USDA FoodData Central / McCance & Widdowson / regional tables), not a guess. Per item, energy MUST be internally consistent: verify kcal ≈ 4·p + 4·c + 9·f and correct the macros if it does not hold within ~10%.${replyLangNote()}`,
       `Dish: ${dishForm.name.trim() || "(unnamed home-cooked dish)"}\nIngredients as they went into the pot:\n${ings.map(g => `- ${g.n}${g.a ? ` — ${g.a}` : ""}`).join("\n")}`,
       Math.min(3000, 500 + ings.length * 140));
     const items = arr.filter(o => o && o.name).map(o => {
       reconcileEstimate(o);   // keep each ingredient's kcal consistent with its own macros
       const kc = num(o.kcal), p = num(o.p), c = num(o.c), f = num(o.f), basisG = amountToGrams(o.amount) || 0;
       const it = {name: String(o.name), amount: String(o.amount || ""), kcal: kc, p, c, f, note: String(o.note || "")};
+      const y = num(o.yield); if (y > 0 && y < 12) it.cookedFactor = y;   // method-aware cooking yield (weight ratio)
       if (basisG > 0){ it.basisG = basisG; it.base = {kcal: kc, p, c, f}; it.addedG = basisG; }   // editable grams that rescale this line
       return it;
     });
@@ -11950,6 +11994,7 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
   dishRecipe: dishSaveToRecipes,
   dishScale: dishScalePatch,
   dishAteServing,
+  dishUseCookedEstimate(){ const e = dishCookedEstimate(); if (e > 0){ dishForm.cookedG = String(e); render(); } },
   /* ---- food-log report (date range, multi-format) ---- */
   reportToggle(){ R.reportOpen = !R.reportOpen; render(); },
   openFoodReport(){
