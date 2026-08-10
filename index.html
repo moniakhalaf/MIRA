@@ -1266,6 +1266,8 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
 .rv-scale .rv-pack:active{transform:scale(.96)}
 .rv-scale .rv-note{flex-basis:100%;font-size:11.5px;color:var(--txt2);margin-top:1px}
 /* "I cooked this" ingredient breakdown */
+.dish-editbar{display:flex;gap:6px;align-items:flex-start;background:var(--acc-soft);color:var(--acc);border:1px solid var(--acc);border-radius:9px;padding:8px 10px;font-size:12px;font-weight:600;line-height:1.35;margin:2px 0 8px}
+.dish-editbar svg{flex:0 0 auto;margin-top:1px}
 .dish-break{margin-top:12px;border-top:1px solid var(--line2);padding-top:4px}
 .dish-line{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:4.5px 0;border-bottom:1px dashed var(--line);font-size:12.5px;color:var(--txt2)}
 .dish-line i{font-style:normal;color:var(--txt3);font-size:11.5px}
@@ -1566,7 +1568,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.161";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.162";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1786,6 +1788,11 @@ const TR = {
     "Servings I ate":"الحصص التي أكلتُها","Get macros from ingredients":"احسب الماكروز من المكوّنات",
     "Whole dish":"الطبق كامل","Per serving":"لكل حصة","Your portion":"حصّتك","Log my portion":"سجّل حصّتي",
     "Save as recipe":"حفظ كوصفة","Ingredient":"مكوّن","Cook & log from these ingredients":"اطبخ وسجّل من هذه المكوّنات",
+    "Update recipe":"تحديث الوصفة","Edit recipe ingredients":"تعديل مكوّنات الوصفة","Editing":"تعديل",
+    "add ingredients by typing or snapping a label, adjust grams, then Update recipe.":"أضف مكوّنات بالكتابة أو بتصوير الملصق، عدّل الغرامات، ثم حدّث الوصفة.",
+    "Edit ingredients — add by typing or photo":"تعديل المكوّنات — أضف بالكتابة أو بالصورة",
+    "Add ingredients by typing or snapping a label, tweak grams, then Update recipe — or Log my portion.":"أضف مكوّنات بالكتابة أو بتصوير ملصق، عدّل الغرامات، ثم حدّث الوصفة — أو سجّل حصّتي.",
+    "Loaded — add or adjust ingredients, then Update recipe.":"تم التحميل — أضف أو عدّل المكوّنات، ثم حدّث الوصفة.",
     "Calories":"السعرات","Protein":"بروتين","Carbs":"كربوهيدرات","Fat":"دهون","Nutrition":"التغذية","Body composition":"تكوين الجسم",
     "Finish your day":"أكمل يومك","last meal":"آخر وجبة","Log this":"سجّل هذا","Ideas to fill the gap":"أفكار لسدّ الفجوة",
     "Suggest what to eat":"اقترح ماذا آكل","Suggest again":"اقترح مجددًا",
@@ -5182,7 +5189,7 @@ let findBusy = false, extractBusy = false, barcodeBusy = false;
 /* "I cooked this" — build a home-cooked dish from its ingredients: the AI
    prices each ingredient from composition tables, MIRA sums the dish locally
    and splits it into servings. */
-const dishForm = {open: false, name: "", makes: "1", ate: "1", cookedG: "", perServingG: "", ateG: "",
+const dishForm = {open: false, editId: null, name: "", makes: "1", ate: "1", cookedG: "", perServingG: "", ateG: "",
   ings: [{n: "", a: ""}, {n: "", a: ""}, {n: "", a: ""}], res: null};
 let dishBusy = false;
 
@@ -6631,7 +6638,8 @@ function dishHTML(){
   const dt = res ? dishTotals() : null;
   return `
   <div class="review-item" style="margin-top:12px">
-    <b style="font-size:14px">${ic("flame", 14)} ${t("I cooked this")}</b>
+    <b style="font-size:14px">${ic("flame", 14)} ${dishForm.editId ? t("Edit recipe ingredients") : t("I cooked this")}</b>
+    ${dishForm.editId ? `<div class="dish-editbar">${ic("edit", 13)} ${t("Editing")} — ${t("add ingredients by typing or snapping a label, adjust grams, then Update recipe.")}</div>` : ""}
     <div class="tiny" style="margin-bottom:8px">${t("List what went into the pot with the grams of each — MIRA prices every ingredient from standard food-composition data and sums the whole dish. Then log by grams.")}</div>
     <div class="field"><label>${t("Dish name")}</label><input value="${esc(dishForm.name)}" dir="auto" placeholder="e.g. Chicken machboos" oninput="dishForm.name=this.value"></div>
     <label class="tiny" style="display:block;margin-bottom:5px">${t("Ingredients & amounts, raw as they went in — include cooking oil, butter or ghee.")}</label>
@@ -6677,7 +6685,7 @@ function dishHTML(){
     </div>
     <div class="row" style="margin-top:10px">
       <button class="btn sm" style="flex:1" onclick="M.dishLog()">${t("Log my portion")}</button>
-      <button class="btn sm sec" style="flex:0 0 auto" onclick="M.dishRecipe()">${ic("book", 14)} ${t("Save as recipe")}</button>
+      <button class="btn sm sec" style="flex:0 0 auto" onclick="M.dishRecipe()">${ic("book", 14)} ${dishForm.editId ? t("Update recipe") : t("Save as recipe")}</button>
     </div>
     <div class="tiny" style="margin-top:7px"><span class="badge estimate">${t("estimate")}</span> From standard composition tables (USDA & regional) — review each line, and you can still edit before saving.</div>
     ` : ""}
@@ -6770,7 +6778,7 @@ You know worldwide and Arab/Gulf cuisines, Arabic script and transliteration, an
 // results, folds the builder away and hides the recipe picker — but leaves the
 // outer food-tools card open so the other logging options stay one tap away.
 function dishCollapse(){
-  dishForm.open = false;
+  dishForm.open = false; dishForm.editId = null;
   dishForm.name = ""; dishForm.cookedG = ""; dishForm.perServingG = ""; dishForm.ateG = "";
   dishForm.ings = [{n: "", a: ""}, {n: "", a: ""}, {n: "", a: ""}];
   dishForm.res = null;
@@ -6801,14 +6809,19 @@ function dishSaveToRecipes(){
   const t = dishTotals(), ref = dishRefG(), gps = num(dishForm.perServingG);
   // servings derived from grams-per-serving over the reference weight; else 1
   const servings = (ref > 0 && gps > 0) ? Math.max(1, Math.round(ref / gps)) : 1;
-  saveRecipe({name: dishForm.name.trim() || "Home-cooked dish", servings, tags: ["home-cooked"],
+  const payload = {name: dishForm.name.trim() || "Home-cooked dish", servings, tags: ["home-cooked"],
     per: {kcal: Math.round(t.kcal / servings), p: +(t.p / servings).toFixed(1), c: +(t.c / servings).toFixed(1), f: +(t.f / servings).toFixed(1)},
     cookedWeight: ref > 0 ? Math.round(ref) : 0,
     ingredients: dishForm.res.items.map(x => { const amt = x.basisG > 0 ? `${n0(dishItemG(x))} g` : x.amount; return x.name + (amt ? ` — ${amt}` : ""); }),
-    components: dishForm.res.items.map(x => ({name: x.name, amount: x.basisG > 0 ? `${n0(dishItemG(x))} g` : x.amount, kcal: num(x.kcal), p: num(x.p), c: num(x.c), f: num(x.f), basisG: x.basisG || 0, base: x.base || null, addedG: x.basisG > 0 ? num(x.addedG) : 0, src: x.src || "logged"}))});
+    components: dishForm.res.items.map(x => ({name: x.name, amount: x.basisG > 0 ? `${n0(dishItemG(x))} g` : x.amount, kcal: num(x.kcal), p: num(x.p), c: num(x.c), f: num(x.f), basisG: x.basisG || 0, base: x.base || null, addedG: x.basisG > 0 ? num(x.addedG) : 0, src: x.src || "logged"}))};
+  // editing an existing recipe: update it in place (recomputed macros +
+  // ingredients + components) while preserving its photo, method, tags and
+  // slot in the box. Otherwise add it as a new recipe.
+  const editing = dishForm.editId && S.recipes.some(r => r.id === dishForm.editId);
+  if (editing) updateRecipe(dishForm.editId, payload); else saveRecipe(payload);
   dishCollapse();
   save(); render();
-  toast("Saved to your recipe box ✓");
+  toast(editing ? "Recipe updated ✓" : "Saved to your recipe box ✓");
 }
 function dishAteServing(){ if (num(dishForm.perServingG) > 0){ dishForm.ateG = String(num(dishForm.perServingG)); dishScalePatch(); render(); } }
 
@@ -8316,7 +8329,8 @@ function recipeDetailHTML(){
     ${recipeGramCardHTML(r)}
     <div class="card"><h3>${ic("list", 16)} ${tr("Ingredients")}</h3>
       <ul class="rc-list">${(r.ingredients || []).length ? r.ingredients.map(i => `<li dir="auto">${esc(i)}</li>`).join("") : `<li class="muted">Not listed.</li>`}</ul>
-      ${(r.ingredients || []).length ? `<button class="btn sm sec" style="width:100%;margin-top:10px" onclick="M.recipeToDish('${r.id}')">${ic("flame", 15)} ${t("Cook & log from these ingredients")}</button>` : ""}</div>
+      <button class="btn sm sec" style="width:100%;margin-top:10px" onclick="M.recipeToDish('${r.id}')">${ic("edit", 14)} ${t("Edit ingredients — add by typing or photo")}</button>
+      <div class="tiny" style="color:var(--txt3);margin-top:6px">${t("Add ingredients by typing or snapping a label, tweak grams, then Update recipe — or Log my portion.")}</div></div>
     <div class="card"><h3>${ic("book", 16)} ${tr("Method")}</h3>
       <ol class="rc-steps">${(r.steps || []).length ? r.steps.map(s => `<li dir="auto">${esc(s)}</li>`).join("") : `<li class="muted">${tr("Not listed.")}</li>`}</ol></div>
     <div class="row" style="gap:8px">
@@ -8373,6 +8387,26 @@ function saveRecipe(j){
     steps: (Array.isArray(j.steps) ? j.steps : []).map(x => String(x)).filter(Boolean),
     source: String(j.source || "").trim(), healthNote: String(j.healthNote || "").trim(), ts: Date.now()};
   S.recipes.unshift(r);
+  return r;
+}
+// Update an existing recipe in place from a dish-builder payload — refresh the
+// name, servings, per-serving macros, cooked weight, ingredient list and priced
+// components, but keep the recipe's photo, method, cuisine, tags and position in
+// the box untouched. Used when editing a recipe's ingredients/macros.
+function updateRecipe(id, j){
+  const r = S.recipes.find(x => x.id === id); if (!r) return null;
+  const per = j.per || {};
+  r.name = String(j.name || r.name).trim();
+  r.servings = Math.max(1, parseInt(j.servings) || 1);
+  r.per = {kcal: num(per.kcal), p: num(per.p), c: num(per.c), f: num(per.f)};
+  r.cookedWeight = num(j.cookedWeight) > 0 ? Math.round(num(j.cookedWeight)) : 0;
+  r.ingredients = (Array.isArray(j.ingredients) ? j.ingredients : []).map(x => String(x)).filter(Boolean);
+  r.components = (Array.isArray(j.components) ? j.components : []).map(x => ({
+    name: String(x.name || ""), amount: String(x.amount || ""),
+    kcal: num(x.kcal), p: num(x.p), c: num(x.c), f: num(x.f),
+    basisG: num(x.basisG) || 0,
+    base: (x.base && typeof x.base === "object") ? {kcal: num(x.base.kcal), p: num(x.base.p), c: num(x.base.c), f: num(x.base.f)} : null,
+    addedG: num(x.addedG) || 0, src: String(x.src || "")})).filter(x => x.name);
   return r;
 }
 // The pre-seeded recipe library was removed by request. The recipe box now
@@ -11712,6 +11746,7 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
   /* ---- "I cooked this": dish built from ingredients ---- */
   dishToggle(){
     dishForm.open = !dishForm.open;
+    if (dishForm.open) dishForm.editId = null;   // a fresh build, not editing a saved recipe
     if (dishForm.open && !dishForm.name && foodForm.name.trim()) dishForm.name = foodForm.name.trim();
     render();
   },
@@ -11768,7 +11803,7 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
       if (basisG > 0){ it.basisG = basisG; it.base = {kcal: kc, p, c, f: ff}; it.addedG = basisG; }
       return it;
     });
-    dishForm.name = "";
+    dishForm.name = ""; dishForm.editId = null;
     dishForm.ings = resItems.map(x => ({n: x.name, a: x.basisG ? n0(dishItemG(x)) + " g" : x.amount}));
     dishForm.res = {items: resItems};
     dishForm.cookedG = ""; dishForm.perServingG = ""; dishForm.ateG = "";
@@ -12104,6 +12139,8 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
   // recipe, or when the stored per-serving macros predate a change.
   recipeToDish(id){
     const r = S.recipes.find(x => x.id === id); if (!r) return;
+    // editing this recipe: a later "Update recipe" writes back to the same entry
+    dishForm.editId = id;
     // recipes saved from the dish builder keep per-ingredient components — reload
     // them intact so each ingredient's grams stays editable with live macros
     if (r.components && r.components.length){
@@ -12121,7 +12158,7 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
       R.recipeId = null; R.tab = "food"; R.homeCat = null; R.logFoodOpen = true;
       render();
       setTimeout(() => { const el = $("#addFoodCard"); if (el){ el.classList.add("open"); el.scrollIntoView({behavior: "smooth", block: "start"}); } }, 60);
-      toast(tr("Loaded — adjust each ingredient's grams, then Save as recipe."), 4500);
+      toast(tr("Loaded — add or adjust ingredients, then Update recipe."), 4500);
       return;
     }
     const rows = (r.ingredients || []).map(line => {
