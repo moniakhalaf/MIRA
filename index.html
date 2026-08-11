@@ -1575,7 +1575,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.167";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.168";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1592,19 +1592,21 @@ async function sha256(str){
 }
 const buzz = (ms = 10) => { if (navigator.vibrate) navigator.vibrate(ms); };
 function toast(msg, ms = 2600){
-  const t = $("#toast");
-  t.textContent = msg;
-  t.classList.add("show");
-  clearTimeout(t._h);
-  t._h = setTimeout(() => t.classList.remove("show"), ms);
+  const el = $("#toast");
+  // Auto-translate the message so every toast shows in the chosen language
+  // without wrapping each call site; unknown strings fall back to the source.
+  el.textContent = typeof msg === "string" ? tr(msg) : msg;
+  el.classList.add("show");
+  clearTimeout(el._h);
+  el._h = setTimeout(() => el.classList.remove("show"), ms);
 }
 function fmtDate(d){
   const dt = new Date(d + "T12:00:00");
   const t = todayStr();
-  if (d === t) return "Today";
+  if (d === t) return tr("Today");
   const y = new Date(Date.now() - 864e5).toLocaleDateString("en-CA");
-  if (d === y) return "Yesterday";
-  return dt.toLocaleDateString("en-GB", {weekday: "short", day: "numeric", month: "short"});
+  if (d === y) return tr("Yesterday");
+  return dt.toLocaleDateString(uiLang() || "en-GB", {weekday: "short", day: "numeric", month: "short"});
 }
 /* inline SVG icon set (stroke style) */
 const I = {
@@ -1807,6 +1809,337 @@ const TR = {
     "MIRA estimates this dish cooks down to":"تُقدّر ميرا أن هذا الطبق يصبح بعد الطهي",
     "(pasta & rice soak up water; meats lose ~25%). Used for per-gram until you weigh it.":"(المعكرونة والأرز يمتصّان الماء؛ واللحوم تفقد ~25%). يُستخدم لحساب الغرام حتى تزنه.",
     "Per-gram uses your weighed cooked weight if you enter one, otherwise MIRA's cooked estimate. Weighing the finished dish is the most accurate.":"يُحسب لكل غرام بالوزن المطبوخ إن أدخلته، وإلا فبتقدير ميرا للوزن المطبوخ. وزن الطبق النهائي هو الأدق.",
+    "Yesterday":"أمس","Something went wrong":"حدث خطأ ما","Reload the app":"أعِد تحميل التطبيق",
+    "A display error occurred, but your data is safe on this device. Try reloading — if it keeps happening, export a backup and reinstall.":"حدث خطأ في العرض، لكن بياناتك آمنة على هذا الجهاز. جرّب إعادة التحميل — وإن تكرّر الأمر، صدّر نسخة احتياطية وأعِد التثبيت.",
+    "Export backup":"تصدير نسخة احتياطية",
+    "Storage error — export a backup and clear old chats.":"خطأ في التخزين — صدّر نسخة احتياطية وامسح المحادثات القديمة.",
+    "Voice input isn't supported on this browser.":"الإدخال الصوتي غير مدعوم في هذا المتصفح.",
+    "Didn't catch that — try again.":"لم ألتقط ذلك — حاول مرة أخرى.","Listening…":"أستمع…","Voice input unavailable.":"الإدخال الصوتي غير متاح.",
+    "Add your API key in Settings first.":"أضِف مفتاح الـAPI في الإعدادات أولًا.",
+    "File too large (max ~9 MB).":"الملف كبير جدًا (الحد الأقصى ~9 ميغابايت).",
+    "Give the food a name.":"أعطِ الطعام اسمًا.","Type what you ate first.":"اكتب ما أكلته أولًا.",
+    "No database match for that. Add your API key in Settings to estimate it, or enter the macros yourself.":"لا يوجد تطابق في قواعد البيانات. أضِف مفتاح الـAPI في الإعدادات للتقدير، أو أدخِل الماكروز بنفسك.",
+    "Photograph the barcode itself.":"صوّر الباركود نفسه.",
+    "Could not read a barcode in that photo — try a closer, sharper shot.":"تعذّرت قراءة الباركود في الصورة — جرّب لقطة أقرب وأوضح.",
+    "Could not read any items from that file.":"تعذّرت قراءة أي عناصر من هذا الملف.",
+    "Rest done — next set.":"انتهت الراحة — المجموعة التالية.",
+    "Couldn't process that image.":"تعذّرت معالجة الصورة.","Couldn't read that image.":"تعذّرت قراءة الصورة.",
+    "Enter at least one value.":"أدخِل قيمة واحدة على الأقل.","Weight looks impossible — check it.":"الوزن يبدو غير منطقي — تحقّق منه.",
+    "Phase angle out of plausible range (1–20°).":"زاوية الطور خارج النطاق المعقول (1–20°).","Scan saved ✓":"تم حفظ الفحص ✓",
+    "Encrypted backup loaded — enter its passphrase to unlock.":"تم تحميل نسخة احتياطية مشفّرة — أدخِل عبارة المرور لفتحها.",
+    "Backup restored ✓":"تمت استعادة النسخة الاحتياطية ✓","That file is not a valid MIRA backup.":"هذا الملف ليس نسخة احتياطية صالحة من ميرا.",
+    "This browser can't encrypt (needs HTTPS).":"لا يستطيع هذا المتصفح التشفير (يتطلّب HTTPS).",
+    "Use at least 8 characters.":"استخدم 8 أحرف على الأقل.","The two passphrases don't match.":"عبارتا المرور غير متطابقتين.",
+    "Your data is now encrypted ✓":"بياناتك الآن مشفّرة ✓","Couldn't enable encryption — nothing changed.":"تعذّر تفعيل التشفير — لم يتغيّر شيء.",
+    "Encryption turned off.":"تم إيقاف التشفير.","Confirm with Face ID / fingerprint…":"أكّد عبر Face ID / البصمة…",
+    "Face ID unlock enabled ✓":"تم تفعيل الفتح بـFace ID ✓","Face ID unlock removed.":"تمت إزالة الفتح بـFace ID.",
+    "Not enough data yet.":"لا توجد بيانات كافية بعد.",
+    "Enter both the Client ID and Client Secret from strava.com/settings/api.":"أدخِل Client ID وClient Secret من strava.com/settings/api.",
+    "Strava disconnected.":"تم فصل سترافا.","File too large (max ~25 MB).":"الملف كبير جدًا (الحد الأقصى ~25 ميغابايت).",
+    "Couldn't read an activity from that file — export it as TCX or GPX and try again.":"تعذّرت قراءة نشاط من هذا الملف — صدّره بصيغة TCX أو GPX وحاول مجددًا.",
+    "Couldn't read that file — export the activity as TCX or GPX.":"تعذّرت قراءة هذا الملف — صدّر النشاط بصيغة TCX أو GPX.",
+    "Upload a screenshot image of the workout summary.":"ارفع لقطة شاشة لملخّص التمرين.",
+    "Couldn't read a workout from that screenshot — try a clearer one of the summary.":"تعذّرت قراءة التمرين من لقطة الشاشة — جرّب لقطة أوضح للملخّص.",
+    "Enter the reps.":"أدخِل عدد التكرارات.","Add exercises first.":"أضِف التمارين أولًا.","Add at least one set first.":"أضِف مجموعة واحدة على الأقل أولًا.",
+    "Give the exercise a name.":"أعطِ التمرين اسمًا.","Type the exercise name in the search box first.":"اكتب اسم التمرين في مربع البحث أولًا.",
+    "Couldn't build a program — try again.":"تعذّر إنشاء برنامج — حاول مرة أخرى.",
+    "Log at least one session first — the next block is built from your results.":"سجّل جلسة واحدة على الأقل أولًا — تُبنى المرحلة التالية من نتائجك.",
+    "Couldn't build the next block — try again.":"تعذّر إنشاء المرحلة التالية — حاول مرة أخرى.","Keep at least one day.":"أبقِ يومًا واحدًا على الأقل.",
+    "Give the supplement a name.":"أعطِ المكمّل اسمًا.","Added to your list ✓":"أُضيف إلى قائمتك ✓","Enter hours slept.":"أدخِل عدد ساعات النوم.",
+    "Name the habit.":"سمِّ العادة.","Type the task first.":"اكتب المهمة أولًا.",
+    "Reminder ready — open it to add to your calendar.":"التذكير جاهز — افتحه لإضافته إلى تقويمك.",
+    "Type your profession.":"اكتب مهنتك.","Set your profession first.":"حدّد مهنتك أولًا.",
+    "Toolkit ready ✓":"حقيبة الأدوات جاهزة ✓","Couldn't build the toolkit — try again.":"تعذّر إنشاء حقيبة الأدوات — حاول مرة أخرى.",
+    "Name the bill.":"سمِّ الفاتورة.","Name the fixed expense.":"سمِّ المصروف الثابت.","Enter the monthly amount.":"أدخِل المبلغ الشهري.",
+    "Enter the amount.":"أدخِل المبلغ.","Add your income and a few expenses first.":"أضِف دخلك وبعض المصاريف أولًا.",
+    "Add your monthly income first.":"أضِف دخلك الشهري أولًا.","Log a few expenses first.":"سجّل بعض المصاريف أولًا.",
+    "Add a title and date.":"أضِف عنوانًا وتاريخًا.","Add a title.":"أضِف عنوانًا.",
+    "Renewal reminder ready — open it to add to your calendar.":"تذكير التجديد جاهز — افتحه لإضافته إلى تقويمك.",
+    "Where to?":"إلى أين؟","What are you comparing?":"ما الذي تقارنه؟","Name the option.":"سمِّ الخيار.","What's the decision?":"ما القرار؟",
+    "Decision logged ✓":"تم تسجيل القرار ✓","Report copied to clipboard.":"تم نسخ التقرير إلى الحافظة.","Report exported as a file.":"تم تصدير التقرير كملف.",
+    "Coach data exported ✓":"تم تصدير بيانات المدرّب ✓","Copied.":"تم النسخ.","Could not copy on this browser.":"تعذّر النسخ في هذا المتصفح.",
+    "Calendar file ready — open it to add the event.":"ملف التقويم جاهز — افتحه لإضافة الحدث.","Chat exported as a text file.":"تم تصدير المحادثة كملف نصّي.",
+    "No previous day to copy.":"لا يوجد يوم سابق للنسخ.","Nothing logged today yet.":"لم يُسجَّل شيء اليوم بعد.","Enter a weight in kg.":"أدخِل الوزن بالكيلوغرام.",
+    "Reply copied.":"تم نسخ الرد.","Enter the base amount and the amount eaten.":"أدخِل المقدار الأساسي والمقدار المأكول.","Restored ✓":"تمت الاستعادة ✓",
+    "Food log copied to clipboard.":"تم نسخ سجلّ الطعام إلى الحافظة.","Food log saved as a file.":"تم حفظ سجلّ الطعام كملف.",
+    "CSV exported — open it in Excel or Google Sheets.":"تم تصدير CSV — افتحه في Excel أو Google Sheets.",
+    "Allow pop-ups to export a PDF, or use Share.":"اسمح بالنوافذ المنبثقة لتصدير PDF، أو استخدم المشاركة.",
+    "Choose \"Save as PDF\" in the print dialog.":"اختر «حفظ كـPDF» في نافذة الطباعة.",
+    "Saved your values for this barcode — used automatically next scan ✓":"تم حفظ قيمك لهذا الباركود — ستُستخدم تلقائيًا في الفحص القادم ✓",
+    "Saved your correction — used automatically next time you search this ✓":"تم حفظ تصحيحك — سيُستخدم تلقائيًا عند بحثك عن هذا لاحقًا ✓",
+    "Shared to the community database — thank you ✓":"تمت المشاركة في قاعدة بيانات المجتمع — شكرًا لك ✓",
+    "Couldn't reach the community database. Check the settings and try again.":"تعذّر الوصول إلى قاعدة بيانات المجتمع. تحقّق من الإعدادات وحاول مجددًا.",
+    "Paste a recipe link or the recipe text first.":"الصق رابط الوصفة أو نصّها أولًا.",
+    "MIRA couldn't pull a recipe from that link. Instagram & TikTok usually block reading — paste the recipe text or caption here instead.":"تعذّر على ميرا جلب وصفة من هذا الرابط. إنستغرام وتيك توك يمنعان القراءة عادةً — الصق نص الوصفة أو التعليق هنا بدلًا من ذلك.",
+    "Recipe read from the image — review and tap Save ✓":"تمت قراءة الوصفة من الصورة — راجِعها واضغط حفظ ✓",
+    "Describe what you'd like MIRA to find.":"صِف ما تريد أن تبحث عنه ميرا.","Pick an image.":"اختر صورة.",
+    "Enter the cooked weight and grams you ate.":"أدخِل الوزن المطبوخ والغرامات التي أكلتها.",
+    "Loaded into the dish builder — tap “Get macros from ingredients”.":"تم التحميل في منشئ الطبق — اضغط «احسب الماكروز من المكوّنات».",
+    "Recipe removed.":"تمت إزالة الوصفة.","Week cleared.":"تم مسح الأسبوع.","Added to plan.":"أُضيف إلى الخطة.",
+    "Grocery list copied.":"تم نسخ قائمة التسوّق.","Could not share.":"تعذّرت المشاركة.","Could not copy.":"تعذّر النسخ.",
+    "Do a check-in first.":"سجّل حالة أولًا.","Enter at least one measurement.":"أدخِل قياسًا واحدًا على الأقل.","Measurements saved ✓":"تم حفظ القياسات ✓",
+    "Photo saved ✓":"تم حفظ الصورة ✓","Name the marker.":"سمِّ المؤشّر.","Enter the value.":"أدخِل القيمة.","Result added ✓":"أُضيفت النتيجة ✓",
+    "Pick a mood or energy level.":"اختر مزاجًا أو مستوى طاقة.","Check-in saved ✓":"تم حفظ الحالة ✓","Add at least one scan first.":"أضِف فحصًا واحدًا على الأقل أولًا.",
+    "Enter a valid email address.":"أدخِل بريدًا إلكترونيًا صالحًا.","Account created on this device ✓":"تم إنشاء الحساب على هذا الجهاز ✓",
+    "Type a domain name.":"اكتب اسم مجال.","PIN must be exactly 4 digits.":"يجب أن يكون الرمز 4 أرقام بالضبط.","PINs did not match.":"الرمزان غير متطابقين.",
+    "PIN set ✓":"تم تعيين الرمز ✓","MIRA was reset.":"تمت إعادة ضبط ميرا.","Everything erased.":"تم مسح كل شيء.","Strava authorization was declined.":"تم رفض تفويض سترافا.",
+    "Go to anything — a screen, task, food, recipe, chat…":"اذهب إلى أي شيء — شاشة، مهمة، طعام، وصفة، محادثة…",
+    "Passphrase":"عبارة المرور","Your name":"اسمك","How should MIRA address you?":"كيف تحبّ أن تناديك ميرا؟",
+    "e.g. Lawyer, Chef, Engineer, Student":"مثال: محامٍ، طاهٍ، مهندس، طالب",
+    "e.g. Lose 4 kg, ship my thesis, build strength":"مثال: خسارة 4 كغم، إنهاء أطروحتي، بناء القوة",
+    "Custom domain (e.g. Photography)":"مجال مخصّص (مثال: التصوير)","Message MIRA…":"راسِل ميرا…",
+    "Start typing — saved foods appear":"ابدأ الكتابة — تظهر الأطعمة المحفوظة","e.g. 3 pieces · 150 g · 250 ml":"مثال: 3 قطع · 150 غم · 250 مل",
+    "amount":"المقدار","e.g. Chicken machboos":"مثال: مجبوس دجاج","200 g · 2 tbsp":"200 غم · 2 ملعقة كبيرة",
+    "Total kg (e.g. 100)":"الوزن الكلي بالكغم (مثال: 100)","paste from strava.com/settings/api":"الصق من strava.com/settings/api",
+    "e.g. Dumbbell":"مثال: دمبل","Who's coaching you?":"من يدرّبك؟","What's affecting it?":"ما الذي يؤثّر فيه؟",
+    "Add a habit…":"أضِف عادة…","e.g. Vitamin D3":"مثال: فيتامين D3","e.g. woke twice":"مثال: استيقظت مرتين",
+    "https://…  (recipe site, Instagram, TikTok) — or paste the recipe/caption":"https://…  (موقع وصفات، إنستغرام، تيك توك) — أو الصق الوصفة/التعليق",
+    "e.g. high-protein GCC dinner under 500 kcal":"مثال: عشاء خليجي عالي البروتين تحت 500 سعرة","e.g. Grilled chicken salad":"مثال: سلطة دجاج مشوي",
+    "Add a task…":"أضِف مهمة…","Title":"العنوان","Write your note, memo or document…":"اكتب ملاحظتك أو مذكّرتك أو مستندك…",
+    "e.g. Photographer":"مثال: مصوّر","Today's weight, kg":"وزن اليوم بالكغم","e.g. Lawyer, Chef, Engineer":"مثال: محامٍ، طاهٍ، مهندس",
+    "e.g. Lose 4 kg, ship my thesis":"مثال: خسارة 4 كغم، إنهاء أطروحتي","Repeat it":"أعِدها",
+    "Dark":"داكن",
+    "Light":"فاتح",
+    "Auto":"تلقائي",
+    "Glass":"زجاجي",
+    "OLED":"OLED",
+    "Midnight":"منتصف الليل",
+    "Sepia":"بنّي داكن",
+    "Medium":"متوسّط",
+    "Add supplement":"إضافة مكمّل",
+    "Log sleep":"تسجيل النوم",
+    "Log this snack":"سجّل هذه الوجبة",
+    "Find (AI)":"إيجاد (ذكاء)",
+    "Generate & share":"إنشاء ومشاركة",
+    "Export data for coach (JSON)":"تصدير البيانات للمدرّب (JSON)",
+    "Live coach sync":"مزامنة مباشرة مع المدرّب",
+    "Progress report":"تقرير التقدّم",
+    "Your coach":"مدرّبك",
+    "Today's habits":"عادات اليوم",
+    "Privacy":"الخصوصية",
+    "Snacks that fit your day":"وجبات خفيفة تناسب يومك",
+    "Suggest snacks that fit my day":"اقترح وجبات خفيفة تناسب يومي",
+    "High-protein":"عالي البروتين",
+    "Healthy fats":"دهون صحية",
+    "Low-calorie":"منخفض السعرات",
+    "Treat":"مكافأة",
+    "Fibre":"ألياف",
+    "7 days":"7 أيام",
+    "30 days":"30 يومًا",
+    "90 days":"90 يومًا",
+    "Chest":"الصدر",
+    "Back":"الظهر",
+    "Shoulders":"الأكتاف",
+    "Legs":"الأرجل",
+    "Glutes":"الأرداف",
+    "Arms":"الذراعان",
+    "Core":"الجذع",
+    "Cardio":"كارديو",
+    "Olympic":"أولمبي",
+    "Barbell":"بار حديد",
+    "Dumbbell":"دمبل",
+    "Cable":"كيبل",
+    "Machine":"جهاز",
+    "Bodyweight":"وزن الجسم",
+    "Kettlebell":"كيتل بيل",
+    "Wheel":"عجلة",
+    "Never backed up":"لم يُنسخ احتياطيًا قط",
+    "You have about":"لديك نحو",
+    "and":"و",
+    "No PIN set. Add a 4-digit PIN to gate entry to MIRA.":"لا يوجد رمز PIN. أضِف رمزًا من 4 أرقام لتقييد الدخول إلى ميرا.",
+    "of goal":"من الهدف",
+    "Set daily targets in Settings and MIRA will tailor snacks to what's left in your day. Meanwhile, here are solid go-to options below.":"حدّد أهدافًا يومية في الإعدادات وستُخصّص ميرا الوجبات الخفيفة لما تبقّى من يومك. وفي الأثناء، إليك خيارات مثالية أدناه.",
+    "Avg":"متوسّط","on target":"ضمن الهدف","water goal hit":"تحقّق هدف الماء",
+    "on logged days":"في الأيام المسجَّلة",
+    "A coach login that sees your workouts and food log in real time arrives with the hosted backend. Your data already exports in a structured format ready for it.":"تسجيل دخول للمدرّب يتيح له رؤية تمارينك وسجلّ طعامك مباشرةً سيصل مع الخادم المُستضاف. بياناتك تُصدَّر بالفعل بصيغة مُنظّمة جاهزة لذلك.",
+    "Glass is frosted & aurora-lit · OLED is true black · Midnight is deep navy · Sepia is warm paper · Auto follows your device.":"الزجاجي مُثلَّج بإضاءة شفقية · OLED أسود خالص · منتصف الليل كحلي عميق · البنّي الداكن ورقي دافئ · التلقائي يتبع جهازك.",
+    "Lets MIRA research the live internet through your API key and cite real pages. Anthropic bills searches (~$10 per 1,000) on top of tokens. Also toggled with the globe button in chat.":"يتيح لميرا البحث في الإنترنت المباشر عبر مفتاحك واقتباس صفحات حقيقية. تحتسب Anthropic عمليات البحث (~10$ لكل 1000) إضافةً إلى الرموز. ويمكن تبديله أيضًا بزرّ الكرة الأرضية في المحادثة.",
+    "Lock your logs, chats and API key behind a passphrase. Everything is encrypted on this device (AES-GCM); nothing readable is left in storage or backups. Add Face ID after setup for quick unlock.":"اقفل سجلّاتك ومحادثاتك ومفتاحك خلف عبارة مرور. كل شيء مشفّر على هذا الجهاز (AES-GCM)؛ ولا يبقى شيء قابل للقراءة في التخزين أو النسخ الاحتياطية. أضِف Face ID بعد الإعداد للفتح السريع.",
+    "Logs, targets, saved foods, chats and settings live only in this browser":"السجلّات والأهداف والأطعمة المحفوظة والمحادثات والإعدادات موجودة في هذا المتصفح فقط",
+    "Stored only in this browser; sent only to api.anthropic.com. Billed to your own account.":"مخزّن في هذا المتصفح فقط؛ ويُرسَل فقط إلى api.anthropic.com. ويُحتسب على حسابك الخاص.",
+    "left today. MIRA can suggest healthy snacks that fit — grounded in evidence, macros labelled as estimates.":"متبقّية اليوم. يمكن لميرا اقتراح وجبات خفيفة صحية تناسبك — قائمة على الأدلة، والماكروز موسومة كتقديرات.",
+    "% of the browser's ~5 MB budget":"% من حدّ المتصفح البالغ ~5 ميغابايت",
+    "glasses":"أكواب",
+    "GCC":"خليجي",
+    "g carbs":"غ كربوهيدرات","g fat":"غ دهون",
+    "protein":"بروتين",
+    "Tap the Share icon":"اضغط أيقونة المشاركة",
+    "in Safari, then":"في سفاري، ثم",
+    "Add to Home Screen":"إضافة إلى الشاشة الرئيسية",
+    "— MIRA opens full-screen like a native app and works offline.":"— تُفتح ميرا بملء الشاشة كتطبيق أصلي وتعمل دون اتصال.",
+    "Jump to any screen or search everything on this device — try \"recipes\", \"sleep\", \"budget\"…":"انتقل إلى أي شاشة أو ابحث في كل شيء على هذا الجهاز — جرّب «وصفات»، «نوم»، «ميزانية»…",
+    "Enter your PIN":"أدخِل رمز PIN",
+    "Forgot PIN?":"نسيت الرمز؟",
+    "Your data is encrypted on this device.":"بياناتك مشفّرة على هذا الجهاز.",
+    "My Integrated Reasoning Assistant":"مساعدي للتفكير المتكامل",
+    "Sign up to keep your MIRA identity across devices when sync launches.":"سجّل للاحتفاظ بهويتك في ميرا عبر الأجهزة عند إطلاق المزامنة.",
+    "Email address":"البريد الإلكتروني",
+    "Create account":"إنشاء حساب",
+    "Continue without an account":"المتابعة بدون حساب",
+    "Stored on this device only for now — cross-device sync arrives with the hosted backend.":"مخزّن على هذا الجهاز فقط حاليًا — تصل المزامنة عبر الأجهزة مع الخادم المُستضاف.",
+    "Your main goal right now":"هدفك الأساسي الآن",
+    "Language MIRA replies in":"اللغة التي ترد بها ميرا",
+    "Billed to your own account, stored only in this browser and sent only to api.anthropic.com. Get one at":"يُحتسب على حسابك الخاص، ويُخزَّن في هذا المتصفح فقط ويُرسَل فقط إلى api.anthropic.com. احصل على واحد من",
+    ". You can also add it later in Settings.":". يمكنك أيضًا إضافته لاحقًا من الإعدادات.",
+    "Continue":"متابعة",
+    "Start using MIRA":"ابدأ استخدام ميرا",
+    "My Integrated Reasoning Assistant — every fact checked, or honestly labelled an estimate.":"مساعدي للتفكير المتكامل — كل معلومة مُتحقَّق منها، أو موسومة بأمانة كتقدير.",
+    "Everything stays on this device. Export a backup any time from Settings.":"كل شيء يبقى على هذا الجهاز. صدّر نسخة احتياطية في أي وقت من الإعدادات.",
+    "To:":"إلى:",
+    "Subject:":"الموضوع:",
+    "Sends from your own mail account — nothing goes out until you press send there.":"يُرسَل من حساب بريدك الخاص — لا يخرج شيء حتى تضغط إرسال هناك.",
+    "Title:":"العنوان:",
+    "When:":"متى:",
+    "Where:":"أين:",
+    "MIRA needs your Anthropic API key to chat. It stays on this device.":"تحتاج ميرا إلى مفتاح Anthropic API للمحادثة. يبقى على هذا الجهاز.",
+    "Open Settings":"فتح الإعدادات",
+    "Saved on this device until you delete them.":"محفوظة على هذا الجهاز حتى تحذفها.",
+    "No conversations yet in this mode.":"لا توجد محادثات بعد في هذا الوضع.",
+    "Deep Solve on — two-stage reasoning for hard problems":"الحل العميق مُفعّل — تفكير من مرحلتين للمسائل الصعبة",
+    "Enter macros for a base amount, then the amount actually eaten — all four recalculate.":"أدخِل الماكروز لمقدار أساسي، ثم المقدار المأكول فعليًا — تُعاد جميعها احتسابًا.",
+    "Base amount":"المقدار الأساسي",
+    "kcal per base":"سعرة لكل مقدار أساسي",
+    "Eaten":"المأكول",
+    "Apply to form":"تطبيق على النموذج",
+    "Save a day's log as a reusable meal (e.g. \"my usual breakfast\"), then log it in one tap.":"احفظ سجلّ يومٍ كوجبة قابلة لإعادة الاستخدام (مثل «فطوري المعتاد»)، ثم سجّلها بضغطة واحدة.",
+    "Macros are estimates, logged with the current time. These clear when you leave the page.":"الماكروز تقديرية، تُسجَّل بالوقت الحالي. وتُمسح عند مغادرة الصفحة.",
+    "Review before saving":"راجِع قبل الحفظ",
+    "MIRA never saves extracted or looked-up values without your review.":"لا تحفظ ميرا القيم المستخرجة أو المُستعلَم عنها دون مراجعتك.",
+    "Open-source data — double-check the pack.":"بيانات مفتوحة المصدر — تحقّق من العبوة.",
+    "How much did you have?":"كم تناولت؟",
+    "Label shows values per":"يعرض الملصق القيم لكل",
+    "— the macros below scale to your amount.":"— تتغيّر الماكروز أدناه حسب مقدارك.",
+    "Portion":"الحصّة",
+    "Half":"نصف",
+    "Whole":"كامل",
+    "Log it":"سجّله",
+    "Skip":"تخطٍّ",
+    "Start":"ابدأ",
+    "Per side:":"لكل جهة:",
+    "Just the bar (20 kg).":"البار فقط (20 كغم).",
+    "Less than the bar (20 kg).":"أقل من البار (20 كغم).",
+    "Garmin, Apple Watch, Polar, Coros and most watches can auto-send every activity to Strava — link them once in their own app and everything lands here.":"يمكن لـGarmin وApple Watch وPolar وCoros ومعظم الساعات إرسال كل نشاط تلقائيًا إلى سترافا — اربطها مرة واحدة من تطبيقها ويصل كل شيء هنا.",
+    "Like your Anthropic key, MIRA uses":"مثل مفتاح Anthropic، تستخدم ميرا",
+    "your own free Strava API app":"تطبيق Strava API المجاني الخاص بك",
+    "— no MIRA server, tokens stay on this device. One-time setup:":"— لا خادم لميرا، وتبقى الرموز على هذا الجهاز. إعداد لمرة واحدة:",
+    "and create an app (any name).":"وأنشئ تطبيقًا (بأي اسم).",
+    "Authorization Callback Domain":"نطاق رد الاتصال للتفويض",
+    "to exactly:":"إلى الآتي تمامًا:",
+    "Client ID":"معرّف العميل (Client ID)",
+    "Client Secret":"سرّ العميل (Client Secret)",
+    "Authorize with Strava":"التفويض عبر سترافا",
+    "Or bring in a single workout without an account:":"أو استورد تمرينًا واحدًا بدون حساب:",
+    "Export the activity as":"صدّر النشاط بصيغة",
+    "for exact numbers, or upload a":"للأرقام الدقيقة، أو ارفع",
+    "screenshot of the summary":"لقطة شاشة للملخّص",
+    "and MIRA reads it. Everything stays on this device.":"وتقرأها ميرا. كل شيء يبقى على هذا الجهاز.",
+    "Starts today's workout with the same exercises and last time's numbers pre-filled — beat them.":"يبدأ تمرين اليوم بنفس التمارين وأرقام المرة السابقة مُعبّأة مسبقًا — تجاوزها.",
+    "Past sessions and progress are in":"الجلسات السابقة والتقدّم في",
+    "Discard":"تجاهل",
+    "Add an exercise":"إضافة تمرين",
+    "Muscle":"العضلة",
+    "Equipment":"المعدّات",
+    "How-to / cue (optional)":"الطريقة / تلميح (اختياري)",
+    "Save exercise":"حفظ التمرين",
+    "No workouts logged yet. Start one in the":"لم تُسجَّل تمارين بعد. ابدأ واحدًا من",
+    "Log this exercise on two or more days to see the trend. Best est. 1RM so far:":"سجّل هذا التمرين في يومين أو أكثر لرؤية الاتجاه. أفضل تقدير لأقصى تكرار حتى الآن:",
+    "Coach name":"اسم المدرّب",
+    "Coach email (optional)":"بريد المدرّب (اختياري)",
+    "Workouts, PRs, nutrition adherence, hydration and weight over the period — as a message you send your coach.":"التمارين والأرقام القياسية والالتزام الغذائي والترطيب والوزن خلال الفترة — كرسالة ترسلها لمدرّبك.",
+    "Suggested for you":"مقترح لك",
+    "Great go-to snacks":"وجبات خفيفة مثالية",
+    "Evidence-based favourites — tap to log":"مفضّلات قائمة على الأدلة — اضغط للتسجيل",
+    "No snacks match that filter.":"لا وجبات خفيفة تطابق هذا المرشّح.",
+    "Macros are per-serving estimates from standard composition — your own logged numbers always take precedence.":"الماكروز تقديرات لكل حصّة من التركيب القياسي — أرقامك المسجَّلة لها الأولوية دائمًا.",
+    "Mood (1 low – 5 great)":"المزاج (1 منخفض – 5 ممتاز)",
+    "Energy (1 low – 5 high)":"الطاقة (1 منخفضة – 5 عالية)",
+    "Save check-in":"حفظ الحالة",
+    "Average mood":"متوسّط المزاج",
+    "Recent":"الأخيرة",
+    "Build daily habits — meditate, read, walk, stretch. Tick them off and watch the streak grow.":"ابنِ عادات يومية — تأمّل، اقرأ، امشِ، تمدّد. حدّدها وشاهد السلسلة تنمو.",
+    "Intermittent fasting":"الصيام المتقطّع",
+    "Tap to mark what you've taken today.":"اضغط لتحديد ما تناولته اليوم.",
+    "Add the supplements or vitamins you take to build a daily checklist and track adherence.":"أضِف المكمّلات أو الفيتامينات التي تتناولها لبناء قائمة يومية وتتبّع الالتزام.",
+    "Dose (optional)":"الجرعة (اختياري)",
+    "Timing":"التوقيت",
+    "Add to my list":"أضِف إلى قائمتي",
+    "MIRA answers supplement questions only from reputable evidence — ask in Health chat before starting anything new.":"تجيب ميرا عن أسئلة المكمّلات من أدلة موثوقة فقط — اسأل في محادثة الصحة قبل بدء أي شيء جديد.",
+    "Hours slept":"ساعات النوم",
+    "Quality":"الجودة",
+    "Save sleep":"حفظ النوم",
+    "Average":"المتوسّط",
+    "Recent nights":"الليالي الأخيرة",
+    "No sleep logged yet. Track a few nights to see your trend.":"لم يُسجَّل نوم بعد. تتبّع بضع ليالٍ لرؤية اتجاهك.",
+    "Get an evidence-based review of your week — what's going well, what to adjust, and one priority — grounded in your own data.":"احصل على مراجعة أسبوعك قائمة على الأدلة — ما يسير جيدًا، وما يُعدَّل، وأولوية واحدة — مبنيّة على بياناتك.",
+    "Ask MIRA to review my week":"اطلب من ميرا مراجعة أسبوعي",
+    "Upload a recipe photo or screenshot":"ارفع صورة وصفة أو لقطة شاشة",
+    "Paste a recipe link — or the recipe text":"الصق رابط وصفة — أو نصّها",
+    "Ask MIRA to find a recipe":"اطلب من ميرا إيجاد وصفة",
+    "Link/find run a live web search on your API key. Paste a caption if a link doesn't read.":"يجري «الرابط/الإيجاد» بحثًا مباشرًا على الويب عبر مفتاحك. الصق تعليقًا إذا تعذّرت قراءة الرابط.",
+    "your wellness averages":"متوسّطات عافيتك",
+    "A slow, steady reset — good before a meal, a hard task, or sleep.":"إعادة ضبط بطيئة وثابتة — مناسبة قبل وجبة أو مهمة صعبة أو النوم.",
+    "If today feels heavy, you don't have to carry it alone — talking to someone you trust, or a professional, can genuinely help.":"إن كان اليوم ثقيلًا، فلست مضطرًا لحمله وحدك — التحدّث إلى شخص تثق به أو إلى مختص قد يساعد حقًا.",
+    "Full trend is on the Insights tab.":"الاتجاه الكامل في تبويب التحليلات.",
+    "Macros shown are per planned serving from your recipes & saved meals — estimates where the source didn't publish exact values.":"الماكروز المعروضة لكل حصّة مخطّطة من وصفاتك ووجباتك المحفوظة — تقديرات حيث لم ينشر المصدر قيمًا دقيقة.",
+    "Quick add (name)":"إضافة سريعة (اسم)",
+    "From your recipes":"من وصفاتك",
+    "From saved meals":"من الوجبات المحفوظة",
+    "No recipes or saved meals yet — add a name above, or build your recipe box first.":"لا وصفات أو وجبات محفوظة بعد — أضِف اسمًا أعلاه، أو ابنِ صندوق وصفاتك أولًا.",
+    "Rolled up from the recipes & meals you planned this week. Ticks are just for shopping — they reset when you leave.":"مُجمّعة من الوصفات والوجبات التي خطّطتها هذا الأسبوع. علامات التحديد للتسوّق فقط — وتُعاد عند المغادرة.",
+    "Nothing planned yet":"لا شيء مخطّط بعد",
+    "Add recipes or meals to your week and their ingredients gather here as one shopping list.":"أضِف وصفات أو وجبات إلى أسبوعك وتتجمّع مكوّناتها هنا كقائمة تسوّق واحدة.",
+    "No open tasks. Add one above — MIRA uses your priorities in the daily brief.":"لا مهام مفتوحة. أضِف واحدة أعلاه — تستخدم ميرا أولوياتك في الموجز اليومي.",
+    "Clear completed":"مسح المُنجَز",
+    "Note":"ملاحظة",
+    "Saved automatically on this device.":"محفوظ تلقائيًا على هذا الجهاز.",
+    "No notes yet. Create documents, memos, or meeting notes — all stored on your device.":"لا ملاحظات بعد. أنشئ مستندات أو مذكّرات أو محاضر اجتماعات — كلها مخزّنة على جهازك.",
+    "Pomodoro — focus in blocks":"بومودورو — تركيز على دفعات",
+    "Focus on (optional)":"التركيز على (اختياري)",
+    "— no task —":"— لا مهمة —",
+    "Sessions":"الجلسات",
+    "Focus min":"دقائق التركيز",
+    "All-time":"الإجمالي",
+    "MIRA tailors the Work tools, terminology and standards to your field — a lawyer, chef, engineer, photographer, coach, or anything else.":"تُكيّف ميرا أدوات العمل والمصطلحات والمعايير حسب مجالك — محامٍ، طاهٍ، مهندس، مصوّر، مدرّب، أو أي شيء آخر.",
+    "Save profession":"حفظ المهنة",
+    "Your field — tools adapt to it":"مجالك — تتكيّف الأدوات معه",
+    "Change":"تغيير",
+    "Log waist, chest, arms and more (cm) to track shape change alongside weight.":"سجّل الخصر والصدر والذراعين وغيرها (سم) لتتبّع تغيّر القوام إلى جانب الوزن.",
+    "Save measurements":"حفظ القياسات",
+    "delete latest":"حذف الأحدث",
+    "Snap a monthly progress photo. Stored on this device only (resized to keep it small).":"التقط صورة تقدّم شهرية. تُخزَّن على هذا الجهاز فقط (بحجم مُصغّر).",
+    "Track blood markers (cholesterol, glucose, vitamin D…) and watch trends over time.":"تتبّع مؤشّرات الدم (الكوليسترول، الغلوكوز، فيتامين D…) وراقب الاتجاهات عبر الوقت.",
+    "Marker":"المؤشّر",
+    "Value":"القيمة",
+    "Unit":"الوحدة",
+    "Add result":"إضافة نتيجة",
+    "Each scan is stored with the change from the previous entry per metric. MIRA reads this log live — ask for a trend analysis in Fitness mode any time.":"يُخزَّن كل فحص مع التغيّر عن الإدخال السابق لكل مقياس. تقرأ ميرا هذا السجل مباشرة — اطلب تحليل الاتجاه في وضع اللياقة في أي وقت.",
+    "Weight kg":"الوزن كغم",
+    "InBody score":"درجة InBody",
+    "Body-fat mass kg":"كتلة الدهون كغم",
+    "Skeletal-muscle mass kg":"كتلة العضلات الهيكلية كغم",
+    "Phase angle °":"زاوية الطور °",
+    "Save scan":"حفظ الفحص",
+    "Review extracted values":"راجِع القيم المستخرجة",
+    "Read from your result sheet — check each value before saving. Nothing is ever guessed.":"مقروءة من ورقة نتائجك — تحقّق من كل قيمة قبل الحفظ. لا يُخمَّن شيء أبدًا.",
+    "No scans yet. Add your first InBody scan above — or photograph the result sheet and MIRA will read the values for you.":"لا فحوصات بعد. أضِف أول فحص InBody أعلاه — أو صوّر ورقة النتائج وستقرأ ميرا القيم لك.",
+    "Account on this device — sync arrives with the hosted backend":"حساب على هذا الجهاز — تصل المزامنة مع الخادم المُستضاف",
+    "MIRA writes all its replies, suggestions, macro lookups and reviews in this language. Choose":"تكتب ميرا جميع ردودها واقتراحاتها وعمليات البحث عن الماكروز والمراجعات بهذه اللغة. اختر",
+    "to switch language mid-conversation.":"لتبديل اللغة أثناء المحادثة.",
+    "Set a goal weight and Insights shows an honest projection of when you'd reach it, based on your own logged weight trend.":"حدّد وزنًا مستهدفًا وتعرض التحليلات توقّعًا صادقًا لموعد بلوغه، بناءً على اتجاه وزنك المسجَّل.",
+    "Every food you log is remembered here for one-tap re-entry.":"كل طعام تسجّله يُحفَظ هنا لإعادة إدخاله بضغطة واحدة.",
+    "MIRA builds a specialist mode around each domain you add, with the same evidence standard everywhere.":"تبني ميرا وضعًا متخصّصًا حول كل مجال تضيفه، بنفس معيار الأدلة في كل مكان.",
+    "A PIN is a casual screen lock — for real protection use encryption below.":"رمز PIN قفل شاشة بسيط — للحماية الحقيقية استخدم التشفير أدناه.",
+    "Your data is":"بياناتك",
+    "encrypted at rest":"مشفّرة أثناء التخزين",
+    "From standard composition tables (USDA & regional) — review each line, and you can still edit before saving.":"من جداول التركيب القياسية (USDA وإقليمية) — راجِع كل سطر، ويمكنك التعديل قبل الحفظ.",
+    "Remove Face ID":"إزالة Face ID",
+    "Turn off encryption":"إيقاف التشفير",
+    "Auto-lock when idle":"القفل التلقائي عند الخمول",
+    "Write your passphrase down somewhere safe.":"اكتب عبارة المرور في مكان آمن.",
+    "It's the only way to read your data — if you forget it, your logs cannot be recovered (that's what makes it secure). MIRA can't reset it.":"إنها الطريقة الوحيدة لقراءة بياناتك — إن نسيتها، لا يمكن استعادة سجلّاتك (وهذا ما يجعلها آمنة). ولا تستطيع ميرا إعادة تعيينها.",
+    "New passphrase (min 8 characters)":"عبارة مرور جديدة (8 أحرف على الأقل)",
+    "Confirm passphrase":"أكّد عبارة المرور",
+    "On-device data:":"البيانات على الجهاز:",
     "add ingredients by typing or snapping a label, adjust grams, then Update recipe.":"أضف مكوّنات بالكتابة أو بتصوير الملصق، عدّل الغرامات، ثم حدّث الوصفة.",
     "Edit ingredients — add by typing or photo":"تعديل المكوّنات — أضف بالكتابة أو بالصورة",
     "Add ingredients by typing or snapping a label, tweak grams, then Update recipe — or Log my portion.":"أضف مكوّنات بالكتابة أو بتصوير ملصق، عدّل الغرامات، ثم حدّث الوصفة — أو سجّل حصّتي.",
@@ -3078,20 +3411,56 @@ const R = {
 // Crash guard: a bug in one screen must never white-screen the whole app.
 // All data is safe in localStorage, so we show a recovery screen instead.
 function render(){
-  try { renderMain(); }
+  try { renderMain(); localizeAttrs(); localizeText(); }
   catch (e){ renderCrash(e); }
+}
+// Translate any UI text node whose exact text matches a dictionary entry, so
+// inline labels/headings/buttons show in the chosen language without wrapping
+// each one. Strictly scoped: never touches chat (#msgs) or user-entered content
+// (marked dir="auto"), inputs, code, or option lists — and only replaces an
+// EXACT whole-text match, so numbers, names and dynamic text are left alone.
+function localizeText(){
+  const l = uiLang(); const dict = l && TR[l]; if (!dict) return;
+  const app = document.getElementById("app"); if (!app) return;
+  const skip = new Set(["SCRIPT", "STYLE", "TEXTAREA", "INPUT", "CODE", "PRE", "OPTION"]);
+  const walker = document.createTreeWalker(app, NodeFilter.SHOW_TEXT, null);
+  const jobs = [];
+  let n;
+  while ((n = walker.nextNode())){
+    const p = n.parentElement; if (!p || skip.has(p.nodeName)) continue;
+    if (p.closest('#msgs, [dir="auto"]')) continue;   // never translate chat or user content
+    const raw = n.nodeValue, key = raw.trim();
+    if (key.length < 3 || key.length > 160) continue;
+    const tv = dict[key];
+    if (tv && tv !== key) jobs.push([n, raw.replace(key, tv)]);
+  }
+  jobs.forEach(([node, val]) => { node.nodeValue = val; });
+}
+// Translate placeholder / aria-label / title attributes across the freshly
+// rendered DOM, so every input hint and icon label shows in the chosen language
+// without wrapping each attribute in the templates. Unknown strings (emails,
+// keys, URLs) simply fall back to their source text.
+function localizeAttrs(){
+  if (!uiLang()) return;
+  const app = document.getElementById("app"); if (!app) return;
+  app.querySelectorAll("[placeholder],[aria-label],[title]").forEach(el => {
+    ["placeholder", "aria-label", "title"].forEach(a => {
+      const v = el.getAttribute(a);
+      if (v){ const tv = tr(v); if (tv !== v) el.setAttribute(a, tv); }
+    });
+  });
 }
 function renderCrash(e){
   try { console.error("MIRA render error:", e); } catch (_) {}
   const app = document.getElementById("app");
   if (!app) return;
   app.innerHTML = `<div class="crash"><div class="crash-box">
-    <div class="crash-t">Something went wrong</div>
-    <div class="crash-d">A display error occurred, but <b>your data is safe</b> on this device. Try reloading — if it keeps happening, export a backup and reinstall.</div>
+    <div class="crash-t">${tr("Something went wrong")}</div>
+    <div class="crash-d">${tr("A display error occurred, but your data is safe on this device. Try reloading — if it keeps happening, export a backup and reinstall.")}</div>
     <div class="crash-err">${esc(String((e && e.message) || e || "unknown error"))}</div>
     <div class="crash-btns">
-      <button class="btn" onclick="location.reload()">Reload</button>
-      <button class="btn sec" onclick="try{backup()}catch(_){}">Export backup</button>
+      <button class="btn" onclick="location.reload()">${tr("Reload")}</button>
+      <button class="btn sec" onclick="try{backup()}catch(_){}">${tr("Export backup")}</button>
     </div>
   </div></div>`;
 }
@@ -3100,7 +3469,7 @@ let _undoFn = null, _undoTimer = null;
 function undoBar(msg, fn, ms = 6000){
   _undoFn = fn;
   const b = $("#snackbar"); if (!b) { toast(msg); return; }
-  const m = $("#snackMsg"); if (m) m.textContent = msg;
+  const m = $("#snackMsg"); if (m) m.textContent = typeof msg === "string" ? tr(msg) : msg;
   b.classList.add("show");
   clearTimeout(_undoTimer);
   _undoTimer = setTimeout(() => { b.classList.remove("show"); _undoFn = null; }, ms);
@@ -3352,7 +3721,7 @@ function widgetData(id){
   if (id === "protein"){ const tot = dayTotals(t); return {kind: "ring", pct: tg.protein ? tot.p / tg.protein * 100 : 0, color: "#4CC4E0", center: (tg.protein ? n0(Math.max(0, tg.protein - tot.p)) : n0(tot.p)) + "g", label: tg.protein ? "Protein left" : "Protein", sub: tg.protein ? `${n0(tot.p)} / ${n0(tg.protein)} g` : "today", onclick: "M.homeSection('health')"}; }
   if (id === "carbs"){ const tot = dayTotals(t); return {kind: "ring", pct: tg.carbs ? tot.c / tg.carbs * 100 : 0, color: "#F5B851", center: (tg.carbs ? n0(Math.max(0, tg.carbs - tot.c)) : n0(tot.c)) + "g", label: tg.carbs ? "Carbs left" : "Carbs", sub: tg.carbs ? `${n0(tot.c)} / ${n0(tg.carbs)} g` : "today", onclick: "M.homeSection('health')"}; }
   if (id === "fat"){ const tot = dayTotals(t); return {kind: "ring", pct: tg.fat ? tot.f / tg.fat * 100 : 0, color: "#A78BFA", center: (tg.fat ? n0(Math.max(0, tg.fat - tot.f)) : n0(tot.f)) + "g", label: tg.fat ? "Fat left" : "Fat", sub: tg.fat ? `${n0(tot.f)} / ${n0(tg.fat)} g` : "today", onclick: "M.homeSection('health')"}; }
-  if (id === "water"){ const ml = (S.water[t] || 0) * 250, goal = S.settings.waterGoal || 2500; return {kind: "ring", pct: ml / goal * 100, color: "#4CC4E0", center: (ml / 1000).toFixed(1).replace(/\.0$/, "") + "L", label: "Water", sub: `${Math.round(ml / goal * 100)}% of goal`, onclick: "M.homeSection('health')"}; }
+  if (id === "water"){ const ml = (S.water[t] || 0) * 250, goal = S.settings.waterGoal || 2500; return {kind: "ring", pct: ml / goal * 100, color: "#4CC4E0", center: (ml / 1000).toFixed(1).replace(/\.0$/, "") + "L", label: tr("Water"), sub: `${Math.round(ml / goal * 100)}% ${tr("of goal")}`, onclick: "M.homeSection('health')"}; }
   if (id === "wellness"){ const c = (typeof todayCheckin === "function") ? todayCheckin() : null; const s = c ? checkinScore(c) : null; return {kind: "ring", pct: s || 0, color: s != null ? scoreColor(s) : "var(--txt3)", center: s != null ? "" + s : "—", label: "Wellness", sub: s != null ? "today's score" : "check in", onclick: "M.goWellness()"}; }
   if (id === "sleep"){ const l = [...(S.sleep || [])].sort((a, b) => a.date < b.date ? -1 : 1).pop(); return {kind: "tile", icon: "moon", label: "Last sleep", val: l ? l.hours + " h" : "—", sub: l ? fmtDate(l.date) : "not logged", onclick: "M.goHealth('sleep')"}; }
   if (id === "mood"){ const c = (typeof todayCheckin === "function") ? todayCheckin() : null; const f = c && c.mood ? MOOD_FACES.find(x => x.v === c.mood) : null; return {kind: "tile", icon: "smile", label: "Mood", val: f ? f.l : "—", sub: c && checkinScore(c) != null ? "score " + checkinScore(c) : "check in", onclick: "M.goWellness()"}; }
@@ -3475,7 +3844,7 @@ function homeHTML(){
   const chip = (id, label, color, dot) => `<button class="mode-chip ${id === R.homeSection ? "on" : ""}" style="--mc:${color}" onclick="M.homeSection('${id}')">${dot ? `<span class="d"></span>` : ""}${esc(label)}</button>`;
   return `
     <div class="home-hero">
-      <div class="hdate">${new Date().toLocaleDateString("en-GB", {weekday: "long", day: "numeric", month: "long"})}</div>
+      <div class="hdate">${new Date().toLocaleDateString(uiLang() || "en-GB", {weekday: "long", day: "numeric", month: "long"})}</div>
       <div class="hi">${greeting()}</div>
       <div class="q">${t("How can I help you today?")}</div>
     </div>
@@ -5277,7 +5646,7 @@ function insightsHTML(){
     <h3>${ic("chart", 16)} Last 7 days ${streak > 1 ? `<span class="badge" style="margin-inline-start:auto">${streak}-day streak</span>` : ""}</h3>
     <svg viewBox="0 0 154 46" style="width:100%;height:56px;display:block;margin:4px 0 8px">${tLine}${bars}</svg>
     <div class="muted" style="font-size:12.5px">
-      Avg <b>${n0(avgK)} kcal</b> · <b>${n1(avgP)} g protein</b> on logged days${tg.kcal ? ` · on target <b>${onTarget}/${logged.length}</b>` : ""} · water goal hit <b>${waterHit}/7</b>
+      ${tr("Avg")} <b>${n0(avgK)} kcal</b> · <b>${n1(avgP)} ${tr("g protein")}</b> ${tr("on logged days")}${tg.kcal ? ` · ${tr("on target")} <b>${onTarget}/${logged.length}</b>` : ""} · ${tr("water goal hit")} <b>${waterHit}/7</b>
     </div>
   </div>`;
 }
@@ -5625,14 +5994,14 @@ function foodHTML(){
   return `
   <button class="cat-back" aria-label="Back to Home" onclick="M.backToHome('health')">${ic("back", 18)} ${t("Home")}</button>
   <div class="card">
-    <h3>${ic("target", 16)} ${t("Today")} <span class="tiny" style="margin-inline-start:auto;font-weight:400">${new Date().toLocaleDateString("en-GB",{day:"numeric",month:"long"})}</span></h3>
+    <h3>${ic("target", 16)} ${t("Today")} <span class="tiny" style="margin-inline-start:auto;font-weight:400">${new Date().toLocaleDateString(uiLang() || "en-GB",{day:"numeric",month:"long"})}</span></h3>
     <div class="bars">
       ${macroBar(t("Calories"), tot.kcal, tg.kcal, "kcal", "var(--acc)")}
       ${macroBar(t("Protein"), tot.p, tg.protein, "g", "#4CC4E0")}
       ${macroBar(t("Carbs"), tot.c, tg.carbs, "g", "#F5B851")}
       ${macroBar(t("Fat"), tot.f, tg.fat, "g", "#A78BFA")}
     </div>
-    <div class="muted" style="margin-top:9px">${t("Remaining")}: <b>${n0(Math.max(0, tg.kcal - tot.kcal))} kcal</b> · <b>${n1(Math.max(0, tg.protein - tot.p))} g protein</b>${tg.carbs ? ` · ${n1(Math.max(0, tg.carbs - tot.c))} g carbs` : ""}${tg.fat ? ` · ${n1(Math.max(0, tg.fat - tot.f))} g fat` : ""}</div>
+    <div class="muted" style="margin-top:9px">${t("Remaining")}: <b>${n0(Math.max(0, tg.kcal - tot.kcal))} kcal</b> · <b>${n1(Math.max(0, tg.protein - tot.p))} ${tr("g protein")}</b>${tg.carbs ? ` · ${n1(Math.max(0, tg.carbs - tot.c))} ${tr("g carbs")}` : ""}${tg.fat ? ` · ${n1(Math.max(0, tg.fat - tot.f))} ${tr("g fat")}` : ""}</div>
     ${microStripHTML(tot)}
   </div>
 
@@ -5643,7 +6012,7 @@ function foodHTML(){
   ${finishDayCardHTML()}
 
   <div class="card">
-    <h3>${ic("droplet", 16)} ${t("Hydration")} <span class="tiny" style="margin-inline-start:auto;font-weight:400">${glasses} glasses · ${litres.toFixed(2)} L / ${(S.settings.waterGoal/1000).toFixed(2)} L</span></h3>
+    <h3>${ic("droplet", 16)} ${t("Hydration")} <span class="tiny" style="margin-inline-start:auto;font-weight:400">${glasses} ${tr("glasses")} · ${litres.toFixed(2)} L / ${(S.settings.waterGoal/1000).toFixed(2)} L</span></h3>
     <div class="glasses">${Array.from({length: goalGl}, (_, i) =>
       `<button class="glass ${i < glasses ? "f" : ""}" aria-label="Glass ${i + 1} of ${goalGl}" aria-pressed="${i < glasses}" onclick="M.water(${i})">${glassSvg(i < glasses)}</button>`).join("")}</div>
     <div class="bar"><i style="width:${wPct}%;background:var(--water)"></i></div>
@@ -7705,7 +8074,7 @@ function trainLibHTML(){
       ${list.length ? list.map((x, i) => `<div class="lib-item">
         <button class="feat-card" style="flex:1;min-width:0" onclick="M.libPick(${i})">
           <span class="fc-tx"><span class="fc-nm" dir="auto">${esc(x.n)}${x.user ? ` <span class="tiny">· ${tr("yours")}</span>` : ""}</span>
-            <span class="fc-ds">${esc(x.m)}${x.e ? " · " + esc(x.e) : ""}</span></span>
+            <span class="fc-ds">${esc(tr(x.m))}${x.e ? " · " + esc(tr(x.e)) : ""}</span></span>
           <span class="fc-ar">${R.trainWO || R.progAddEx ? ic("plus", 17) : ic("chevR", 16)}</span>
         </button>
         <button class="icon-btn demo-btn lib-demo" aria-label="${tr("How-to")}" data-n="${esc(x.n)}" onclick="M.exDemo(this.dataset.n)">${ic("book", 17)}</button>
@@ -8156,8 +8525,8 @@ function healthSnacksHTML(){
     <div class="card">
       <h3>${ic("food", 16)} Snacks that fit your day</h3>
       <div class="muted" style="margin:2px 0 12px">${remK != null
-        ? `You have about <b>${n0(remK)} kcal</b>${remP != null ? ` and <b>${n1(remP)} g protein</b>` : ""} left today. MIRA can suggest healthy snacks that fit — grounded in evidence, macros labelled as estimates.`
-        : `Set daily targets in Settings and MIRA will tailor snacks to what's left in your day. Meanwhile, here are solid go-to options below.`}</div>
+        ? `${tr("You have about")} <b>${n0(remK)} kcal</b>${remP != null ? ` ${tr("and")} <b>${n1(remP)} ${tr("g protein")}</b>` : ""} ${tr("left today. MIRA can suggest healthy snacks that fit — grounded in evidence, macros labelled as estimates.")}`
+        : tr("Set daily targets in Settings and MIRA will tailor snacks to what's left in your day. Meanwhile, here are solid go-to options below.")}</div>
       <button class="btn sm" onclick="M.snackSuggest()" ${busy ? "disabled" : ""}>${busy ? "Thinking…" : ic("search", 15) + (ideas.length ? " Suggest again" : " Suggest snacks that fit my day")}</button>
       ${ideas.length ? `<div class="ideas-head"><span>Suggested for you</span><button class="ideas-x" onclick="M.snackClear()">${ic("x", 15)} Dismiss</button></div>
       <div class="snack-grid">${ideas.map((s, i) => `<div class="snack-card ai">
@@ -8393,7 +8762,7 @@ function recipeCardHTML(r){
     ${recipeHeroHTML(r, false)}
     <div class="rc-body">
       <div class="rc-nm" dir="auto">${esc(r.name)}</div>
-      <div class="rc-macros">${n0(r.per.kcal)} kcal · ${n0(r.per.p)}g protein</div>
+      <div class="rc-macros">${n0(r.per.kcal)} kcal · ${n0(r.per.p)} ${tr("g protein")}</div>
       ${(r.tags || []).length ? `<div class="rc-tags">${r.tags.slice(0, 2).map(t => `<span class="rc-tag">${esc(tagLabel(t))}</span>`).join("")}</div>` : ""}
     </div>
   </button>`;
@@ -8696,7 +9065,7 @@ function wellnessHTML(){
   return `
     <button class="cat-back" onclick="M.backToHome('health')">${ic("back", 18)} ${tr("Home")}</button>
     <div class="cat-title"><div class="ch-nm">${tr("Wellness check-in")}</div>
-      <div class="ch-ds">${new Date().toLocaleDateString("en-GB", {weekday: "long", day: "numeric", month: "long"})}</div></div>
+      <div class="ch-ds">${new Date().toLocaleDateString(uiLang() || "en-GB", {weekday: "long", day: "numeric", month: "long"})}</div></div>
 
     <div class="card">
       <h3 style="justify-content:center">${tr("How are you feeling today?")}</h3>
@@ -10251,7 +10620,7 @@ function settingsHTML(){
         <option value="match" ${(st.lang || "match") === "match" ? "selected" : ""}>${tr("Match what I write")}</option>
         ${LANGUAGES.map(([code, en, native]) => `<option value="${code}" ${st.lang === code ? "selected" : ""}>${native}${native === en ? "" : " — " + en}</option>`).join("")}
       </select>
-      <div class="tiny" style="margin-top:8px">MIRA writes all its replies, suggestions, macro lookups and reviews in this language. Choose <b>Match what I write</b> to switch language mid-conversation. Menu labels stay in English for now.</div></div>
+      <div class="tiny" style="margin-top:8px">MIRA writes all its replies, suggestions, macro lookups and reviews in this language. Choose <b>Match what I write</b> to switch language mid-conversation.</div></div>
   </div>
 
   <div class="card" id="setAppearance">
