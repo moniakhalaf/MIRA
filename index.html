@@ -1575,7 +1575,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.169";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.170";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1948,6 +1948,22 @@ const TR = {
     "and":"و",
     "No PIN set. Add a 4-digit PIN to gate entry to MIRA.":"لا يوجد رمز PIN. أضِف رمزًا من 4 أرقام لتقييد الدخول إلى ميرا.",
     "of goal":"من الهدف",
+    "Circle & Coach — progress sharing":"الدائرة والمدرّب — مشاركة التقدّم",
+    "Share summaries of your weight, nutrition adherence and training with a coach or family — never your food diary, chat or budget. Everything stays on your device; a code is the only thing that changes hands.":"شارك ملخّصات وزنك والتزامك الغذائي وتدريبك مع مدرّب أو العائلة — دون مذكّرة طعامك أو محادثاتك أو ميزانيتك أبدًا. كل شيء يبقى على جهازك؛ ولا يتبادل سوى رمز.",
+    "Coaches: ask each member for their code and add them all below to see your whole group in one place.":"للمدرّبين: اطلب من كل عضو رمزه وأضِفهم جميعًا أدناه لرؤية مجموعتك كاملة في مكان واحد.",
+    "Share my progress with a coach":"شارك تقدّمي مع مدرّب",
+    "Add a member / follow someone":"أضِف عضوًا / تابِع شخصًا",
+    "My group":"مجموعتي",
+    "workouts":"تمرين",
+    "shared: weight, nutrition & training summaries":"المُشارَك: ملخّصات الوزن والتغذية والتدريب",
+    "Workouts / 30d":"تمارين / 30 يومًا",
+    "Volume kg / 30d":"الحجم كغم / 30 يومًا",
+    "Day streak":"سلسلة الأيام",
+    "new personal best (30 days)":"رقم شخصي جديد (30 يومًا)",
+    "new personal bests (30 days)":"أرقام شخصية جديدة (30 يومًا)",
+    "Weekly training volume (kg, last 8 weeks)":"حجم التدريب الأسبوعي (كغم، آخر 8 أسابيع)",
+    "Top lifts (est. 1RM)":"أفضل الرفعات (تقدير أقصى تكرار)",
+    "No training shared yet.":"لم يُشارَك تدريب بعد.",
     "Reading the photo…":"جارٍ قراءة الصورة…",
     "Snap my portion — estimate from a photo":"صوّر حصّتي — تقدير من صورة",
     "Or snap a photo of your plate and MIRA estimates the portion size, then applies this recipe's macros.":"أو صوّر طبقك وتقدّر ميرا حجم الحصّة، ثم تطبّق ماكروز هذه الوصفة.",
@@ -9283,7 +9299,34 @@ function progressPayload(){
     .sort((a, b) => a.d < b.d ? -1 : 1);
   const tg = S.settings.targets || {};
   return {v: 1, name: (S.settings.name || "").trim(), ts: Date.now(),
-    tg: {k: num(tg.kcal) || null, p: num(tg.protein) || null}, weight, nutrition};
+    tg: {k: num(tg.kcal) || null, p: num(tg.protein) || null}, weight, nutrition, training: trainingSummary()};
+}
+// Coach-facing TRAINING summary — counts, volume, streak, PRs and an 8-week
+// volume trend. Aggregates only (no per-set detail), matching the "summaries,
+// never your full diary" promise. Returns null when nothing has been logged.
+function trainingSummary(){
+  const tw = (S.workouts || []).slice().sort((a, b) => (a.ts || 0) - (b.ts || 0));
+  if (!tw.length) return null;
+  const now = Date.now(), day = 864e5;
+  const dstr = ms => new Date(ms).toLocaleDateString("en-CA");
+  const weeks = [];
+  for (let k = 7; k >= 0; k--){
+    const start = dstr(now - (k * 7 + 6) * day), end = dstr(now - k * 7 * day);
+    weeks.push(Math.round(tw.filter(w => w.date >= start && w.date <= end).reduce((a, w) => a + woVolume(w), 0)));
+  }
+  const since30 = dstr(now - 29 * day);
+  const recent30 = tw.filter(w => w.date >= since30);
+  const names30 = [...new Set(recent30.flatMap(w => (w.items || []).map(it => it.name)))];
+  let prs30 = 0;
+  names30.forEach(nm => { const inP = bestE1RM(nm, w => w.date >= since30), before = bestE1RM(nm, w => w.date < since30); if (inP > 0 && inP > before) prs30++; });
+  const allNames = [...new Set(tw.flatMap(w => (w.items || []).map(it => it.name)))];
+  const top = allNames.map(nm => ({n: nm, e: +bestE1RM(nm, () => true).toFixed(1)})).filter(x => x.e > 0).sort((a, b) => b.e - a.e).slice(0, 3);
+  return {
+    sessions: tw.length, sessions30: recent30.length,
+    vol30: Math.round(recent30.reduce((a, w) => a + woVolume(w), 0)),
+    prs30, streak: logStreak(d => tw.some(w => w.date === d)),
+    weeks, top, last: tw[tw.length - 1].date,
+  };
 }
 function encodeProgress(obj){
   try { return PROG_PREFIX + btoa(unescape(encodeURIComponent(JSON.stringify(obj)))); } catch (e){ return ""; }
@@ -9310,13 +9353,16 @@ function followerStats(f){
 }
 function circleHTML(){
   const p = progressPayload();
-  const mine = `${p.weight.length} ${tr("weigh-ins")} · ${p.nutrition.length} ${tr("days logged")}`;
+  const tSum = p.training;
+  const mine = `${p.weight.length} ${tr("weigh-ins")} · ${p.nutrition.length} ${tr("days logged")}${tSum ? ` · ${tSum.sessions} ${tr("workouts")}` : ""}`;
   const share = R.circleShareOpen ? encodeProgress(p) : "";
+  const coach = S.followers.length;
   return `<div class="card" id="setCircle">
-    <h3><span class="set-ic">${ic("users", 16)}</span> ${tr("Circle — progress sharing")}</h3>
-    <div class="tiny" style="margin-bottom:12px;color:var(--txt2)">${tr("Share only your weight and nutrition adherence with a coach or family — never your food diary, chat or budget. Private and on your device.")}</div>
+    <h3><span class="set-ic">${ic("users", 16)}</span> ${tr("Circle & Coach — progress sharing")}</h3>
+    <div class="tiny" style="margin-bottom:12px;color:var(--txt2)">${tr("Share summaries of your weight, nutrition adherence and training with a coach or family — never your food diary, chat or budget. Everything stays on your device; a code is the only thing that changes hands.")}</div>
+    <div class="tiny" style="margin:-6px 0 12px;color:var(--txt3)">${ic("info", 12)} ${tr("Coaches: ask each member for their code and add them all below to see your whole group in one place.")}</div>
     <div class="set-row" style="padding-top:0">
-      <div><div class="k">${ic("share", 14)} ${tr("Share my progress")}</div><div class="desc">${esc(mine)}</div></div>
+      <div><div class="k">${ic("share", 14)} ${tr("Share my progress with a coach")}</div><div class="desc">${esc(mine)}</div></div>
       <span class="end"><button class="btn sm" onclick="M.circleShareToggle()">${R.circleShareOpen ? tr("Hide") : tr("Get my code")}</button></span>
     </div>
     ${R.circleShareOpen ? `<div class="review-item" style="margin-top:8px">
@@ -9328,18 +9374,18 @@ function circleHTML(){
       <div class="tiny" style="margin-top:8px;color:var(--txt2)">${tr("Send this to whoever tracks you. Re-send it any time to update them.")}</div>
     </div>` : ""}
     <div class="set-row">
-      <div><div class="k">${ic("plus", 14)} ${tr("Follow someone")}</div><div class="desc">${tr("Paste the code they sent you")}</div></div>
+      <div><div class="k">${ic("plus", 14)} ${tr("Add a member / follow someone")}</div><div class="desc">${tr("Paste the code they sent you")}</div></div>
       <span class="end"><button class="btn sm sec" onclick="M.followerAddToggle()">${R.followerAddOpen ? tr("Cancel") : tr("Add")}</button></span>
     </div>
     ${R.followerAddOpen ? `<div class="review-item" style="margin-top:8px">
       <textarea id="progPaste" class="prog-code" rows="3" placeholder="${tr("Paste their progress code (starts with MIRA-PROGRESS)")}" oninput="R.circleImport=this.value"></textarea>
       <button class="btn sm" style="margin-top:8px" onclick="M.followerImport()">${ic("check", 14)} ${tr("Add / update")}</button>
     </div>` : ""}
-    ${S.followers.length ? `<div class="set-sub">${tr("People I follow")}</div>
-      ${S.followers.map(f => { const s = followerStats(f); return `<button class="feat-card" style="--fc:var(--acc)" onclick="M.followerOpen('${f.id}')">
+    ${S.followers.length ? `<div class="set-sub">${tr("My group")} (${S.followers.length})</div>
+      ${S.followers.map(f => { const s = followerStats(f); const tw = f.training; return `<button class="feat-card" style="--fc:var(--acc)" onclick="M.followerOpen('${f.id}')">
         <span class="fc-ic">${ic("user", 18)}</span>
         <span class="fc-tx"><span class="fc-nm" dir="auto">${esc(f.name || tr("Someone"))}</span>
-          <span class="fc-ds">${s.hasWeight && s.wLast ? `${n1(s.wLast.w)} kg${s.wChange != null && s.wChange !== 0 ? ` (${s.wChange > 0 ? "+" : ""}${s.wChange})` : ""} · ` : ""}${s.days} ${tr("days logged")}</span></span>
+          <span class="fc-ds">${s.hasWeight && s.wLast ? `${n1(s.wLast.w)} kg${s.wChange != null && s.wChange !== 0 ? ` (${s.wChange > 0 ? "+" : ""}${s.wChange})` : ""} · ` : ""}${s.days} ${tr("days logged")}${tw && tw.sessions30 ? ` · ${tw.sessions30} ${tr("workouts")}` : ""}</span></span>
         <span class="fc-ar">${ic("chevR", 16)}</span></button>`; }).join("")}` : ""}
   </div>`;
 }
@@ -9356,7 +9402,7 @@ function followerSheetHTML(){
     <div class="grab"></div>
     <div class="wo-hd" style="margin-bottom:12px"><h3 style="flex:1;margin:0" dir="auto">${esc(f.name || tr("Someone"))}</h3>
       <button class="icon-btn" aria-label="${tr("Close")}" onclick="M.followerClose()">${ic("x", 18)}</button></div>
-    <div class="tiny" style="color:var(--txt2);margin:-6px 0 14px">${tr("updated")} ${fmtDate(new Date(f.ts).toLocaleDateString("en-CA"))} · ${tr("shared: weight + nutrition only")}</div>
+    <div class="tiny" style="color:var(--txt2);margin:-6px 0 14px">${tr("updated")} ${fmtDate(new Date(f.ts).toLocaleDateString("en-CA"))} · ${tr("shared: weight, nutrition & training summaries")}</div>
 
     <div class="cb-week-h">${tr("Weight & body")}</div>
     ${s.hasWeight ? `<div class="rev-grid" style="margin-bottom:10px">
@@ -9374,6 +9420,22 @@ function followerSheetHTML(){
       ${s.tgK ? `<div class="budget-top">${ic("check", 13)} ${tr("On target")} <b>${s.onTarget}/${s.days}</b> ${tr("logged days")} (${onPct}%)</div>` : ""}
       ${kSvg ? `<div class="tiny" style="margin:10px 2px 3px;color:var(--txt3)">${tr("Last 14 logged days (kcal)")}</div>${kSvg}` : ""}`
       : `<div class="muted" style="padding:6px 2px">${tr("No nutrition logged yet.")}</div>`}
+
+    ${(() => {
+      const tw = f.training;
+      const volSvg = tw && tw.weeks && tw.weeks.some(v => v > 0) ? barsSVG(tw.weeks, {color: "#C08CE0"}) : "";
+      return `<div class="cb-week-h" style="margin-top:16px">${tr("Training")}</div>
+      ${tw && tw.sessions ? `<div class="rev-grid" style="margin-bottom:10px">
+          <div class="rev-stat"><div class="rv">${n0(tw.sessions30)}</div><div class="rl">${tr("Workouts / 30d")}</div></div>
+          <div class="rev-stat"><div class="rv">${n0(tw.vol30)}</div><div class="rl">${tr("Volume kg / 30d")}</div></div>
+          <div class="rev-stat"><div class="rv">${n0(tw.streak)}</div><div class="rl">${tr("Day streak")}</div></div>
+        </div>
+        ${tw.prs30 ? `<div class="budget-top">${ic("award", 13)} <b>${tw.prs30}</b> ${tw.prs30 === 1 ? tr("new personal best (30 days)") : tr("new personal bests (30 days)")}</div>` : ""}
+        ${volSvg ? `<div class="tiny" style="margin:10px 2px 3px;color:var(--txt3)">${tr("Weekly training volume (kg, last 8 weeks)")}</div>${volSvg}` : ""}
+        ${tw.top && tw.top.length ? `<div class="tiny" style="margin:10px 2px 5px;color:var(--txt3)">${tr("Top lifts (est. 1RM)")}</div>
+          <div>${tw.top.map(t => `<div style="display:flex;justify-content:space-between;gap:10px;padding:6px 2px;border-bottom:1px dashed var(--line);font-size:13px"><span dir="auto">${esc(t.n)}</span><b style="white-space:nowrap">${n1(t.e)} kg</b></div>`).join("")}</div>` : ""}`
+        : `<div class="muted" style="padding:6px 2px">${tr("No training shared yet.")}</div>`}`;
+    })()}
 
     <button class="btn sec danger" style="width:100%;margin-top:16px" onclick="M.followerDel('${f.id}')">${ic("trash", 15)} ${tr("Remove from my circle")}</button>
   </div>`;
