@@ -1575,7 +1575,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.168";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.169";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1948,6 +1948,13 @@ const TR = {
     "and":"و",
     "No PIN set. Add a 4-digit PIN to gate entry to MIRA.":"لا يوجد رمز PIN. أضِف رمزًا من 4 أرقام لتقييد الدخول إلى ميرا.",
     "of goal":"من الهدف",
+    "Reading the photo…":"جارٍ قراءة الصورة…",
+    "Snap my portion — estimate from a photo":"صوّر حصّتي — تقدير من صورة",
+    "Or snap a photo of your plate and MIRA estimates the portion size, then applies this recipe's macros.":"أو صوّر طبقك وتقدّر ميرا حجم الحصّة، ثم تطبّق ماكروز هذه الوصفة.",
+    "This recipe has no macros yet — set them first.":"هذه الوصفة بلا ماكروز بعد — حدّدها أولًا.",
+    "Estimated from your photo. Macros come from your saved recipe — adjust the grams if it looks off.":"مُقدّرة من صورتك. الماكروز من وصفتك المحفوظة — عدّل الغرامات إن بدت غير دقيقة.",
+    "Estimated from your photo. Macros come from your saved recipe — adjust the servings if it looks off.":"مُقدّرة من صورتك. الماكروز من وصفتك المحفوظة — عدّل عدد الحصص إن بدت غير دقيقة.",
+    "Portion of your saved recipe":"حصّة من وصفتك المحفوظة",
     "Set daily targets in Settings and MIRA will tailor snacks to what's left in your day. Meanwhile, here are solid go-to options below.":"حدّد أهدافًا يومية في الإعدادات وستُخصّص ميرا الوجبات الخفيفة لما تبقّى من يومك. وفي الأثناء، إليك خيارات مثالية أدناه.",
     "Avg":"متوسّط","on target":"ضمن الهدف","water goal hit":"تحقّق هدف الماء",
     "on logged days":"في الأيام المسجَّلة",
@@ -5579,6 +5586,7 @@ let findBusy = false, extractBusy = false, barcodeBusy = false;
 const dishForm = {open: false, editId: null, name: "", makes: "1", ate: "1", cookedG: "", perServingG: "", ateG: "",
   ings: [{n: "", a: ""}, {n: "", a: ""}, {n: "", a: ""}], res: null};
 let dishBusy = false;
+let recipePortionBusy = false;   // reading a plate photo to size a saved-recipe portion
 
 /* time helpers for food entries (each log records the time it was eaten) */
 function nowHM(){ const d = new Date(); return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); }
@@ -6440,7 +6448,7 @@ function reviewHTML(){
           <input id="rvHad${i}" type="number" inputmode="decimal" value="${esc(it.had)}" oninput="M.reviewScale(${i}, this.value)">
           <span class="rv-unit">${esc(it.unit)}</span>
           ${it.pkg && it.pkg !== it.basis ? `<button class="rv-pack" onclick="M.reviewScale(${i}, ${it.pkg})">Whole pack (${n0(it.pkg)} ${esc(it.unit)})</button>` : ""}
-          <div class="rv-note">Label shows values per <b>${n0(it.basis)} ${esc(it.unit)}</b> — the macros below scale to your amount.</div>
+          <div class="rv-note">${it.scaleNote ? esc(it.scaleNote) : `Label shows values per <b>${n0(it.basis)} ${esc(it.unit)}</b> — the macros below scale to your amount.`}</div>
         </div>` : `<div class="rv-scale">
           <label>Portion</label>
           <input id="rvPor${i}" type="number" inputmode="decimal" step="0.25" min="0" value="${esc(it.mult != null ? it.mult : 1)}" oninput="M.reviewPortion(${i}, this.value)">
@@ -8836,7 +8844,8 @@ function recipeGramCardHTML(r){
       <div class="field"><label>${tr("Grams I ate")}</label><input id="recipeGramsIn" type="number" inputmode="decimal" min="0" value="${esc(R.recipeGrams || "")}" ${cw > 0 ? "" : "disabled"} oninput="R.recipeGrams=this.value;M.recipeGramPreview('${r.id}')"></div>
     </div>
     <button class="btn sm" id="recipeLogBtn" style="margin-top:8px;width:100%" onclick="M.recipeGramLog('${r.id}')" ${canLog ? "" : "disabled"}>${ic("plus", 14)} ${tr("Log")}${grams > 0 ? " " + n0(grams) + " g" : ""}</button>
-    <div class="tiny" style="margin-top:7px;color:var(--txt2)">${tr("Weigh the whole cooked dish once; then log by grams each time. Per-gram macros come from the recipe total.")}</div>
+    <button class="btn sm sec" style="margin-top:8px;width:100%" onclick="M.recipePhotoPortion('${r.id}')" ${recipePortionBusy ? "disabled" : ""}>${recipePortionBusy ? tr("Reading the photo…") : ic("camera", 14) + " " + tr("Snap my portion — estimate from a photo")}</button>
+    <div class="tiny" style="margin-top:7px;color:var(--txt2)">${tr("Weigh the whole cooked dish once; then log by grams each time. Per-gram macros come from the recipe total.")} ${tr("Or snap a photo of your plate and MIRA estimates the portion size, then applies this recipe's macros.")}</div>
   </div>`;
 }
 function recipeDetailHTML(){
@@ -12680,6 +12689,61 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
     logFood({name: r.name, amount: `${n0(g)} g`, kcal: Math.round(t.kcal * k), p: +(t.p * k).toFixed(1), c: +(t.c * k).toFixed(1), f: +(t.f * k).toFixed(1), conf: "estimate"});
     R.recipeGrams = ""; render();
     toast(`Logged ${n0(g)} g of ${r.name} ✓`);
+  },
+  // Snap a photo of a served plate of THIS saved recipe. MIRA only estimates the
+  // portion SIZE from the picture; the macros come from the recipe's own stored
+  // figures (per-gram of the cooked dish when its weight is known, else per
+  // serving). The result opens in Review with a scaler so you can nudge the size.
+  recipePhotoPortion(id){
+    const r = S.recipes.find(x => x.id === id); if (!r) return;
+    if (!S.settings.apiKey){ toast("Add your API key in Settings first."); return; }
+    const whole = recipeTotal(r);
+    if (!whole.kcal){ toast(tr("This recipe has no macros yet — set them first.")); return; }
+    const servings = Math.max(1, num(r.servings) || 1), cw = num(r.cookedWeight);
+    pickFile(async file => {
+      recipePortionBusy = true; render();
+      try {
+        const block = file.kind === "pdf"
+          ? {type: "document", source: {type: "base64", media_type: "application/pdf", data: file.data}}
+          : {type: "image", source: {type: "base64", media_type: file.media_type, data: file.data}};
+        const ctx = cw > 0
+          ? `The whole cooked dish weighs about ${n0(cw)} g and makes ${servings} serving(s).`
+          : `The dish makes ${servings} serving(s).`;
+        const txt = await llmJsonCall(
+          `You are MIRA's portion-size estimator. The image shows a served portion of "${r.name}" — a dish whose full macros are ALREADY known, so you must NOT estimate macros, only the SIZE of the portion on the plate. Use visual cues (plate/bowl diameter, cutlery, hand, packaging) to judge how much is shown. ${cw > 0 ? `Return "grams": the portion's weight in grams of the finished dish.` : `Return "servings": how many servings of the dish are shown (a fraction is fine).`} Also return a short "note" describing what you saw. Reply with ONLY JSON: {"grams":num,"servings":num,"note":str}. Use 0 for a value you cannot estimate.${replyLangNote()}`,
+          [block, {type: "text", text: `Estimate the portion size shown of my saved dish. ${ctx}`}],
+          500);
+        const j = tryParseJson(txt);
+        let base, basis, unit, had, scaleNote;
+        if (cw > 0){
+          base = {kcal: whole.kcal * 100 / cw, p: whole.p * 100 / cw, c: whole.c * 100 / cw, f: whole.f * 100 / cw};   // per 100 g cooked
+          basis = 100; unit = "g";
+          had = num(j.grams) > 0 ? Math.round(num(j.grams))
+            : (num(j.servings) > 0 ? Math.round(num(j.servings) * cw / servings) : Math.round(cw / servings));
+          scaleNote = tr("Estimated from your photo. Macros come from your saved recipe — adjust the grams if it looks off.");
+        } else {
+          base = {kcal: num(r.per.kcal), p: num(r.per.p), c: num(r.per.c), f: num(r.per.f)};   // per serving
+          basis = 1; unit = tr("serving");
+          had = num(j.servings) > 0 ? +num(j.servings).toFixed(2) : 1;
+          scaleNote = tr("Estimated from your photo. Macros come from your saved recipe — adjust the servings if it looks off.");
+        }
+        const k = had / basis;
+        reviewItems = [{
+          name: r.name,
+          amount: unit === "g" ? `${n0(had)} g` : `${n1(had)} ${unit}`,
+          kcal: Math.round(base.kcal * k), p: +(base.p * k).toFixed(1), c: +(base.c * k).toFixed(1), f: +(base.f * k).toFixed(1),
+          conf: "estimate",
+          note: `${tr("Portion of your saved recipe")}${j.note ? " — " + j.note : ""}`,
+          basis, unit, baseMacros: base, had: String(had), scaleNote,
+        }];
+        R.recipeId = null; R.tab = "food"; R.homeCat = null; R.logFoodOpen = true;
+        render();
+        setTimeout(() => { const z = $("#reviewZone"); if (z) z.scrollIntoView({behavior: "smooth", block: "nearest"}); }, 60);
+      } catch (e) {
+        toast(e.status ? e.message : "Couldn't read that image.", 4000);
+      }
+      recipePortionBusy = false; render();
+    });
   },
   // Load a recipe's ingredient list into the "I cooked this" dish builder so the
   // user can price it from scratch instead of retyping — handy after tweaking a
