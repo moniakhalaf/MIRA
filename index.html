@@ -1592,7 +1592,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.173";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.174";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1887,6 +1887,8 @@ const TR = {
     "Choose \"Save as PDF\" in the print dialog.":"اختر «حفظ كـPDF» في نافذة الطباعة.",
     "Saved your values for this barcode — used automatically next scan ✓":"تم حفظ قيمك لهذا الباركود — ستُستخدم تلقائيًا في الفحص القادم ✓",
     "Saved your correction — used automatically next time you search this ✓":"تم حفظ تصحيحك — سيُستخدم تلقائيًا عند بحثك عن هذا لاحقًا ✓",
+    "Saved your correction — used automatically next time ✓":"تم حفظ تصحيحك — سيُستخدم تلقائيًا في المرة القادمة ✓",
+    "Used your saved values for this food ✓":"تم استخدام قيمك المحفوظة لهذا الطعام ✓",
     "Shared to the community database — thank you ✓":"تمت المشاركة في قاعدة بيانات المجتمع — شكرًا لك ✓",
     "Couldn't reach the community database. Check the settings and try again.":"تعذّر الوصول إلى قاعدة بيانات المجتمع. تحقّق من الإعدادات وحاول مجددًا.",
     "Paste a recipe link or the recipe text first.":"الصق رابط الوصفة أو نصّها أولًا.",
@@ -6482,6 +6484,16 @@ function acRender(q){
 }
 
 function reviewHTML(){
+  // Snapshot each item's pristine values once, so a later edit to ANY item —
+  // a photo estimate, a scanned label, an AI guess, not only a database search —
+  // is detected on accept and remembered as your value for next time.
+  (reviewItems || []).forEach(it => {
+    if (it && it._origMacros === undefined){
+      it._origMacros = {kcal: num(it.kcal), p: num(it.p), c: num(it.c), f: num(it.f)};
+      it._origAmount = it.amount || "";
+      it._origP100 = itemPer100(it);
+    }
+  });
   return `<div style="margin-top:14px">
     <b style="font-size:14px">Review before saving</b>
     <div class="tiny" style="margin-bottom:8px">MIRA never saves extracted or looked-up values without your review.</div>
@@ -6537,6 +6549,18 @@ function foodSaveDirect(){
     kcal: foodForm.kcal, p: foodForm.p, c: foodForm.c, f: foodForm.f,
     fiber: foodForm.fiber, sugar: foodForm.sugar, sodium: foodForm.sodium, conf: foodForm.conf || "user"};
   if (!it.name){ toast("Give the food a name."); return; }
+  // Left the macros blank? Fall back to your own saved values for this food (a
+  // past correction), scaled to the amount — so "next time, apply it" is automatic.
+  if (!num(it.kcal) && !num(it.p) && !num(it.c) && !num(it.f)){
+    const fx = (S.foodFixes || {})[foodFixKey(it.name)];
+    if (fx){
+      const rv = foodFixToReview(fx, amountToGrams(it.amount));
+      it.kcal = rv.kcal; it.p = rv.p; it.c = rv.c; it.f = rv.f;
+      if (!it.amount && rv.amount) it.amount = rv.amount;
+      it.conf = "user";
+      toast("Used your saved values for this food ✓", 3200);
+    }
+  }
   const s = sanity(it);
   if (s.errors.length){ toast(s.errors[0], 4200); return; }
   if (s.warnings.length) toast(s.warnings[0], 3600);
@@ -6549,12 +6573,14 @@ function foodSaveDirect(){
         kcal: num(it.kcal), p: num(it.p), c: num(it.c), f: num(it.f),
         fiber: num(it.fiber) || 0, sugar: num(it.sugar) || 0, sodium: num(it.sodium) || 0, conf: it.conf || "user"});
     }
+    if (f) rememberFoodValue(it);   // your hand-fixed macros become your value next time
     R.editFoodId = null;
     Object.assign(foodForm, clearForm);
     save(); render();
     toast(f ? "Entry updated ✓" : "That entry no longer exists.");
     return;
   }
+  rememberFoodValue(it);            // typed it yourself → remember it for next time
   logFood(it);
   Object.assign(foodForm, clearForm);
   render();
@@ -7570,6 +7596,14 @@ function saveFoodFix(name, it){
     S.foodFixes[key] = {name: it.name || name, amount: it.amount || "",
       macros: {kcal: num(it.kcal), p: num(it.p), c: num(it.c), f: num(it.f)}, ts: Date.now()};
   }
+}
+// Remember a food you logged/edited by hand as your own value for that name, so
+// the next time you add it MIRA can fill it in for you. Per-100 g when the amount
+// resolves to grams (scales to any portion later), else the literal values.
+function rememberFoodValue(it){
+  if (!it || !it.name || !it.name.trim()) return;
+  if (!(num(it.kcal) || num(it.p) || num(it.c) || num(it.f))) return;   // nothing to remember
+  saveFoodFix(it.name, it);
 }
 function foodFixToReview(fx, hadGrams){
   const noteTxt = "Your saved values for this food (from a past correction). Edit any time.";
@@ -12704,19 +12738,23 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
     if (it.conf === "community" && it.communityId) communityUse(it.communityId);
     // remember a scanned barcode's values so a wrong database is corrected for good
     if (it.barcode){ saveBarcodeFix(it.barcode, it); save(); toast("Saved your values for this barcode — used automatically next scan ✓", 4200); }
-    // remember a CORRECTED searched food (edited macros) so it's your value next time
-    else if (it._searchName){
-      const chg = (a, b) => Math.abs(num(a) - num(b)) > Math.max(1, Math.abs(num(b)) * 0.02);
-      const cur = itemPer100(it);
-      let edited = false;
-      if (cur && it._origP100){
-        edited = chg(cur.kcal, it._origP100.kcal) || chg(cur.p, it._origP100.p) || chg(cur.c, it._origP100.c) || chg(cur.f, it._origP100.f);
-      } else {
-        // grams unknown — only trust an edit when the amount itself is unchanged
-        const om = it._origMacros || {};
-        if ((it.amount || "") === (it._origAmount || "")) edited = chg(it.kcal, om.kcal) || chg(it.p, om.p) || chg(it.c, om.c) || chg(it.f, om.f);
+    // remember a CORRECTED food (edited macros) so it's your value next time — for
+    // ANY source: a database search, a photo estimate, a scanned label, an AI guess.
+    else {
+      const fixName = it._searchName || it.name;
+      if (fixName){
+        const chg = (a, b) => Math.abs(num(a) - num(b)) > Math.max(1, Math.abs(num(b)) * 0.02);
+        const cur = itemPer100(it);
+        let edited = false;
+        if (cur && it._origP100){
+          edited = chg(cur.kcal, it._origP100.kcal) || chg(cur.p, it._origP100.p) || chg(cur.c, it._origP100.c) || chg(cur.f, it._origP100.f);
+        } else {
+          // grams unknown — only trust an edit when the amount itself is unchanged
+          const om = it._origMacros || {};
+          if ((it.amount || "") === (it._origAmount || "")) edited = chg(it.kcal, om.kcal) || chg(it.p, om.p) || chg(it.c, om.c) || chg(it.f, om.f);
+        }
+        if (edited){ saveFoodFix(fixName, it); save(); toast("Saved your correction — used automatically next time ✓", 4200); }
       }
-      if (edited){ saveFoodFix(it._searchName, it); save(); toast("Saved your correction — used automatically next time you search this ✓", 4200); }
     }
     reviewItems.splice(i, 1);
     if (!reviewItems.length) reviewItems = null;
