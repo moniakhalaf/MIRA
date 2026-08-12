@@ -1447,6 +1447,12 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
 .prog-target{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--txt2);background:var(--bg2);border-radius:9px;padding:7px 10px;margin-bottom:8px}
 .prog-target.hit{color:var(--acc);background:var(--acc-soft)}
 .prog-target .prog-count{margin-inline-start:auto;font-variant-numeric:tabular-nums;font-weight:700}
+.prog-coach{display:flex;align-items:center;gap:7px;font-size:12px;line-height:1.35;border-radius:9px;padding:7px 10px;margin-bottom:8px;background:color-mix(in srgb, var(--green) 12%, transparent);color:var(--txt);border:1px solid color-mix(in srgb, var(--green) 40%, transparent)}
+.prog-coach svg{flex:0 0 auto;color:var(--green)}
+.prog-coach .pc-t{flex:1;min-width:0;unicode-bidi:plaintext}
+.prog-coach.deload{background:color-mix(in srgb, var(--amber) 14%, transparent);border-color:color-mix(in srgb, var(--amber) 45%, transparent)}
+.prog-coach.deload svg{color:var(--amber)}
+.prog-coach .pc-use{flex:0 0 auto;background:var(--green);color:var(--acc-ink,#04231a);border:none;border-radius:7px;padding:5px 12px;font-size:12px;font-weight:700}
 .prog-day{border:1px solid var(--line);border-radius:12px;margin-bottom:8px;overflow:hidden}
 .prog-day.open{border-color:var(--line2)}
 .prog-day-hd{display:flex;align-items:center;gap:10px;width:100%;padding:12px;background:var(--bg2);text-align:start}
@@ -1575,7 +1581,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.170";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.171";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1948,6 +1954,18 @@ const TR = {
     "and":"و",
     "No PIN set. Add a 4-digit PIN to gate entry to MIRA.":"لا يوجد رمز PIN. أضِف رمزًا من 4 أرقام لتقييد الدخول إلى ميرا.",
     "of goal":"من الهدف",
+    "Coach":"المدرّب",
+    "Use":"استخدم",
+    "Last":"آخر مرة",
+    "try":"جرّب",
+    "add a rep":"أضِف تكرارًا",
+    "same weight, add a rep":"نفس الوزن، أضِف تكرارًا",
+    "Stalled 3 sessions":"توقّف التقدّم 3 جلسات",
+    "deload to":"خفّف إلى",
+    "and build back up":"ثم ابنِ تصاعديًا",
+    "Ready to progress":"جاهز للتقدّم",
+    "Based on your last sessions — here's the next step for each lift. Beat them.":"بناءً على جلساتك الأخيرة — إليك الخطوة التالية لكل تمرين. تجاوزها.",
+    "Filled from your last session — beat it":"مُعبّأ من جلستك الأخيرة — تجاوزه",
     "Circle & Coach — progress sharing":"الدائرة والمدرّب — مشاركة التقدّم",
     "Share summaries of your weight, nutrition adherence and training with a coach or family — never your food diary, chat or budget. Everything stays on your device; a code is the only thing that changes hands.":"شارك ملخّصات وزنك والتزامك الغذائي وتدريبك مع مدرّب أو العائلة — دون مذكّرة طعامك أو محادثاتك أو ميزانيتك أبدًا. كل شيء يبقى على جهازك؛ ولا يتبادل سوى رمز.",
     "Coaches: ask each member for their code and add them all below to see your whole group in one place.":"للمدرّبين: اطلب من كل عضو رمزه وأضِفهم جميعًا أدناه لرؤية مجموعتك كاملة في مكان واحد.",
@@ -7847,6 +7865,76 @@ function lastPerf(name){
   return prev.items.find(it => it.name === name).sets.map(s => `${n1(s.weight)}×${s.reps}`).join(", ");
 }
 
+/* ---------------- Progressive-overload coach ----------------
+   Reads an exercise's own history and suggests the next concrete step using
+   double progression: climb reps to the top of the range, then add the smallest
+   sensible load increment and drop back down. Detects a 3-session stall and
+   suggests a small deload. Bodyweight moves progress on reps. */
+function exEquip(name){
+  const row = (typeof libAll === "function" ? libAll() : EXERCISE_LIBRARY).find(x => (x.n || "").toLowerCase() === String(name || "").toLowerCase());
+  if (row && row.e) return row.e;
+  const s = String(name || "").toLowerCase();
+  if (/\bdumbbell\b|\bdb\b/.test(s)) return "Dumbbell";
+  if (/kettlebell|\bkb\b/.test(s)) return "Kettlebell";
+  if (/\bcable\b/.test(s)) return "Cable";
+  if (/machine|leg press|pulldown|pec deck|hack squat/.test(s)) return "Machine";
+  if (/push-?up|pull-?up|chin-?up|\bdip\b|plank|bodyweight|sit-?up|crunch|lunge(?!.*dumbbell)/.test(s)) return "Bodyweight";
+  if (/barbell|bench press|back squat|front squat|deadlift|overhead press|\bohp\b|\brow\b|hip thrust|clean|snatch/.test(s)) return "Barbell";
+  return "";
+}
+function loadIncrement(equip){
+  if (equip === "Dumbbell") return 2;        // next dumbbell up (per hand)
+  if (equip === "Kettlebell") return 4;       // kettlebells jump in big steps
+  return 2.5;                                 // barbell / machine / cable smallest plate/pin
+}
+// Round to the nearest achievable load for the equipment (0.5 kg default).
+function roundLoad(w){ return Math.round(w / 0.5) * 0.5; }
+function progressionSuggest(name){
+  const sessions = S.workouts.filter(w => (w.items || []).some(it => it.name === name && (it.sets || []).some(s => num(s.reps) > 0)))
+    .sort((a, b) => b.ts - a.ts);
+  if (!sessions.length) return null;
+  const lastItem = sessions[0].items.find(it => it.name === name);
+  const sets = (lastItem.sets || []).filter(s => num(s.reps) > 0);
+  if (!sets.length) return null;
+  const equip = exEquip(name);
+  const bodyweight = equip === "Bodyweight" || sets.every(s => !(num(s.weight) > 0));
+  const topW = Math.max(...sets.map(s => num(s.weight)));
+  const repsAtTop = sets.filter(s => num(s.weight) === topW).map(s => num(s.reps));
+  const minReps = Math.min(...repsAtTop), maxReps = Math.max(...repsAtTop), setCount = repsAtTop.length;
+  // rep range to hit before adding load: a program's prescription wins, else inferred from the reps done
+  let lo, hi;
+  const tgReps = lastItem.target && lastItem.target.reps;
+  const m = tgReps != null && String(tgReps).match(/(\d+)\s*[–\-]\s*(\d+)/);
+  if (m){ lo = +m[1]; hi = +m[2]; }
+  else if (tgReps != null && /^\d+$/.test(String(tgReps))){ hi = +tgReps; lo = Math.max(1, hi - 2); }
+  else if (maxReps <= 5){ lo = 3; hi = 5; }              // strength
+  else if (maxReps <= 12){ lo = 8; hi = 12; }            // hypertrophy
+  else { lo = 12; hi = 15; }                             // endurance
+  // 3-session plateau at the same top weight with no rep gain → deload
+  const recent = sessions.slice(0, 3).map(w => {
+    const it = w.items.find(x => x.name === name), ss = (it.sets || []).filter(s => num(s.reps) > 0);
+    const tw = ss.length ? Math.max(...ss.map(s => num(s.weight))) : 0;
+    const rs = ss.filter(s => num(s.weight) === tw).map(s => num(s.reps));
+    return {tw, minR: rs.length ? Math.min(...rs) : 0};
+  });
+  const stalled = recent.length >= 3 && recent.every(r => r.tw === topW && topW > 0) && recent[0].minR <= recent[2].minR;
+  if (stalled && !bodyweight){
+    return {kind: "deload", weight: roundLoad(topW * 0.9), reps: hi,
+      text: `${tr("Stalled 3 sessions")} — ${tr("deload to")} ${n1(roundLoad(topW * 0.9))} kg ${tr("and build back up")}`};
+  }
+  if (bodyweight){
+    return {kind: "add-rep", reps: minReps + 1,
+      text: `${tr("Last")}: ${setCount}×${maxReps} → ${tr("add a rep")} (${minReps + 1})`};
+  }
+  if (minReps >= hi){
+    const nw = roundLoad(topW + loadIncrement(equip));
+    return {kind: "add-weight", weight: nw, reps: lo,
+      text: `${tr("Last")}: ${setCount}×${minReps} @ ${n1(topW)} kg → ${tr("try")} ${n1(nw)} kg (${tr("aim")} ${lo}–${hi})`};
+  }
+  return {kind: "add-rep", weight: topW, reps: minReps + 1,
+    text: `${tr("Last")}: ${setCount}×${minReps} @ ${n1(topW)} kg → ${tr("same weight, add a rep")} (${minReps + 1})`};
+}
+
 /* ---- rest timer (updates its own DOM node without a full re-render) ---- */
 let restIv = null, restEnd = 0, restTotal = 0;
 const restRemaining = () => Math.max(0, Math.ceil((restEnd - Date.now()) / 1000));
@@ -8061,6 +8149,7 @@ function exItemHTML(it, i, m){
       <button class="icon-btn demo-btn" aria-label="${tr("How-to")}" data-n="${esc(it.name)}" onclick="M.exDemo(this.dataset.n)">${ic("book", 16)}</button>
       <button class="del" style="flex:0 0 auto;color:var(--txt3)" aria-label="Remove exercise" onclick="M.woDelEx(${i})">✕</button>
     </div>
+    ${(() => { const sg = progressionSuggest(it.name); if (!sg) return ""; return `<div class="prog-coach ${sg.kind}">${ic("trend", 13)} <span class="pc-t"><b>${tr("Coach")}:</b> ${sg.text}</span>${(sg.weight != null || sg.reps != null) ? `<button class="pc-use" onclick="M.woUseSuggest(${i})">${tr("Use")}</button>` : ""}</div>`; })()}
     ${tg ? `<div class="prog-target ${hitTarget ? "hit" : ""}">${ic("target", 13)} ${tr("Target")}: <b>${tg.sets}×${esc(String(tg.reps))}</b>${tg.rest ? ` · ${tr("rest")} ${tg.rest}s` : ""} <span class="prog-count">${done}/${tg.sets}${hitTarget ? " ✓" : ""}</span></div>` : ""}
     ${it.sets.length ? `<div class="set-list">${it.sets.map((s, j) =>
       `<div class="set-row2"><span class="tiny">${tr("Set")} ${j + 1}</span><b>${n1(s.weight)} kg × ${s.reps}</b>
@@ -8172,6 +8261,14 @@ function trainCoachHTML(){
       <div class="field"><label>Coach name</label><input value="${esc(c.name || "")}" oninput="S.settings.coach.name=this.value;save()" placeholder="Who's coaching you?"></div>
       <div class="field" style="margin-bottom:0"><label>Coach email (optional)</label><input type="email" value="${esc(c.email || "")}" oninput="S.settings.coach.email=this.value;save()" placeholder="coach@example.com"></div>
     </div>
+    ${(() => {
+      const names = [...new Set((S.workouts || []).flatMap(w => (w.items || []).map(it => it.name)))];
+      const ready = names.map(n => ({n, sg: progressionSuggest(n)})).filter(x => x.sg && (x.sg.kind === "add-weight" || x.sg.kind === "deload"));
+      if (!ready.length) return "";
+      return `<div class="card"><h3>${ic("trend", 16)} ${tr("Ready to progress")}</h3>
+        <div class="tiny" style="color:var(--txt2);margin:-4px 0 10px">${tr("Based on your last sessions — here's the next step for each lift. Beat them.")}</div>
+        ${ready.slice(0, 10).map(x => `<div class="prog-coach ${x.sg.kind}" style="margin-top:6px"><span class="pc-t"><b dir="auto">${esc(x.n)}</b> — ${x.sg.text}</span></div>`).join("")}</div>`;
+    })()}
     <div class="card">
       <h3>${ic("share", 16)} Progress report</h3>
       <div class="muted" style="margin-bottom:10px">Workouts, PRs, nutrition adherence, hydration and weight over the period — as a message you send your coach.</div>
@@ -11180,6 +11277,16 @@ window.M = {
     M.woAddExercise(x);
   },
   libMuscle(m){ R.libMuscle = m; render(); },
+  // Pre-fill the reps/weight inputs with the coach's next-step suggestion.
+  woUseSuggest(i){
+    const it = R.trainWO && R.trainWO.items[i]; if (!it) return;
+    const sg = progressionSuggest(it.name); if (!sg) return;
+    const w = $("#ww" + i), r = $("#wr" + i);
+    if (w && sg.weight != null) w.value = n1(sg.weight);
+    if (r && sg.reps != null) r.value = sg.reps;
+    if (w && sg.weight != null) w.focus(); else if (r) r.focus();
+    toast(tr("Filled from your last session — beat it"), 1800);
+  },
   woAddSet(i){
     const r = num(($("#wr" + i) || {}).value), w = num(($("#ww" + i) || {}).value);
     if (r <= 0){ toast("Enter the reps."); return; }
