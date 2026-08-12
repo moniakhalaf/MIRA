@@ -831,6 +831,13 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
 .rc-stale svg{color:#E8A13A;flex:0 0 auto}
 .rc-stale>span{flex:1;min-width:150px;line-height:1.4}
 .rc-stale .btn{width:auto;flex:0 0 auto;padding:6px 14px;background:#E8A13A;border-color:#E8A13A;color:#241a06}
+.scan-ov{position:fixed;inset:0;z-index:9999;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.scan-vid{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.scan-frame{position:relative;width:min(74vw,320px);height:min(46vw,200px);border-radius:16px;box-shadow:0 0 0 100vmax rgba(0,0,0,.5);border:2px solid rgba(255,255,255,.85)}
+.scan-frame span{position:absolute;left:8px;right:8px;top:50%;height:2px;background:var(--acc,#E8A13A);box-shadow:0 0 10px 1px var(--acc,#E8A13A);animation:scanLine 1.6s ease-in-out infinite}
+@keyframes scanLine{0%,100%{transform:translateY(-58px)}50%{transform:translateY(58px)}}
+.scan-hint{position:relative;color:#fff;margin-top:26px;font-size:14px;font-weight:600;text-shadow:0 1px 4px rgba(0,0,0,.7);text-align:center;padding:0 20px}
+.scan-x{position:relative;margin-top:20px;background:rgba(255,255,255,.16);color:#fff;border:1px solid rgba(255,255,255,.4);border-radius:24px;padding:11px 30px;font-size:15px;font-weight:600;cursor:pointer;backdrop-filter:blur(6px)}
 .rc-list,.rc-steps{margin:8px 0 0;padding-inline-start:1.2em}
 .rc-list li,.rc-steps li{margin:.3em 0;line-height:1.45}
 .rc-formimg{width:100%;border-radius:12px;margin-bottom:10px;max-height:220px;object-fit:cover;display:block}
@@ -1585,7 +1592,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.172";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.173";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1830,6 +1837,9 @@ const TR = {
     "Give the food a name.":"أعطِ الطعام اسمًا.","Type what you ate first.":"اكتب ما أكلته أولًا.",
     "No database match for that. Add your API key in Settings to estimate it, or enter the macros yourself.":"لا يوجد تطابق في قواعد البيانات. أضِف مفتاح الـAPI في الإعدادات للتقدير، أو أدخِل الماكروز بنفسك.",
     "Photograph the barcode itself.":"صوّر الباركود نفسه.",
+    "Point the camera at the barcode":"وجّه الكاميرا نحو الباركود",
+    "Camera unavailable — snap a photo of the barcode instead.":"الكاميرا غير متاحة — التقط صورة للباركود بدلًا من ذلك.",
+    "Could not read a barcode — try a closer, sharper shot.":"تعذّرت قراءة الباركود — جرّب لقطة أقرب وأوضح.",
     "Could not read a barcode in that photo — try a closer, sharper shot.":"تعذّرت قراءة الباركود في الصورة — جرّب لقطة أقرب وأوضح.",
     "Could not read any items from that file.":"تعذّرت قراءة أي عناصر من هذا الملف.",
     "Rest done — next set.":"انتهت الراحة — المجموعة التالية.",
@@ -7574,37 +7584,100 @@ function foodFixToReview(fx, hadGrams){
   return {name: fx.name, amount: fx.amount || "", kcal: num(m.kcal), p: num(m.p), c: num(m.c), f: num(m.f), conf: "user", note: noteTxt};
 }
 
-async function scanBarcode(){
+// A scanned/decoded barcode → the most-trusted macros MIRA can find, dropped
+// into the review card. Shared by the live camera scanner and the photo path.
+async function barcodeLookup(code){
+  code = String(code || "").replace(/\D/g, "");
+  if (!code){ toast("Could not read a barcode — try a closer, sharper shot."); return; }
+  barcodeBusy = true; render();
+  try {
+    let item = null;
+    // 0) your own saved correction for this exact barcode wins — your pack is the truth
+    const fx = (S.barcodeFixes || {})[code];
+    if (fx) item = barcodeFixToReview(code, fx);
+    // 1) most-trusted database: USDA Branded (manufacturer label data). A
+    //    failure never blocks the OpenFoodFacts fallback.
+    if (!item){ try { item = await usdaBarcode(code, S.settings.usdaKey); } catch (e) { /* fall through */ } }
+    // 2) fallback: OpenFoodFacts (global coverage, community data, labelled)
+    if (!item){
+      const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${code}.json?fields=product_name,brands,nutriments,serving_size,serving_quantity,product_quantity`);
+      const j = await res.json();
+      if (j.status === 1 && j.product) item = barcodeToReview(code, j.product);
+    }
+    if (item){ item.barcode = code; reviewItems = [item]; }
+    else toast(`Barcode ${code} isn't in USDA or OpenFoodFacts — try "Find macros", or snap the label instead.`, 5200);
+  } catch (e) { toast("Barcode lookup failed: " + e.message, 4200); }
+  barcodeBusy = false; render();
+}
+
+// Photo fallback: for browsers without a live BarcodeDetector (e.g. iOS Safari),
+// the model reads the digits printed under the barcode from a still photo.
+async function scanBarcodePhoto(){
   if (!S.settings.apiKey){ toast("Add your API key in Settings first."); return; }
   pickFile(async file => {
     if (file.kind === "pdf"){ toast("Photograph the barcode itself."); return; }
     barcodeBusy = true; render();
+    let code = "";
     try {
       const txt = await llmJsonCall(
         `Read the retail barcode (EAN-13 / EAN-8 / UPC) in the photo. Reply with ONLY JSON: {"code":"digits"} — or {"code":null} if no barcode is clearly readable. Never guess digits.`,
         [{type: "image", source: {type: "base64", media_type: file.media_type, data: file.data}},
          {type: "text", text: "What are the barcode digits?"}],
         200);
-      const code = String(tryParseJson(txt).code || "").replace(/\D/g, "");
-      if (!code){ toast("Could not read a barcode in that photo — try a closer, sharper shot."); barcodeBusy = false; render(); return; }
-      let item = null;
-      // 0) your own saved correction for this exact barcode wins — your pack is the truth
-      const fx = (S.barcodeFixes || {})[code];
-      if (fx) item = barcodeFixToReview(code, fx);
-      // 1) most-trusted database: USDA Branded (manufacturer label data). A
-      //    failure never blocks the OpenFoodFacts fallback.
-      if (!item){ try { item = await usdaBarcode(code, S.settings.usdaKey); } catch (e) { /* fall through */ } }
-      // 2) fallback: OpenFoodFacts (global coverage, community data, labelled)
-      if (!item){
-        const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${code}.json?fields=product_name,brands,nutriments,serving_size,serving_quantity,product_quantity`);
-        const j = await res.json();
-        if (j.status === 1 && j.product) item = barcodeToReview(code, j.product);
-      }
-      if (item){ item.barcode = code; reviewItems = [item]; }
-      else toast(`Barcode ${code} isn't in USDA or OpenFoodFacts — try "Find macros", or snap the label instead.`, 5200);
-    } catch (e) { toast("Barcode lookup failed: " + e.message, 4200); }
-    barcodeBusy = false; render();
+      code = String(tryParseJson(txt).code || "").replace(/\D/g, "");
+    } catch (e) { toast("Barcode read failed: " + e.message, 4200); barcodeBusy = false; render(); return; }
+    barcodeBusy = false;
+    if (!code){ toast("Could not read a barcode in that photo — try a closer, sharper shot."); render(); return; }
+    barcodeLookup(code);
   });
+}
+
+// Live camera scanner using the phone's built-in BarcodeDetector — instant,
+// offline and free (no API call). Falls back to the photo+AI path when the
+// browser has no BarcodeDetector or camera access is refused.
+let _scan = {stream: null, timer: null, overlay: null, video: null, done: false};
+function stopLiveScan(){
+  if (_scan.timer){ clearInterval(_scan.timer); _scan.timer = null; }
+  if (_scan.stream){ try { _scan.stream.getTracks().forEach(t => t.stop()); } catch (e) {} _scan.stream = null; }
+  if (_scan.overlay && _scan.overlay.parentNode) _scan.overlay.parentNode.removeChild(_scan.overlay);
+  _scan.overlay = null; _scan.video = null;
+}
+async function scanBarcode(){
+  const canLive = ("BarcodeDetector" in window) && navigator.mediaDevices && navigator.mediaDevices.getUserMedia;
+  if (!canLive) return scanBarcodePhoto();
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({video: {facingMode: {ideal: "environment"}}});
+  } catch (e){ toast("Camera unavailable — snap a photo of the barcode instead."); return scanBarcodePhoto(); }
+  _scan.done = false; _scan.stream = stream;
+  const ov = document.createElement("div");
+  ov.className = "scan-ov";
+  ov.innerHTML = `<div class="scan-frame"><span></span></div>
+    <div class="scan-hint">${t("Point the camera at the barcode")}</div>
+    <button class="scan-x" type="button">${t("Cancel")}</button>`;
+  const video = document.createElement("video");
+  video.className = "scan-vid"; video.setAttribute("playsinline", ""); video.muted = true;
+  ov.insertBefore(video, ov.firstChild);
+  document.body.appendChild(ov);
+  _scan.overlay = ov; _scan.video = video;
+  ov.querySelector(".scan-x").onclick = () => stopLiveScan();
+  video.srcObject = stream;
+  try { await video.play(); } catch (e) {}
+  let detector;
+  try { detector = new BarcodeDetector({formats: ["ean_13", "ean_8", "upc_a", "upc_e", "code_128", "code_39"]}); }
+  catch (e){ stopLiveScan(); return scanBarcodePhoto(); }
+  _scan.timer = setInterval(async () => {
+    if (_scan.done || !_scan.video) return;
+    let codes;
+    try { codes = await detector.detect(_scan.video); } catch (e){ return; }
+    if (!codes || !codes.length) return;
+    const raw = String(codes[0].rawValue || "").replace(/\D/g, "");
+    if (raw.length < 8) return;                       // ignore partial reads
+    _scan.done = true;
+    if (navigator.vibrate) try { navigator.vibrate(40); } catch (e) {}
+    stopLiveScan();
+    barcodeLookup(raw);
+  }, 250);
 }
 
 // Safety net for photos of several identical items: the model sometimes emits
