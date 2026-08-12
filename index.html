@@ -827,6 +827,10 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
 .rcm span{font-size:11px;color:var(--txt2)}
 .rc-note{font-size:12.5px;color:var(--txt2);background:var(--card2);border:1px solid var(--line2);border-radius:11px;padding:9px 12px;margin-top:12px;display:flex;gap:7px;align-items:flex-start}
 .rc-note svg{color:var(--acc);flex:0 0 auto;margin-top:1px}
+.rc-stale{font-size:12.5px;background:color-mix(in srgb,#E8A13A 16%,var(--card2));border:1px solid color-mix(in srgb,#E8A13A 42%,var(--line2));color:var(--txt);border-radius:11px;padding:10px 12px;margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.rc-stale svg{color:#E8A13A;flex:0 0 auto}
+.rc-stale>span{flex:1;min-width:150px;line-height:1.4}
+.rc-stale .btn{width:auto;flex:0 0 auto;padding:6px 14px;background:#E8A13A;border-color:#E8A13A;color:#241a06}
 .rc-list,.rc-steps{margin:8px 0 0;padding-inline-start:1.2em}
 .rc-list li,.rc-steps li{margin:.3em 0;line-height:1.45}
 .rc-formimg{width:100%;border-radius:12px;margin-bottom:10px;max-height:220px;object-fit:cover;display:block}
@@ -1581,7 +1585,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.171";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.172";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1954,6 +1958,8 @@ const TR = {
     "and":"و",
     "No PIN set. Add a 4-digit PIN to gate entry to MIRA.":"لا يوجد رمز PIN. أضِف رمزًا من 4 أرقام لتقييد الدخول إلى ميرا.",
     "of goal":"من الهدف",
+    "These macros were calculated before the ingredients changed. Recalculate to match the current list.":"حُسبت هذه القيم قبل تغيير المكوّنات. أعِد الحساب لتطابق القائمة الحالية.",
+    "Recalculate":"إعادة الحساب",
     "Coach":"المدرّب",
     "Use":"استخدم",
     "Last":"آخر مرة",
@@ -8961,9 +8967,36 @@ function recipeGramCardHTML(r){
     <div class="tiny" style="margin-top:7px;color:var(--txt2)">${tr("Weigh the whole cooked dish once; then log by grams each time. Per-gram macros come from the recipe total.")} ${tr("Or snap a photo of your plate and MIRA estimates the portion size, then applies this recipe's macros.")}</div>
   </div>`;
 }
+// The plain name of each ingredient line — dish-saved recipes store "name — amount".
+function recipeIngNames(r){
+  return (r.ingredients || []).map(line => {
+    const s = String(line); const m = s.match(/^(.*?)\s+[—–-]\s+(.+)$/);
+    return (m ? m[1] : s).trim();
+  }).filter(Boolean);
+}
+// True when a recipe's stored per-serving macros were computed from priced
+// ingredients that no longer match the current ingredient list — e.g. an
+// ingredient was renamed, added, or removed after the macros were calculated.
+// Conservative: only recipes that carry a priced breakdown can drift this way,
+// and we only flag a genuine mismatch (never a hand-entered recipe).
+function recipeStale(r){
+  if (!r || !r.components || !r.components.length) return false;
+  const names = recipeIngNames(r);
+  if (!names.length) return false;
+  if (r.components.length !== names.length) return true;
+  const used = new Array(names.length).fill(false);
+  for (const c of r.components){
+    let hit = -1;
+    for (let i = 0; i < names.length; i++){ if (!used[i] && sameIng(c.name, names[i])){ hit = i; break; } }
+    if (hit < 0) return true;      // a priced ingredient has no matching line (renamed/removed)
+    used[hit] = true;
+  }
+  return used.some(u => !u);       // a line has no priced ingredient (newly added)
+}
 function recipeDetailHTML(){
   const r = S.recipes.find(x => x.id === R.recipeId);
   if (!r){ R.recipeId = null; return recipesHTML(); }
+  const stale = recipeStale(r);
   return `
     <button class="cat-back" onclick="M.recipeClose()">${ic("back", 18)} ${tr("Recipes")}</button>
     ${recipeHeroHTML(r, true)}
@@ -8976,6 +9009,8 @@ function recipeDetailHTML(){
       <div class="rcm"><b>${n0(r.per.f)}g</b><span>fat</span></div>
     </div>
     <div class="tiny" style="text-align:center;color:var(--txt2);margin-top:4px">per serving${r.per.kcal ? "" : " — macros not set"}</div>
+    ${stale ? `<div class="rc-stale">${ic("alert", 14)} <span>${t("These macros were calculated before the ingredients changed. Recalculate to match the current list.")}</span>
+      <button class="btn sm" onclick="M.recipeRecalc('${r.id}')">${t("Recalculate")}</button></div>` : ""}
     ${r.healthNote ? `<div class="rc-note">${ic("check", 13)} ${esc(r.healthNote)}</div>` : ""}
     ${(r.tags || []).length ? `<div class="rc-tags" style="margin:12px 2px">${r.tags.map(t => `<span class="rc-tag">${esc(tagLabel(t))}</span>`).join("")}</div>` : ""}
     <div class="row" style="margin:6px 0 4px;gap:8px">
@@ -12917,13 +12952,20 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
   // Load a recipe's ingredient list into the "I cooked this" dish builder so the
   // user can price it from scratch instead of retyping — handy after tweaking a
   // recipe, or when the stored per-serving macros predate a change.
-  recipeToDish(id){
+  recipeRecalc(id){
+    // Drop the stale priced breakdown and rebuild the dish from the current
+    // ingredient text, so tapping "Get macros from ingredients" re-prices every
+    // line fresh — the honest fix for macros that drifted after an edit.
+    M.recipeToDish(id, true);
+  },
+  recipeToDish(id, fromText){
     const r = S.recipes.find(x => x.id === id); if (!r) return;
     // editing this recipe: a later "Update recipe" writes back to the same entry
     dishForm.editId = id;
     // recipes saved from the dish builder keep per-ingredient components — reload
-    // them intact so each ingredient's grams stays editable with live macros
-    if (r.components && r.components.length){
+    // them intact so each ingredient's grams stays editable with live macros.
+    // fromText forces the text path instead, so a drifted recipe re-prices clean.
+    if (!fromText && r.components && r.components.length){
       const built = r.components.map(x => {
         const it = {name: x.name, amount: x.amount, kcal: num(x.kcal), p: num(x.p), c: num(x.c), f: num(x.f), note: "", src: x.src || "recipe"};
         if (num(x.basisG) > 0 && x.base){ it.basisG = num(x.basisG); it.base = {kcal: num(x.base.kcal), p: num(x.base.p), c: num(x.base.c), f: num(x.base.f)}; it.addedG = num(x.addedG) || num(x.basisG); }
