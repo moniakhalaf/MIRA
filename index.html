@@ -838,6 +838,12 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
 @keyframes scanLine{0%,100%{transform:translateY(-58px)}50%{transform:translateY(58px)}}
 .scan-hint{position:relative;color:#fff;margin-top:26px;font-size:14px;font-weight:600;text-shadow:0 1px 4px rgba(0,0,0,.7);text-align:center;padding:0 20px}
 .scan-x{position:relative;margin-top:20px;background:rgba(255,255,255,.16);color:#fff;border:1px solid rgba(255,255,255,.4);border-radius:24px;padding:11px 30px;font-size:15px;font-weight:600;cursor:pointer;backdrop-filter:blur(6px)}
+.lf-row{border:1px solid var(--line2);background:var(--card2);border-radius:12px;padding:11px 12px;margin-bottom:10px}
+.lf-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.lf-top b{font-size:14px}
+.lf-del{background:none;border:none;color:var(--txt3);cursor:pointer;padding:4px;border-radius:8px;flex:0 0 auto;display:inline-flex}
+.lf-del:hover{color:var(--danger,#e5484d);background:color-mix(in srgb,var(--danger,#e5484d) 12%,transparent)}
+.lf-basis{color:var(--txt3);margin:2px 0 8px}
 .rc-list,.rc-steps{margin:8px 0 0;padding-inline-start:1.2em}
 .rc-list li,.rc-steps li{margin:.3em 0;line-height:1.45}
 .rc-formimg{width:100%;border-radius:12px;margin-bottom:10px;max-height:220px;object-fit:cover;display:block}
@@ -1592,7 +1598,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.174";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.175";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1889,6 +1895,16 @@ const TR = {
     "Saved your correction — used automatically next time you search this ✓":"تم حفظ تصحيحك — سيُستخدم تلقائيًا عند بحثك عن هذا لاحقًا ✓",
     "Saved your correction — used automatically next time ✓":"تم حفظ تصحيحك — سيُستخدم تلقائيًا في المرة القادمة ✓",
     "Used your saved values for this food ✓":"تم استخدام قيمك المحفوظة لهذا الطعام ✓",
+    "Foods MIRA remembers":"الأطعمة التي تتذكّرها ميرا",
+    "Values you've corrected. MIRA fills these in automatically when you log the food again. Edit or remove any.":"القيم التي صحّحتها. تملؤها ميرا تلقائيًا عند تسجيل الطعام مرة أخرى. عدّل أو احذف أيًّا منها.",
+    "per 100 g":"لكل 100 غرام",
+    "per":"لكل",
+    "as saved":"كما حُفظت",
+    "Remove":"إزالة",
+    "Nothing yet — correct a food's macros once and it'll appear here.":"لا شيء بعد — صحّح ماكروز طعام مرة وسيظهر هنا.",
+    "Clear all remembered foods":"مسح كل الأطعمة المحفوظة",
+    "Forgot":"نُسي",
+    "Forget every remembered food? This can't be undone.":"نسيان كل طعام محفوظ؟ لا يمكن التراجع عن هذا.",
     "Shared to the community database — thank you ✓":"تمت المشاركة في قاعدة بيانات المجتمع — شكرًا لك ✓",
     "Couldn't reach the community database. Check the settings and try again.":"تعذّر الوصول إلى قاعدة بيانات المجتمع. تحقّق من الإعدادات وحاول مجددًا.",
     "Paste a recipe link or the recipe text first.":"الصق رابط الوصفة أو نصّها أولًا.",
@@ -10882,6 +10898,34 @@ async function genPersona(d){
 }
 
 /* ---------------- settings ---------------- */
+// Everything MIRA has learned from your corrections — see it, edit it, forget it.
+function learnedFoodsHTML(){
+  const fx = S.foodFixes || {};
+  const keys = Object.keys(fx).sort((a, b) => {
+    const na = (fx[a].name || a).toLowerCase(), nb = (fx[b].name || b).toLowerCase();
+    return na < nb ? -1 : na > nb ? 1 : 0;
+  });
+  return `<div class="card">
+    <div class="card-h-row"><h3><span class="set-ic">${ic("check", 16)}</span> ${t("Foods MIRA remembers")}</h3>
+      ${keys.length ? `<span class="set-status on"><span class="dot"></span>${keys.length}</span>` : ""}</div>
+    <div class="muted" style="margin:12px 0 10px">${t("Values you've corrected. MIRA fills these in automatically when you log the food again. Edit or remove any.")}</div>
+    ${keys.length ? keys.map(k => {
+      const it = fx[k], per = it.per100, m = per || it.macros || {};
+      const basis = per ? t("per 100 g") : (it.amount ? `${t("per")} ${esc(it.amount)}` : t("as saved"));
+      return `<div class="lf-row">
+        <div class="lf-top"><b dir="auto">${esc(it.name || k)}</b>
+          <button class="lf-del" title="${t("Remove")}" onclick="M.fixDel('${esc(k)}')">${ic("trash", 14)}</button></div>
+        <div class="lf-basis tiny">${basis}</div>
+        <div class="grid4">
+          <div class="field"><label>kcal</label><input type="number" inputmode="decimal" value="${esc(n0(m.kcal))}" onchange="M.fixSet('${esc(k)}','kcal',this.value)"></div>
+          <div class="field"><label>P</label><input type="number" inputmode="decimal" value="${esc(n1(m.p))}" onchange="M.fixSet('${esc(k)}','p',this.value)"></div>
+          <div class="field"><label>C</label><input type="number" inputmode="decimal" value="${esc(n1(m.c))}" onchange="M.fixSet('${esc(k)}','c',this.value)"></div>
+          <div class="field"><label>F</label><input type="number" inputmode="decimal" value="${esc(n1(m.f))}" onchange="M.fixSet('${esc(k)}','f',this.value)"></div>
+        </div></div>`;
+    }).join("") : `<div class="tiny" style="color:var(--txt3)">${t("Nothing yet — correct a food's macros once and it'll appear here.")}</div>`}
+    ${keys.length ? `<button class="btn sm sec danger" style="margin-top:12px" onclick="M.fixClearAll()">${t("Clear all remembered foods")}</button>` : ""}
+  </div>`;
+}
 let setDraft = null;
 function settingsHTML(){
   const st = S.settings;
@@ -11082,6 +11126,8 @@ function settingsHTML(){
     <button class="btn sm danger" onclick="M.wipe()">${tr("Erase everything on this device")}</button>
   </div>`;
   })()}
+
+  ${learnedFoodsHTML()}
 
   <div class="set-foot">
     <div class="set-foot-wm">MIRA</div>
@@ -12763,6 +12809,22 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
     render();
   },
   reviewDrop(i){ reviewItems.splice(i, 1); if (!reviewItems.length) reviewItems = null; render(); },
+  /* ---- Foods MIRA remembers: manage learned corrections ---- */
+  fixSet(key, field, val){
+    const it = (S.foodFixes || {})[key]; if (!it) return;
+    const tgt = it.per100 || it.macros; if (!tgt) return;
+    tgt[field] = num(val); it.ts = Date.now(); save();
+  },
+  fixDel(key){
+    if (!S.foodFixes || !S.foodFixes[key]) return;
+    const nm = S.foodFixes[key].name || key;
+    delete S.foodFixes[key]; save(); render();
+    toast(`${tr("Forgot")} ${nm} ✓`);
+  },
+  fixClearAll(){
+    if (!confirm(tr("Forget every remembered food? This can't be undone."))) return;
+    S.foodFixes = {}; save(); render(); toast("Cleared.");
+  },
   communitySet(field, v){
     if (!S.settings.community) S.settings.community = {url: "", key: ""};
     S.settings.community[field] = (v || "").trim();
