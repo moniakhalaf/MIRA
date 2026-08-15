@@ -1598,7 +1598,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.175";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.176";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -6499,6 +6499,12 @@ function acRender(q){
     : "";
 }
 
+// A label basis unit is "measured" when it's a weight or volume you'd weigh out
+// (g, ml, oz…). Discrete units — serving, burger, piece, slice — are countable,
+// so those items get the same Portion ×/Half/Whole scaler as photo estimates.
+function unitIsMeasured(u){
+  return /^(g|gr|gram|grams|kg|kilogram|kilograms|mg|ml|milliliter|millilitre|milliliters|millilitres|cc|cl|dl|l|liter|litre|liters|litres|oz|ounce|ounces|fl\s?oz|floz|lb|lbs|cup|cups|tbsp|tablespoon|tablespoons|tsp|teaspoon|teaspoons)$/i.test(String(u || "").trim());
+}
 function reviewHTML(){
   // Snapshot each item's pristine values once, so a later edit to ANY item —
   // a photo estimate, a scanned label, an AI guess, not only a database search —
@@ -6521,7 +6527,7 @@ function reviewHTML(){
           <input id="rvAmt${i}" value="${esc(it.amount || "")}" placeholder="amount" style="flex:0 0 96px" oninput="reviewItems[${i}].amount=this.value">
         </div>
         ${it.conf === "label" ? `<div class="rv-warn">${ic("alert", 15)}<span><b>Open-source data — double-check the pack.</b> These numbers come from OpenFoodFacts, a free community database that anyone can edit, so they can be out of date or wrong. Compare them with the label and correct any value before saving — MIRA will remember your fix.</span></div>` : ""}
-        ${it.basis && it.unit ? `<div class="rv-scale">
+        ${it.basis && it.unit && unitIsMeasured(it.unit) ? `<div class="rv-scale">
           <label>How much did you have?</label>
           <input id="rvHad${i}" type="number" inputmode="decimal" value="${esc(it.had)}" oninput="M.reviewScale(${i}, this.value)">
           <span class="rv-unit">${esc(it.unit)}</span>
@@ -12890,7 +12896,10 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
   reviewPortion(i, val){
     const it = reviewItems[i];
     if (!it) return;
-    if (!it.baseMacros){ it.baseMacros = {kcal: num(it.kcal), p: num(it.p), c: num(it.c), f: num(it.f), fiber: num(it.fiber), sugar: num(it.sugar), sodium: num(it.sodium)}; it.baseAmount = it.amount || ""; }
+    // A discrete label item (e.g. "1 burger") already carries baseMacros from the
+    // label read — capture its baseAmount separately so the × label stays correct.
+    if (it.baseAmount == null) it.baseAmount = it.amount || "";
+    if (!it.baseMacros){ it.baseMacros = {kcal: num(it.kcal), p: num(it.p), c: num(it.c), f: num(it.f), fiber: num(it.fiber), sugar: num(it.sugar), sodium: num(it.sodium)}; }
     const m = Math.max(0, parseFloat(val) || 0);
     it.mult = m;
     const b = it.baseMacros;
