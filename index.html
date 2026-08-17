@@ -1598,7 +1598,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.176";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.177";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -6922,6 +6922,28 @@ function isDeepFriedName(n){
   const s = String(n || "").toLowerCase();
   return /french\s*fried|deep[\s-]?fried|deep\s*fry|fried\s+in\b/.test(s) || (/\bfried\b/.test(s) && /\boil\b/.test(s));
 }
+// How much of what the user typed actually appears in a candidate's name, as a
+// 0–1 fraction of the query's significant tokens (synonyms and brand/filler
+// words folded via ingTokens, so "minced beef" ≡ "beef, ground"). A wrong
+// substitution — "labneh" vs "cream cheese" — shares nothing and scores 0.
+// Cooking-method / state words describe how a food was prepared, not what it is,
+// so they shouldn't count toward identity coverage (deep-fried vs air-fried is
+// handled separately above). "air fried potato" must still match "potato, roasted".
+const METHOD_WORDS = new Set(["air", "fried", "fry", "roasted", "roast", "baked", "bake",
+  "grilled", "grill", "boiled", "boil", "steamed", "steam", "sauteed", "saute", "poached",
+  "frozen", "canned", "dried", "smoked", "cured"]);
+function queryCoverage(query, name){
+  const strip = arr => arr.filter(t => !METHOD_WORDS.has(t));
+  const qt = strip(ingTokens(query));
+  if (!qt.length) return 0;
+  const nt = new Set(strip(ingTokens(name)));
+  let hit = 0; qt.forEach(t => { if (nt.has(t)) hit++; });
+  return hit / qt.length;
+}
+// A database hit is only trustworthy for THIS query when its name genuinely
+// covers what was typed. Below the floor we'd rather show an honest AI estimate
+// of the right food than a confident number for the wrong one.
+function candidateMatches(query, name){ return queryCoverage(query, name) >= 0.6; }
 function bestFoodMatch(query, usda, off, comm){
   const q = String(query || "").toLowerCase().trim();
   // Drop deep-fried candidates for an air-fried / no-oil query so their frying-oil
@@ -6948,8 +6970,11 @@ function bestFoodMatch(query, usda, off, comm){
   (usda || []).forEach(x => scored.push({x, score: usdaTrust(x.type) + nameScore(x.name)}));
   (off || []).forEach(x => scored.push({x, score: 3 + nameScore(x.name)}));    // branded label ≈ trust 3
   (comm || []).forEach(x => scored.push({x, score: 1 + nameScore(x.name)}));   // community lowest
-  scored.sort((a, b) => b.score - a.score);
-  return scored.length ? scored[0].x : null;
+  // Only rank candidates that actually match what the user typed — a high-trust
+  // but unrelated food must never win by trust alone (that's the silent swap).
+  const matched = scored.filter(s => candidateMatches(query, s.x.name));
+  matched.sort((a, b) => b.score - a.score);
+  return matched.length ? matched[0].x : null;
 }
 
 // Turn database hits (per 100 g) into review items with a serving scaler, so the
@@ -7198,7 +7223,9 @@ function dishRecipePickHTML(){
 // across typing, snapped labels and recipes even when the wording differs — brand
 // text, plurals, "whole wheat", macaroni vs pasta. This is what stops the same
 // ingredient being added twice (the classic cause of a doubled calorie count).
-const ING_SYN = [[/\b(macaroni|spaghetti|penne|fusilli|farfalle|vermicelli|noodles?)\b/g, "pasta"]];
+const ING_SYN = [[/\b(macaroni|spaghetti|penne|fusilli|farfalle|vermicelli|noodles?)\b/g, "pasta"],
+  [/\bminced\b/g, "ground"], [/\byoghurt\b/g, "yogurt"], [/\bprawns?\b/g, "shrimp"],
+  [/\baubergines?\b/g, "eggplant"], [/\bcourgettes?\b/g, "zucchini"], [/\bchickpeas?\b/g, "chickpea"]];
 const ING_STOP = new Set(["whole","wheat","organic","fresh","raw","cooked","full","fat","reduced","low","light","skimmed","kd","cow","brand","natureland","the","of","and"]);
 // Significant, normalized tokens of an ingredient name — brand text and generic
 // words stripped, plurals folded, macaroni/spaghetti/… mapped to "pasta".
