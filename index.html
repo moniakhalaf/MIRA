@@ -310,7 +310,9 @@ body.kb .fab{display:none}
   flex:0 0 auto;
   display:flex;justify-content:space-around;
   padding:6px 8px calc(var(--safe-bot) + 6px);
-  background:var(--glass);
+  /* opaque (not translucent) so the bottom safe-area strip is one clean colour
+     with no two-tone seam under the tab bar */
+  background:var(--bg2);
   border-top:1px solid var(--line);
 }
 .tabbar button{
@@ -1547,7 +1549,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.179";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.180";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -3202,8 +3204,8 @@ function bindViewport(){
     if (!app) return;
     const ed = editable();
     if (!ed) vvBase = Math.max(vvBase, vv.height);          // refresh baseline while the keyboard is down
-    const shrink = Math.max(vvBase - vv.height, window.innerHeight - vv.height);
-    const kbOpen = ed && shrink > 100;
+    const shrink = vvBase - vv.height;   // shrink from the no-keyboard baseline only
+    const kbOpen = ed && shrink > 100;   // innerHeight is unreliable here (see above)
     if (kbOpen){
       // keyboard up: pin the shell to the visible area so it sits on the keyboard
       app.style.top = vv.offsetTop + "px";    // track the visible top → no gap
@@ -11129,8 +11131,6 @@ function settingsHTML(){
     <button class="btn sm danger" onclick="M.wipe()">${tr("Erase everything on this device")}</button>
   </div>`;
   })()}
-
-  ${learnedFoodsHTML()}
 
   <div class="set-foot">
     <div class="set-foot-wm">MIRA</div>
