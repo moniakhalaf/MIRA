@@ -1306,6 +1306,15 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
 .food-tools-wrap.open>.ft-body{display:block;margin-top:8px}
 .food-tools-wrap>.ft-toggle .chev{color:var(--txt3);transition:transform .2s;font-size:11px;margin-inline-start:6px}
 .food-tools-wrap.open>.ft-toggle .chev{transform:rotate(90deg)}
+.ft-tools{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ft-tile{display:flex;align-items:center;gap:10px;text-align:start;padding:11px;border:1px solid var(--line2);border-radius:14px;background:var(--card2);transition:transform .12s,border-color .15s}
+.ft-tile:hover{border-color:var(--acc)}
+.ft-tile:active{transform:scale(.97)}
+.ft-tile:disabled{opacity:.55}
+.ft-ic{flex:0 0 auto;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:var(--acc-soft);color:var(--acc)}
+.ft-tx{display:flex;flex-direction:column;min-width:0}
+.ft-tx b{font-size:13px;font-weight:650;line-height:1.2}
+.ft-tx small{font-size:10.5px;color:var(--txt3);line-height:1.25;margin-top:2px}
 
 /* ---------- body comp ---------- */
 .ib-entry{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:13px 14px;margin-bottom:10px}
@@ -1538,7 +1547,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.178";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.179";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1749,6 +1758,8 @@ const TR = {
     "Save to log":"حفظ في السجل","Update entry":"تحديث الإدخال","Portion scaler":"محوّل الكمية",
     "Find macros":"إيجاد الماكروز","Snap food / label":"صوّر الطعام / الملصق","Barcode":"الباركود",
     "I cooked this — build the dish from ingredients":"طبختُ هذا — احسب الطبق من المكوّنات",
+    "Scan a package":"امسح عبوة","Photo → macros":"صورة ← ماكروز","Scale to your amount":"عدّل حسب كميتك",
+    "Build from ingredients":"احسب من المكوّنات","Looking up…":"جارٍ البحث…","Reading…":"جارٍ القراءة…",
     "Breakfast":"فطور","Lunch":"غداء","Dinner":"عشاء","Snack":"وجبة خفيفة",
     "Meals & shortcuts":"الوجبات والاختصارات","Copy yesterday":"نسخ الأمس","Save today as meal":"حفظ اليوم كوجبة",
     "I cooked this":"طبختُ هذا","Dish name":"اسم الطبق","Servings it makes":"عدد الحصص الناتجة",
@@ -3193,9 +3204,19 @@ function bindViewport(){
     if (!ed) vvBase = Math.max(vvBase, vv.height);          // refresh baseline while the keyboard is down
     const shrink = Math.max(vvBase - vv.height, window.innerHeight - vv.height);
     const kbOpen = ed && shrink > 100;
-    app.style.top = vv.offsetTop + "px";      // track the visible top → no gap
-    app.style.height = vv.height + "px";
-    app.style.bottom = "auto";
+    if (kbOpen){
+      // keyboard up: pin the shell to the visible area so it sits on the keyboard
+      app.style.top = vv.offsetTop + "px";    // track the visible top → no gap
+      app.style.height = vv.height + "px";
+      app.style.bottom = "auto";
+    } else {
+      // keyboard down: clear the pin and let CSS inset:0 fill the whole screen,
+      // including the bottom safe area — otherwise a shorter visual viewport
+      // leaves a dead band under the tab bar.
+      app.style.top = "";
+      app.style.height = "";
+      app.style.bottom = "";
+    }
     document.body.classList.toggle("kb", kbOpen);
     if (resetScroll && (window.pageYOffset || window.pageXOffset)) window.scrollTo(0, 0);
     if (kbOpen && R.tab === "chat"){
@@ -6082,13 +6103,24 @@ function foodHTML(){
       <div class="food-tools-wrap ${(R.foodToolsOpen || foodForm.scOpen || dishForm.open || extractBusy || barcodeBusy) ? "open" : ""}">
         <button class="btn sm sec ft-toggle" style="width:100%" aria-expanded="${R.foodToolsOpen ? "true" : "false"}" onclick="M.foodTools(this)">${ic("plus", 16)} ${t("More ways to add this")} <span class="chev">▶</span></button>
         <div class="ft-body">
-          <div class="tiny" style="margin:2px 2px 8px;color:var(--txt2)">${t("Scan a label or barcode, scale a portion, or build a cooked dish from its ingredients.")}</div>
-          <div class="grid2" style="gap:8px">
-            <button class="btn sm sec" style="width:100%" onclick="M.barcode()" ${barcodeBusy ? "disabled" : ""}>${barcodeBusy ? "Looking up…" : ic("barcode", 15) + " " + t("Barcode")}</button>
-            <button class="btn sm sec" style="width:100%" onclick="M.extractPhoto()" ${extractBusy ? "disabled" : ""}>${extractBusy ? "Reading…" : ic("camera", 15) + " " + t("Snap food / label")}</button>
-            <button class="btn sm sec" style="width:100%" onclick="M.scToggle()">${ic("sliders", 15)} ${t("Portion scaler")}</button>
+          <div class="ft-tools">
+            <button class="ft-tile" onclick="M.barcode()" ${barcodeBusy ? "disabled" : ""}>
+              <span class="ft-ic">${ic("barcode", 18)}</span>
+              <span class="ft-tx"><b>${t("Barcode")}</b><small>${barcodeBusy ? t("Looking up…") : t("Scan a package")}</small></span>
+            </button>
+            <button class="ft-tile" onclick="M.extractPhoto()" ${extractBusy ? "disabled" : ""}>
+              <span class="ft-ic">${ic("camera", 18)}</span>
+              <span class="ft-tx"><b>${t("Snap food / label")}</b><small>${extractBusy ? t("Reading…") : t("Photo → macros")}</small></span>
+            </button>
+            <button class="ft-tile" onclick="M.scToggle()">
+              <span class="ft-ic">${ic("sliders", 18)}</span>
+              <span class="ft-tx"><b>${t("Portion scaler")}</b><small>${t("Scale to your amount")}</small></span>
+            </button>
+            <button class="ft-tile" aria-expanded="${dishForm.open}" onclick="M.dishToggle()">
+              <span class="ft-ic">${ic("flame", 18)}</span>
+              <span class="ft-tx"><b>${t("I cooked this")}</b><small>${t("Build from ingredients")}</small></span>
+            </button>
           </div>
-          <button class="btn sm sec" style="width:100%;margin-top:8px" aria-expanded="${dishForm.open}" onclick="M.dishToggle()">${ic("flame", 15)} ${t("I cooked this — build the dish from ingredients")}</button>
         </div>
       </div>
       ${foodForm.scOpen ? `
