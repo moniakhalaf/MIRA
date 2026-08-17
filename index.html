@@ -996,6 +996,14 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
 .ws-row.on .ws-kind{color:var(--txt2)}
 .ws-tog{width:26px;height:26px;border-radius:50%;border:1.5px solid var(--line2);display:flex;align-items:center;justify-content:center;color:var(--acc);flex:0 0 auto}
 .ws-row.on .ws-tog{border-color:var(--acc);background:var(--acc-soft)}
+.ws-sel{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 10px 9px 12px;border-radius:12px;background:var(--card2);border:1px solid var(--line2);margin-bottom:8px}
+.ws-ord{display:flex;align-items:center;gap:5px;flex:0 0 auto}
+.ws-mv{width:30px;height:30px;border-radius:9px;border:1px solid var(--line2);display:flex;align-items:center;justify-content:center;color:var(--txt2);flex:0 0 auto}
+.ws-mv:disabled{opacity:.3}
+.ws-mv.dn svg{transform:rotate(180deg)}
+.ws-rm{width:30px;height:30px;border-radius:9px;border:1px solid var(--line2);display:flex;align-items:center;justify-content:center;color:var(--red);flex:0 0 auto;margin-inline-start:3px}
+.ws-sub{font-size:12px;font-weight:600;color:var(--txt2);margin:11px 6px 3px}
+.ws-empty{font-size:13px;color:var(--txt3);padding:9px 6px}
 .recent-chats{display:flex;flex-direction:column;gap:8px}
 .recent-chat{display:flex;align-items:center;gap:11px;width:100%;text-align:start;padding:12px 14px;border-radius:13px;background:var(--card);border:1px solid var(--line2)}
 .recent-chat:active{transform:scale(.99)}
@@ -1581,7 +1589,7 @@ html[data-setpage="privacy"] .set-page[data-page="privacy"]{display:block}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.182";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.183";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -2232,6 +2240,13 @@ const TR = {
     "Now":"الآن","Goal":"الهدف","To go (kg)":"المتبقّي (كغ)","Weeks":"أسابيع",
     "Customize":"تخصيص","Customize Today":"تخصيص اليوم","Done":"تم","Pick up where you left off":"تابِع من حيث توقفت","Open":"فتح","Ask":"اسأل",
     "No widgets selected. Tap Customize to choose what you see here.":"لا توجد أدوات مختارة. اضغط تخصيص لاختيار ما يظهر هنا.",
+    "Shown on Today":"المعروضة في اليوم","Add a widget":"أضِف أداة","Move up":"تحريك لأعلى","Move down":"تحريك لأسفل",
+    "Remove":"إزالة","Nothing yet — add widgets below.":"لا شيء بعد — أضِف أدوات من الأسفل.","All widgets are on Today.":"جميع الأدوات معروضة في اليوم.",
+    "ring":"قرص","tile":"مربّع","Health":"الصحة","Fitness":"اللياقة","Work":"العمل","Life":"الحياة",
+    "Calories left":"السعرات المتبقية","Protein left":"البروتين المتبقي","Carbs left":"الكربوهيدرات المتبقية","Fat left":"الدهون المتبقية",
+    "Wellness score":"مؤشر العافية","Last night's sleep":"نوم الليلة الماضية","Today's mood":"مزاج اليوم","Latest weight":"آخر وزن",
+    "Workouts this week":"تمارين هذا الأسبوع","Fasting":"الصيام","Next task":"المهمة التالية","Open tasks":"المهام المفتوحة",
+    "Focus today":"التركيز اليوم","Next bill":"الفاتورة التالية","Habits today":"عادات اليوم","Spent this month":"المصروف هذا الشهر",
     "Your day starts here.":"يومك يبدأ من هنا.",
     "Log something with the + button, pick an area above, or ask MIRA anything.":"سجّل شيئًا بزر +، أو اختر مجالًا بالأعلى، أو اسأل ميرا أي شيء.",
     "Library · tracking · coach":"مكتبة · تتبّع · مدرّب","Workout":"تمرين","Library":"المكتبة","History":"السجل","Coach":"المدرّب",
@@ -3824,18 +3839,30 @@ function homeDashHTML(){
   return `<div class="today-custrow">${custom}</div>${body || `<div class="today-empty2">${tr("No widgets selected. Tap Customize to choose what you see here.")}</div>`}`;
 }
 function widgetSheetHTML(){
-  const on = new Set(S.settings.widgets || []);
+  const sel = (S.settings.widgets || []);
+  const on = new Set(sel);
+  const meta = id => WIDGET_META.find(m => m.id === id);
   const cats = {};
-  WIDGET_META.forEach(m => { (cats[m.cat] = cats[m.cat] || []).push(m); });
+  WIDGET_META.forEach(m => { if (!on.has(m.id)) (cats[m.cat] = cats[m.cat] || []).push(m); });
+  const anyToAdd = Object.values(cats).some(a => a.length);
   return `<div class="qa-scrim" onclick="M.widgetsClose()"></div>
     <div class="qa-sheet widget-sheet">
       <div class="qa-grip"></div>
       <div class="ws-head"><div class="qa-h" style="margin:0">${tr("Customize Today")}</div><button class="ws-done" onclick="M.widgetsClose()">${tr("Done")}</button></div>
       <div class="ws-body">
-        ${Object.entries(cats).map(([cat, items]) => `<div class="ws-cat">${cat}</div>
-          ${items.map(m => `<button class="ws-row ${on.has(m.id) ? "on" : ""}" onclick="M.widgetToggle('${m.id}')">
-            <span class="ws-rl">${esc(m.label)} <span class="ws-kind">${m.kind}</span></span>
-            <span class="ws-tog">${on.has(m.id) ? ic("check", 16) : ""}</span></button>`).join("")}`).join("")}
+        <div class="ws-cat">${tr("Shown on Today")}</div>
+        ${sel.length ? sel.map((id, i) => { const m = meta(id); if (!m) return ""; return `<div class="ws-sel">
+            <span class="ws-rl">${esc(tr(m.label))} <span class="ws-kind">${tr(m.kind)}</span></span>
+            <span class="ws-ord">
+              <button class="ws-mv" aria-label="${tr("Move up")}" ${i === 0 ? "disabled" : ""} onclick="M.widgetMove('${id}',-1)">${ic("arrowUp", 15)}</button>
+              <button class="ws-mv dn" aria-label="${tr("Move down")}" ${i === sel.length - 1 ? "disabled" : ""} onclick="M.widgetMove('${id}',1)">${ic("arrowUp", 15)}</button>
+              <button class="ws-rm" aria-label="${tr("Remove")}" onclick="M.widgetToggle('${id}')">${ic("x", 15)}</button>
+            </span></div>`; }).join("") : `<div class="ws-empty">${tr("Nothing yet — add widgets below.")}</div>`}
+        <div class="ws-cat" style="margin-top:16px">${tr("Add a widget")}</div>
+        ${anyToAdd ? Object.entries(cats).map(([cat, items]) => items.length ? `<div class="ws-sub">${tr(cat)}</div>
+          ${items.map(m => `<button class="ws-row" onclick="M.widgetToggle('${m.id}')">
+            <span class="ws-rl">${esc(tr(m.label))} <span class="ws-kind">${tr(m.kind)}</span></span>
+            <span class="ws-tog">${ic("plus", 16)}</span></button>`).join("")}` : "").join("") : `<div class="ws-empty">${tr("All widgets are on Today.")}</div>`}
       </div>
     </div>`;
 }
@@ -11292,6 +11319,7 @@ window.M = {
   widgetsOpen(){ R.widgetsOpen = true; render(); },
   widgetsClose(){ R.widgetsOpen = false; render(); },
   widgetToggle(id){ const w = S.settings.widgets; const i = w.indexOf(id); if (i >= 0) w.splice(i, 1); else w.push(id); save(); render(); },
+  widgetMove(id, dir){ const w = S.settings.widgets; const i = w.indexOf(id); if (i < 0) return; const j = i + dir; if (j < 0 || j >= w.length) return; const tmp = w[i]; w[i] = w[j]; w[j] = tmp; save(); render(); },
   setOpen(id){ R.setPage = id; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
   setBack(){ R.setPage = null; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
   // Deep links from elsewhere (hero edit, "Set targets", Backup) still use the old
