@@ -1369,6 +1369,33 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
 .set-nav button:active{transform:scale(.95)}
 .set-nav button.on{color:var(--btn-ink);border-color:var(--gold);background:var(--gold);font-weight:700;box-shadow:0 2px 10px -3px color-mix(in srgb,var(--gold) 60%,transparent)}
 @supports not ((-webkit-backdrop-filter:blur(1px)) or (backdrop-filter:blur(1px))){.set-nav{background:var(--bg)}}
+/* Settings hub: a tidy category list; tapping one opens its detail page */
+.set-hub{display:flex;flex-direction:column;gap:9px;margin-top:14px}
+.set-hub-row{display:flex;align-items:center;gap:12px;width:100%;text-align:start;padding:13px 14px;background:var(--card);border:1px solid var(--line2);border-radius:15px;transition:transform .12s,border-color .15s}
+.set-hub-row:hover{border-color:var(--acc)}
+.set-hub-row:active{transform:scale(.985)}
+.shr-ic{flex:0 0 auto;width:36px;height:36px;border-radius:11px;display:grid;place-items:center;background:var(--acc-soft);color:var(--acc)}
+.shr-tx{flex:1;display:flex;flex-direction:column;min-width:0}
+.shr-tx b{font-size:14.5px;font-weight:650}
+.shr-tx small{font-size:12px;color:var(--txt3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.shr-chev{flex:0 0 auto;color:var(--txt3);font-size:11px}
+[dir="rtl"] .shr-chev{transform:scaleX(-1)}
+.set-page{display:none}
+.set-back,.set-page-title{display:none}
+.set-back{margin-top:6px}
+html:not([data-setpage="hub"]) .set-hero,
+html:not([data-setpage="hub"]) .set-hub,
+html:not([data-setpage="hub"]) .set-foot{display:none}
+html:not([data-setpage="hub"]) .set-back,
+html:not([data-setpage="hub"]) .set-page-title{display:block}
+html[data-setpage="profile"] .set-page[data-page="profile"],
+html[data-setpage="circle"] .set-page[data-page="circle"],
+html[data-setpage="language"] .set-page[data-page="language"],
+html[data-setpage="appearance"] .set-page[data-page="appearance"],
+html[data-setpage="nutrition"] .set-page[data-page="nutrition"],
+html[data-setpage="domains"] .set-page[data-page="domains"],
+html[data-setpage="assistant"] .set-page[data-page="assistant"],
+html[data-setpage="privacy"] .set-page[data-page="privacy"]{display:block}
 .set-group-label{font-size:11px;font-weight:750;letter-spacing:.1em;text-transform:uppercase;color:var(--txt3);margin:22px 6px 10px;display:flex;align-items:center;gap:8px}
 .set-group-label::before{content:"";width:3px;height:12px;border-radius:2px;background:var(--acc);opacity:.85}
 .set-sub{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--txt3);margin:14px 2px 9px}
@@ -1554,7 +1581,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.181";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.182";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -2185,6 +2212,9 @@ const TR = {
     "Profession / field":"المهنة / المجال","Primary goal":"الهدف الأساسي","Coaching style":"أسلوب التوجيه",
     "Direct":"مباشر","Balanced":"متوازن","Encouraging":"مُشجِّع","Answer depth":"عمق الإجابة","Short":"مختصر","Detailed":"مفصّل",
     "MIRA replies in":"تردّ ميرا بـ","Match what I write":"طابِق ما أكتبه","Appearance":"المظهر","Nutrition & body":"التغذية والجسم",
+    "Name, goal & coaching style":"الاسم والهدف وأسلوب التدريب","Share progress with a coach":"شارك تقدّمك مع مدرّب",
+    "Targets, databases, saved foods":"الأهداف وقواعد البيانات والأطعمة المحفوظة","active":"نشِط",
+    "Add your API key":"أضِف مفتاح API","Lock, encryption, backup":"القفل والتشفير والنسخ الاحتياطي",
     "Emerald":"زُمرّدي","Ember":"جمر ذهبي","Aegean":"أزرق بحري","Porcelain":"خزفي فاتح",
     "Emerald is the signature deep green · Ember is warm ink & gold · Aegean is sea-navy & teal · Porcelain is a bright daytime light.":"زُمرّدي هو الأخضر العميق المميّز · جمر ذهبي حبر دافئ وذهب · أزرق بحري كحلي وفيروزي · خزفي فاتح إضاءة نهارية ساطعة.",
     "Daily targets":"الأهداف اليومية","Calories kcal":"السعرات كيلوكالوري","Carbs g (optional)":"كربوهيدرات غ (اختياري)","Fat g (optional)":"دهون غ (اختياري)",
@@ -3602,7 +3632,8 @@ function renderMain(){
     if (ta && keepInput){ ta.value = keepInput; ta.style.height = "auto"; ta.style.height = Math.min(ta.scrollHeight, 120) + "px"; }
     afterChatRender();
   }
-  if (R.tab === "set") settingsSpy();
+  if (R.tab === "set") document.documentElement.dataset.setpage = R.setPage || "hub";
+  else document.documentElement.removeAttribute("data-setpage");
   if (R._dek) touchActivity();
 }
 /* Scroll-spy for the Settings quick-jump bar: highlights the section currently
@@ -10945,7 +10976,17 @@ function settingsHTML(){
   const themeName = tr((THEMES.find(t => t[0] === (st.theme || "emerald")) || [, "Emerald"])[1]);
   const langRow = LANGUAGES.find(l => l[0] === st.lang);
   const langLabel = (!st.lang || st.lang === "match") ? tr("Match what I write") : (langRow ? langRow[2] : st.lang);
-  const nav = [["setProfile","Profile"],["setCircle","Circle"],["setLanguage","Language"],["setAppearance","Appearance"],["setNutrition","Nutrition"],["setDomains","Domains"],["setAI","Assistant"],["setSecurity","Privacy"]];
+  const HUB = [
+    ["profile", "user", tr("Profile"), st.name ? esc(st.name) : tr("Name, goal & coaching style")],
+    ["circle", "users", tr("Circle"), tr("Share progress with a coach")],
+    ["language", "globe", tr("Language"), esc(langLabel)],
+    ["appearance", "sun", tr("Appearance"), esc(themeName)],
+    ["nutrition", "target", tr("Nutrition & body"), tr("Targets, databases, saved foods")],
+    ["domains", "grid", tr("Domains"), `${S.domains.length} ${tr("active")}`],
+    ["assistant", "key", tr("Assistant"), st.apiKey ? tr("Connected") : tr("Add your API key")],
+    ["privacy", "lock", tr("Privacy & data"), st.encOn ? tr("Encrypted") : (st.pinHash ? tr("PIN on") : tr("Lock, encryption, backup"))],
+  ];
+  const titleOf = id => (HUB.find(h => h[0] === id) || [, , tr("Settings")])[2];
   return `
   <div class="set-hero">
     <span class="set-avatar">${esc(initial)}</span>
@@ -10956,9 +10997,15 @@ function settingsHTML(){
     </div>
     <button class="set-hero-edit" aria-label="${tr("Edit profile")}" title="${tr("Edit profile")}" onclick="M.setJump('setProfile')">${ic("edit", 17)}</button>
   </div>
-  <div class="set-nav">${nav.map(([id, l]) => `<button onclick="M.setJump('${id}')">${tr(l)}</button>`).join("")}</div>
+  <button class="cat-back set-back" onclick="M.setBack()">${ic("back", 18)} ${tr("Settings")}</button>
+  <div class="cat-title set-page-title"><div class="ch-nm">${titleOf(R.setPage)}</div></div>
+  <div class="set-hub">${HUB.map(([id, icn, ttl, dsc]) => `<button class="set-hub-row" onclick="M.setOpen('${id}')">
+    <span class="shr-ic">${ic(icn, 18)}</span>
+    <span class="shr-tx"><b>${ttl}</b><small dir="auto">${dsc}</small></span>
+    <span class="shr-chev">▶</span>
+  </button>`).join("")}</div>
 
-  <div class="set-group-label">${tr("Account")}</div>
+  <div class="set-page" data-page="profile">
   <div class="card" id="setProfile">
     <h3><span class="set-ic">${ic("user", 16)}</span> ${tr("Profile")}</h3>
     ${FEATURES.emailSignup && st.account && st.account.email ? `<div class="set-row" style="padding-top:0">
@@ -10973,10 +11020,11 @@ function settingsHTML(){
       <div class="seg">${[["short","Short"],["balanced","Balanced"],["detailed","Detailed"]].map(([v, l]) => `<button class="${st.depth === v ? "on" : ""}" onclick="M.set('depth','${v}')">${tr(l)}</button>`).join("")}</div></div>
   </div>
 
-  <div class="set-group-label">${tr("Sharing")}</div>
+  </div>
+  <div class="set-page" data-page="circle">
   ${circleHTML()}
-
-  <div class="set-group-label">${tr("Preferences")}</div>
+  </div>
+  <div class="set-page" data-page="language">
   <div class="card" id="setLanguage">
     <div class="card-h-row"><h3><span class="set-ic">${ic("globe", 16)}</span> ${tr("Language")}</h3><span class="set-status">${esc(langLabel)}</span></div>
     <div class="field" style="margin:10px 0 0"><label>${tr("MIRA replies in")}</label>
@@ -10986,7 +11034,8 @@ function settingsHTML(){
       </select>
       <div class="tiny" style="margin-top:8px">MIRA writes all its replies, suggestions, macro lookups and reviews in this language. Choose <b>Match what I write</b> to switch language mid-conversation.</div></div>
   </div>
-
+  </div>
+  <div class="set-page" data-page="appearance">
   <div class="card" id="setAppearance">
     <div class="card-h-row"><h3><span class="set-ic">${ic("sun", 16)}</span> ${tr("Appearance")}</h3><span class="set-status">${esc(themeName)}</span></div>
     <div class="theme-grid" style="margin-top:12px">${THEMES.map(([v, l, c]) => `
@@ -11000,7 +11049,8 @@ function settingsHTML(){
     <div class="tiny" style="margin-top:10px">${t("Emerald is the signature deep green · Ember is warm ink & gold · Aegean is sea-navy & teal · Porcelain is a bright daytime light.")}</div>
   </div>
 
-  <div class="set-group-label">${tr("Nutrition & body")}</div>
+  </div>
+  <div class="set-page" data-page="nutrition">
   <div class="card" id="setNutrition">
     <h3><span class="set-ic">${ic("target", 16)}</span> ${tr("Daily targets")}</h3>
     <div class="grid2" style="margin-bottom:10px">
@@ -11045,7 +11095,8 @@ function settingsHTML(){
     </div>
   </div>
 
-  <div class="set-group-label">${tr("Domains")}</div>
+  </div>
+  <div class="set-page" data-page="domains">
   <div class="card" id="setDomains">
     <h3><span class="set-ic">${ic("grid", 16)}</span> ${tr("Domains")}</h3>
     ${S.domains.map((d, i) => `<div class="set-row">
@@ -11060,7 +11111,8 @@ function settingsHTML(){
     <div class="tiny" style="margin-top:8px">MIRA builds a specialist mode around each domain you add, with the same evidence standard everywhere.</div>
   </div>
 
-  <div class="set-group-label">${tr("Assistant")}</div>
+  </div>
+  <div class="set-page" data-page="assistant">
   <div class="card" id="setAI">
     <div class="card-h-row"><h3><span class="set-ic">${ic("key", 16)}</span> ${tr("API & model")}</h3>
       <span class="set-status ${st.apiKey ? "on" : ""}"><span class="dot"></span>${st.apiKey ? tr("Connected") : tr("No key")}</span></div>
@@ -11077,7 +11129,8 @@ function settingsHTML(){
       <div class="tiny" style="margin-top:6px">Lets MIRA research the live internet through your API key and cite real pages. Anthropic bills searches (~$10 per 1,000) on top of tokens. Also toggled with the globe button in chat.</div></div>
   </div>
 
-  <div class="set-group-label">${tr("Privacy & data")}</div>
+  </div>
+  <div class="set-page" data-page="privacy">
   <div class="card" id="setSecurity">
     <div class="card-h-row"><h3><span class="set-ic">${ic("lock", 16)}</span> ${tr("App lock")}</h3>
       <span class="set-status ${st.pinHash ? "on" : ""}"><span class="dot"></span>${st.pinHash ? tr("PIN on") : tr("No PIN")}</span></div>
@@ -11136,6 +11189,7 @@ function settingsHTML(){
     <button class="btn sm danger" onclick="M.wipe()">${tr("Erase everything on this device")}</button>
   </div>`;
   })()}
+  </div>
 
   <div class="set-foot">
     <div class="set-foot-wm">MIRA</div>
@@ -11227,8 +11281,8 @@ window.num = num;
 window.M = {
   // Opening the chat surface always starts a FRESH conversation; previous
   // chats stay saved and are reachable via the Chats (clock) button.
-  tab(t){ R.tab = t; R.homeCat = null; R.reviewOpen = false; R.quickOpen = false; R.widgetsOpen = false; R.sheet = null; R.finishIdeas = null; R.snackIdeas = null; if (t === "chat") R.convId = null; render(); },
-  goTab(t){ R.tab = t; R.homeCat = null; R.reviewOpen = false; R.quickOpen = false; R.widgetsOpen = false; R.sheet = null; R.finishIdeas = null; R.snackIdeas = null; if (t === "chat") R.convId = null; render(); },
+  tab(t){ R.tab = t; R.setPage = null; R.homeCat = null; R.reviewOpen = false; R.quickOpen = false; R.widgetsOpen = false; R.sheet = null; R.finishIdeas = null; R.snackIdeas = null; if (t === "chat") R.convId = null; render(); },
+  goTab(t){ R.tab = t; R.setPage = null; R.homeCat = null; R.reviewOpen = false; R.quickOpen = false; R.widgetsOpen = false; R.sheet = null; R.finishIdeas = null; R.snackIdeas = null; if (t === "chat") R.convId = null; render(); },
   home(catId){ R.homeCat = catId; R.reviewOpen = false; render(); },
   homeBack(){ R.homeCat = null; render(); },
   homeSection(id){ R.tab = "home"; R.homeSection = id; R.homeCat = null; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
@@ -11238,11 +11292,15 @@ window.M = {
   widgetsOpen(){ R.widgetsOpen = true; render(); },
   widgetsClose(){ R.widgetsOpen = false; render(); },
   widgetToggle(id){ const w = S.settings.widgets; const i = w.indexOf(id); if (i >= 0) w.splice(i, 1); else w.push(id); save(); render(); },
+  setOpen(id){ R.setPage = id; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
+  setBack(){ R.setPage = null; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
+  // Deep links from elsewhere (hero edit, "Set targets", Backup) still use the old
+  // section ids — map each to its new hub page and open it.
   setJump(id){
-    const el = document.getElementById(id), c = $("#content");
-    if (!el || !c) return;
-    const top = el.getBoundingClientRect().top - c.getBoundingClientRect().top + c.scrollTop - 60;
-    c.scrollTo({top: Math.max(0, top), behavior: "smooth"});
+    const map = {setProfile: "profile", setCircle: "circle", setLanguage: "language", setAppearance: "appearance",
+      setNutrition: "nutrition", setCommunity: "nutrition", savedFoodsCard: "nutrition", setDomains: "domains",
+      setAI: "assistant", setSecurity: "privacy", setEncrypt: "privacy", setBackup: "privacy"};
+    M.setOpen(map[id] || "profile");
   },
   nudgeDismiss(id){
     const t = todayStr();
