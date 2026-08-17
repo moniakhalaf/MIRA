@@ -8,29 +8,29 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="MIRA">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#0A0D13">
+<meta name="theme-color" content="#0B1310">
 <!-- iOS requires a real PNG for the home-screen tile (data-URI SVGs are ignored) -->
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230A0D13'/><text x='50' y='67' font-size='52' text-anchor='middle' fill='%23D2AC64' font-family='sans-serif' font-weight='bold'>M</text></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230B1310'/><text x='50' y='67' font-size='52' text-anchor='middle' fill='%23D2AC64' font-family='sans-serif' font-weight='bold'>M</text></svg>">
 <link rel="manifest" href="manifest.webmanifest">
 <style>
 :root{
   color-scheme:dark;
-  /* deep ink + emerald signature (gold kept for the MIRA wordmark) */
-  --bg:#0A0E14; --bg2:#0F1620; --card:#141C27; --card2:#1B2634;
-  --sheet-bg:#151E29;
-  --line:rgba(226,236,250,.08); --line2:rgba(226,236,250,.14);
-  --txt:#EAF1F8; --txt2:#9DB0C2; --txt3:#63768A;
+  /* Emerald Deep — deep graphite-green ground, jewel emerald accent (gold kept for the MIRA wordmark) */
+  --bg:#0B1310; --bg2:#0F1B16; --card:#13201B; --card2:#1A2C24;
+  --sheet-bg:#142219;
+  --line:rgba(230,245,238,.08); --line2:rgba(230,245,238,.14);
+  --txt:#EAF3EE; --txt2:#9EB6AB; --txt3:#61786C;
   --gold:#D8B36B; --gold-soft:rgba(216,179,107,.13);
-  --acc:#33D69B; --acc-soft:rgba(51,214,155,.14);
-  --btn-ink:#04140D;
-  --green:#33D69B; --amber:#F0B24C; --red:#F0685F;
+  --acc:#25C286; --acc-soft:rgba(37,194,134,.14);
+  --btn-ink:#06231A;
+  --green:#25C286; --amber:#F0B24C; --red:#F0685F;
   --water:#4CC4E0; --water-ink:#BEEFFA;
-  --glass:rgba(10,14,20,.86);
-  --key:rgba(236,241,248,.05);
-  --code:rgba(236,241,248,.08);
-  --track:#0F1620;
-  --lockbg:#101927;
+  --glass:rgba(11,19,16,.86);
+  --key:rgba(234,243,238,.05);
+  --code:rgba(234,243,238,.08);
+  --track:#0F1B16;
+  --lockbg:#101E18;
   --shadow:0 14px 40px rgba(0,0,0,.52);
   --cardshadow:0 1px 2px rgba(0,0,0,.22);
   --radius:16px;
@@ -38,123 +38,63 @@
   --safe-bot:env(safe-area-inset-bottom,0px);
   font-size:16px;
 }
-:root[data-theme="light"]{
+:root[data-theme="porcelain"]{
   color-scheme:light;
-  /* cool alabaster + emerald ink */
-  --bg:#F1F4F2; --bg2:#FBFDFC; --card:#FFFFFF; --card2:#F6F9F7;
-  --sheet-bg:#FFFFFF;
-  --line:rgba(20,40,34,.10); --line2:rgba(20,40,34,.16);
-  --txt:#14201C; --txt2:#4E6259; --txt3:#8B9C94;
-  --gold:#9A7A28; --gold-soft:rgba(154,122,40,.10);
-  --acc:#0FA46A; --acc-soft:rgba(15,164,106,.12);
+  /* Porcelain — bright warm off-white, deep forest accent */
+  --bg:#EDF0EA; --bg2:#F7F9F5; --card:#FBFCF9; --card2:#F2F5EF;
+  --sheet-bg:#FBFCF9;
+  --line:rgba(20,40,32,.11); --line2:rgba(20,40,32,.18);
+  --txt:#17231E; --txt2:#5B6B62; --txt3:#8A978E;
+  --gold:#B07C1C; --gold-soft:rgba(176,124,28,.12);
+  --acc:#0E9E66; --acc-soft:rgba(14,158,102,.12);
   --btn-ink:#FFFFFF;
-  --green:#0FA46A; --amber:#B07C1C; --red:#C24A4A;
+  --green:#0E9E66; --amber:#B07C1C; --red:#C24A46;
   --water:#2F7FBE; --water-ink:#21689B;
-  --glass:rgba(250,249,246,.9);
-  --key:rgba(28,36,51,.05);
-  --code:rgba(28,36,51,.07);
-  --track:#E9E7E1;
-  --lockbg:#EAE7DF;
-  --shadow:0 12px 36px rgba(28,36,51,.15);
-  --cardshadow:0 1px 2px rgba(28,36,51,.05),0 4px 16px rgba(28,36,51,.05);
+  --glass:rgba(247,249,245,.9);
+  --key:rgba(20,40,32,.05);
+  --code:rgba(20,40,32,.07);
+  --track:#E4E9E0;
+  --lockbg:#E7ECE2;
+  --shadow:0 12px 36px rgba(20,40,32,.14);
+  --cardshadow:0 1px 2px rgba(20,40,32,.05),0 4px 16px rgba(20,40,32,.05);
 }
-:root[data-theme="glass"]{
+:root[data-theme="ember"]{
   color-scheme:dark;
-  /* aurora glassmorphism — dark translucent surfaces keep text at AA contrast */
-  --bg:#0A0C16;
-  --bg2:rgba(16,20,38,.52);
-  --sheet-bg:rgba(17,21,40,.92);
-  --card:rgba(19,24,44,.55); --card2:rgba(28,34,60,.62);
-  --line:rgba(255,255,255,.13); --line2:rgba(255,255,255,.22);
-  --txt:#F2F4FA; --txt2:#B3BBCF; --txt3:#7E879E;
-  --gold:#E2BE78; --gold-soft:rgba(226,190,120,.16);
-  --acc-soft:rgba(226,190,120,.16);
-  --btn-ink:#12100B;
-  --green:#4CC79B; --amber:#E5B054; --red:#E87878;
+  /* Ember & Ink — warm near-black ink, gold primary */
+  --bg:#0C0B0A; --bg2:#131110; --card:#17140F; --card2:#211C15;
+  --sheet-bg:#18140E;
+  --line:rgba(243,238,228,.08); --line2:rgba(243,238,228,.15);
+  --txt:#F3EEE4; --txt2:#B4A991; --txt3:#7C7161;
+  --gold:#E5B053; --gold-soft:rgba(229,176,83,.14);
+  --acc:#E5B053; --acc-soft:rgba(229,176,83,.14);
+  --btn-ink:#241B06;
+  --green:#57C08A; --amber:#E5B053; --red:#EC7A63;
   --water:#6FB6E8; --water-ink:#D6ECFF;
-  --glass:rgba(12,15,28,.5);
-  --key:rgba(255,255,255,.08);
-  --code:rgba(255,255,255,.1);
-  --track:rgba(255,255,255,.09);
-  --lockbg:#181D36;
-  --shadow:0 14px 44px rgba(0,0,0,.55);
-  --cardshadow:0 8px 30px rgba(0,0,0,.28);
+  --glass:rgba(12,11,10,.88);
+  --key:rgba(243,238,228,.05);
+  --code:rgba(243,238,228,.08);
+  --track:#131110;
+  --lockbg:#131110;
+  --shadow:0 14px 40px rgba(0,0,0,.6);
+  --cardshadow:0 1px 2px rgba(0,0,0,.3);
 }
-:root[data-theme="glass"] body{
-  background:
-    radial-gradient(58% 42% at 12% 6%,rgba(124,92,246,.30),transparent 62%),
-    radial-gradient(46% 38% at 88% 10%,rgba(226,190,120,.17),transparent 60%),
-    radial-gradient(64% 50% at 72% 94%,rgba(63,140,205,.24),transparent 62%),
-    #0A0C16;
-  background-attachment:fixed;
-}
-:root[data-theme="glass"] .topbar,
-:root[data-theme="glass"] .tabbar,
-:root[data-theme="glass"] .chat-head{backdrop-filter:blur(24px) saturate(1.4);-webkit-backdrop-filter:blur(24px) saturate(1.4)}
-:root[data-theme="glass"] .card,
-:root[data-theme="glass"] .msg.mira,
-:root[data-theme="glass"] .msg.user,
-:root[data-theme="glass"] .chatbar .inner,
-:root[data-theme="glass"] .sheet,
-:root[data-theme="glass"] .day-head,
-:root[data-theme="glass"] .day-items,
-:root[data-theme="glass"] .ib-entry,
-:root[data-theme="glass"] .ac-list,
-:root[data-theme="glass"] .suggest button,
-:root[data-theme="glass"] .mode-chip{backdrop-filter:blur(18px) saturate(1.35);-webkit-backdrop-filter:blur(18px) saturate(1.35)}
-:root[data-theme="glass"] .card{border-color:rgba(255,255,255,.16)}
-:root[data-theme="glass"] .chatbar{background:transparent}
 
-:root[data-theme="oled"]{
+:root[data-theme="aegean"]{
   color-scheme:dark;
-  /* true black — battery-friendly on OLED, maximum contrast */
-  --bg:#000000; --bg2:#08080A; --card:#0F0F13; --card2:#16161C;
-  --sheet-bg:#121216;
-  --line:rgba(255,255,255,.08); --line2:rgba(255,255,255,.15);
-  --txt:#F3F3F6; --txt2:#9A9AA6; --txt3:#6E6E7B;
-  --gold:#E6C074; --gold-soft:rgba(230,192,116,.14);
-  --acc:#E6C074; --acc-soft:rgba(230,192,116,.14);
-  --btn-ink:#100D06;
-  --green:#3DC495; --amber:#E3AE48; --red:#E56A6A;
-  --water:#5EA9DF; --water-ink:#BEE3FF;
-  --glass:rgba(0,0,0,.9);
-  --key:rgba(255,255,255,.05); --code:rgba(255,255,255,.07);
-  --track:#08080A; --lockbg:#000000;
-  --shadow:0 12px 36px rgba(0,0,0,.7); --cardshadow:0 0 0 1px rgba(255,255,255,.02);
-}
-:root[data-theme="midnight"]{
-  color-scheme:dark;
-  /* deep navy with champagne gold — luxe night look */
-  --bg:#0A0F1F; --bg2:#0F1730; --card:#141D38; --card2:#1C2748;
-  --sheet-bg:#16203D;
-  --line:rgba(180,200,255,.09); --line2:rgba(180,200,255,.17);
-  --txt:#EAEEF8; --txt2:#9FB0D0; --txt3:#61729A;
-  --gold:#E2C07E; --gold-soft:rgba(226,192,126,.15);
-  --acc:#E2C07E; --acc-soft:rgba(226,192,126,.15);
-  --btn-ink:#0E1226;
-  --green:#43C79A; --amber:#E3B152; --red:#E77A7A;
-  --water:#6FB6E8; --water-ink:#D6ECFF;
-  --glass:rgba(10,15,31,.86);
-  --key:rgba(180,200,255,.06); --code:rgba(180,200,255,.09);
-  --track:#0F1730; --lockbg:#0F1730;
+  /* Aegean — deep sea-navy, cyan-teal accent (gold kept for the MIRA wordmark) */
+  --bg:#081420; --bg2:#0D1D30; --card:#102237; --card2:#16314B;
+  --sheet-bg:#112339;
+  --line:rgba(220,236,252,.09); --line2:rgba(220,236,252,.16);
+  --txt:#E8F1FA; --txt2:#9DB6CE; --txt3:#5F7793;
+  --gold:#E4C079; --gold-soft:rgba(228,192,121,.14);
+  --acc:#33C6D6; --acc-soft:rgba(51,198,214,.14);
+  --btn-ink:#04222A;
+  --green:#3EC9A0; --amber:#F0A24C; --red:#EE7A7A;
+  --water:#37C6D6; --water-ink:#BEEFFA;
+  --glass:rgba(8,20,32,.88);
+  --key:rgba(220,236,252,.05); --code:rgba(220,236,252,.08);
+  --track:#0D1D30; --lockbg:#0D1D30;
   --shadow:0 14px 40px rgba(0,0,0,.55); --cardshadow:0 1px 2px rgba(0,0,0,.3);
-}
-:root[data-theme="sepia"]{
-  color-scheme:light;
-  /* warm paper + bronze ink — easy on the eyes */
-  --bg:#F1E9DA; --bg2:#F8F2E6; --card:#FBF6EC; --card2:#F5EEDF;
-  --sheet-bg:#FBF6EC;
-  --line:rgba(74,56,32,.10); --line2:rgba(74,56,32,.18);
-  --txt:#3A2E1E; --txt2:#6E5E48; --txt3:#9C8B72;
-  --gold:#9A6720; --gold-soft:rgba(165,106,32,.12);
-  --acc:#A56A20; --acc-soft:rgba(165,106,32,.12);
-  --btn-ink:#FBF6EC;
-  --green:#4E7A44; --amber:#9A6E20; --red:#B0503E;
-  --water:#4A7C9E; --water-ink:#3A6079;
-  --glass:rgba(248,242,230,.9);
-  --key:rgba(74,56,32,.05); --code:rgba(74,56,32,.07);
-  --track:#E4D8C2; --lockbg:#EAE0CD;
-  --shadow:0 12px 36px rgba(74,56,32,.15); --cardshadow:0 1px 2px rgba(74,56,32,.06),0 4px 16px rgba(74,56,32,.05);
 }
 
 body,.topbar,.tabbar,.card,.chatbar .inner,input,select,textarea{transition:background-color .25s,border-color .25s,color .25s}
@@ -1598,7 +1538,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.177";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.178";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -2227,6 +2167,8 @@ const TR = {
     "Profession / field":"المهنة / المجال","Primary goal":"الهدف الأساسي","Coaching style":"أسلوب التوجيه",
     "Direct":"مباشر","Balanced":"متوازن","Encouraging":"مُشجِّع","Answer depth":"عمق الإجابة","Short":"مختصر","Detailed":"مفصّل",
     "MIRA replies in":"تردّ ميرا بـ","Match what I write":"طابِق ما أكتبه","Appearance":"المظهر","Nutrition & body":"التغذية والجسم",
+    "Emerald":"زُمرّدي","Ember":"جمر ذهبي","Aegean":"أزرق بحري","Porcelain":"خزفي فاتح",
+    "Emerald is the signature deep green · Ember is warm ink & gold · Aegean is sea-navy & teal · Porcelain is a bright daytime light.":"زُمرّدي هو الأخضر العميق المميّز · جمر ذهبي حبر دافئ وذهب · أزرق بحري كحلي وفيروزي · خزفي فاتح إضاءة نهارية ساطعة.",
     "Daily targets":"الأهداف اليومية","Calories kcal":"السعرات كيلوكالوري","Carbs g (optional)":"كربوهيدرات غ (اختياري)","Fat g (optional)":"دهون غ (اختياري)",
     "fiber":"ألياف","sugar":"سكر","sodium":"صوديوم","Fiber, sugar & sodium":"الألياف والسكر والصوديوم","Fiber g":"ألياف غ","Sugar g":"سكر غ","Sodium mg":"صوديوم ملغ","Fiber goal g (optional)":"هدف الألياف غ (اختياري)","e.g. 30":"مثال: 30","Sodium limit mg (optional)":"حد الصوديوم ملغ (اختياري)","e.g. 2300":"مثال: 2300",
     "Water goal ml":"هدف الماء مل","Goal weight kg":"الوزن المستهدف كغ","Saved foods":"الأطعمة المحفوظة","Forget":"نسيان",
@@ -3013,7 +2955,7 @@ const BLANK = () => ({
   settings: {
     name: "", style: "balanced", depth: "balanced", lang: "match",
     apiKey: "", model: "claude-sonnet-5", pinHash: null, webSearch: true, usdaKey: "",
-    theme: "dark", account: null,
+    theme: "emerald", account: null,
     encOn: false, faceAuto: true, autoLockMin: 0,   // on-device encryption + auto-lock
     targets: {kcal: 2000, protein: 120, carbs: 0, fat: 0, fiber: 0, sodium: 0},
     waterGoal: 2500,
@@ -3173,7 +3115,11 @@ function migrateChats(){
   if (S.settings.coachLastCheckin === undefined) S.settings.coachLastCheckin = "";
   if (!S.settings.coach) S.settings.coach = {name: "", email: ""};
   if (S.settings.webSearch === undefined) S.settings.webSearch = true;
-  if (!S.settings.theme) S.settings.theme = "dark";
+  if (!S.settings.theme) S.settings.theme = "emerald";
+  // migrate anyone on a retired theme to its closest replacement in the new set
+  const THEME_MIGRATE = {dark: "emerald", light: "porcelain", sepia: "porcelain", glass: "aegean", oled: "ember", midnight: "aegean", auto: "emerald"};
+  if (THEME_MIGRATE[S.settings.theme]) S.settings.theme = THEME_MIGRATE[S.settings.theme];
+  if (!["emerald", "ember", "aegean", "porcelain"].includes(S.settings.theme)) S.settings.theme = "emerald";
   (S.domains || []).forEach(d => { if (COLOR_MIGRATE[d.color]) d.color = COLOR_MIGRATE[d.color]; });
   // Record-level hygiene: one malformed record (an old or hand-edited backup)
   // must never crash a screen — drop non-objects and coerce required fields.
@@ -3196,28 +3142,20 @@ migrateChats();
 
 /* ---------------- theme ---------------- */
 const THEMES = [
-  ["dark", "Dark", {bg: "#0A0D13", card: "#1A2030", acc: "#D2AC64"}],
-  ["light", "Light", {bg: "#F4F3EF", card: "#FFFFFF", acc: "#8E6E22"}],
-  ["glass", "Glass", {bg: "linear-gradient(135deg,#241a55,#0A0C16 62%)", card: "#2a3252", acc: "#E2BE78"}],
-  ["oled", "OLED", {bg: "#000000", card: "#16161C", acc: "#E6C074"}],
-  ["midnight", "Midnight", {bg: "#0A0F1F", card: "#1C2748", acc: "#E2C07E"}],
-  ["sepia", "Sepia", {bg: "#F1E9DA", card: "#FBF6EC", acc: "#A56A20"}],
-  ["auto", "Auto", {bg: "linear-gradient(120deg,#0A0D13 0 50%,#F4F3EF 50% 100%)", card: "#9aa0b0", acc: "#D2AC64"}],
+  ["emerald", "Emerald", {bg: "#0B1310", card: "#13201B", acc: "#25C286"}],
+  ["ember", "Ember", {bg: "#0C0B0A", card: "#17140F", acc: "#E5B053"}],
+  ["aegean", "Aegean", {bg: "#081420", card: "#102237", acc: "#33C6D6"}],
+  ["porcelain", "Porcelain", {bg: "#EDF0EA", card: "#FBFCF9", acc: "#0E9E66"}],
 ];
+const THEME_KEYS = THEMES.map(t => t[0]);
 function applyTheme(){
-  const pref = S.settings.theme || "dark";
-  const actual = pref === "auto"
-    ? (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark")
-    : pref;
+  const actual = THEME_KEYS.includes(S.settings.theme) ? S.settings.theme : "emerald";
   document.documentElement.dataset.theme = actual;
   const meta = document.querySelector('meta[name="theme-color"]');
-  const bar = {light: "#F4F3EF", glass: "#0A0C16", oled: "#000000", midnight: "#0A0F1F", sepia: "#F1E9DA", dark: "#0A0D13"};
-  if (meta) meta.content = bar[actual] || "#0A0D13";
+  const bar = {emerald: "#0B1310", ember: "#0C0B0A", aegean: "#081420", porcelain: "#EDF0EA"};
+  if (meta) meta.content = bar[actual] || "#0B1310";
   applyDir();
 }
-matchMedia("(prefers-color-scheme: light)").addEventListener("change", () => {
-  if (S.settings.theme === "auto") applyTheme();
-});
 
 /* ---------------- keyboard-aware viewport ----------------
    iOS pans fixed layouts when the keyboard opens, cutting off the top
@@ -10965,7 +10903,7 @@ function settingsHTML(){
   const initial = (st.name || "M").trim().charAt(0).toUpperCase() || "M";
   const heroSub = [st.profession, st.goal].filter(Boolean).join(" · ") || "Tap Profile to personalise MIRA";
   const modelName = (MODELS.find(m => m.id === st.model) || {}).name || st.model || "—";
-  const themeName = (THEMES.find(t => t[0] === (st.theme || "dark")) || [,"Dark"])[1];
+  const themeName = tr((THEMES.find(t => t[0] === (st.theme || "emerald")) || [, "Emerald"])[1]);
   const langRow = LANGUAGES.find(l => l[0] === st.lang);
   const langLabel = (!st.lang || st.lang === "match") ? tr("Match what I write") : (langRow ? langRow[2] : st.lang);
   const nav = [["setProfile","Profile"],["setCircle","Circle"],["setLanguage","Language"],["setAppearance","Appearance"],["setNutrition","Nutrition"],["setDomains","Domains"],["setAI","Assistant"],["setSecurity","Privacy"]];
@@ -11013,14 +10951,14 @@ function settingsHTML(){
   <div class="card" id="setAppearance">
     <div class="card-h-row"><h3><span class="set-ic">${ic("sun", 16)}</span> ${tr("Appearance")}</h3><span class="set-status">${esc(themeName)}</span></div>
     <div class="theme-grid" style="margin-top:12px">${THEMES.map(([v, l, c]) => `
-      <button class="theme-swatch ${(st.theme || "dark") === v ? "on" : ""}" onclick="M.theme('${v}')" aria-label="${l} theme">
+      <button class="theme-swatch ${(st.theme || "emerald") === v ? "on" : ""}" onclick="M.theme('${v}')" aria-label="${l} theme">
         <span class="ts-prev" style="background:${c.bg}">
           <span class="ts-card" style="background:${c.card}"></span>
           <span class="ts-dot" style="background:${c.acc}"></span>
         </span>
-        <span class="ts-nm">${l}</span>
+        <span class="ts-nm">${tr(l)}</span>
       </button>`).join("")}</div>
-    <div class="tiny" style="margin-top:10px">Glass is frosted & aurora-lit · OLED is true black · Midnight is deep navy · Sepia is warm paper · Auto follows your device.</div>
+    <div class="tiny" style="margin-top:10px">${t("Emerald is the signature deep green · Ember is warm ink & gold · Aegean is sea-navy & teal · Porcelain is a bright daytime light.")}</div>
   </div>
 
   <div class="set-group-label">${tr("Nutrition & body")}</div>
