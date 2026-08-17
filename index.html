@@ -156,6 +156,30 @@ body.kb .fab{display:none}
 @media(prefers-reduced-motion:reduce){.content.view-enter{animation:none}}
 .empty-state{text-align:center;color:var(--txt2);font-size:13px;line-height:1.5;padding:22px 16px;background:var(--card);border:1px solid var(--line2);border-radius:14px}
 .empty-state b{display:block;color:var(--txt);font-size:14.5px;margin-bottom:3px}
+/* Conscious Spending Plan */
+.csp-list{display:flex;flex-direction:column;gap:9px;margin-top:12px}
+.csp-row{display:flex;align-items:center;gap:11px}
+.csp-dot{flex:0 0 auto;width:11px;height:11px;border-radius:4px;display:inline-block}
+.csp-tx{flex:1;display:flex;flex-direction:column;min-width:0}
+.csp-tx b{font-size:14px;font-weight:600}
+.csp-tx small{font-size:11px;color:var(--txt3);line-height:1.3}
+.csp-amt{flex:0 0 auto}
+.csp-amt input{width:96px;text-align:end;font-weight:700;padding:9px 10px;min-height:0}
+.csp-track{margin-top:12px}
+.csp-track:first-of-type{margin-top:6px}
+.csp-tkh{display:flex;align-items:center;justify-content:space-between;font-size:13px;margin-bottom:5px}
+.csp-tkh>span:first-child{display:flex;align-items:center;gap:7px;font-weight:600}
+.csp-tkv{font-variant-numeric:tabular-nums;color:var(--txt2)}
+.csp-tkv.over{color:var(--red);font-weight:700}
+.csp-bar{height:8px;border-radius:6px;background:var(--track);overflow:hidden}
+.csp-bar>span{display:block;height:100%;border-radius:6px;transition:width .3s}
+.csp-tks{font-size:11px;color:var(--txt3);margin-top:3px;text-align:end}
+.csp-tks.over{color:var(--red)}
+.csp-note{display:flex;gap:8px;align-items:flex-start;font-size:12.5px;line-height:1.45;color:var(--txt);background:var(--card2);border:1px solid var(--line2);border-radius:11px;padding:10px 12px;margin-top:10px}
+.csp-note svg{color:var(--acc);flex:0 0 auto;margin-top:2px}
+.csp-tips{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.csp-tip{display:flex;gap:8px;align-items:flex-start;font-size:12.5px;line-height:1.45;color:var(--txt2)}
+.csp-tip svg{color:var(--gold);flex:0 0 auto;margin-top:2px}
 /* budget dashboard */
 .budget-dash{display:flex;align-items:center;gap:16px;margin-top:6px}
 .donut{width:118px;height:118px;flex:0 0 auto}
@@ -1589,7 +1613,7 @@ html[data-setpage="privacy"] .set-page[data-page="privacy"]{display:block}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.183";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.184";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -2623,6 +2647,20 @@ const TR = {
     "month": "شهر",
     "Set a monthly saving amount above to see when you'll reach it.": "حدّد مبلغ ادّخار شهري بالأعلى لمعرفة متى ستصل إليه.",
     "Add expense": "أضف مصروفًا",
+    "Monthly plan":"الخطة الشهرية","Monthly salary (KWD)":"الراتب الشهري (د.ك)","Salary day (resets cycle)":"يوم الراتب (يبدأ الدورة)",
+    "A Conscious Spending Plan: give every dinar a job. Amounts fill in from your salary — edit any to fit your life.":"خطة إنفاق واعية: امنح كل دينار مهمة. تُملأ المبالغ من راتبك — عدّل أيًّا منها لتناسب حياتك.",
+    "Where your salary goes":"أين يذهب راتبك","unallocated":"غير مخصّص","of salary":"من الراتب","suggested":"مقترح","(fixed)":"(ثابت)",
+    "Essentials":"الأساسيات","Guilt-free":"إنفاق بلا ذنب","Debt payoff":"سداد الديون","Short-term savings":"ادّخار قصير المدى","Long-term / investing":"طويل المدى / استثمار",
+    "Rent, bills, groceries, transport":"الإيجار والفواتير والبقالة والمواصلات","Anything you enjoy, no guilt":"أي شيء تستمتع به، دون ذنب","Loans & credit — clear it fast":"القروض والبطاقات — سدّدها بسرعة",
+    "Travel, purchases, emergency fund":"السفر والمشتريات وصندوق الطوارئ","Investing & building wealth":"الاستثمار وبناء الثروة",
+    "Reset to the 55·5·10·15·15 split":"إعادة إلى تقسيم 55·5·10·15·15","This cycle":"هذه الدورة","left":"متبقّي",
+    "Path to financial freedom":"طريقك إلى الحرية المالية","Saved & invested":"مُدّخر ومُستثمر","Invested / mo":"مُستثمر/شهر","Years to freedom":"سنوات للحرية",
+    "Investing":"استثمار","KWD/month":"د.ك/شهر","at ~5%/yr could grow to":"بنمو ~5٪ سنويًا قد يصل إلى","in 10 years, and":"خلال 10 سنوات، و","in 20":"خلال 20","An estimate, not a promise.":"تقدير، وليس وعدًا.",
+    "Financial independence ≈":"الاستقلال المالي ≈","25× your yearly essentials":"25× أساسياتك السنوية","At this rate you'd reach it in about":"بهذا المعدّل ستصل إليه خلال نحو","years":"سنة",
+    "Total debt remaining (optional)":"إجمالي الدين المتبقّي (اختياري)","At":"عند","you'd be debt-free in about":"ستتخلّص من الديون خلال نحو","Then redirect it straight to investing.":"ثم وجّهه مباشرة إلى الاستثمار.",
+    "Ask MIRA how to get there faster":"اسأل ميرا كيف تصل أسرع","Thinking…":"أفكّر…",
+    "Add your monthly salary above":"أضِف راتبك الشهري بالأعلى","Then MIRA splits it into a plan and shows your path to financial freedom.":"ثم تقسّمه ميرا إلى خطة وتُظهر طريقك إلى الحرية المالية.",
+    "Bucket":"الفئة","Note (optional) — e.g. groceries, coffee, Tabby":"ملاحظة (اختياري) — مثل بقالة، قهوة، تابي","more this cycle":"أخرى هذه الدورة",
     "Category": "الفئة",
     "Add a custom category": "أضف فئة مخصّصة",
     "New category — e.g. Tabby, Mob bill, DBA payment": "فئة جديدة — مثال: تابي، فاتورة موبايل، دفعة DBA",
@@ -3163,6 +3201,7 @@ function migrateChats(){
   if (S.budget.goalAmount === undefined) S.budget.goalAmount = 0;
   if (!Array.isArray(S.budget.cats)) S.budget.cats = [];
   if (!Array.isArray(S.budget.fixed)) S.budget.fixed = [];
+  if (!S.budget.csp || typeof S.budget.csp !== "object") S.budget.csp = {pct: {}, fixed: {}, debtTotal: 0};   // Conscious Spending Plan
   if (S.budget.plan === undefined) S.budget.plan = null;   // AI savings plan {ts, headline, moves:[…], note}
   if (S.budget.saveRec === undefined) S.budget.saveRec = null;   // AI "how much to save" rec {ts, recommend, conservative, stretch, rationale, note}
   if (!Array.isArray(S.expenses)) S.expenses = [];
@@ -3471,7 +3510,7 @@ const R = {
   workTab: "tasks",    // tasks | notes | focus | kit
   taskForm: {title: "", priority: "med", due: "", dueTime: ""},
   pomo: {mode: null, endsAt: 0, taskId: ""},  // mode: 'work'|'break'|null
-  expForm: {category: "Groceries", amount: "", note: "", date: ""},
+  expForm: {bucket: "ess", category: "Groceries", amount: "", note: "", date: ""},
   expNewCat: null,    // when non-null, the "add custom category" input is open
   planBusy: false,    // AI savings-plan generation in progress
   saveRecBusy: false, // AI "how much should I save" recommendation in progress
@@ -10167,106 +10206,130 @@ function budgetPeriodLabel(p){
   const f = d => d.toLocaleDateString(uiLang() === "ar" ? "ar" : "en-GB", {day: "numeric", month: "short"});
   return `<bdi dir="ltr">${f(p.start)} – ${f(last)}</bdi>`;
 }
+// ---- Conscious Spending Plan: give every dinar a job, then track it ----
+const CSP_BUCKETS = [
+  {id: "ess", label: "Essentials", pct: 55, color: "#4CA0E0", desc: "Rent, bills, groceries, transport"},
+  {id: "guilt", label: "Guilt-free", pct: 5, color: "#E0A34C", desc: "Anything you enjoy, no guilt"},
+  {id: "debt", label: "Debt payoff", pct: 10, color: "#E06B6B", desc: "Loans & credit — clear it fast"},
+  {id: "short", label: "Short-term savings", pct: 15, color: "#3FC7A0", desc: "Travel, purchases, emergency fund"},
+  {id: "long", label: "Long-term / investing", pct: 15, color: "#8A7CF0", desc: "Investing & building wealth"},
+];
+function cspObj(){ const c = S.budget.csp = (S.budget.csp && typeof S.budget.csp === "object") ? S.budget.csp : {}; c.pct = c.pct || {}; c.fixed = c.fixed || {}; return c; }
+function cspAlloc(id){ const c = cspObj(), income = num(S.budget.income); const fx = c.fixed[id]; if (fx != null && fx !== "") return num(fx); const def = (CSP_BUCKETS.find(b => b.id === id) || {}).pct || 0; const pct = c.pct[id] != null ? num(c.pct[id]) : def; return income * pct / 100; }
+function cspSpent(id, per){ per = per || budgetPeriod(); return S.expenses.filter(e => e.bucket === id && inPeriod(e.date, per)).reduce((a, e) => a + num(e.amount), 0); }
+// future value of a monthly contribution stream at an annual rate
+function fvMonthly(m, years, rate){ const r = rate / 12, n = years * 12; return r === 0 ? m * n : m * ((Math.pow(1 + r, n) - 1) / r); }
+function yearsToFI(monthly, target, rate){ if (monthly <= 0 || target <= 0) return null; for (let y = 1; y <= 60; y++){ if (fvMonthly(monthly, y, rate) >= target) return y; } return null; }
+function cspTips(){
+  const income = num(S.budget.income); if (!income) return [];
+  const tips = [], pctOf = id => cspAlloc(id) / income * 100;
+  if (pctOf("ess") > 60) tips.push({ic: "alert", t: `${tr("Essentials are")} ${Math.round(pctOf("ess"))}% ${tr("of your salary — above the 55% guide. Lowering fixed costs (rent, subscriptions) is the biggest lever for freedom.")}`});
+  if (pctOf("debt") > 10) tips.push({ic: "flame", t: `${tr("Debt takes")} ${Math.round(pctOf("debt"))}% ${tr("— above the 10% guide. Clear it fast; every freed dinar can go to investing.")}`});
+  const savePct = pctOf("short") + pctOf("long");
+  if (savePct >= 20) tips.push({ic: "check", t: `${tr("You're directing")} ${Math.round(savePct)}% ${tr("to your future — a strong savings rate. Keep it automatic on salary day.")}`});
+  else if (savePct > 0 && savePct < 15) tips.push({ic: "trend", t: tr("Aim to lift saving & investing toward 30%. Even +5% now compounds hugely over the years.")});
+  if (pctOf("guilt") === 0) tips.push({ic: "smile", t: tr("Keep a small guilt-free slice — a plan you enjoy is one you'll actually stick to.")});
+  return tips.slice(0, 3);
+}
+function freedomHTML(){
+  const c = cspObj(), income = num(S.budget.income);
+  const invest = cspAlloc("long"), saveRate = income > 0 ? Math.round((cspAlloc("short") + cspAlloc("long")) / income * 100) : null;
+  const fiTarget = cspAlloc("ess") * 12 * 25;                 // 25× yearly essentials (4% rule)
+  const y2fi = yearsToFI(invest, fiTarget, 0.05);
+  const debtMo = cspAlloc("debt"), debtTotal = num(c.debtTotal);
+  const debtMonths = debtTotal > 0 && debtMo > 0 ? Math.ceil(debtTotal / debtMo) : null;
+  const tips = cspTips();
+  return `<div class="card">
+    <h3>${ic("trend", 16)} ${tr("Path to financial freedom")}</h3>
+    <div class="rev-grid" style="margin-top:10px">
+      <div class="rev-stat"><div class="rv">${saveRate != null ? saveRate + "%" : "—"}</div><div class="rl">${tr("Saved & invested")}</div></div>
+      <div class="rev-stat"><div class="rv">${cur(invest)}</div><div class="rl">${tr("Invested / mo")}</div></div>
+      <div class="rev-stat"><div class="rv">${y2fi ? "~" + y2fi : "—"}</div><div class="rl">${tr("Years to freedom")}</div></div>
+    </div>
+    ${invest > 0 ? `<div class="csp-note">${ic("check", 13)} <span>${tr("Investing")} <b>${cur(invest)} ${tr("KWD/month")}</b> ${tr("at ~5%/yr could grow to")} <b>${cur(fvMonthly(invest, 10, 0.05))}</b> ${tr("in 10 years, and")} <b>${cur(fvMonthly(invest, 20, 0.05))}</b> ${tr("in 20")}. ${tr("An estimate, not a promise.")}</span></div>` : ""}
+    ${y2fi ? `<div class="csp-note">${ic("target", 13)} <span>${tr("Financial independence ≈")} <b>${cur(fiTarget)} ${tr("KWD")}</b> (${tr("25× your yearly essentials")}). ${tr("At this rate you'd reach it in about")} <b>${y2fi} ${tr("years")}</b>.</span></div>` : ""}
+    <div class="field" style="margin-top:12px"><label>${tr("Total debt remaining (optional)")}</label><input type="number" inputmode="decimal" value="${c.debtTotal || ""}" placeholder="${tr("e.g. 3200")}" oninput="S.budget.csp.debtTotal=num(this.value);save()"></div>
+    ${debtMonths ? `<div class="csp-note">${ic("flame", 13)} <span>${tr("At")} <b>${cur(debtMo)} ${tr("KWD/month")}</b> ${tr("you'd be debt-free in about")} <b>${debtMonths} ${debtMonths === 1 ? tr("month") : tr("months")}</b> (${fmtDate(new Date(Date.now() + debtMonths * 30 * 864e5).toLocaleDateString("en-CA"))}). ${tr("Then redirect it straight to investing.")}</span></div>` : ""}
+    ${tips.length ? `<div class="csp-tips">${tips.map(t => `<div class="csp-tip">${ic(t.ic, 14)} <span>${t.t}</span></div>`).join("")}</div>` : ""}
+    <button class="btn sm sec" style="margin-top:12px;width:100%" onclick="M.cspCoach()" ${R.cspBusy ? "disabled" : ""}>${R.cspBusy ? tr("Thinking…") : ic("chat", 15) + " " + tr("Ask MIRA how to get there faster")}</button>
+    ${c.coach ? `<div class="csp-note" style="margin-top:10px"><span dir="auto">${esc(c.coach)}</span></div>` : ""}
+  </div>`;
+}
 function budgetHTML(){
   const per = budgetPeriod();
-  const monthExp = S.expenses.filter(e => inPeriod(e.date, per));
-  const spent = monthExp.reduce((a, e) => a + num(e.amount), 0);
-  const billsMo = S.bills.reduce((a, b) => a + num(b.amount) * (BILL_CYCLES[b.cycle] || BILL_CYCLES.monthly).perMonth, 0);
-  const fx = fixedMonthly();
   const income = num(S.budget.income);
-  const totalOut = spent + billsMo + fx;
-  const net = income - totalOut;
-  const saveRate = income > 0 ? Math.round(net / income * 100) : null;
-  const catTot = {};
-  monthExp.forEach(e => { catTot[e.category] = (catTot[e.category] || 0) + num(e.amount); });
-  if (billsMo) catTot["Bills"] = (catTot["Bills"] || 0) + billsMo;
-  // fixed commitments show under their own category (loan/gym/education), not lumped
-  (S.budget.fixed || []).forEach(x => { const c = x.cat || "Other"; catTot[c] = (catTot[c] || 0) + num(x.amount); });
-  const entries = Object.entries(catTot).sort((a, b) => b[1] - a[1]);
-  const top = entries[0];
-  const saveT = S.budget.saveTarget != null ? S.budget.saveTarget : Math.max(0, Math.round(net));
-  const goalAmt = num(S.budget.goalAmount);
-  const monthsToGoal = goalAmt > 0 && saveT > 0 ? Math.ceil(goalAmt / saveT) : null;
+  const c = cspObj();
+  const allocTot = CSP_BUCKETS.reduce((a, b) => a + cspAlloc(b.id), 0);
+  const leftover = income - allocTot;
+  const monthExp = S.expenses.filter(e => inPeriod(e.date, per));
   const f = R.expForm;
   return `
     <div class="card">
-      <div class="grid2" style="margin-bottom:2px">
-        <div class="field"><label>${tr("Monthly income (KWD)")}</label><input type="number" inputmode="decimal" value="${S.budget.income || ""}" oninput="S.budget.income=num(this.value);save()"></div>
-        <div class="field"><label>${tr("Salary day (resets budget)")}</label><input type="number" inputmode="numeric" min="1" max="28" value="${S.budget.cycleDay && S.budget.cycleDay > 1 ? S.budget.cycleDay : ""}" placeholder="${tr("1 = calendar month")}" onchange="M.budgetCycleSet(this.value)"></div>
+      <h3>${ic("wallet", 16)} ${tr("Monthly plan")}</h3>
+      <div class="grid2" style="margin:10px 0 2px">
+        <div class="field"><label>${tr("Monthly salary (KWD)")}</label><input type="number" inputmode="decimal" value="${S.budget.income || ""}" oninput="S.budget.income=num(this.value);save()"></div>
+        <div class="field"><label>${tr("Salary day (resets cycle)")}</label><input type="number" inputmode="numeric" min="1" max="28" value="${S.budget.cycleDay && S.budget.cycleDay > 1 ? S.budget.cycleDay : ""}" placeholder="${tr("1 = calendar month")}" onchange="M.budgetCycleSet(this.value)"></div>
       </div>
-      <div class="tiny" style="margin:0 2px 12px;color:var(--txt2)">${ic("calendar", 12)} ${budgetCycleDay() > 1 ? `${tr("This pay cycle")} · ${budgetPeriodLabel(per)} — ${tr("resets on day")} ${budgetCycleDay()}` : `${tr("This month")} · ${budgetPeriodLabel(per)}`}</div>
-      <div class="rev-grid">
-        <div class="rev-stat"><div class="rv">${cur(totalOut)}</div><div class="rl">${budgetCycleDay() > 1 ? tr("Out this cycle") : tr("Out this month")}</div></div>
-        <div class="rev-stat"><div class="rv" style="color:${net >= 0 ? "var(--green)" : "var(--red)"}">${cur(net)}</div><div class="rl">${tr("Net left")}</div></div>
-        <div class="rev-stat"><div class="rv">${saveRate != null ? saveRate + "%" : "—"}</div><div class="rl">${tr("Savings rate")}</div></div>
-      </div>
+      <div class="tiny" style="margin:0 2px 4px;color:var(--txt2)">${ic("calendar", 12)} ${budgetCycleDay() > 1 ? `${tr("This pay cycle")} · ${budgetPeriodLabel(per)}` : `${tr("This month")} · ${budgetPeriodLabel(per)}`}</div>
+      <div class="tiny" style="margin:2px 2px 0;color:var(--txt2)">${tr("A Conscious Spending Plan: give every dinar a job. Amounts fill in from your salary — edit any to fit your life.")}</div>
     </div>
 
-    ${fixedHTML()}
-
-    ${savingsBalanceHTML()}
-
-    ${entries.length ? `<div class="card">
-      <h3>${ic("wallet", 16)} ${tr("Where it goes")}</h3>
-      <div class="budget-dash">
-        ${donutSVG(entries, totalOut)}
-        <div class="budget-legend">${entries.map(([c, v]) => `<div class="bl-row"><span class="bl-dot" style="background:${catColor(c)}"></span><span class="bl-c">${esc(tr(c))}</span><span class="bl-v">${cur(v)}<span class="bl-p">${totalOut ? Math.round(v / totalOut * 100) : 0}%</span></span></div>`).join("")}</div>
+    ${income > 0 ? `
+    <div class="card">
+      <div class="card-h-row"><h3>${ic("target", 16)} ${tr("Where your salary goes")}</h3>
+        <span class="set-status ${Math.abs(leftover) <= Math.max(1, income * 0.005) ? "on" : ""}">${leftover >= 0 ? `${cur(leftover)} ${tr("unallocated")}` : `${cur(-leftover)} ${tr("over")}`}</span></div>
+      <div class="csp-list">
+        ${CSP_BUCKETS.map(b => { const alloc = cspAlloc(b.id), pct = income > 0 ? Math.round(alloc / income * 100) : 0, fixed = c.fixed[b.id] != null && c.fixed[b.id] !== "";
+          return `<div class="csp-row">
+            <span class="csp-dot" style="background:${b.color}"></span>
+            <span class="csp-tx"><b>${tr(b.label)}</b><small>${tr(b.desc)} · ${pct}% ${fixed ? tr("(fixed)") : (pct !== b.pct ? `${tr("of")} ${b.pct}% ${tr("suggested")}` : tr("of salary"))}</small></span>
+            <span class="csp-amt"><input type="number" inputmode="decimal" value="${alloc ? Math.round(alloc * 100) / 100 : ""}" placeholder="${Math.round(income * b.pct / 100)}" onchange="M.cspAmount('${b.id}',this.value)"></span>
+          </div>`; }).join("")}
       </div>
-      ${top ? `<div class="budget-top">${ic("trend", 13)} ${tr("Most goes to")} <b>${esc(tr(top[0]))}</b> — ${cur(top[1])} ${tr("KWD")} (${totalOut ? Math.round(top[1] / totalOut * 100) : 0}% ${tr("of spending")})</div>` : ""}
-    </div>` : ""}
-
-    ${monthTrendHTML()}
+      <button class="btn sm sec" style="margin-top:10px" onclick="M.cspReset()">${ic("refresh", 14)} ${tr("Reset to the 55·5·10·15·15 split")}</button>
+    </div>
 
     <div class="card">
-      <h3>${ic("target", 16)} ${tr("Savings plan")}</h3>
-      <div class="field"><label>${tr("Save each month (KWD)")}</label><input type="number" inputmode="decimal" value="${saveT || ""}" placeholder="${Math.max(0, Math.round(net))}" oninput="S.budget.saveTarget=num(this.value);save()"></div>
-      ${saveRecHTML(net, income)}
-      <div class="save-proj">
-        ${[3, 6, 12].map(m => `<div class="sp-cell"><div class="sp-v">${cur(saveT * m)}</div><div class="sp-l">${m === 12 ? tr("1 year") : m + " " + tr("months")}</div></div>`).join("")}
-      </div>
-      <div class="row" style="margin-top:12px;gap:8px">
-        <div class="field" style="flex:2;margin:0"><label>${tr("Saving toward (optional)")}</label><input value="${esc(S.budget.goalName || "")}" oninput="S.budget.goalName=this.value;save()" placeholder="${tr("e.g. new laptop, Umrah, emergency fund")}" dir="auto"></div>
-        <div class="field" style="flex:1;margin:0"><label>${tr("Cost (KWD)")}</label><input type="number" inputmode="decimal" value="${S.budget.goalAmount || ""}" oninput="S.budget.goalAmount=num(this.value);save()"></div>
-      </div>
-      ${monthsToGoal ? `<div class="budget-top" style="margin-top:10px">${ic("check", 13)} ${tr("At")} ${cur(saveT)} ${tr("KWD/month you'll reach")} <b>${esc(S.budget.goalName || tr("your goal"))}</b> ${tr("in about")} <b>${monthsToGoal} ${monthsToGoal === 1 ? tr("month") : tr("months")}</b> (${fmtDate(new Date(Date.now() + monthsToGoal * 30 * 864e5).toLocaleDateString("en-CA"))}).</div>` : goalAmt > 0 ? `<div class="tiny" style="margin-top:8px;color:var(--txt2)">${tr("Set a monthly saving amount above to see when you'll reach it.")}</div>` : ""}
+      <h3>${ic("trend", 16)} ${tr("This cycle")}</h3>
+      ${CSP_BUCKETS.map(b => { const alloc = cspAlloc(b.id), spent = cspSpent(b.id, per); const pct = alloc > 0 ? Math.min(100, spent / alloc * 100) : (spent > 0 ? 100 : 0); const over = alloc > 0 && spent > alloc + 0.001;
+        return `<div class="csp-track">
+          <div class="csp-tkh"><span><span class="csp-dot" style="background:${b.color}"></span>${tr(b.label)}</span><span class="csp-tkv ${over ? "over" : ""}">${cur(spent)} / ${cur(alloc)} ${tr("KWD")}</span></div>
+          <div class="csp-bar"><span style="width:${pct}%;background:${over ? "var(--red)" : b.color}"></span></div>
+          ${alloc > 0 ? `<div class="csp-tks ${over ? "over" : ""}">${over ? `${cur(spent - alloc)} ${tr("over")}` : `${cur(alloc - spent)} ${tr("left")}`}</div>` : ""}
+        </div>`; }).join("")}
     </div>
 
-    ${savingsPlanHTML(income, net, billsMo + fx)}
+    ${freedomHTML()}
+    ` : `<div class="empty-state"><b>${tr("Add your monthly salary above")}</b>${tr("Then MIRA splits it into a plan and shows your path to financial freedom.")}</div>`}
 
     <div class="card">
       <h3>${ic("plus", 16)} ${tr("Add expense")}</h3>
       <div class="grid2" style="margin-bottom:10px">
-        <div class="field"><label>${tr("Category")}</label>
-          <div class="row" style="gap:6px">
-            <select style="flex:1" onchange="R.expForm.category=this.value">${allExpenseCats().map(c => `<option value="${esc(c)}" ${f.category === c ? "selected" : ""}>${esc(tr(c))}</option>`).join("")}</select>
-            <button class="btn sm sec" style="flex:0 0 auto" aria-label="${tr("Add a custom category")}" onclick="M.expCatNewToggle()">${ic(R.expNewCat != null ? "x" : "plus", 15)}</button>
-          </div></div>
+        <div class="field"><label>${tr("Bucket")}</label>
+          <select onchange="R.expForm.bucket=this.value">${CSP_BUCKETS.map(b => `<option value="${b.id}" ${(f.bucket || "ess") === b.id ? "selected" : ""}>${tr(b.label)}</option>`).join("")}</select></div>
         <div class="field"><label>${tr("Amount (KWD)")}</label><input type="number" inputmode="decimal" value="${esc(f.amount)}" oninput="R.expForm.amount=this.value"></div>
       </div>
-      ${R.expNewCat != null ? `<div class="row" style="margin-bottom:10px">
-          <input id="newCatInput" value="${esc(R.expNewCat)}" placeholder="${tr("New category — e.g. Tabby, Mob bill, DBA payment")}" dir="auto" oninput="R.expNewCat=this.value" onkeydown="if(event.key==='Enter')M.expCatAdd()">
-          <button class="btn sm" style="flex:0 0 auto" onclick="M.expCatAdd()">${tr("Add")}</button>
-        </div>
-        ${((S.budget && S.budget.cats) || []).length ? `<div class="rc-tags" style="margin:-4px 2px 10px">${(S.budget.cats).map((c, i) => `<span class="rc-tag" style="display:inline-flex;align-items:center;gap:5px"><span class="bl-dot" style="background:${catColor(c)}"></span>${esc(c)} <button aria-label="${tr("Remove")} ${esc(c)}" style="background:none;color:var(--txt3);font-weight:700" onclick="M.expCatDel(${i})">✕</button></span>`).join("")}</div>` : ""}` : ""}
-      <div class="row"><input value="${esc(f.note)}" oninput="R.expForm.note=this.value" placeholder="${tr("Note (optional)")}" dir="auto">
+      <div class="row"><input value="${esc(f.note)}" oninput="R.expForm.note=this.value" placeholder="${tr("Note (optional) — e.g. groceries, coffee, Tabby")}" dir="auto">
         <button class="btn sm" style="flex:0 0 auto" onclick="M.expAdd()">${tr("Add")}</button></div>
     </div>
 
     ${monthExp.length ? (() => {
       const heading = budgetCycleDay() > 1 ? budgetPeriodLabel(per) : monLoc(new Date(), "long");
       const sorted = [...monthExp].sort((a, b) => b.ts - a.ts);
-      const shown = sorted.slice(0, 50);
+      const shown = sorted.slice(0, 60);
+      const spent = monthExp.reduce((a, e) => a + num(e.amount), 0);
       return `<div class="card fold ${R.expListOpen ? "open" : ""}">
       <h3 onclick="M.expListToggle()">${ic("creditCard", 16)} ${heading} ${tr("expenses")} <span class="exp-sum">${monthExp.length} · ${cur(spent)} ${tr("KWD")}</span><span class="chev">▶</span></h3>
       <div class="fold-body">
-      ${shown.map(e => `<div class="set-row">
-        <div><div class="k"><span class="bl-dot" style="background:${catColor(e.category)};margin-inline-end:7px"></span>${esc(tr(e.category))}${e.note ? ` · ${esc(e.note)}` : ""}</div><div class="desc">${fmtDate(e.date)}</div></div>
+      ${shown.map(e => { const b = CSP_BUCKETS.find(x => x.id === e.bucket) || {color: "var(--txt3)", label: e.category || "Other"};
+        return `<div class="set-row">
+        <div><div class="k"><span class="bl-dot" style="background:${b.color};margin-inline-end:7px"></span>${tr(b.label)}${e.note ? ` · ${esc(e.note)}` : ""}</div><div class="desc">${fmtDate(e.date)}</div></div>
         <span class="end"><b>${cur(e.amount)} ${tr("KWD")}</b><button class="btn sm danger" aria-label="${tr("Delete")}" onclick="M.expDel('${e.id}')">${ic("trash", 13)}</button></span>
-      </div>`).join("")}
-      ${sorted.length > shown.length ? `<div class="tiny" style="margin-top:8px;color:var(--txt3);text-align:center">+ ${sorted.length - shown.length} ${tr("more this month")}</div>` : ""}
+      </div>`; }).join("")}
+      ${sorted.length > shown.length ? `<div class="tiny" style="margin-top:8px;color:var(--txt3);text-align:center">+ ${sorted.length - shown.length} ${tr("more this cycle")}</div>` : ""}
       </div>
     </div>`;
-    })() : `<div class="empty-state"><b>${tr("No expenses logged this month")}</b>${tr("Add what you spend and MIRA will show where it goes and how to save.")}</div>`}`;
+    })() : ""}`;
 }
 
 /* ---------------- Month-by-month trend dashboard ---------------- */
@@ -12032,9 +12095,34 @@ Rules: exactly ${days} day objects. Order compound lifts first; 4-6 exercises pe
   expAdd(){
     const a = num(R.expForm.amount);
     if (a <= 0){ toast("Enter the amount."); return; }
-    S.expenses.push({id: uid(), date: todayStr(), category: R.expForm.category, amount: a, note: R.expForm.note.trim(), ts: Date.now()});
-    R.expForm = {category: R.expForm.category, amount: "", note: "", date: ""};
+    const bucket = R.expForm.bucket || "ess";
+    S.expenses.push({id: uid(), date: todayStr(), bucket, category: R.expForm.category, amount: a, note: R.expForm.note.trim(), ts: Date.now()});
+    R.expForm = {bucket, category: R.expForm.category, amount: "", note: "", date: ""};
     buzz(); save(); render();
+  },
+  /* ---- Conscious Spending Plan ---- */
+  cspAmount(id, v){
+    const c = cspObj(), income = num(S.budget.income), n = num(v);
+    if (v === "" || n < 0){ delete c.fixed[id]; }
+    else { c.fixed[id] = n; if (income > 0) c.pct[id] = Math.round(n / income * 100); }
+    save(); render();
+  },
+  cspReset(){ const c = cspObj(); c.fixed = {}; c.pct = {}; save(); render(); toast(tr("Reset to the 55·5·10·15·15 split")); },
+  async cspCoach(){
+    if (!S.settings.apiKey){ toast("Add your API key in Settings first."); R.tab = "set"; R.setPage = "assistant"; render(); return; }
+    R.cspBusy = true; render();
+    try {
+      const income = num(S.budget.income), c = cspObj();
+      const split = CSP_BUCKETS.map(b => `${b.label} ${Math.round(cspAlloc(b.id))} KWD (${income ? Math.round(cspAlloc(b.id) / income * 100) : 0}%)`).join("; ");
+      const txt = await llmJsonCall(
+        `You are MIRA, a calm, practical personal-finance coach. The user follows a Conscious Spending Plan in Kuwaiti Dinar (KWD). Give specific, encouraging, non-judgmental guidance to reach financial freedom faster — what to adjust, whether to prioritise clearing debt or investing, and one concrete next action. Reply with ONLY JSON: {"advice": "3-4 short sentences, plain text, no markdown"}.${(typeof replyLangNote === "function") ? replyLangNote() : ""}`,
+        `Monthly salary: ${income} KWD. Current split — ${split}. Total remaining debt: ${num(c.debtTotal)} KWD.`,
+        500);
+      const j = tryParseJson(txt);
+      c.coach = String((j && j.advice) || "").trim();
+      save();
+    } catch (e) { toast("Coach failed: " + e.message, 4000); }
+    R.cspBusy = false; render();
   },
   expDel(id){ S.expenses = S.expenses.filter(e => e.id !== id); save(); render(); },
   /* ---- custom expense categories ---- */
