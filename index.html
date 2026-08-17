@@ -125,7 +125,12 @@ h1,h2,h3,h4{margin:0;font-weight:600}
    pinned to the real screen edges with inset:0 — immune to the iOS
    standalone bug where 100vh/100dvh exclude the bottom safe area */
 body{overflow:hidden}
-#app{position:fixed;inset:0;display:flex;flex-direction:column;overflow:hidden}
+#app{position:fixed;inset:0;display:flex;flex-direction:column;overflow:hidden;background:var(--bg)}
+/* Backstop for iOS standalone: if the web view ever stops short of the physical
+   bottom, paint that strip with the tab-bar colour so no OS grey band shows.
+   #app (opaque) covers it everywhere the shell reaches; only a genuine gap
+   under the tab bar reveals this filler, matched to the bar so it's seamless. */
+body::after{content:"";position:fixed;left:0;right:0;bottom:0;height:160px;background:var(--bg2);z-index:-1;pointer-events:none}
 /* while the keyboard is up: tab bar hides so the input sits on the keyboard,
    and the composer reads as a bar docked to the keyboard (hairline + lift) */
 body.kb .tabbar{display:none}
@@ -1549,7 +1554,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.180";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.181";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
