@@ -180,6 +180,12 @@ body.kb .fab{display:none}
 .csp-tips{display:flex;flex-direction:column;gap:8px;margin-top:12px}
 .csp-tip{display:flex;gap:8px;align-items:flex-start;font-size:12.5px;line-height:1.45;color:var(--txt2)}
 .csp-tip svg{color:var(--gold);flex:0 0 auto;margin-top:2px}
+.macro-micros{display:flex;flex-direction:column;gap:2px;margin-top:12px;border-top:1px solid var(--line);padding-top:10px}
+.mm-row{display:flex;align-items:center;justify-content:space-between;font-size:13px;padding:3px 0}
+.mm-row>span:first-child{color:var(--txt2)}
+.mm-v{font-variant-numeric:tabular-nums;font-weight:600}
+.mm-v.over{color:var(--red)}
+.mm-cal{font-size:11px;color:var(--txt3);font-weight:500}
 /* budget dashboard */
 .budget-dash{display:flex;align-items:center;gap:16px;margin-top:6px}
 .donut{width:118px;height:118px;flex:0 0 auto}
@@ -1613,7 +1619,7 @@ html[data-setpage="privacy"] .set-page[data-page="privacy"]{display:block}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.185";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.186";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -2647,6 +2653,7 @@ const TR = {
     "month": "شهر",
     "Set a monthly saving amount above to see when you'll reach it.": "حدّد مبلغ ادّخار شهري بالأعلى لمعرفة متى ستصل إليه.",
     "Add expense": "أضف مصروفًا",
+    "Macro breakdown":"تفصيل الماكروز","Fiber":"الألياف","Sugar":"السكر","Sodium":"الصوديوم",
     "Calculate my targets":"احسب أهدافي","A quick, science-based estimate (Mifflin-St Jeor). Once you've logged for a couple of weeks, MIRA fine-tunes it from your real results.":"تقدير سريع مبني على العلم (Mifflin-St Jeor). بعد أسبوعين من التسجيل، تضبطه ميرا من نتائجك الفعلية.",
     "Sex":"الجنس","Female":"أنثى","Male":"ذكر","Age":"العمر","Height (cm)":"الطول (سم)","Current weight (kg)":"الوزن الحالي (كجم)","e.g. 72":"مثال 72",
     "Activity level":"مستوى النشاط","Goal":"الهدف","Lose":"إنقاص","Maintain":"محافظة","Gain":"زيادة","Pace":"الوتيرة",
@@ -6177,6 +6184,40 @@ function foodCoachHTML(today, tot, tg){
   </div>`;
 }
 
+// Classic MyFitnessPal macro pie: the calorie split across protein/carbs/fat,
+// with grams and % of each goal, plus fiber/sugar/sodium against their goals.
+function macroDonutSVG(segs, centerTop, centerBot){
+  const total = segs.reduce((a, s) => a + s.v, 0) || 1, R = 42, C = 2 * Math.PI * R;
+  let off = 0;
+  const arcs = segs.map(s => { const len = s.v / total * C; const el = `<circle cx="60" cy="60" r="${R}" fill="none" stroke="${s.color}" stroke-width="14" stroke-dasharray="${len.toFixed(1)} ${(C - len).toFixed(1)}" stroke-dashoffset="${(-off).toFixed(1)}" transform="rotate(-90 60 60)"/>`; off += len; return el; }).join("");
+  return `<svg viewBox="0 0 120 120" class="donut" role="img" aria-label="${esc(tr("Macro breakdown"))}">
+    <circle cx="60" cy="60" r="${R}" fill="none" stroke="var(--track)" stroke-width="14"/>
+    ${arcs}
+    <text x="60" y="57" text-anchor="middle" class="d-c">${centerTop}</text>
+    <text x="60" y="73" text-anchor="middle" class="d-l">${centerBot}</text>
+  </svg>`;
+}
+function macroBreakdownHTML(tot, tg){
+  tg = tg || {};
+  const pk = num(tot.p) * 4, ck = num(tot.c) * 4, fk = num(tot.f) * 9, sum = pk + ck + fk;
+  if (sum <= 0) return "";
+  const macs = [["Protein", num(tot.p), pk, "#4CC4E0", num(tg.protein)], ["Carbs", num(tot.c), ck, "#F5B851", num(tg.carbs)], ["Fat", num(tot.f), fk, "#A78BFA", num(tg.fat)]];
+  const legend = macs.map(([l, g, k, col, goal]) => { const pc = Math.round(k / sum * 100), pg = goal > 0 ? Math.round(g / goal * 100) : null;
+    return `<div class="bl-row"><span class="bl-dot" style="background:${col}"></span><span class="bl-c">${tr(l)} <span class="mm-cal">${pc}%</span></span><span class="bl-v">${n0(g)}g${pg != null ? `<span class="bl-p">${pg}% ${tr("of goal")}</span>` : ""}</span></div>`; }).join("");
+  const micros = [];
+  if (num(tg.fiber) > 0) micros.push(["Fiber", num(tot.fiber), num(tg.fiber), "g", false]);
+  if (num(tot.sugar) > 0) micros.push(["Sugar", num(tot.sugar), 0, "g", false]);
+  if (num(tg.sodium) > 0) micros.push(["Sodium", num(tot.sodium), num(tg.sodium), "mg", true]);
+  return `<div class="card">
+    <h3>${ic("target", 16)} ${tr("Macro breakdown")}</h3>
+    <div class="budget-dash">
+      ${macroDonutSVG(macs.map(m => ({v: m[2], color: m[3]})), n0(num(tot.kcal)), "kcal")}
+      <div class="budget-legend">${legend}</div>
+    </div>
+    ${micros.length ? `<div class="macro-micros">${micros.map(([l, v, goal, unit, limit]) => { const pct = goal > 0 ? Math.round(v / goal * 100) : null, over = limit && goal > 0 && v > goal;
+      return `<div class="mm-row"><span>${tr(l)}</span><span class="mm-v ${over ? "over" : ""}">${unit === "mg" ? n0(v) : n1(v)}${unit}${goal > 0 ? ` / ${n0(goal)}${unit}` : ""}${pct != null ? ` · ${pct}%` : ""}</span></div>`; }).join("")}</div>` : ""}
+  </div>`;
+}
 function foodHTML(){
   const today = todayStr();   // NB: keep this named `today` — the global t() is the translator
   const tot = dayTotals(today);
@@ -6202,6 +6243,8 @@ function foodHTML(){
     <div class="muted" style="margin-top:9px">${t("Remaining")}: <b>${n0(Math.max(0, tg.kcal - tot.kcal))} kcal</b> · <b>${n1(Math.max(0, tg.protein - tot.p))} ${tr("g protein")}</b>${tg.carbs ? ` · ${n1(Math.max(0, tg.carbs - tot.c))} ${tr("g carbs")}` : ""}${tg.fat ? ` · ${n1(Math.max(0, tg.fat - tot.f))} ${tr("g fat")}` : ""}</div>
     ${microStripHTML(tot)}
   </div>
+
+  ${macroBreakdownHTML(tot, tg)}
 
   ${foodCoachHTML(today, tot, tg)}
 
