@@ -1619,7 +1619,7 @@ html[data-setpage="privacy"] .set-page[data-page="privacy"]{display:block}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.187";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.188";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -2654,6 +2654,10 @@ const TR = {
     "Set a monthly saving amount above to see when you'll reach it.": "حدّد مبلغ ادّخار شهري بالأعلى لمعرفة متى ستصل إليه.",
     "Add expense": "أضف مصروفًا",
     "Macro breakdown":"تفصيل الماكروز","Fiber":"الألياف","Sugar":"السكر","Sodium":"الصوديوم",
+    "5-week forecast":"توقّع 5 أسابيع","If every day looked like today, you'd be about":"لو كان كل يوم مثل اليوم، سيكون وزنك نحو","in 5 weeks":"خلال 5 أسابيع",
+    "If every day looked like today, you'd":"لو كان كل يوم مثل اليوم،","lose about":"ستفقد نحو","gain about":"ستكتسب نحو","hold at about":"ستثبت عند نحو",
+    "An estimate":"تقدير","vs your maintenance":"مقارنةً بمستوى المحافظة","vs your calorie goal":"مقارنةً بهدف سعراتك",
+    "Log your weight to see your projected number, not just the change.":"سجّل وزنك لرؤية الرقم المتوقّع، وليس التغيّر فقط.","Set up the goal calculator for a maintenance-based forecast.":"أعِدّ حاسبة الأهداف للحصول على توقّع مبني على مستوى المحافظة.",
     "Exercise calories":"سعرات التمارين","kcal burned":"سعرة محروقة","A conservative estimate from today's logged workouts. Add them back to your food budget?":"تقدير متحفّظ من تمارين اليوم المُسجّلة. أضِفها إلى ميزانية طعامك؟",
     "None":"لا شيء","Half":"النصف","All":"الكل","Added":"أُضيف","to today's budget.":"إلى ميزانية اليوم.",
     "Losing weight? Your target already builds in the deficit — leave this at None so eating back doesn't cancel it.":"تريد إنقاص الوزن؟ هدفك يتضمّن العجز أصلًا — اتركها على \"لا شيء\" كي لا يُلغى بإعادة الأكل.",
@@ -6240,6 +6244,39 @@ function exerciseCalHTML(burned, added){
     <div class="csp-note" style="margin-top:10px">${ic("alert", 13)}<span>${tr("Losing weight? Your target already builds in the deficit — leave this at None so eating back doesn't cancel it.")}</span></div>
   </div>`;
 }
+// MyFitnessPal's "complete diary" projection — but grounded: it measures the
+// day against your real maintenance (from the goal calculator or adaptive
+// estimate, or your calorie goal as a fallback) and your logged weight, then
+// projects 5 weeks out via the 7700 kcal/kg rule. Clearly an estimate.
+function closeDayForecast(){
+  const tot = dayTotals(todayStr()), eaten = num(tot.kcal);
+  if (eaten <= 0) return null;
+  const tc = targetCalc(), at = (typeof adaptiveTargets === "function") ? adaptiveTargets() : null;
+  const maint = tc ? tc.tdee : (at ? at.tdee : 0);
+  const ref = maint > 0 ? maint : num((S.settings.targets || {}).kcal);
+  if (!(ref > 0)) return null;
+  const usingMaint = maint > 0, burned = todayBurn();
+  const dailyBalance = eaten - ref - (usingMaint ? burned : 0);   // vs maintenance(+exercise), or vs goal
+  const kg5wk = dailyBalance * 35 / KCAL_PER_KG;
+  const curW = latestWeightKg();
+  return {eaten, ref, usingMaint, burned, dailyBalance, kg5wk, curW, projW: curW ? +(curW + kg5wk).toFixed(1) : null};
+}
+function closeDayHTML(){
+  const f = closeDayForecast(); if (!f) return "";
+  const dir = f.kg5wk < -0.1 ? "lose" : f.kg5wk > 0.1 ? "gain" : "hold";
+  const absKg = Math.abs(f.kg5wk).toFixed(1);
+  const line = f.projW != null
+    ? `${tr("If every day looked like today, you'd be about")} <b>${f.projW} kg</b> ${tr("in 5 weeks")}`
+    : `${tr("If every day looked like today, you'd")} ${dir === "lose" ? tr("lose about") : dir === "gain" ? tr("gain about") : tr("hold at about")} <b>${dir === "hold" ? "±0" : absKg} kg</b> ${tr("in 5 weeks")}`;
+  const refTxt = f.usingMaint ? tr("vs your maintenance") : tr("vs your calorie goal");
+  const icn = dir === "lose" ? "trend" : dir === "gain" ? "flame" : "check";
+  return `<div class="card">
+    <h3>${ic("trend", 16)} ${tr("5-week forecast")}</h3>
+    <div class="csp-note" style="margin-top:10px">${ic(icn, 13)}<span>${line}. ${tr("An estimate")} — ${refTxt}.</span></div>
+    ${!f.curW ? `<div class="tiny" style="margin-top:8px;color:var(--txt3)">${tr("Log your weight to see your projected number, not just the change.")}</div>` : ""}
+    ${!f.usingMaint ? `<div class="tiny" style="margin-top:8px;color:var(--txt3)">${tr("Set up the goal calculator for a maintenance-based forecast.")}</div>` : ""}
+  </div>`;
+}
 function foodHTML(){
   const today = todayStr();   // NB: keep this named `today` — the global t() is the translator
   const tot = dayTotals(today);
@@ -6274,6 +6311,8 @@ function foodHTML(){
   ${exerciseCalHTML(burned, added)}
 
   ${macroBreakdownHTML(tot, tg)}
+
+  ${closeDayHTML()}
 
   ${foodCoachHTML(today, tot, tg)}
 
