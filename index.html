@@ -1629,7 +1629,7 @@ html[data-setpage="privacy"] .set-page[data-page="privacy"]{display:block}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.189";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.190";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -2665,7 +2665,8 @@ const TR = {
     "Add expense": "أضف مصروفًا",
     "Macro breakdown":"تفصيل الماكروز","Fiber":"الألياف","Sugar":"السكر","Sodium":"الصوديوم",
     "Split calories into macros":"قسّم السعرات إلى ماكروز","Enter a calorie goal and a ratio — MIRA turns it into gram targets using 4 kcal/g for protein & carbs and 9 kcal/g for fat.":"أدخِل هدف السعرات ونسبة — تحوّلها ميرا إلى أهداف بالغرام باستخدام 4 سعرات/غرام للبروتين والكربوهيدرات و9 سعرات/غرام للدهون.",
-    "Ratio":"النسبة","Balanced":"متوازن","High-protein":"عالي البروتين","Low-carb":"قليل الكربوهيدرات","Keto":"كيتو",
+    "Ratio":"النسبة","Balanced":"متوازن","Fat loss":"خسارة الدهون","High-protein":"عالي البروتين","Low-carb":"قليل الكربوهيدرات","Keto":"كيتو",
+    "Grams use the Atwater 4·4·9 kcal/g factors (USDA). Ratios follow the Institute of Medicine's macronutrient ranges and ISSN protein guidance — Fat loss keeps protein high to protect muscle in a deficit.":"تُحسب الغرامات بعوامل أتواتر 4·4·9 سعرة/غرام (USDA). تتبع النسب نطاقات المغذّيات من معهد الطب وإرشادات ISSN للبروتين — \"خسارة الدهون\" تُبقي البروتين عاليًا لحماية العضلات أثناء العجز.",
     "Protein %":"البروتين %","Carbs %":"الكربوهيدرات %","Fat %":"الدهون %","Percentages total":"مجموع النسب","aim for 100%.":"اجعله 100%.",
     "Targets set from the split ✓":"تم ضبط الأهداف من التقسيم ✓",
     "5-week forecast":"توقّع 5 أسابيع","If every day looked like today, you'd be about":"لو كان كل يوم مثل اليوم، سيكون وزنك نحو","in 5 weeks":"خلال 5 أسابيع",
@@ -4736,7 +4737,12 @@ function targetCalcHTML(){
 // Calorie → macro splitter: turn any calorie goal + a P/C/F ratio into gram
 // targets using the Atwater factors (protein & carbs 4 kcal/g, fat 9 kcal/g),
 // with the math shown so the numbers are transparent.
-const MACRO_PRESETS = [["Balanced", 30, 40, 30], ["High-protein", 40, 35, 25], ["Low-carb", 35, 25, 40], ["Keto", 25, 8, 67]];
+// Ratios grounded in trusted guidance: the Institute of Medicine's Acceptable
+// Macronutrient Distribution Ranges (carbs 45–65%, fat 20–35%, protein 10–35%
+// of energy) and ISSN protein recommendations (1.4–2.0 g/kg for active people,
+// higher when cutting). Specialised presets (Fat loss, Keto) deliberately push
+// protein/fat beyond the general range for their goal, as the evidence supports.
+const MACRO_PRESETS = [["Balanced", 30, 40, 30], ["Fat loss", 40, 35, 25], ["High-protein", 40, 40, 20], ["Low-carb", 35, 25, 40], ["Keto", 25, 8, 67]];
 function macroSplitObj(){ const s = S.settings.macroSplit = (S.settings.macroSplit && typeof S.settings.macroSplit === "object") ? S.settings.macroSplit : {p: 30, c: 40, f: 30}; ["p", "c", "f"].forEach(k => { if (s[k] == null) s[k] = {p: 30, c: 40, f: 30}[k]; }); return s; }
 function splitKcalNow(){ if (R.splitKcal != null && R.splitKcal !== "") return num(R.splitKcal); const t = num((S.settings.targets || {}).kcal); return t > 0 ? t : 1900; }
 function macroSplitCalc(){
@@ -4766,6 +4772,7 @@ function macroSplitHTML(){
       </div>
       <div class="split-total">${tr("Total")}: <b>${n0(c.tot)} kcal</b>${bad ? "" : " ✓"}</div>
       <button class="btn ${applied ? "sec" : ""}" style="width:100%;margin-top:12px" onclick="M.splitApply()">${applied ? tr("Applied ✓") : tr("Use these targets")}</button>
+      <div class="tiny" style="margin-top:12px;color:var(--txt3);line-height:1.45">${ic("check", 12)} ${tr("Grams use the Atwater 4·4·9 kcal/g factors (USDA). Ratios follow the Institute of Medicine's macronutrient ranges and ISSN protein guidance — Fat loss keeps protein high to protect muscle in a deficit.")}</div>
     </div>
   </div>`;
 }
