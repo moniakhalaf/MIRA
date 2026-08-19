@@ -186,6 +186,16 @@ body.kb .fab{display:none}
 .mm-v{font-variant-numeric:tabular-nums;font-weight:600}
 .mm-v.over{color:var(--red)}
 .mm-cal{font-size:11px;color:var(--txt3);font-weight:500}
+.seg-wrap{flex-wrap:wrap}
+.split-rows{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+.split-row{display:flex;align-items:center;gap:10px}
+.split-dot{flex:0 0 auto;width:11px;height:11px;border-radius:4px}
+.split-l{flex:1;font-size:14px;font-weight:600}
+.split-pc{font-size:11px;color:var(--txt3);font-weight:500}
+.split-g{text-align:end;display:flex;flex-direction:column;line-height:1.2}
+.split-g b{font-size:15px;font-variant-numeric:tabular-nums}
+.split-k{font-size:10.5px;color:var(--txt3)}
+.split-total{margin-top:12px;padding-top:10px;border-top:1px solid var(--line);font-size:13.5px;color:var(--txt2);text-align:end}
 /* budget dashboard */
 .budget-dash{display:flex;align-items:center;gap:16px;margin-top:6px}
 .donut{width:118px;height:118px;flex:0 0 auto}
@@ -1619,7 +1629,7 @@ html[data-setpage="privacy"] .set-page[data-page="privacy"]{display:block}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.188";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.189";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -2654,6 +2664,10 @@ const TR = {
     "Set a monthly saving amount above to see when you'll reach it.": "حدّد مبلغ ادّخار شهري بالأعلى لمعرفة متى ستصل إليه.",
     "Add expense": "أضف مصروفًا",
     "Macro breakdown":"تفصيل الماكروز","Fiber":"الألياف","Sugar":"السكر","Sodium":"الصوديوم",
+    "Split calories into macros":"قسّم السعرات إلى ماكروز","Enter a calorie goal and a ratio — MIRA turns it into gram targets using 4 kcal/g for protein & carbs and 9 kcal/g for fat.":"أدخِل هدف السعرات ونسبة — تحوّلها ميرا إلى أهداف بالغرام باستخدام 4 سعرات/غرام للبروتين والكربوهيدرات و9 سعرات/غرام للدهون.",
+    "Ratio":"النسبة","Balanced":"متوازن","High-protein":"عالي البروتين","Low-carb":"قليل الكربوهيدرات","Keto":"كيتو",
+    "Protein %":"البروتين %","Carbs %":"الكربوهيدرات %","Fat %":"الدهون %","Percentages total":"مجموع النسب","aim for 100%.":"اجعله 100%.",
+    "Targets set from the split ✓":"تم ضبط الأهداف من التقسيم ✓",
     "5-week forecast":"توقّع 5 أسابيع","If every day looked like today, you'd be about":"لو كان كل يوم مثل اليوم، سيكون وزنك نحو","in 5 weeks":"خلال 5 أسابيع",
     "If every day looked like today, you'd":"لو كان كل يوم مثل اليوم،","lose about":"ستفقد نحو","gain about":"ستكتسب نحو","hold at about":"ستثبت عند نحو",
     "An estimate":"تقدير","vs your maintenance":"مقارنةً بمستوى المحافظة","vs your calorie goal":"مقارنةً بهدف سعراتك",
@@ -4716,6 +4730,42 @@ function targetCalcHTML(){
       <div class="csp-note" style="margin-top:12px">${ic("trend", 13)}<span>${tr("Target")} <b>${n0(c.kcal)} kcal</b> · <b>${c.protein}g</b> ${tr("protein")} · <b>${c.carbs}g</b> ${tr("carbs")} · <b>${c.fat}g</b> ${tr("fat")}. ${c.goal === "maintain" ? tr("Set to hold your weight.") : `${tr("Set to")} ${c.goal === "lose" ? tr("lose") : tr("gain")} ~${c.pace} ${tr("kg/week")}.`}${c.floored ? ` ${tr("(kept at a safe minimum)")}` : ""}</span></div>
       <button class="btn ${applied ? "sec" : ""}" style="width:100%;margin-top:12px" onclick="M.calcApply()">${applied ? tr("Applied ✓") : tr("Use these targets")}</button>
       ` : `<div class="tiny" style="margin-top:6px;color:var(--txt3)">${tr("Fill in age, height and weight to see your numbers.")}</div>`}
+    </div>
+  </div>`;
+}
+// Calorie → macro splitter: turn any calorie goal + a P/C/F ratio into gram
+// targets using the Atwater factors (protein & carbs 4 kcal/g, fat 9 kcal/g),
+// with the math shown so the numbers are transparent.
+const MACRO_PRESETS = [["Balanced", 30, 40, 30], ["High-protein", 40, 35, 25], ["Low-carb", 35, 25, 40], ["Keto", 25, 8, 67]];
+function macroSplitObj(){ const s = S.settings.macroSplit = (S.settings.macroSplit && typeof S.settings.macroSplit === "object") ? S.settings.macroSplit : {p: 30, c: 40, f: 30}; ["p", "c", "f"].forEach(k => { if (s[k] == null) s[k] = {p: 30, c: 40, f: 30}[k]; }); return s; }
+function splitKcalNow(){ if (R.splitKcal != null && R.splitKcal !== "") return num(R.splitKcal); const t = num((S.settings.targets || {}).kcal); return t > 0 ? t : 1900; }
+function macroSplitCalc(){
+  const kcal = splitKcalNow(), s = macroSplitObj(), sum = num(s.p) + num(s.c) + num(s.f);
+  const pg = Math.round(kcal * num(s.p) / 100 / 4), cg = Math.round(kcal * num(s.c) / 100 / 4), fg = Math.round(kcal * num(s.f) / 100 / 9);
+  const pk = pg * 4, ck = cg * 4, fk = fg * 9;
+  return {kcal, s, sum, pg, cg, fg, pk, ck, fk, tot: pk + ck + fk};
+}
+function macroSplitHTML(){
+  const c = macroSplitCalc(), bad = Math.abs(c.sum - 100) > 0.5, tg = S.settings.targets || {};
+  const applied = tg.kcal === c.kcal && tg.protein === c.pg && tg.carbs === c.cg && tg.fat === c.fg;
+  const rows = [["Protein", c.pg, c.pk, c.s.p, 4, "#4CC4E0"], ["Carbs", c.cg, c.ck, c.s.c, 4, "#F5B851"], ["Fat", c.fg, c.fk, c.s.f, 9, "#A78BFA"]];
+  return `<div class="card fold ${R.splitOpen ? "open" : ""}">
+    <h3 onclick="M.fold('splitOpen',this)"><span class="set-ic">${ic("target", 16)}</span> ${tr("Split calories into macros")} <span class="chev">▶</span></h3>
+    <div class="fold-body">
+      <div class="tiny" style="margin:2px 2px 12px;color:var(--txt2)">${tr("Enter a calorie goal and a ratio — MIRA turns it into gram targets using 4 kcal/g for protein & carbs and 9 kcal/g for fat.")}</div>
+      <div class="field"><label>${tr("Calories (kcal)")}</label><input type="number" inputmode="numeric" value="${splitKcalNow()}" oninput="M.splitKcal(this.value)"></div>
+      <div class="field"><label>${tr("Ratio")}</label><div class="seg seg-wrap">${MACRO_PRESETS.map(([l, p, cc, f]) => `<button class="${c.s.p == p && c.s.c == cc && c.s.f == f ? "on" : ""}" onclick="M.splitPreset(${p},${cc},${f})">${tr(l)}</button>`).join("")}</div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+        <div class="field"><label>${tr("Protein %")}</label><input type="number" inputmode="numeric" value="${c.s.p}" oninput="M.splitPct('p',this.value)"></div>
+        <div class="field"><label>${tr("Carbs %")}</label><input type="number" inputmode="numeric" value="${c.s.c}" oninput="M.splitPct('c',this.value)"></div>
+        <div class="field"><label>${tr("Fat %")}</label><input type="number" inputmode="numeric" value="${c.s.f}" oninput="M.splitPct('f',this.value)"></div>
+      </div>
+      ${bad ? `<div class="tiny" style="color:var(--amber);margin:-2px 2px 8px">${ic("alert", 12)} ${tr("Percentages total")} ${Math.round(c.sum)}% — ${tr("aim for 100%.")}</div>` : ""}
+      <div class="split-rows">
+        ${rows.map(([l, g, k, pc, fac, col]) => `<div class="split-row"><span class="split-dot" style="background:${col}"></span><span class="split-l">${tr(l)} <span class="split-pc">${pc}%</span></span><span class="split-g"><b>${g}g</b><span class="split-k">${g} × ${fac} = ${n0(k)} kcal</span></span></div>`).join("")}
+      </div>
+      <div class="split-total">${tr("Total")}: <b>${n0(c.tot)} kcal</b>${bad ? "" : " ✓"}</div>
+      <button class="btn ${applied ? "sec" : ""}" style="width:100%;margin-top:12px" onclick="M.splitApply()">${applied ? tr("Applied ✓") : tr("Use these targets")}</button>
     </div>
   </div>`;
 }
@@ -11312,6 +11362,7 @@ function settingsHTML(){
   </div>
   <div class="set-page" data-page="nutrition">
   ${targetCalcHTML()}
+  ${macroSplitHTML()}
   <div class="card" id="setNutrition">
     <h3><span class="set-ic">${ic("target", 16)}</span> ${tr("Daily targets")}</h3>
     <div class="grid2" style="margin-bottom:10px">
@@ -13736,6 +13787,15 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
 
   set(k, v){ S.settings[k] = v; save(); render(); },
   calcWeight(v){ R.calcW = v; render(); },
+  splitKcal(v){ R.splitKcal = v; render(); },
+  splitPct(k, v){ macroSplitObj()[k] = Math.max(0, Math.min(100, num(v))); save(); render(); },
+  splitPreset(p, c, f){ const s = macroSplitObj(); s.p = p; s.c = c; s.f = f; save(); render(); },
+  splitApply(){
+    const c = macroSplitCalc();
+    S.settings.targets = S.settings.targets || {};
+    Object.assign(S.settings.targets, {kcal: c.kcal, protein: c.pg, carbs: c.cg, fat: c.fg});
+    save(); render(); toast(tr("Targets set from the split ✓"), 3500);
+  },
   calcApply(){
     const c = targetCalc();
     if (!c){ toast(tr("Fill in age, height and weight first.")); return; }
