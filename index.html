@@ -1619,7 +1619,7 @@ html[data-setpage="privacy"] .set-page[data-page="privacy"]{display:block}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.186";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.187";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -2654,6 +2654,10 @@ const TR = {
     "Set a monthly saving amount above to see when you'll reach it.": "حدّد مبلغ ادّخار شهري بالأعلى لمعرفة متى ستصل إليه.",
     "Add expense": "أضف مصروفًا",
     "Macro breakdown":"تفصيل الماكروز","Fiber":"الألياف","Sugar":"السكر","Sodium":"الصوديوم",
+    "Exercise calories":"سعرات التمارين","kcal burned":"سعرة محروقة","A conservative estimate from today's logged workouts. Add them back to your food budget?":"تقدير متحفّظ من تمارين اليوم المُسجّلة. أضِفها إلى ميزانية طعامك؟",
+    "None":"لا شيء","Half":"النصف","All":"الكل","Added":"أُضيف","to today's budget.":"إلى ميزانية اليوم.",
+    "Losing weight? Your target already builds in the deficit — leave this at None so eating back doesn't cancel it.":"تريد إنقاص الوزن؟ هدفك يتضمّن العجز أصلًا — اتركها على \"لا شيء\" كي لا يُلغى بإعادة الأكل.",
+    "Includes":"يشمل","kcal from exercise":"سعرة من التمارين",
     "Calculate my targets":"احسب أهدافي","A quick, science-based estimate (Mifflin-St Jeor). Once you've logged for a couple of weeks, MIRA fine-tunes it from your real results.":"تقدير سريع مبني على العلم (Mifflin-St Jeor). بعد أسبوعين من التسجيل، تضبطه ميرا من نتائجك الفعلية.",
     "Sex":"الجنس","Female":"أنثى","Male":"ذكر","Age":"العمر","Height (cm)":"الطول (سم)","Current weight (kg)":"الوزن الحالي (كجم)","e.g. 72":"مثال 72",
     "Activity level":"مستوى النشاط","Goal":"الهدف","Lose":"إنقاص","Maintain":"محافظة","Gain":"زيادة","Pace":"الوتيرة",
@@ -6218,6 +6222,24 @@ function macroBreakdownHTML(tot, tg){
       return `<div class="mm-row"><span>${tr(l)}</span><span class="mm-v ${over ? "over" : ""}">${unit === "mg" ? n0(v) : n1(v)}${unit}${goal > 0 ? ` / ${n0(goal)}${unit}` : ""}${pct != null ? ` · ${pct}%` : ""}</span></div>`; }).join("")}</div>` : ""}
   </div>`;
 }
+// Eat-back exercise calories (MyFitnessPal's net-calories model) — but honest:
+// a conservative burn estimate, and OFF by default so a weight-loss deficit
+// isn't quietly cancelled. The user opts in to add None / Half / All back.
+function workoutBurn(w){ let sets = 0; (w.items || []).forEach(it => sets += (it.sets || []).length); if (!sets) return 0; return Math.min(500, Math.max(80, sets * 5)); }
+function todayBurn(){ const t = todayStr(); return (S.workouts || []).filter(w => w.date === t).reduce((a, w) => a + workoutBurn(w), 0); }
+function eatBackFrac(){ return ({half: 0.5, full: 1})[S.settings.eatBack] || 0; }
+function exerciseCalHTML(burned, added){
+  if (!(burned > 0)) return "";
+  const mode = S.settings.eatBack || "off";
+  const seg = [["off", "None"], ["half", "Half"], ["full", "All"]];
+  return `<div class="card">
+    <div class="card-h-row"><h3>${ic("flame", 16)} ${tr("Exercise calories")}</h3><span class="set-status">~${n0(burned)} ${tr("kcal burned")}</span></div>
+    <div class="tiny" style="margin:8px 2px 10px;color:var(--txt2)">${tr("A conservative estimate from today's logged workouts. Add them back to your food budget?")}</div>
+    <div class="seg">${seg.map(([v, l]) => `<button class="${mode === v ? "on" : ""}" onclick="M.set('eatBack','${v}')">${tr(l)}</button>`).join("")}</div>
+    ${added > 0 ? `<div class="csp-note" style="margin-top:10px">${ic("plus", 13)}<span>${tr("Added")} <b>${n0(added)} kcal</b> ${tr("to today's budget.")}</span></div>` : ""}
+    <div class="csp-note" style="margin-top:10px">${ic("alert", 13)}<span>${tr("Losing weight? Your target already builds in the deficit — leave this at None so eating back doesn't cancel it.")}</span></div>
+  </div>`;
+}
 function foodHTML(){
   const today = todayStr();   // NB: keep this named `today` — the global t() is the translator
   const tot = dayTotals(today);
@@ -6230,19 +6252,26 @@ function foodHTML(){
   const dates = [...new Set(S.foods.map(f => f.date))].sort().reverse();
   if (!dates.includes(today)) dates.unshift(today);
 
+  const burned = todayBurn();
+  const added = Math.round(burned * eatBackFrac());
+  const adjKcal = num(tg.kcal) + added;
+
   return `
   <button class="cat-back" aria-label="Back to Home" onclick="M.backToHome('health')">${ic("back", 18)} ${t("Home")}</button>
   <div class="card">
     <h3>${ic("target", 16)} ${t("Today")} <span class="tiny" style="margin-inline-start:auto;font-weight:400">${new Date().toLocaleDateString(uiLang() || "en-GB",{day:"numeric",month:"long"})}</span></h3>
     <div class="bars">
-      ${macroBar(t("Calories"), tot.kcal, tg.kcal, "kcal", "var(--acc)")}
+      ${macroBar(t("Calories"), tot.kcal, adjKcal, "kcal", "var(--acc)")}
       ${macroBar(t("Protein"), tot.p, tg.protein, "g", "#4CC4E0")}
       ${macroBar(t("Carbs"), tot.c, tg.carbs, "g", "#F5B851")}
       ${macroBar(t("Fat"), tot.f, tg.fat, "g", "#A78BFA")}
     </div>
-    <div class="muted" style="margin-top:9px">${t("Remaining")}: <b>${n0(Math.max(0, tg.kcal - tot.kcal))} kcal</b> · <b>${n1(Math.max(0, tg.protein - tot.p))} ${tr("g protein")}</b>${tg.carbs ? ` · ${n1(Math.max(0, tg.carbs - tot.c))} ${tr("g carbs")}` : ""}${tg.fat ? ` · ${n1(Math.max(0, tg.fat - tot.f))} ${tr("g fat")}` : ""}</div>
+    <div class="muted" style="margin-top:9px">${t("Remaining")}: <b>${n0(Math.max(0, adjKcal - tot.kcal))} kcal</b> · <b>${n1(Math.max(0, tg.protein - tot.p))} ${tr("g protein")}</b>${tg.carbs ? ` · ${n1(Math.max(0, tg.carbs - tot.c))} ${tr("g carbs")}` : ""}${tg.fat ? ` · ${n1(Math.max(0, tg.fat - tot.f))} ${tr("g fat")}` : ""}</div>
+    ${added > 0 ? `<div class="tiny" style="margin-top:5px;color:var(--txt2)">${ic("flame", 11)} ${tr("Includes")} +${n0(added)} ${tr("kcal from exercise")}</div>` : ""}
     ${microStripHTML(tot)}
   </div>
+
+  ${exerciseCalHTML(burned, added)}
 
   ${macroBreakdownHTML(tot, tg)}
 
