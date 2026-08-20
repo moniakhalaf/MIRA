@@ -1629,7 +1629,7 @@ html[data-setpage="privacy"] .set-page[data-page="privacy"]{display:block}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.192";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.193";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -2671,6 +2671,8 @@ const TR = {
     "Targets set from the split ✓":"تم ضبط الأهداف من التقسيم ✓",
     "5-week forecast":"توقّع 5 أسابيع","If every day looked like today, you'd be about":"لو كان كل يوم مثل اليوم، سيكون وزنك نحو","in 5 weeks":"خلال 5 أسابيع",
     "If every day looked like today, you'd":"لو كان كل يوم مثل اليوم،","lose about":"ستفقد نحو","gain about":"ستكتسب نحو","hold at about":"ستثبت عند نحو",
+    "At this week's average, you'd be about":"بمتوسّط هذا الأسبوع، سيكون وزنك نحو","At this week's average, you'd":"بمتوسّط هذا الأسبوع،","If today were typical, you'd be about":"لو كان اليوم نموذجيًّا، سيكون وزنك نحو","If today were typical, you'd":"لو كان اليوم نموذجيًّا،",
+    "Averaged over your last":"متوسّط آخر","logged days — steadier than any single day.":"يوم مُسجّل — أثبت من أي يوم منفرد.","Based on today alone — log a few days and this settles into a weekly trend.":"مبني على اليوم فقط — سجّل بضعة أيام ليستقرّ كاتجاه أسبوعي.",
     "An estimate":"تقدير","vs your maintenance":"مقارنةً بمستوى المحافظة","vs your calorie goal":"مقارنةً بهدف سعراتك",
     "vs your maintenance (from your activity level)":"مقارنةً بمستوى المحافظة (من مستوى نشاطك)",
     "How often do you train? The forecast counts it as part of your maintenance — no need to log each session.":"كم مرة تتمرّن؟ يحتسبها التوقّع ضمن مستوى المحافظة — دون الحاجة لتسجيل كل جلسة.",
@@ -6330,27 +6332,44 @@ function maintenanceEstimate(){
   if (w > 0 && act && ACT_KCAL_PER_KG[act]) return {kcal: Math.round(w * ACT_KCAL_PER_KG[act]), src: "activity"};
   return null;
 }
-// MyFitnessPal's "complete diary" projection, grounded: today's intake vs your
-// maintenance (which already includes your regular training via activity level),
-// projected 5 weeks out with the 7700 kcal/kg rule. Clearly an estimate.
+// Average daily intake over the trailing 7 calendar days, counting only the
+// days that actually have food logged — a blank day means "didn't log", not
+// "ate nothing", so it shouldn't drag the average to zero. Averaging a week
+// is far steadier than extrapolating from a single day, which swings wildly.
+function weekIntakeAvg(){
+  const p = todayStr().split("-").map(Number), base = new Date(p[0], p[1] - 1, p[2]);
+  let sum = 0, days = 0;
+  for (let i = 0; i < 7; i++){
+    const d = new Date(base); d.setDate(base.getDate() - i);
+    const k = num(dayTotals(d.toLocaleDateString("en-CA")).kcal);
+    if (k > 0){ sum += k; days++; }
+  }
+  return {avg: days ? sum / days : 0, days};
+}
+// Grounded "complete diary" projection: your weekly-average intake vs your
+// maintenance (which already includes your regular training via activity
+// level), projected 5 weeks out with the 7700 kcal/kg rule. Clearly an estimate.
 function closeDayForecast(){
-  const tot = dayTotals(todayStr()), eaten = num(tot.kcal);
-  if (eaten <= 0) return null;
+  const wk = weekIntakeAvg();
+  if (!(wk.avg > 0)) return null;
   const m = maintenanceEstimate();
   const ref = m ? m.kcal : num((S.settings.targets || {}).kcal);
   if (!(ref > 0)) return null;
-  const dailyBalance = eaten - ref;   // maintenance already counts routine activity — no double-count
+  const dailyBalance = wk.avg - ref;   // maintenance already counts routine activity — no double-count
   const kg5wk = dailyBalance * 35 / KCAL_PER_KG;
   const curW = latestWeightKg();
-  return {eaten, ref, src: m ? m.src : "goal", dailyBalance, kg5wk, curW, projW: curW ? +(curW + kg5wk).toFixed(1) : null};
+  return {avgEaten: Math.round(wk.avg), days: wk.days, ref, src: m ? m.src : "goal", dailyBalance, kg5wk, curW, projW: curW ? +(curW + kg5wk).toFixed(1) : null};
 }
 function closeDayHTML(){
   const f = closeDayForecast(); if (!f) return "";
   const dir = f.kg5wk < -0.1 ? "lose" : f.kg5wk > 0.1 ? "gain" : "hold";
   const absKg = Math.abs(f.kg5wk).toFixed(1);
+  const many = f.days >= 2;
+  const leadBe = many ? tr("At this week's average, you'd be about") : tr("If today were typical, you'd be about");
+  const leadCh = many ? tr("At this week's average, you'd") : tr("If today were typical, you'd");
   const line = f.projW != null
-    ? `${tr("If every day looked like today, you'd be about")} <b>${f.projW} kg</b> ${tr("in 5 weeks")}`
-    : `${tr("If every day looked like today, you'd")} ${dir === "lose" ? tr("lose about") : dir === "gain" ? tr("gain about") : tr("hold at about")} <b>${dir === "hold" ? "±0" : absKg} kg</b> ${tr("in 5 weeks")}`;
+    ? `${leadBe} <b>${f.projW} kg</b> ${tr("in 5 weeks")}`
+    : `${leadCh} ${dir === "lose" ? tr("lose about") : dir === "gain" ? tr("gain about") : tr("hold at about")} <b>${dir === "hold" ? "±0" : absKg} kg</b> ${tr("in 5 weeks")}`;
   const refTxt = f.src === "activity" ? tr("vs your maintenance (from your activity level)") : (f.src === "goal" ? tr("vs your calorie goal") : tr("vs your maintenance"));
   const icn = dir === "lose" ? "trend" : dir === "gain" ? "flame" : "check";
   const acts = [["sed", "Rarely"], ["light", "1–3×/wk"], ["mod", "3–5×/wk"], ["active", "6–7×/wk"]];
@@ -6361,6 +6380,7 @@ function closeDayHTML(){
   return `<div class="card">
     <h3>${ic("trend", 16)} ${tr("5-week forecast")}</h3>
     <div class="csp-note" style="margin-top:10px">${ic(icn, 13)}<span>${line}. ${tr("An estimate")} — ${refTxt}.</span></div>
+    <div class="tiny" style="margin-top:8px;color:var(--txt3)">${ic(many ? "check" : "clock", 12)} ${many ? `${tr("Averaged over your last")} ${f.days} ${tr("logged days — steadier than any single day.")}` : tr("Based on today alone — log a few days and this settles into a weekly trend.")}</div>
     ${showPicker ? `<div style="margin-top:12px">
       <div class="tiny" style="margin:0 2px 6px;color:var(--txt2)">${ic("flame", 12)} ${tr("How often do you train? The forecast counts it as part of your maintenance — no need to log each session.")}</div>
       <div class="seg seg-wrap">${acts.map(([v, l]) => `<button class="${S.settings.activity === v ? "on" : ""}" onclick="M.set('activity','${v}')">${tr(l)}</button>`).join("")}</div>
