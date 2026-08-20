@@ -1629,7 +1629,7 @@ html[data-setpage="privacy"] .set-page[data-page="privacy"]{display:block}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.194";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.195";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -2673,6 +2673,7 @@ const TR = {
     "If every day looked like today, you'd":"لو كان كل يوم مثل اليوم،","lose about":"ستفقد نحو","gain about":"ستكتسب نحو","hold at about":"ستثبت عند نحو",
     "At this week's average, you'd be about":"بمتوسّط هذا الأسبوع، سيكون وزنك نحو","At this week's average, you'd":"بمتوسّط هذا الأسبوع،","If today were typical, you'd be about":"لو كان اليوم نموذجيًّا، سيكون وزنك نحو","If today were typical, you'd":"لو كان اليوم نموذجيًّا،",
     "At your last logged day, you'd be about":"بآخر يوم مُسجّل، سيكون وزنك نحو","At your last logged day, you'd":"بآخر يوم مُسجّل،",
+    "kcal/day":"سعرة/يوم","below maintenance":"أقل من المحافظة","above maintenance":"أعلى من المحافظة","about":"نحو","down":"نزولًا","up":"صعودًا","Right around maintenance — holding steady.":"حول مستوى المحافظة تقريبًا — ثابت.",
     "Averaged over your last":"متوسّط آخر","logged days — steadier than any single day.":"يوم مُسجّل — أثبت من أي يوم منفرد.","completed days — today isn't counted until it's done, so a half-logged day can't skew it.":"يوم مكتمل — لا يُحتسب اليوم حتى ينتهي، فلا يشوّه يومٌ نصف مُسجّل النتيجة.","Based on today so far — a partial day. Today isn't averaged in once you have full days logged.":"مبني على اليوم حتى الآن — يوم جزئي. لا يُدرَج اليوم في المتوسّط بمجرّد توفّر أيام كاملة مُسجّلة.","Based on your last completed day — log a few more and it averages into a steadier weekly trend.":"مبني على آخر يوم مكتمل — سجّل بضعة أيام أخرى ليُصبح متوسّطًا أسبوعيًّا أثبت.",
     "An estimate":"تقدير","vs your maintenance":"مقارنةً بمستوى المحافظة","vs your calorie goal":"مقارنةً بهدف سعراتك",
     "vs your maintenance (from your activity level)":"مقارنةً بمستوى المحافظة (من مستوى نشاطك)",
@@ -6385,6 +6386,13 @@ function closeDayHTML(){
   // when maintenance comes from the full Mifflin calculator, since the activity
   // level feeds that number too and the user still wants to adjust it here.
   const showPicker = latestWeightKg() > 0;
+  // Spell out the energy balance explicitly: how far above/below maintenance
+  // your average intake sits, and what that works out to per week (7700 kcal/kg).
+  const balKcal = Math.round(Math.abs(f.dailyBalance)), perWkKg = Math.abs(f.dailyBalance) * 7 / KCAL_PER_KG;
+  const balDir = f.dailyBalance < -40 ? "under" : f.dailyBalance > 40 ? "over" : "hold";
+  const balLine = balDir === "hold"
+    ? tr("Right around maintenance — holding steady.")
+    : `≈ <b>${n0(balKcal)} ${tr("kcal/day")}</b> ${balDir === "under" ? tr("below maintenance") : tr("above maintenance")} → ${tr("about")} <b>${n1(perWkKg)} ${tr("kg/week")}</b> ${balDir === "under" ? tr("down") : tr("up")}`;
   const noteTxt = f.partial
     ? tr("Based on today so far — a partial day. Today isn't averaged in once you have full days logged.")
     : many
@@ -6393,6 +6401,7 @@ function closeDayHTML(){
   return `<div class="card">
     <h3>${ic("trend", 16)} ${tr("5-week forecast")}</h3>
     <div class="csp-note" style="margin-top:10px">${ic(icn, 13)}<span>${line}. ${tr("An estimate")} — ${refTxt}.</span></div>
+    <div class="csp-note" style="margin-top:8px">${ic("target", 13)}<span>${balLine}</span></div>
     <div class="tiny" style="margin-top:8px;color:var(--txt3)">${ic(f.partial ? "clock" : "check", 12)} ${noteTxt}</div>
     ${showPicker ? `<div style="margin-top:12px">
       <div class="tiny" style="margin:0 2px 6px;color:var(--txt2)">${ic("flame", 12)} ${tr("How often do you train? The forecast counts it as part of your maintenance — no need to log each session.")}</div>
