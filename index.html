@@ -1629,7 +1629,7 @@ html[data-setpage="privacy"] .set-page[data-page="privacy"]{display:block}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.193";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.194";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -2672,7 +2672,8 @@ const TR = {
     "5-week forecast":"توقّع 5 أسابيع","If every day looked like today, you'd be about":"لو كان كل يوم مثل اليوم، سيكون وزنك نحو","in 5 weeks":"خلال 5 أسابيع",
     "If every day looked like today, you'd":"لو كان كل يوم مثل اليوم،","lose about":"ستفقد نحو","gain about":"ستكتسب نحو","hold at about":"ستثبت عند نحو",
     "At this week's average, you'd be about":"بمتوسّط هذا الأسبوع، سيكون وزنك نحو","At this week's average, you'd":"بمتوسّط هذا الأسبوع،","If today were typical, you'd be about":"لو كان اليوم نموذجيًّا، سيكون وزنك نحو","If today were typical, you'd":"لو كان اليوم نموذجيًّا،",
-    "Averaged over your last":"متوسّط آخر","logged days — steadier than any single day.":"يوم مُسجّل — أثبت من أي يوم منفرد.","Based on today alone — log a few days and this settles into a weekly trend.":"مبني على اليوم فقط — سجّل بضعة أيام ليستقرّ كاتجاه أسبوعي.",
+    "At your last logged day, you'd be about":"بآخر يوم مُسجّل، سيكون وزنك نحو","At your last logged day, you'd":"بآخر يوم مُسجّل،",
+    "Averaged over your last":"متوسّط آخر","logged days — steadier than any single day.":"يوم مُسجّل — أثبت من أي يوم منفرد.","completed days — today isn't counted until it's done, so a half-logged day can't skew it.":"يوم مكتمل — لا يُحتسب اليوم حتى ينتهي، فلا يشوّه يومٌ نصف مُسجّل النتيجة.","Based on today so far — a partial day. Today isn't averaged in once you have full days logged.":"مبني على اليوم حتى الآن — يوم جزئي. لا يُدرَج اليوم في المتوسّط بمجرّد توفّر أيام كاملة مُسجّلة.","Based on your last completed day — log a few more and it averages into a steadier weekly trend.":"مبني على آخر يوم مكتمل — سجّل بضعة أيام أخرى ليُصبح متوسّطًا أسبوعيًّا أثبت.",
     "An estimate":"تقدير","vs your maintenance":"مقارنةً بمستوى المحافظة","vs your calorie goal":"مقارنةً بهدف سعراتك",
     "vs your maintenance (from your activity level)":"مقارنةً بمستوى المحافظة (من مستوى نشاطك)",
     "How often do you train? The forecast counts it as part of your maintenance — no need to log each session.":"كم مرة تتمرّن؟ يحتسبها التوقّع ضمن مستوى المحافظة — دون الحاجة لتسجيل كل جلسة.",
@@ -6332,19 +6333,26 @@ function maintenanceEstimate(){
   if (w > 0 && act && ACT_KCAL_PER_KG[act]) return {kcal: Math.round(w * ACT_KCAL_PER_KG[act]), src: "activity"};
   return null;
 }
-// Average daily intake over the trailing 7 calendar days, counting only the
-// days that actually have food logged — a blank day means "didn't log", not
-// "ate nothing", so it shouldn't drag the average to zero. Averaging a week
-// is far steadier than extrapolating from a single day, which swings wildly.
+// Average daily intake over the trailing week — using only *completed* days
+// (yesterday back through 7 days ago) and only days that actually have food
+// logged. Today is deliberately excluded: it's still in progress, so a
+// half-logged day would (a) look like a tiny-intake day and overstate the
+// deficit, and (b) make the projection creep as you add each meal. Counting
+// full days keeps the forecast steady through the day and moves only as real
+// days complete. A blank day means "didn't log", not "ate nothing", so it's
+// skipped rather than counted as zero. If nothing is logged yet in the past
+// week, we fall back to today alone — clearly flagged as a partial day.
 function weekIntakeAvg(){
   const p = todayStr().split("-").map(Number), base = new Date(p[0], p[1] - 1, p[2]);
   let sum = 0, days = 0;
-  for (let i = 0; i < 7; i++){
+  for (let i = 1; i <= 7; i++){
     const d = new Date(base); d.setDate(base.getDate() - i);
     const k = num(dayTotals(d.toLocaleDateString("en-CA")).kcal);
     if (k > 0){ sum += k; days++; }
   }
-  return {avg: days ? sum / days : 0, days};
+  if (days > 0) return {avg: sum / days, days, partial: false};
+  const kToday = num(dayTotals(todayStr()).kcal);      // no full days yet — use today, flagged partial
+  return kToday > 0 ? {avg: kToday, days: 1, partial: true} : {avg: 0, days: 0, partial: false};
 }
 // Grounded "complete diary" projection: your weekly-average intake vs your
 // maintenance (which already includes your regular training via activity
@@ -6358,15 +6366,15 @@ function closeDayForecast(){
   const dailyBalance = wk.avg - ref;   // maintenance already counts routine activity — no double-count
   const kg5wk = dailyBalance * 35 / KCAL_PER_KG;
   const curW = latestWeightKg();
-  return {avgEaten: Math.round(wk.avg), days: wk.days, ref, src: m ? m.src : "goal", dailyBalance, kg5wk, curW, projW: curW ? +(curW + kg5wk).toFixed(1) : null};
+  return {avgEaten: Math.round(wk.avg), days: wk.days, partial: wk.partial, ref, src: m ? m.src : "goal", dailyBalance, kg5wk, curW, projW: curW ? +(curW + kg5wk).toFixed(1) : null};
 }
 function closeDayHTML(){
   const f = closeDayForecast(); if (!f) return "";
   const dir = f.kg5wk < -0.1 ? "lose" : f.kg5wk > 0.1 ? "gain" : "hold";
   const absKg = Math.abs(f.kg5wk).toFixed(1);
-  const many = f.days >= 2;
-  const leadBe = many ? tr("At this week's average, you'd be about") : tr("If today were typical, you'd be about");
-  const leadCh = many ? tr("At this week's average, you'd") : tr("If today were typical, you'd");
+  const many = f.days >= 2 && !f.partial;
+  const leadBe = f.partial ? tr("If today were typical, you'd be about") : many ? tr("At this week's average, you'd be about") : tr("At your last logged day, you'd be about");
+  const leadCh = f.partial ? tr("If today were typical, you'd") : many ? tr("At this week's average, you'd") : tr("At your last logged day, you'd");
   const line = f.projW != null
     ? `${leadBe} <b>${f.projW} kg</b> ${tr("in 5 weeks")}`
     : `${leadCh} ${dir === "lose" ? tr("lose about") : dir === "gain" ? tr("gain about") : tr("hold at about")} <b>${dir === "hold" ? "±0" : absKg} kg</b> ${tr("in 5 weeks")}`;
@@ -6377,10 +6385,15 @@ function closeDayHTML(){
   // when maintenance comes from the full Mifflin calculator, since the activity
   // level feeds that number too and the user still wants to adjust it here.
   const showPicker = latestWeightKg() > 0;
+  const noteTxt = f.partial
+    ? tr("Based on today so far — a partial day. Today isn't averaged in once you have full days logged.")
+    : many
+      ? `${tr("Averaged over your last")} ${f.days} ${tr("completed days — today isn't counted until it's done, so a half-logged day can't skew it.")}`
+      : tr("Based on your last completed day — log a few more and it averages into a steadier weekly trend.");
   return `<div class="card">
     <h3>${ic("trend", 16)} ${tr("5-week forecast")}</h3>
     <div class="csp-note" style="margin-top:10px">${ic(icn, 13)}<span>${line}. ${tr("An estimate")} — ${refTxt}.</span></div>
-    <div class="tiny" style="margin-top:8px;color:var(--txt3)">${ic(many ? "check" : "clock", 12)} ${many ? `${tr("Averaged over your last")} ${f.days} ${tr("logged days — steadier than any single day.")}` : tr("Based on today alone — log a few days and this settles into a weekly trend.")}</div>
+    <div class="tiny" style="margin-top:8px;color:var(--txt3)">${ic(f.partial ? "clock" : "check", 12)} ${noteTxt}</div>
     ${showPicker ? `<div style="margin-top:12px">
       <div class="tiny" style="margin:0 2px 6px;color:var(--txt2)">${ic("flame", 12)} ${tr("How often do you train? The forecast counts it as part of your maintenance — no need to log each session.")}</div>
       <div class="seg seg-wrap">${acts.map(([v, l]) => `<button class="${S.settings.activity === v ? "on" : ""}" onclick="M.set('activity','${v}')">${tr(l)}</button>`).join("")}</div>
