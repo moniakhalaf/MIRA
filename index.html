@@ -1389,6 +1389,12 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
 .set-row .k{font-size:14.5px}
 .set-row .desc{font-size:12px;color:var(--txt3)}
 .set-row .end{margin-inline-start:auto;display:flex;align-items:center;gap:8px}
+.prep-group + .prep-group{margin-top:4px}
+.prep-group-h{display:flex;align-items:center;gap:9px;margin:14px 2px 2px}
+.prep-group-h .pg-name{font-weight:600;font-size:13.5px}
+.prep-group-h .pg-n{font-size:11.5px;color:var(--txt3);background:var(--bg2);border-radius:20px;padding:1px 8px}
+.prep-group-h .btn.sm{margin-inline-start:auto;padding:0 12px}
+.prep-meal-sel{width:auto;max-width:100%;min-height:32px;padding:5px 30px 5px 10px;margin-top:7px;font-size:12px;border-radius:8px;color:var(--txt2);background-position:right 9px center}
 .dom-color{width:16px;height:16px;border-radius:50%}
 /* ---- Settings: sectioned, best-in-class layout ---- */
 .set-hero{display:flex;align-items:center;gap:15px;padding:17px 18px;margin-bottom:8px;border:1px solid var(--line);border-radius:22px;
@@ -1629,7 +1635,7 @@ html[data-setpage="privacy"] .set-page[data-page="privacy"]{display:block}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.196";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.197";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -2193,7 +2199,9 @@ const TR = {
     "From your recipes":"من وصفاتك",
     "From saved meals":"من الوجبات المحفوظة",
     "Save for later (meal prep)":"احفظ لوقت لاحق (تحضير الوجبات)","Prepared meals":"وجبات محضّرة مسبقًا","Log now":"سجّل الآن","Delete":"حذف",
+    "Log all":"سجّل الكل","Unsorted":"غير مصنّف","item":"عنصر","items":"عناصر","Logged":"سُجّل",
     "Cooked ahead? Register a portion and its macros here without logging it — then tap Log now when you actually eat it.":"طبخت مسبقًا؟ سجّل هنا حصّة وماكروزها دون إضافتها لليوم — ثم اضغط «سجّل الآن» عندما تأكلها فعلًا.",
+    "Cooked ahead? Register portions and give each a meal — then Log all of a meal in one tap, or Log now item by item.":"طبخت مسبقًا؟ سجّل الحصص وامنح كلًّا منها وجبة — ثم «سجّل الكل» لوجبة بضغطة واحدة، أو «سجّل الآن» عنصرًا عنصرًا.",
     "Nothing prepped yet. Fill in a food in Log food above, then tap “Save for later (meal prep)”.":"لا يوجد تحضير بعد. أدخِل طعامًا في «تسجيل الطعام» أعلاه، ثم اضغط «احفظ لوقت لاحق (تحضير الوجبات)».",
     "No recipes or saved meals yet — add a name above, or build your recipe box first.":"لا وصفات أو وجبات محفوظة بعد — أضِف اسمًا أعلاه، أو ابنِ صندوق وصفاتك أولًا.",
     "Rolled up from the recipes & meals you planned this week. Ticks are just for shopping — they reset when you leave.":"مُجمّعة من الوصفات والوجبات التي خطّطتها هذا الأسبوع. علامات التحديد للتسوّق فقط — وتُعاد عند المغادرة.",
@@ -6607,20 +6615,43 @@ function foodHTML(){
 /* Meal-prep shelf card: portions registered ahead of time, not yet logged.
    Each row logs to today in one tap (kept on the shelf for batch cooks), or
    can be edited back into the form or removed. */
+function prepRowHTML(p){
+  return `<div class="set-row">
+    <div style="flex:1;min-width:0">
+      <div class="k" dir="auto">${esc(p.name)}</div>
+      <div class="desc">${p.amount ? esc(p.amount) + " · " : ""}${n0(p.kcal)} kcal · ${n1(p.p)}P · ${n1(p.c)}C · ${n1(p.f)}F</div>
+      <select class="prep-meal-sel" onchange="M.prepMeal('${p.id}',this.value)" aria-label="${t("Meal")}">
+        <option value="" ${!prepGroupOf(p) || prepGroupOf(p) === "unsorted" ? "selected" : ""}>${t("Unsorted")}</option>
+        ${FOOD_MEALS.map(([v, l]) => `<option value="${v}" ${p.meal === v ? "selected" : ""}>${t(l)}</option>`).join("")}
+      </select>
+    </div>
+    <span class="end">
+      <button class="btn sm" onclick="M.prepLog('${p.id}')">${t("Log now")}</button>
+      <button class="btn sm sec" aria-label="${t("Edit")}" title="${t("Edit")}" onclick="M.prepEdit('${p.id}')">${ic("edit", 13)}</button>
+      <button class="btn sm danger" aria-label="${t("Delete")}" title="${t("Delete")}" onclick="M.prepDel('${p.id}')">${ic("trash", 13)}</button>
+    </span>
+  </div>`;
+}
 function prepHTML(){
   const list = S.prep || [];
+  const order = [...FOOD_MEALS.map(m => m[0]), "unsorted"];
+  const body = list.length ? order.map(g => {
+    const items = list.filter(p => prepGroupOf(p) === g);
+    if (!items.length) return "";
+    const label = g === "unsorted" ? t("Unsorted") : t((FOOD_MEALS.find(x => x[0] === g) || [, g])[1]);
+    return `<div class="prep-group">
+      <div class="prep-group-h">
+        <span class="pg-name">${label}</span><span class="pg-n">${items.length}</span>
+        <button class="btn sm" onclick="M.prepLogGroup('${g}')">${ic("plus", 13)} ${t("Log all")}</button>
+      </div>
+      ${items.map(prepRowHTML).join("")}
+    </div>`;
+  }).join("") : `<div class="muted">${t("Nothing prepped yet. Fill in a food in Log food above, then tap “Save for later (meal prep)”.")}</div>`;
   return `<div class="card fold ${R.prepOpen ? "open" : ""}" id="prepCard">
     <h3 onclick="M.fold('prepOpen', this)">${ic("bookmark", 16)} ${t("Prepared meals")}${list.length ? ` (${list.length})` : ""} <span class="chev">▶</span></h3>
     <div class="fold-body">
-      <div class="tiny" style="margin:2px 2px 10px;color:var(--txt2)">${t("Cooked ahead? Register a portion and its macros here without logging it — then tap Log now when you actually eat it.")}</div>
-      ${list.length ? list.map(p => `<div class="set-row">
-          <div><div class="k" dir="auto">${esc(p.name)}</div><div class="desc">${p.amount ? esc(p.amount) + " · " : ""}${n0(p.kcal)} kcal · ${n1(p.p)}P · ${n1(p.c)}C · ${n1(p.f)}F</div></div>
-          <span class="end">
-            <button class="btn sm" onclick="M.prepLog('${p.id}')">${t("Log now")}</button>
-            <button class="btn sm sec" aria-label="${t("Edit")}" title="${t("Edit")}" onclick="M.prepEdit('${p.id}')">${ic("edit", 13)}</button>
-            <button class="btn sm danger" aria-label="${t("Delete")}" title="${t("Delete")}" onclick="M.prepDel('${p.id}')">${ic("trash", 13)}</button>
-          </span>
-        </div>`).join("") : `<div class="muted">${t("Nothing prepped yet. Fill in a food in Log food above, then tap “Save for later (meal prep)”.")}</div>`}
+      <div class="tiny" style="margin:2px 2px 10px;color:var(--txt2)">${t("Cooked ahead? Register portions and give each a meal — then Log all of a meal in one tap, or Log now item by item.")}</div>
+      ${body}
     </div>
   </div>`;
 }
@@ -7015,7 +7046,10 @@ function foodSaveDirect(){
   Object.assign(foodForm, clearForm);
   render();
 }
-function logFood(it){
+// Push one entry to today + refresh the saved-foods library, WITHOUT the
+// toast/buzz/save side-effects — so a batch (e.g. "Log all breakfast") can
+// write many entries and then buzz/save/toast just once.
+function logFoodQuiet(it){
   const time = (it.time || "").trim() || nowHM();
   S.foods.push({id: uid(), date: todayStr(), name: it.name.trim(), amount: (it.amount || "").trim(),
     time, meal: it.meal || mealFromTime(time),
@@ -7027,6 +7061,9 @@ function logFood(it){
     fiber: num(it.fiber) || 0, sugar: num(it.sugar) || 0, sodium: num(it.sodium) || 0};
   if (ex >= 0) S.savedFoods[ex] = saved; else S.savedFoods.unshift(saved);
   if (S.savedFoods.length > 400) S.savedFoods.pop();
+}
+function logFood(it){
+  logFoodQuiet(it);
   R.openDays.add(todayStr());
   buzz();
   save();
@@ -7085,6 +7122,27 @@ function prepEdit(id){
 function prepDel(id){
   S.prep = (S.prep || []).filter(x => x.id !== id);
   save(); render();
+}
+// Which meal bucket a prepped portion belongs to (its own meal tag, or
+// "unsorted" when none is set / it's an unknown value).
+function prepGroupOf(p){ const m = (p.meal || "").toLowerCase(); return FOOD_MEALS.some(x => x[0] === m) ? m : "unsorted"; }
+function prepMeal(id, meal){
+  const p = (S.prep || []).find(x => x.id === id); if (!p) return;
+  p.meal = FOOD_MEALS.some(x => x[0] === meal) ? meal : "";
+  save(); render();
+}
+// One tap logs every prepped portion in a meal bucket to today. Unsorted items
+// log with no meal, so each falls to the bucket its time implies. Items stay on
+// the shelf (like Log now) so a repeating prep can be logged again tomorrow.
+function prepLogGroup(meal){
+  const items = (S.prep || []).filter(p => prepGroupOf(p) === meal);
+  if (!items.length) return;
+  items.forEach(p => logFoodQuiet({name: p.name, amount: p.amount, meal: meal === "unsorted" ? "" : p.meal,
+    kcal: p.kcal, p: p.p, c: p.c, f: p.f, fiber: p.fiber, sugar: p.sugar, sodium: p.sodium, conf: p.conf || "user"}));
+  R.openDays.add(todayStr());
+  buzz(); save(); render();
+  const label = meal === "unsorted" ? tr("Unsorted") : tr((FOOD_MEALS.find(x => x[0] === meal) || [, meal])[1]);
+  toast(`${tr("Logged")} ${items.length} ${items.length === 1 ? tr("item") : tr("items")} → ${label} ✓`);
 }
 
 /* find and parse the JSON payload in a model reply that may also contain prose */
@@ -13181,6 +13239,8 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
   prepLog(id){ prepLog(id); },
   prepEdit(id){ prepEdit(id); },
   prepDel(id){ prepDel(id); },
+  prepMeal(id, meal){ prepMeal(id, meal); },
+  prepLogGroup(meal){ prepLogGroup(meal); },
   foodDel(id){
     const idx = S.foods.findIndex(f => f.id === id);
     if (idx < 0) return;
