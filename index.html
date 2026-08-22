@@ -1629,7 +1629,7 @@ html[data-setpage="privacy"] .set-page[data-page="privacy"]{display:block}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.195";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.196";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -2192,6 +2192,9 @@ const TR = {
     "Quick add (name)":"إضافة سريعة (اسم)",
     "From your recipes":"من وصفاتك",
     "From saved meals":"من الوجبات المحفوظة",
+    "Save for later (meal prep)":"احفظ لوقت لاحق (تحضير الوجبات)","Prepared meals":"وجبات محضّرة مسبقًا","Log now":"سجّل الآن","Delete":"حذف",
+    "Cooked ahead? Register a portion and its macros here without logging it — then tap Log now when you actually eat it.":"طبخت مسبقًا؟ سجّل هنا حصّة وماكروزها دون إضافتها لليوم — ثم اضغط «سجّل الآن» عندما تأكلها فعلًا.",
+    "Nothing prepped yet. Fill in a food in Log food above, then tap “Save for later (meal prep)”.":"لا يوجد تحضير بعد. أدخِل طعامًا في «تسجيل الطعام» أعلاه، ثم اضغط «احفظ لوقت لاحق (تحضير الوجبات)».",
     "No recipes or saved meals yet — add a name above, or build your recipe box first.":"لا وصفات أو وجبات محفوظة بعد — أضِف اسمًا أعلاه، أو ابنِ صندوق وصفاتك أولًا.",
     "Rolled up from the recipes & meals you planned this week. Ticks are just for shopping — they reset when you leave.":"مُجمّعة من الوصفات والوجبات التي خطّطتها هذا الأسبوع. علامات التحديد للتسوّق فقط — وتُعاد عند المغادرة.",
     "Nothing planned yet":"لا شيء مخطّط بعد",
@@ -3123,6 +3126,7 @@ const BLANK = () => ({
   convs: [],          // [{id, dom, title, ts, msgs: [{role, content, ts, att}]}]
   foods: [],          // {id, date, name, amount, kcal, p, c, f, conf, ts}
   savedFoods: [],     // {name, amount, kcal, p, c, f}
+  prep: [],           // meal-prep shelf: {id, name, amount, meal, kcal, p, c, f, fiber, sugar, sodium, conf, ts}
   meals: [],          // {id, name, items: [{name, amount, kcal, p, c, f}]}
   recipes: [],        // {id, name, image, cuisine, tags[], servings, per:{kcal,p,c,f}, ingredients[], steps[], source, healthNote, seed, ts}
   mealPlan: {},       // dateStr -> {breakfast:[item], lunch:[], dinner:[], snack:[]}; item {name, kcal, p, c, f, rid?, ing:[]}
@@ -3273,6 +3277,7 @@ function migrateChats(){
   // must never crash a screen — drop non-objects and coerce required fields.
   if (!Array.isArray(S.foods)) S.foods = [];
   if (!Array.isArray(S.savedFoods)) S.savedFoods = [];
+  if (!Array.isArray(S.prep)) S.prep = [];   // meal-prep shelf: portions registered ahead, logged when eaten
   if (!Array.isArray(S.inbody)) S.inbody = [];
   if (!S.barcodeFixes || typeof S.barcodeFixes !== "object") S.barcodeFixes = {};
   if (!S.foodFixes || typeof S.foodFixes !== "object") S.foodFixes = {};
@@ -6506,7 +6511,8 @@ function foodHTML(){
           </div>
         </div>
       </div>
-      <button class="btn" style="width:100%;margin-bottom:12px" onclick="M.foodSave()">${R.editFoodId ? t("Update entry") : t("Save to log")}</button>
+      <button class="btn" style="width:100%;margin-bottom:${R.editFoodId ? "12px" : "8px"}" onclick="M.foodSave()">${R.editFoodId ? t("Update entry") : t("Save to log")}</button>
+      ${R.editFoodId ? "" : `<button class="btn sm sec" style="width:100%;margin-bottom:12px" onclick="M.prepSave()">${ic("bookmark", 15)} ${t("Save for later (meal prep)")}</button>`}
       `}
       <button class="btn sm sec" style="width:100%;margin-bottom:8px" onclick="M.findMacros()" ${findBusy ? "disabled" : ""}>${findBusy ? "Searching…" : ic("search", 15) + " " + t("Find macros")}</button>
       <div class="food-tools-wrap ${(R.foodToolsOpen || foodForm.scOpen || dishForm.open || extractBusy || barcodeBusy) ? "open" : ""}">
@@ -6553,6 +6559,8 @@ function foodHTML(){
     </div>
   </div>
 
+  ${prepHTML()}
+
   <div class="card fold ${R.mealsOpen ? "open" : ""}" id="mealsCard">
     <h3 onclick="M.fold('mealsOpen', this)">${ic("bookmark", 16)} ${t("Meals & shortcuts")}${S.meals.length ? ` (${S.meals.length})` : ""} <span class="chev">▶</span></h3>
     <div class="fold-body">
@@ -6594,6 +6602,27 @@ function foodHTML(){
       }).join("") : `<div class="food-it"><span class="muted">${tr("Nothing logged.")}</span></div>`}</div>` : ""}
     </div>`;
   }).join("")}`;
+}
+
+/* Meal-prep shelf card: portions registered ahead of time, not yet logged.
+   Each row logs to today in one tap (kept on the shelf for batch cooks), or
+   can be edited back into the form or removed. */
+function prepHTML(){
+  const list = S.prep || [];
+  return `<div class="card fold ${R.prepOpen ? "open" : ""}" id="prepCard">
+    <h3 onclick="M.fold('prepOpen', this)">${ic("bookmark", 16)} ${t("Prepared meals")}${list.length ? ` (${list.length})` : ""} <span class="chev">▶</span></h3>
+    <div class="fold-body">
+      <div class="tiny" style="margin:2px 2px 10px;color:var(--txt2)">${t("Cooked ahead? Register a portion and its macros here without logging it — then tap Log now when you actually eat it.")}</div>
+      ${list.length ? list.map(p => `<div class="set-row">
+          <div><div class="k" dir="auto">${esc(p.name)}</div><div class="desc">${p.amount ? esc(p.amount) + " · " : ""}${n0(p.kcal)} kcal · ${n1(p.p)}P · ${n1(p.c)}C · ${n1(p.f)}F</div></div>
+          <span class="end">
+            <button class="btn sm" onclick="M.prepLog('${p.id}')">${t("Log now")}</button>
+            <button class="btn sm sec" aria-label="${t("Edit")}" title="${t("Edit")}" onclick="M.prepEdit('${p.id}')">${ic("edit", 13)}</button>
+            <button class="btn sm danger" aria-label="${t("Delete")}" title="${t("Delete")}" onclick="M.prepDel('${p.id}')">${ic("trash", 13)}</button>
+          </span>
+        </div>`).join("") : `<div class="muted">${t("Nothing prepped yet. Fill in a food in Log food above, then tap “Save for later (meal prep)”.")}</div>`}
+    </div>
+  </div>`;
 }
 
 /* Suggest foods/mini-meals to finish the day's remaining macros, using the food log + last-meal time */
@@ -7002,6 +7031,60 @@ function logFood(it){
   buzz();
   save();
   toast(`Logged: ${it.name.trim()} ✓`);
+}
+
+/* Meal-prep shelf: register a portion + its macros now, WITHOUT adding it to
+   any day. Later, one tap logs it to today (its macros are kept as-is). Same
+   name-recovery, saved-value fallback and sanity checks as a normal log. */
+function prepSaveDirect(){
+  let nm = foodForm.name.trim(), amt = foodForm.amount.trim();
+  if (!nm && amt){ nm = amt; amt = ""; }
+  const it = {name: nm, amount: amt, meal: foodForm.meal,
+    kcal: foodForm.kcal, p: foodForm.p, c: foodForm.c, f: foodForm.f,
+    fiber: foodForm.fiber, sugar: foodForm.sugar, sodium: foodForm.sodium, conf: foodForm.conf || "user"};
+  if (!it.name){ toast("Give the food a name."); return; }
+  if (!num(it.kcal) && !num(it.p) && !num(it.c) && !num(it.f)){
+    const fx = (S.foodFixes || {})[foodFixKey(it.name)];
+    if (fx){
+      const rv = foodFixToReview(fx, amountToGrams(it.amount));
+      it.kcal = rv.kcal; it.p = rv.p; it.c = rv.c; it.f = rv.f;
+      if (!it.amount && rv.amount) it.amount = rv.amount;
+      it.conf = "user";
+    }
+  }
+  const s = sanity(it);
+  if (s.errors.length){ toast(s.errors[0], 4200); return; }
+  if (s.warnings.length) toast(s.warnings[0], 3600);
+  rememberFoodValue(it);            // typed it yourself → remember it for next time
+  S.prep.unshift({id: uid(), name: it.name.trim(), amount: (it.amount || "").trim(), meal: it.meal || "",
+    kcal: num(it.kcal), p: num(it.p), c: num(it.c), f: num(it.f),
+    fiber: num(it.fiber) || 0, sugar: num(it.sugar) || 0, sodium: num(it.sodium) || 0, conf: it.conf || "user", ts: Date.now()});
+  if (S.prep.length > 200) S.prep.pop();
+  Object.assign(foodForm, {name: "", amount: "", time: "", meal: "", kcal: "", p: "", c: "", f: "", fiber: "", sugar: "", sodium: "", conf: "user", scOpen: false, micrOpen: false, portion: null, portG: ""});
+  R.prepOpen = true;
+  buzz(); save(); render();
+  toast(`Saved for later: ${it.name.trim()} ✓`);
+}
+function prepLog(id){
+  const p = (S.prep || []).find(x => x.id === id); if (!p) return;
+  logFood({name: p.name, amount: p.amount, meal: p.meal, kcal: p.kcal, p: p.p, c: p.c, f: p.f,
+    fiber: p.fiber, sugar: p.sugar, sodium: p.sodium, conf: p.conf || "user"});
+  // logFood already toasts + saves; the prepped portion stays on the shelf so
+  // batch cooks (several portions) can be logged across days. Remove it by hand.
+}
+function prepEdit(id){
+  const p = (S.prep || []).find(x => x.id === id); if (!p) return;
+  Object.assign(foodForm, {name: p.name, amount: p.amount, meal: p.meal || "", kcal: p.kcal || "", p: p.p || "", c: p.c || "", f: p.f || "",
+    fiber: p.fiber || "", sugar: p.sugar || "", sodium: p.sodium || "", conf: p.conf || "user", portion: null, portG: ""});
+  S.prep = S.prep.filter(x => x.id !== id);   // pull it back into the form to re-save
+  R.logFoodOpen = true;
+  save(); render();
+  const el = document.getElementById("ffName"); if (el) el.scrollIntoView({block: "center"});
+  toast("Loaded into the form — edit and save again.");
+}
+function prepDel(id){
+  S.prep = (S.prep || []).filter(x => x.id !== id);
+  save(); render();
 }
 
 /* find and parse the JSON payload in a model reply that may also contain prose */
@@ -13094,6 +13177,10 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
     toast(`${tr("Copied")} ${tr(label)} ${tr("to today")} ✓`);
   },
   foodSave: foodSaveDirect,
+  prepSave: prepSaveDirect,
+  prepLog(id){ prepLog(id); },
+  prepEdit(id){ prepEdit(id); },
+  prepDel(id){ prepDel(id); },
   foodDel(id){
     const idx = S.foods.findIndex(f => f.id === id);
     if (idx < 0) return;
