@@ -1641,7 +1641,7 @@ html[data-setpage="privacy"] .set-page[data-page="privacy"]{display:block}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.200";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.201";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -2207,7 +2207,7 @@ const TR = {
     "Save for later (meal prep)":"احفظ لوقت لاحق (تحضير الوجبات)","Prepared meals":"وجبات محضّرة مسبقًا","Log now":"سجّل الآن","Delete":"حذف",
     "Log all":"سجّل الكل","Unsorted":"غير مصنّف","item":"عنصر","items":"عناصر","Logged":"سُجّل",
     "Servings prepared":"عدد الحصص المحضّرة","e.g. 5 — blank means one serving":"مثال 5 — اتركه فارغًا لحصّة واحدة","left":"متبقٍّ","One fewer":"واحد أقل","One more":"واحد أكثر",
-    "Take or upload a photo":"التقط صورة أو ارفع واحدة","Save typed entry for later":"احفظ الإدخال المكتوب لوقت لاحق","From a photo, MIRA reads the macros — review them, then tap the bookmark to save it here.":"من الصورة، تقرأ ميرا الماكروز — راجِعها، ثم اضغط الإشارة المرجعية لحفظها هنا.",
+    "Prefer a photo? Use “Snap food / label” below, then tap the bookmark on the result to save it here.":"تفضّل الصورة؟ استخدم «التقط الطعام / الملصق» بالأسفل، ثم اضغط الإشارة المرجعية على النتيجة لحفظها هنا.",
     "Cooked ahead? Register a portion and its macros here without logging it — then tap Log now when you actually eat it.":"طبخت مسبقًا؟ سجّل هنا حصّة وماكروزها دون إضافتها لليوم — ثم اضغط «سجّل الآن» عندما تأكلها فعلًا.",
     "Cooked ahead? Register portions and give each a meal — then Log all of a meal in one tap, or Log now item by item.":"طبخت مسبقًا؟ سجّل الحصص وامنح كلًّا منها وجبة — ثم «سجّل الكل» لوجبة بضغطة واحدة، أو «سجّل الآن» عنصرًا عنصرًا.",
     "Nothing prepped yet. Fill in a food in Log food above, then tap “Save for later (meal prep)”.":"لا يوجد تحضير بعد. أدخِل طعامًا في «تسجيل الطعام» أعلاه، ثم اضغط «احفظ لوقت لاحق (تحضير الوجبات)».",
@@ -6531,9 +6531,8 @@ function foodHTML(){
       ${R.editFoodId ? "" : `
       <div class="field" style="margin-bottom:8px"><label>${t("Servings prepared")} <span class="micr-opt">${t("optional")}</span></label>
         <input type="number" inputmode="numeric" min="1" value="${esc(foodForm.prepQty)}" oninput="foodForm.prepQty=this.value" placeholder="${t("e.g. 5 — blank means one serving")}"></div>
-      <button class="btn sm sec" style="width:100%;margin-bottom:8px" onclick="M.extractPhoto()" ${extractBusy ? "disabled" : ""}>${ic("camera", 15)} ${extractBusy ? t("Reading…") : t("Take or upload a photo")}</button>
-      <div class="tiny" style="margin:0 2px 8px;color:var(--txt3)">${t("From a photo, MIRA reads the macros — review them, then tap the bookmark to save it here.")}</div>
-      <button class="btn sm sec" style="width:100%;margin-bottom:12px" onclick="M.prepSave()">${ic("bookmark", 15)} ${t("Save typed entry for later")}</button>`}
+      <button class="btn sm sec" style="width:100%;margin-bottom:8px" onclick="M.prepSave()">${ic("bookmark", 15)} ${t("Save for later (meal prep)")}</button>
+      <div class="tiny" style="margin:0 2px 12px;color:var(--txt3)">${t("Prefer a photo? Use “Snap food / label” below, then tap the bookmark on the result to save it here.")}</div>`}
       `}
       <button class="btn sm sec" style="width:100%;margin-bottom:8px" onclick="M.findMacros()" ${findBusy ? "disabled" : ""}>${findBusy ? "Searching…" : ic("search", 15) + " " + t("Find macros")}</button>
       <div class="food-tools-wrap ${(R.foodToolsOpen || foodForm.scOpen || dishForm.open || extractBusy || barcodeBusy) ? "open" : ""}">
