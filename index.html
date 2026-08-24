@@ -1641,7 +1641,7 @@ html[data-setpage="privacy"] .set-page[data-page="privacy"]{display:block}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.199";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.200";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -2207,6 +2207,7 @@ const TR = {
     "Save for later (meal prep)":"احفظ لوقت لاحق (تحضير الوجبات)","Prepared meals":"وجبات محضّرة مسبقًا","Log now":"سجّل الآن","Delete":"حذف",
     "Log all":"سجّل الكل","Unsorted":"غير مصنّف","item":"عنصر","items":"عناصر","Logged":"سُجّل",
     "Servings prepared":"عدد الحصص المحضّرة","e.g. 5 — blank means one serving":"مثال 5 — اتركه فارغًا لحصّة واحدة","left":"متبقٍّ","One fewer":"واحد أقل","One more":"واحد أكثر",
+    "Take or upload a photo":"التقط صورة أو ارفع واحدة","Save typed entry for later":"احفظ الإدخال المكتوب لوقت لاحق","From a photo, MIRA reads the macros — review them, then tap the bookmark to save it here.":"من الصورة، تقرأ ميرا الماكروز — راجِعها، ثم اضغط الإشارة المرجعية لحفظها هنا.",
     "Cooked ahead? Register a portion and its macros here without logging it — then tap Log now when you actually eat it.":"طبخت مسبقًا؟ سجّل هنا حصّة وماكروزها دون إضافتها لليوم — ثم اضغط «سجّل الآن» عندما تأكلها فعلًا.",
     "Cooked ahead? Register portions and give each a meal — then Log all of a meal in one tap, or Log now item by item.":"طبخت مسبقًا؟ سجّل الحصص وامنح كلًّا منها وجبة — ثم «سجّل الكل» لوجبة بضغطة واحدة، أو «سجّل الآن» عنصرًا عنصرًا.",
     "Nothing prepped yet. Fill in a food in Log food above, then tap “Save for later (meal prep)”.":"لا يوجد تحضير بعد. أدخِل طعامًا في «تسجيل الطعام» أعلاه، ثم اضغط «احفظ لوقت لاحق (تحضير الوجبات)».",
@@ -6530,7 +6531,9 @@ function foodHTML(){
       ${R.editFoodId ? "" : `
       <div class="field" style="margin-bottom:8px"><label>${t("Servings prepared")} <span class="micr-opt">${t("optional")}</span></label>
         <input type="number" inputmode="numeric" min="1" value="${esc(foodForm.prepQty)}" oninput="foodForm.prepQty=this.value" placeholder="${t("e.g. 5 — blank means one serving")}"></div>
-      <button class="btn sm sec" style="width:100%;margin-bottom:12px" onclick="M.prepSave()">${ic("bookmark", 15)} ${t("Save for later (meal prep)")}</button>`}
+      <button class="btn sm sec" style="width:100%;margin-bottom:8px" onclick="M.extractPhoto()" ${extractBusy ? "disabled" : ""}>${ic("camera", 15)} ${extractBusy ? t("Reading…") : t("Take or upload a photo")}</button>
+      <div class="tiny" style="margin:0 2px 8px;color:var(--txt3)">${t("From a photo, MIRA reads the macros — review them, then tap the bookmark to save it here.")}</div>
+      <button class="btn sm sec" style="width:100%;margin-bottom:12px" onclick="M.prepSave()">${ic("bookmark", 15)} ${t("Save typed entry for later")}</button>`}
       `}
       <button class="btn sm sec" style="width:100%;margin-bottom:8px" onclick="M.findMacros()" ${findBusy ? "disabled" : ""}>${findBusy ? "Searching…" : ic("search", 15) + " " + t("Find macros")}</button>
       <div class="food-tools-wrap ${(R.foodToolsOpen || foodForm.scOpen || dishForm.open || extractBusy || barcodeBusy) ? "open" : ""}">
@@ -7005,7 +7008,8 @@ function reviewHTML(){
           <span class="badge ${it.conf}">${it.conf}</span>
           <span class="tiny" style="flex:1">${esc(it.note || "")}</span>
           ${communityConfigured() && it.conf !== "community" ? `<button class="btn sm sec" style="flex:0 0 auto" aria-label="Share to community database" onclick="M.reviewShare(${i})" ${it.shared ? "disabled" : ""}>${it.shared ? ic("check", 14) : ic("share", 14)}</button>` : ""}
-          <button class="btn sm" style="flex:0 0 auto" onclick="M.reviewAccept(${i})">Log it</button>
+          <button class="btn sm sec" style="flex:0 0 auto" aria-label="${t("Save for later (meal prep)")}" title="${t("Save for later (meal prep)")}" onclick="M.reviewToPrep(${i})">${ic("bookmark", 14)}</button>
+          <button class="btn sm" style="flex:0 0 auto" onclick="M.reviewAccept(${i})">${t("Log it")}</button>
           <button class="btn sm sec" style="flex:0 0 auto" onclick="M.reviewDrop(${i})">✕</button>
         </div>
         ${s.errors.map(e => `<div class="err">${esc(e)}</div>`).join("")}
@@ -7082,6 +7086,24 @@ function logFood(it){
   buzz();
   save();
   toast(`Logged: ${it.name.trim()} ✓`);
+}
+// Remember a corrected/looked-up review item as your value for next time — for
+// any source (barcode, label, photo estimate, search). Shared by "Log it" and
+// "Save for later" so a photographed prep item teaches MIRA the same way.
+function learnFromReview(it){
+  if (it.barcode){ saveBarcodeFix(it.barcode, it); save(); toast("Saved your values for this barcode — used automatically next scan ✓", 4200); return; }
+  const fixName = it._searchName || it.name;
+  if (!fixName) return;
+  const chg = (a, b) => Math.abs(num(a) - num(b)) > Math.max(1, Math.abs(num(b)) * 0.02);
+  const cur = itemPer100(it);
+  let edited = false;
+  if (cur && it._origP100){
+    edited = chg(cur.kcal, it._origP100.kcal) || chg(cur.p, it._origP100.p) || chg(cur.c, it._origP100.c) || chg(cur.f, it._origP100.f);
+  } else {
+    const om = it._origMacros || {};
+    if ((it.amount || "") === (it._origAmount || "")) edited = chg(it.kcal, om.kcal) || chg(it.p, om.p) || chg(it.c, om.c) || chg(it.f, om.f);
+  }
+  if (edited){ saveFoodFix(fixName, it); save(); toast("Saved your correction — used automatically next time ✓", 4200); }
 }
 
 /* Meal-prep shelf: register a portion + its macros now, WITHOUT adding it to
@@ -13455,31 +13477,34 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
     logFood(it);
     // if this was a community entry, ping it as useful so good entries rise
     if (it.conf === "community" && it.communityId) communityUse(it.communityId);
-    // remember a scanned barcode's values so a wrong database is corrected for good
-    if (it.barcode){ saveBarcodeFix(it.barcode, it); save(); toast("Saved your values for this barcode — used automatically next scan ✓", 4200); }
-    // remember a CORRECTED food (edited macros) so it's your value next time — for
-    // ANY source: a database search, a photo estimate, a scanned label, an AI guess.
-    else {
-      const fixName = it._searchName || it.name;
-      if (fixName){
-        const chg = (a, b) => Math.abs(num(a) - num(b)) > Math.max(1, Math.abs(num(b)) * 0.02);
-        const cur = itemPer100(it);
-        let edited = false;
-        if (cur && it._origP100){
-          edited = chg(cur.kcal, it._origP100.kcal) || chg(cur.p, it._origP100.p) || chg(cur.c, it._origP100.c) || chg(cur.f, it._origP100.f);
-        } else {
-          // grams unknown — only trust an edit when the amount itself is unchanged
-          const om = it._origMacros || {};
-          if ((it.amount || "") === (it._origAmount || "")) edited = chg(it.kcal, om.kcal) || chg(it.p, om.p) || chg(it.c, om.c) || chg(it.f, om.f);
-        }
-        if (edited){ saveFoodFix(fixName, it); save(); toast("Saved your correction — used automatically next time ✓", 4200); }
-      }
-    }
+    learnFromReview(it);   // remember corrections/values for next time
     reviewItems.splice(i, 1);
     if (!reviewItems.length) reviewItems = null;
     // clear the add-food form too, so the looked-up name/amount don't linger
     Object.assign(foodForm, {name: "", amount: "", kcal: "", p: "", c: "", f: "", conf: "user", scOpen: false, portion: null, portG: ""});
     render();
+  },
+  // Save a reviewed item (from a photo, label, scan or search) to the prep shelf
+  // instead of logging it — so a photographed meal can be prepped for later.
+  reviewToPrep(i){
+    const it = reviewItems[i];
+    const s = sanity(it);
+    if (s.errors.length){ toast(s.errors[0], 4200); render(); return; }
+    if (it.conf === "community" && it.communityId) communityUse(it.communityId);
+    learnFromReview(it);
+    const q = Math.floor(num(foodForm.prepQty));
+    const entry = {id: uid(), name: (it.name || "").trim(), amount: (it.amount || "").trim(), meal: foodForm.meal || "",
+      kcal: num(it.kcal), p: num(it.p), c: num(it.c), f: num(it.f),
+      fiber: num(it.fiber) || 0, sugar: num(it.sugar) || 0, sodium: num(it.sodium) || 0, conf: it.conf || "user", ts: Date.now()};
+    if (q >= 1) entry.qty = q;
+    S.prep.unshift(entry);
+    if (S.prep.length > 200) S.prep.pop();
+    R.prepOpen = true;
+    reviewItems.splice(i, 1);
+    if (!reviewItems.length) reviewItems = null;
+    Object.assign(foodForm, {name: "", amount: "", kcal: "", p: "", c: "", f: "", conf: "user", scOpen: false, portion: null, portG: ""});
+    save(); render();
+    toast(`Saved for later: ${entry.name} ✓`);
   },
   reviewDrop(i){ reviewItems.splice(i, 1); if (!reviewItems.length) reviewItems = null; render(); },
   /* ---- Foods MIRA remembers: manage learned corrections ---- */
