@@ -701,14 +701,23 @@ body.kb .fab{display:none}
   padding:4px 12px 8px;background:var(--bg);
 }
 .chatbar .inner{
-  display:flex;align-items:flex-end;gap:8px;background:var(--card2);
-  border:1px solid var(--line2);border-radius:22px;padding:7px 8px 7px 6px;
-  box-shadow:var(--shadow);
+  display:flex;align-items:flex-end;gap:6px;background:var(--card);
+  border:1px solid var(--line2);border-radius:26px;padding:6px 7px 6px 6px;
+  box-shadow:var(--shadow);transition:border-color .15s,box-shadow .15s;
+}
+.chatbar .inner:focus-within{
+  border-color:color-mix(in srgb,var(--acc) 60%,var(--line2));
+  box-shadow:0 0 0 3px var(--acc-soft),var(--shadow);
 }
 .chatbar textarea{
   flex:1;background:none;border:none;resize:none;max-height:140px;min-height:42px;
-  padding:9px 4px;line-height:1.45;font-size:15px;
+  padding:10px 6px;line-height:1.45;font-size:15.5px;
 }
+.chatbar textarea:focus{outline:none}
+.chatbar textarea::placeholder{color:var(--txt3)}
+.icon-btn.send.busy{position:relative;color:transparent;background:var(--acc)}
+.icon-btn.send.busy::after{content:"";position:absolute;width:17px;height:17px;border-radius:50%;border:2px solid var(--btn-ink);border-top-color:transparent;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
 .tool-row{display:flex;flex-wrap:wrap;gap:7px;padding:0 4px;max-height:0;opacity:0;overflow:hidden;pointer-events:none;transition:max-height .24s ease,opacity .18s ease,padding .24s ease}
 .tool-row.open{max-height:160px;opacity:1;padding:2px 4px 9px;pointer-events:auto}
 .tool-btn{
@@ -1673,7 +1682,7 @@ html[data-setpage="privacy"] .set-page[data-page="privacy"]{display:block}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.209";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.210";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -5413,6 +5422,9 @@ THREE NON-NEGOTIABLE PRINCIPLES
 2. The user's own data always wins. A personal product label or measured value overrides any database or estimate. The live data block below is ground truth.
 3. Honest limits. When something cannot be verified, say so plainly. Label estimates as estimates with your confidence and how you derived them. Never pretend precision you don't have.
 
+ANSWER THE QUESTION ACTUALLY ASKED
+Interpret every question in the subject the user raised and stay there. Do not swap topics or reframe the question into a different domain. In particular: "calorie bank", "calorie budget", "calorie journey", "banking calories" and anything about food, meals, macros, cheat meals, or eating are NUTRITION topics about energy (kilocalories) — they have NOTHING to do with money. NEVER bring up money, spending, KWD, or the financial budget unless the user explicitly asks about money or cost. If a food/nutrition question arrives, answer it with calories and macros using the user's live nutrition data and trusted food-composition sources (USDA, regional tables, the product's own label) — and if you are unsure what the user means, ask one short clarifying question rather than guessing a different subject.
+
 PROFESSIONAL RESEARCHER
 When the user wants anything found on the internet — a product, a price, a paper, a regulation, a comparison, the best option for a need — act as a professional researcher${st.webSearch
   ? ": run targeted searches (multiple angles when it matters), prefer primary and authoritative sources over aggregators, cross-check anything surprising, discard low-quality pages, and deliver the most suitable data as a clear recommendation with working links, dates, and what you filtered out. Say plainly when results are inconclusive."
@@ -5653,8 +5665,8 @@ function chatHTML(){
         <div class="card"><h3><span class="mode-dot"></span>${esc(dom.name)} mode</h3>
           <div class="muted">${esc(dom.desc.split(".")[0])}. Every fact verified or honestly labelled an estimate.</div></div>
         <div class="suggest">${sug.map(s => `<button onclick="M.suggest(this)">${esc(s)}</button>`).join("")}</div>`}
-      <div class="build-tag">MIRA v${BUILD}</div>
-    </div>`;
+    </div>
+    <div class="build-tag">MIRA v${BUILD}</div>`;
 }
 function msgHTML(m, convId, idx, isLast, isLastUser){
   if (m.role === "user")
@@ -5701,7 +5713,7 @@ function chatbarHTML(){
       <textarea id="chatIn" rows="1" placeholder="Message MIRA…" dir="auto" aria-label="Message MIRA"
         oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,140)+'px'"
         onkeydown="if(event.key==='Enter'&&!event.shiftKey&&!('ontouchstart' in window)){event.preventDefault();M.send()}"></textarea>
-      <button class="icon-btn send" aria-label="Send" onclick="M.send()" ${R.busy ? "disabled" : ""}>${R.busy ? "…" : ic("arrowUp", 19)}</button>
+      <button class="icon-btn send ${R.busy ? "busy" : ""}" aria-label="Send" onclick="M.send()" ${R.busy ? "disabled" : ""}>${ic("arrowUp", 19)}</button>
     </div>
     <div class="ds-note ${R.deepSolve ? "open" : ""}">Deep Solve on — two-stage reasoning for hard problems</div>
   </div>`;
