@@ -1424,6 +1424,15 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
 .hx-table .hx-slow{color:#e0724c;font-weight:600}
 .hx-table .hx-fast{color:var(--acc);font-weight:600}
 .hx-pb{font-size:10px;font-weight:700;color:var(--acc);background:color-mix(in srgb,var(--acc) 16%,transparent);border-radius:20px;padding:1px 7px;margin-inline-start:6px;vertical-align:middle}
+.rd-hero{display:flex;align-items:center;gap:16px}
+.rd-ring{position:relative;flex:0 0 auto;width:84px;height:84px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--rc) calc(var(--p)*1%),var(--line) 0)}
+.rd-ring::before{content:"";position:absolute;width:66px;height:66px;border-radius:50%;background:var(--card2)}
+.rd-ring span{position:relative;font-size:26px;font-weight:800;font-variant-numeric:tabular-nums}
+.rd-hero-tx{flex:1;min-width:0}
+.rd-band{font-size:16px;font-weight:700}
+.rd-factors{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.rd-chip{font-size:11.5px;color:var(--txt2);background:var(--card2);border:1px solid var(--line);border-radius:20px;padding:3px 10px}
+.rd-dot{display:inline-block;width:9px;height:9px;border-radius:50%;vertical-align:middle;margin-inline-end:4px}
 .dom-color{width:16px;height:16px;border-radius:50%}
 /* ---- Settings: sectioned, best-in-class layout ---- */
 .set-hero{display:flex;align-items:center;gap:15px;padding:17px 18px;margin-bottom:8px;border:1px solid var(--line);border-radius:22px;
@@ -1664,7 +1673,7 @@ html[data-setpage="privacy"] .set-page[data-page="privacy"]{display:block}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.206";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.207";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -2338,6 +2347,13 @@ const TR = {
     "Start a workout":"ابدأ تمرينًا","Start blank workout":"ابدأ تمرينًا فارغًا",
     "Log your session set by set. Add exercises from the library, or anything custom.":"سجّل جلستك مجموعة بمجموعة. أضِف تمارين من المكتبة أو أي شيء مخصص.",
     "Hyrox":"هايروكس","Run":"جري",
+    "Readiness":"الجاهزية","A quick morning check-in — sleep, soreness and resting heart rate — turns into a readiness score that tells you how hard to train today.":"تسجيل صباحي سريع — النوم وتيبّس العضلات ونبض الراحة — يتحوّل إلى درجة جاهزية تخبرك كم يجب أن تتمرّن بشدّة اليوم.",
+    "Prime — push":"ذروة — انطلق","Good — train as planned":"جيّد — تمرّن كما خُطّط","Moderate — dial it back":"متوسّط — خفّف قليلًا","Recover — go easy":"تعافَ — خفّف كثيرًا",
+    "You're primed — a great day for intensity or a PR attempt.":"أنت في الذروة — يوم رائع للشدّة أو محاولة رقم قياسي.","Solid recovery — train as planned.":"تعافٍ جيّد — تمرّن كما خُطّط.","A bit under-recovered — trim the volume or intensity a notch.":"تعافٍ ناقص قليلًا — قلّل الحجم أو الشدّة درجة.","Low recovery — keep it easy today: mobility, a walk, or full rest.":"تعافٍ منخفض — خفّف اليوم: إطالة، مشي، أو راحة تامّة.",
+    "Morning check-in":"تسجيل صباحي","Muscle soreness":"تيبّس العضلات","None":"لا شيء","Light":"خفيف","Moderate":"متوسّط","High":"عالٍ","Severe":"شديد",
+    "Resting HR (bpm)":"نبض الراحة (نبضة/د)","e.g. 58":"مثال 58","Sleep (h)":"النوم (ساعة)","e.g. 7.5":"مثال 7.5","Using":"باستخدام","from your sleep log.":"من سجل نومك.",
+    "Update today":"حدّث اليوم","Save check-in":"احفظ التسجيل","A guide from your own inputs, not a medical assessment. Resting HR is most useful measured on waking, before getting up.":"دليل من مدخلاتك أنت، وليس تقييمًا طبيًّا. نبض الراحة أدق عند قياسه فور الاستيقاظ قبل النهوض.",
+    "Soreness":"التيبّس","Resting HR":"نبض الراحة","vs base":"مقابل الأساس",
     "Cardio":"كارديو","Log runs and cardio — distance and time give you pace and an estimated burn, which counts toward today's exercise calories.":"سجّل الجري والكارديو — المسافة والزمن يعطيانك السرعة وتقديرًا للسعرات المحروقة، وتُحتسب ضمن سعرات تمارين اليوم.",
     "This week":"هذا الأسبوع","Time · 7d":"الزمن · 7 أيام","Avg run pace":"متوسّط سرعة الجري","Log cardio":"سجّل كارديو",
     "Type":"النوع","Bike":"دراجة","Row":"تجديف","Swim":"سباحة","Other":"أخرى",
@@ -3210,6 +3226,7 @@ const BLANK = () => ({
   hyrox: [],          // Hyrox race simulations {id, date, runs:[8 sec], stations:[8 sec], total, note}
   cardio: [],         // cardio sessions {id, date, modality, effort, distanceKm, seconds, note, ts}
   cycle: {starts: [], periodLen: 5, avgCycle: null},   // menstrual cycle: period start dates + settings
+  readiness: [],      // daily recovery check-ins {date, soreness, restingHR, sleepH, note, ts}
   routines: [],       // {id, name, items:[{name, muscle}]}
   program: null,      // active training program {id,name,goal,level,place,daysPerWeek,weeks,phase,cursor,days:[{name,focus,exercises:[{name,muscle,sets,reps,rest,note}]}],progression,createdAt,startDate}
   exDemos: {},        // exercise name -> cached form demo {setup, steps[], mistakes[], breathing, search, ts}
@@ -3298,6 +3315,7 @@ function migrateChats(){
   if (!Array.isArray(S.cardio)) S.cardio = [];
   if (!S.cycle || typeof S.cycle !== "object" || Array.isArray(S.cycle)) S.cycle = {starts: [], periodLen: 5, avgCycle: null};
   if (!Array.isArray(S.cycle.starts)) S.cycle.starts = [];
+  if (!Array.isArray(S.readiness)) S.readiness = [];
   if (!Array.isArray(S.routines)) S.routines = [];
   if (!Array.isArray(S.followers)) S.followers = [];
   if (S.program && (!Array.isArray(S.program.days) || !S.program.days.length)) S.program = null;
@@ -3370,6 +3388,7 @@ function migrateChats(){
   S.workouts = rec(S.workouts).map(w => ({...w, items: Array.isArray(w.items) ? w.items : []}));
   S.hyrox = rec(S.hyrox).map(h => ({...h, runs: Array.isArray(h.runs) ? h.runs : [], stations: Array.isArray(h.stations) ? h.stations : []}));
   S.cardio = rec(S.cardio);
+  S.readiness = rec(S.readiness);
   S.meals = rec(S.meals).map(m => ({...m, name: str(m.name, "Meal"), items: Array.isArray(m.items) ? m.items : []}));
 }
 migrateChats();
@@ -3605,6 +3624,7 @@ const R = {
   trainTab: "today",  // today | program | library | hyrox | history | coach
   hyroxForm: null,    // in-progress Hyrox simulation entry (mm:ss strings)
   cardioForm: null,   // in-progress cardio session {modality, effort, dist, time, note}
+  readyForm: null,    // in-progress readiness check-in {soreness, restingHR, sleepH, note}
   trainWO: null,      // in-progress workout being logged
   libQuery: "",
   libMuscle: "All",
@@ -8813,6 +8833,103 @@ function plateHTML(){
 }
 
 /* ---------- Training view ---------- */
+/* ---------------- Recovery & readiness ---------------- */
+// Latest logged sleep hours for a date (from the Sleep log).
+function sleepHoursFor(date){ const l = (S.sleep || []).filter(s => s.date === date); return l.length ? num(l[l.length - 1].hours) : 0; }
+// Resting-HR baseline: mean of the last ~14 logged resting HRs before this date.
+function hrBaseline(exclDate){
+  const hrs = (S.readiness || []).filter(r => r.date !== exclDate && num(r.restingHR) > 0).slice(-14).map(r => num(r.restingHR));
+  return hrs.length >= 3 ? Math.round(hrs.reduce((a, x) => a + x, 0) / hrs.length) : 0;
+}
+const SORENESS = [["1", "None"], ["2", "Light"], ["3", "Moderate"], ["4", "High"], ["5", "Severe"]];
+// Composite 0–100 readiness: sleep (40) + soreness (30) + resting-HR vs baseline
+// (20) + cycle phase (10). Missing inputs fall back to a neutral share.
+function readinessScore(r){
+  let pts = 0;
+  const sleepH = num(r.sleepH) || sleepHoursFor(r.date || todayStr());
+  const sp = sleepH > 0 ? Math.round(Math.max(0, Math.min(1, sleepH / 7.5)) * 40) : 28;
+  pts += sp;
+  const sore = num(r.soreness);
+  const sorePts = sore >= 1 && sore <= 5 ? [30, 24, 18, 9, 0][sore - 1] : 21;
+  pts += sorePts;
+  const base = hrBaseline(r.date || todayStr()), hr = num(r.restingHR);
+  let hrPts = 14;
+  if (hr > 0 && base > 0) hrPts = Math.max(0, Math.min(20, 20 - Math.max(0, hr - base) * 2));
+  else if (hr > 0) hrPts = 16;
+  pts += hrPts;
+  const cyc = (typeof cycleStats === "function") ? cycleStats() : null;
+  let phase = null, phasePts = 7;
+  if (cyc){ phase = cyc.phase; phasePts = ({follicular: 10, ovulation: 10, menstrual: 6, luteal: 5})[phase] != null ? ({follicular: 10, ovulation: 10, menstrual: 6, luteal: 5})[phase] : 7; }
+  pts += phasePts;
+  return {score: Math.max(0, Math.min(100, Math.round(pts))), sleepH, sp, sore, sorePts, base, hr, hrPts, phase, phasePts};
+}
+function readinessBand(s){
+  return s >= 80 ? {k: "prime", label: "Prime — push", color: "var(--acc)"} :
+         s >= 65 ? {k: "good", label: "Good — train as planned", color: "#4CC4E0"} :
+         s >= 50 ? {k: "moderate", label: "Moderate — dial it back", color: "#F5B851"} :
+                   {k: "recover", label: "Recover — go easy", color: "#e0724c"};
+}
+function readyToday(){ return (S.readiness || []).find(r => r.date === todayStr()); }
+function readyFormObj(){
+  if (!R.readyForm){ const t = readyToday(); R.readyForm = t
+    ? {soreness: String(t.soreness || ""), restingHR: t.restingHR != null ? String(t.restingHR) : "", sleepH: t.sleepH != null ? String(t.sleepH) : "", note: t.note || ""}
+    : {soreness: "", restingHR: "", sleepH: "", note: ""}; }
+  return R.readyForm;
+}
+function trainReadyHTML(){
+  const f = readyFormObj();
+  const todaySleep = sleepHoursFor(todayStr());
+  const previewR = {date: todayStr(), soreness: num(f.soreness), restingHR: num(f.restingHR), sleepH: num(f.sleepH) || todaySleep};
+  const has = num(f.soreness) > 0 || num(f.restingHR) > 0 || (num(f.sleepH) || todaySleep) > 0;
+  const sc = readinessScore(previewR), band = readinessBand(sc.score);
+  const list = [...(S.readiness || [])].sort((a, b) => a.date < b.date ? 1 : -1);
+  // factor chips explaining the score
+  const factors = [];
+  if (sc.sleepH > 0) factors.push(`${tr("Sleep")} ${n1(sc.sleepH)}h`);
+  if (sc.sore >= 1) factors.push(`${tr("Soreness")} ${tr((SORENESS[sc.sore - 1] || [, ""])[1])}`);
+  if (sc.hr > 0) factors.push(`${tr("Resting HR")} ${sc.hr}${sc.base > 0 ? ` (${sc.hr - sc.base >= 0 ? "+" : ""}${sc.hr - sc.base} ${tr("vs base")})` : ""}`);
+  if (sc.phase) factors.push(tr((CYCLE_PHASES[sc.phase] || {label: ""}).label));
+  const advice = band.k === "prime" ? tr("You're primed — a great day for intensity or a PR attempt.")
+    : band.k === "good" ? tr("Solid recovery — train as planned.")
+    : band.k === "moderate" ? tr("A bit under-recovered — trim the volume or intensity a notch.")
+    : tr("Low recovery — keep it easy today: mobility, a walk, or full rest.");
+
+  const seg = (k, opts, cur) => `<div class="seg seg-wrap">${opts.map(([v, l]) => `<button class="${cur === v ? "on" : ""}" onclick="M.readyField('${k}','${v}')">${tr(l)}</button>`).join("")}</div>`;
+
+  return `
+    <div class="tiny" style="margin:2px 2px 12px;color:var(--txt2)">${tr("A quick morning check-in — sleep, soreness and resting heart rate — turns into a readiness score that tells you how hard to train today.")}</div>
+
+    ${has ? `<div class="card hx-card" style="margin-bottom:14px">
+      <div class="rd-hero">
+        <div class="rd-ring" style="--p:${sc.score};--rc:${band.color}"><span>${sc.score}</span></div>
+        <div class="rd-hero-tx"><div class="rd-band" style="color:${band.color}">${tr(band.label)}</div>
+          <div class="tiny" style="color:var(--txt2);margin-top:3px">${advice}</div></div>
+      </div>
+      ${factors.length ? `<div class="rd-factors">${factors.map(x => `<span class="rd-chip">${x}</span>`).join("")}</div>` : ""}
+    </div>` : ""}
+
+    <div class="card hx-card">
+      <h3>${ic("plus", 15)} ${tr("Morning check-in")}</h3>
+      <div class="field" style="margin-top:8px"><label>${tr("Muscle soreness")}</label>${seg("soreness", SORENESS, f.soreness)}</div>
+      <div class="grid2">
+        <div class="field"><label>${tr("Resting HR (bpm)")} <span class="micr-opt">${tr("optional")}</span></label><input type="number" inputmode="numeric" value="${esc(f.restingHR)}" placeholder="${tr("e.g. 58")}" oninput="M.readyField('restingHR',this.value)"></div>
+        <div class="field"><label>${tr("Sleep (h)")}</label><input type="number" inputmode="decimal" value="${esc(f.sleepH)}" placeholder="${todaySleep > 0 ? n1(todaySleep) : tr("e.g. 7.5")}" oninput="M.readyField('sleepH',this.value)"></div>
+      </div>
+      ${todaySleep > 0 && !num(f.sleepH) ? `<div class="tiny" style="margin:-4px 2px 8px;color:var(--txt3)">${ic("moon", 12)} ${tr("Using")} ${n1(todaySleep)}h ${tr("from your sleep log.")}</div>` : ""}
+      <input class="hx-note" value="${esc(f.note)}" placeholder="${tr("Note (optional)")}" dir="auto" oninput="R.readyForm.note=this.value">
+      <button class="btn" style="width:100%;margin-top:12px" onclick="M.readySave()">${ic("check", 15)} ${readyToday() ? tr("Update today") : tr("Save check-in")}</button>
+      <div class="tiny" style="margin-top:10px;color:var(--txt3);line-height:1.45">${ic("alert", 12)} ${tr("A guide from your own inputs, not a medical assessment. Resting HR is most useful measured on waking, before getting up.")}</div>
+    </div>
+
+    ${list.length ? `<div class="card hx-card" style="margin-top:14px"><h3>${ic("clock", 15)} ${tr("Recent")} <span class="tiny" style="margin-inline-start:auto;font-weight:400;color:var(--txt3)">${list.length}</span></h3>
+      ${list.slice(0, 21).map(r => { const s = readinessScore(r), b = readinessBand(s.score);
+        return `<div class="set-row"><div><div class="k"><span class="rd-dot" style="background:${b.color}"></span> ${s.score} · ${tr(b.label)}</div>
+          <div class="desc">${fmtDate(r.date)}${s.sleepH > 0 ? ` · ${n1(s.sleepH)}h` : ""}${r.soreness ? ` · ${tr((SORENESS[num(r.soreness) - 1] || [, ""])[1])}` : ""}${num(r.restingHR) > 0 ? ` · ${r.restingHR} bpm` : ""}</div></div>
+          <span class="end"><button class="btn sm danger" aria-label="${tr("Delete")}" onclick="M.readyDel('${r.date}')">${ic("trash", 13)}</button></span></div>`; }).join("")}
+    </div>` : ""}
+  `;
+}
+
 /* ---------------- Cardio / running tracker ---------------- */
 const CARDIO_MODALITIES = [["run", "Run"], ["bike", "Bike"], ["row", "Row"], ["swim", "Swim"], ["other", "Other"]];
 const CARDIO_EFFORTS = [["easy", "Easy"], ["tempo", "Tempo"], ["interval", "Interval"], ["long", "Long"], ["race", "Race"]];
@@ -8981,7 +9098,7 @@ function trainHyroxHTML(){
 }
 
 function trainHTML(){
-  const tabs = [["today","Workout"],["program","Program"],["library","Library"],["cardio","Cardio"],["hyrox","Hyrox"],["history","History"],["coach","Coach"]];
+  const tabs = [["today","Workout"],["ready","Readiness"],["program","Program"],["library","Library"],["cardio","Cardio"],["hyrox","Hyrox"],["history","History"],["coach","Coach"]];
   return `
     <button class="cat-back" onclick="M.trainBack()">${ic("back", 18)} ${tr("Fitness")}</button>
     <div class="cat-title"><div class="ch-nm">${tr("Training")}</div><div class="ch-ds">${tr("Program · tracking · coach")}</div></div>
@@ -8989,6 +9106,7 @@ function trainHTML(){
       `<button class="chip ${R.trainTab === k ? "on" : ""}" onclick="M.trainGo('${k}')">${tr(l)}</button>`).join("")}</div>
     <div style="margin-top:12px">${
       R.trainTab === "today" ? trainTodayHTML() :
+      R.trainTab === "ready" ? trainReadyHTML() :
       R.trainTab === "program" ? trainProgramHTML() :
       R.trainTab === "library" ? trainLibHTML() :
       R.trainTab === "cardio" ? trainCardioHTML() :
@@ -12374,6 +12492,20 @@ window.M = {
     toast(`Cardio saved · ~${n0(cardioBurn({modality: f.modality, distanceKm: km, seconds: sec}))} kcal ✓`);
   },
   cardioDel(id){ S.cardio = (S.cardio || []).filter(x => x.id !== id); save(); render(); },
+  readyField(k, v){ readyFormObj()[k] = v; render(); },
+  readySave(){
+    const f = readyFormObj();
+    if (!(num(f.soreness) > 0) && !(num(f.restingHR) > 0) && !(num(f.sleepH) > 0) && !(sleepHoursFor(todayStr()) > 0)){ toast("Add soreness, resting HR or sleep first."); return; }
+    const entry = {date: todayStr(), soreness: num(f.soreness) || 0, restingHR: num(f.restingHR) || 0,
+      sleepH: num(f.sleepH) || 0, note: (f.note || "").trim(), ts: Date.now()};
+    const i = (S.readiness || []).findIndex(r => r.date === todayStr());
+    if (i >= 0) S.readiness[i] = entry; else S.readiness.push(entry);
+    R.readyForm = null;
+    const sc = readinessScore(entry);
+    buzz(); save(); render();
+    toast(`Readiness ${sc.score} · ${tr(readinessBand(sc.score).label)} ✓`);
+  },
+  readyDel(date){ S.readiness = (S.readiness || []).filter(r => r.date !== date); if (readyToday() == null) R.readyForm = null; save(); render(); },
   cycleStart(){ M.cycleStartDate(todayStr()); },
   cycleStartDate(d){ if (!d) return; if (!S.cycle || typeof S.cycle !== "object") S.cycle = {starts: [], periodLen: 5};
     if (!Array.isArray(S.cycle.starts)) S.cycle.starts = [];
