@@ -1180,6 +1180,11 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
 .micr-toggle .chev{margin-inline-start:auto;color:var(--txt3);transition:transform .2s}
 .micr-wrap.open .micr-toggle .chev{transform:rotate(90deg)}
 .rv-micros{font-size:12px;color:var(--txt2);display:flex;align-items:center;gap:5px;margin:-2px 0 8px}
+.rv-range{font-size:12px;color:var(--txt2);display:flex;align-items:flex-start;gap:6px;margin:-2px 0 8px;line-height:1.4}
+.rv-range svg{flex:0 0 auto;margin-top:2px;color:var(--acc)}
+.snap-hero{font-weight:700}
+.snap-hero svg{color:currentColor}
+.snap-hero-hint{margin:-4px 2px 14px;color:var(--txt3);line-height:1.4}
 .rv-micros b{color:var(--txt);font-weight:650}
 .glasses{display:flex;flex-wrap:wrap;gap:4px;margin:10px 0 10px}
 .glass{
@@ -1641,7 +1646,7 @@ html[data-setpage="privacy"] .set-page[data-page="privacy"]{display:block}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.201";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.202";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -2207,7 +2212,9 @@ const TR = {
     "Save for later (meal prep)":"احفظ لوقت لاحق (تحضير الوجبات)","Prepared meals":"وجبات محضّرة مسبقًا","Log now":"سجّل الآن","Delete":"حذف",
     "Log all":"سجّل الكل","Unsorted":"غير مصنّف","item":"عنصر","items":"عناصر","Logged":"سُجّل",
     "Servings prepared":"عدد الحصص المحضّرة","e.g. 5 — blank means one serving":"مثال 5 — اتركه فارغًا لحصّة واحدة","left":"متبقٍّ","One fewer":"واحد أقل","One more":"واحد أكثر",
-    "Prefer a photo? Use “Snap food / label” below, then tap the bookmark on the result to save it here.":"تفضّل الصورة؟ استخدم «التقط الطعام / الملصق» بالأسفل، ثم اضغط الإشارة المرجعية على النتيجة لحفظها هنا.",
+    "Prefer a photo? Use “Snap a meal” at the top, then tap the bookmark on the result to save it here.":"تفضّل الصورة؟ استخدم «صوّر وجبة» بالأعلى، ثم اضغط الإشارة المرجعية على النتيجة لحفظها هنا.",
+    "Snap a meal → macros":"صوّر وجبة ← ماكروز","Photo of your plate or a label — MIRA reads the macros. Include a fork, hand or the whole plate so it can size the portion.":"صورة لطبقك أو لملصق — تقرأ ميرا الماكروز. أدرِج شوكة أو يدًا أو الطبق كاملًا لتقدير حجم الحصّة.",
+    "Likely range":"النطاق المرجّح","a photo estimate. Correct any value and MIRA remembers it for next time.":"تقدير من صورة. صحّح أي قيمة وستتذكّرها ميرا في المرّة القادمة.",
     "Cooked ahead? Register a portion and its macros here without logging it — then tap Log now when you actually eat it.":"طبخت مسبقًا؟ سجّل هنا حصّة وماكروزها دون إضافتها لليوم — ثم اضغط «سجّل الآن» عندما تأكلها فعلًا.",
     "Cooked ahead? Register portions and give each a meal — then Log all of a meal in one tap, or Log now item by item.":"طبخت مسبقًا؟ سجّل الحصص وامنح كلًّا منها وجبة — ثم «سجّل الكل» لوجبة بضغطة واحدة، أو «سجّل الآن» عنصرًا عنصرًا.",
     "Nothing prepped yet. Fill in a food in Log food above, then tap “Save for later (meal prep)”.":"لا يوجد تحضير بعد. أدخِل طعامًا في «تسجيل الطعام» أعلاه، ثم اضغط «احفظ لوقت لاحق (تحضير الوجبات)».",
@@ -6487,6 +6494,8 @@ function foodHTML(){
     <h3 onclick="M.fold('logFoodOpen', this)">${ic(R.editFoodId ? "edit" : "plus", 16)} ${R.editFoodId ? t("Edit entry") : t("Log food")} <span class="chev">▶</span></h3>
     <div class="fold-body">
       ${R.editFoodId ? `<div class="edit-banner">${ic("edit", 14)} Editing a logged entry <button class="btn sm sec" onclick="M.foodEditCancel()">Cancel</button></div>` : ""}
+      ${(!R.editFoodId && !reviewItems) ? `<button class="btn snap-hero" style="width:100%;margin-bottom:12px" onclick="M.extractPhoto()" ${extractBusy ? "disabled" : ""}>${ic("camera", 18)} ${extractBusy ? t("Reading…") : t("Snap a meal → macros")}</button>
+      <div class="tiny snap-hero-hint">${t("Photo of your plate or a label — MIRA reads the macros. Include a fork, hand or the whole plate so it can size the portion.")}</div>` : ""}
       <div class="field ac-wrap"><label>${t("Food name")}</label>
         <input id="ffName" value="${esc(foodForm.name)}" placeholder="Start typing — saved foods appear" dir="auto" autocomplete="off" style="padding-right:44px"
           oninput="M.ffName(this.value)" onfocus="acRender(this.value)" onblur="setTimeout(()=>M.acHide(),180)">
@@ -6532,7 +6541,7 @@ function foodHTML(){
       <div class="field" style="margin-bottom:8px"><label>${t("Servings prepared")} <span class="micr-opt">${t("optional")}</span></label>
         <input type="number" inputmode="numeric" min="1" value="${esc(foodForm.prepQty)}" oninput="foodForm.prepQty=this.value" placeholder="${t("e.g. 5 — blank means one serving")}"></div>
       <button class="btn sm sec" style="width:100%;margin-bottom:8px" onclick="M.prepSave()">${ic("bookmark", 15)} ${t("Save for later (meal prep)")}</button>
-      <div class="tiny" style="margin:0 2px 12px;color:var(--txt3)">${t("Prefer a photo? Use “Snap food / label” below, then tap the bookmark on the result to save it here.")}</div>`}
+      <div class="tiny" style="margin:0 2px 12px;color:var(--txt3)">${t("Prefer a photo? Use “Snap a meal” at the top, then tap the bookmark on the result to save it here.")}</div>`}
       `}
       <button class="btn sm sec" style="width:100%;margin-bottom:8px" onclick="M.findMacros()" ${findBusy ? "disabled" : ""}>${findBusy ? "Searching…" : ic("search", 15) + " " + t("Find macros")}</button>
       <div class="food-tools-wrap ${(R.foodToolsOpen || foodForm.scOpen || dishForm.open || extractBusy || barcodeBusy) ? "open" : ""}">
@@ -6542,10 +6551,6 @@ function foodHTML(){
             <button class="ft-tile" onclick="M.barcode()" ${barcodeBusy ? "disabled" : ""}>
               <span class="ft-ic">${ic("barcode", 18)}</span>
               <span class="ft-tx"><b>${t("Barcode")}</b><small>${barcodeBusy ? t("Looking up…") : t("Scan a package")}</small></span>
-            </button>
-            <button class="ft-tile" onclick="M.extractPhoto()" ${extractBusy ? "disabled" : ""}>
-              <span class="ft-ic">${ic("camera", 18)}</span>
-              <span class="ft-tx"><b>${t("Snap food / label")}</b><small>${extractBusy ? t("Reading…") : t("Photo → macros")}</small></span>
             </button>
             <button class="ft-tile" onclick="M.scToggle()">
               <span class="ft-ic">${ic("sliders", 18)}</span>
@@ -7002,6 +7007,7 @@ function reviewHTML(){
           <div class="field"><label>C</label><input id="rvC${i}" type="number" inputmode="decimal" value="${esc(it.c)}" oninput="reviewItems[${i}].c=this.value"></div>
           <div class="field"><label>F</label><input id="rvF${i}" type="number" inputmode="decimal" value="${esc(it.f)}" oninput="reviewItems[${i}].f=this.value"></div>
         </div>
+        ${it.conf === "estimate" && num(it.kcal) > 0 ? `<div class="rv-range">${ic("target", 12)}<span>${tr("Likely range")} <b>${n0(Math.round(num(it.kcal) * 0.8 / 10) * 10)}–${n0(Math.round(num(it.kcal) * 1.2 / 10) * 10)} kcal</b> — ${tr("a photo estimate. Correct any value and MIRA remembers it for next time.")}</span></div>` : ""}
         ${(num(it.fiber) || num(it.sugar) || num(it.sodium)) ? `<div class="rv-micros">${ic("droplet", 12)} ${tr("fiber")} <b>${n1(num(it.fiber))}g</b> · ${tr("sugar")} <b>${n1(num(it.sugar))}g</b> · ${tr("sodium")} <b>${n0(num(it.sodium))}mg</b></div>` : ""}
         <div class="row">
           <span class="badge ${it.conf}">${it.conf}</span>
