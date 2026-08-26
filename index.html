@@ -1664,7 +1664,7 @@ html[data-setpage="privacy"] .set-page[data-page="privacy"]{display:block}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.205";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.206";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -2359,6 +2359,22 @@ const TR = {
     "Upload a screenshot of a recipe, import from a link, ask MIRA to find one, or add your own.":"ارفع لقطة شاشة لوصفة، أو استورد من رابط، أو اطلب من ميرا إيجاد واحدة، أو أضِف وصفتك.",
     "Recipes":"الوصفات","Log a serving":"سجّل حصة","Add to plan":"أضِف إلى الخطة","Ingredients":"المكوّنات","Method":"الطريقة","Not listed.":"غير مُدرج.",
     "Snacks · supplements · sleep · review":"وجبات خفيفة · مكمّلات · نوم · مراجعة","Snacks":"وجبات خفيفة","Supplements":"المكمّلات","Habits":"العادات","Fasting":"الصيام","Mood":"المزاج","Review":"مراجعة",
+    "Cycle":"الدورة","Track your cycle to time training and nutrition to each phase. Everything stays on your device.":"تتبّعي دورتكِ لمواءمة التمارين والتغذية مع كل مرحلة. يبقى كل شيء على جهازكِ.",
+    "Start tracking":"ابدئي التتبّع","Log the first day of your period to begin — MIRA learns your average cycle as you add more.":"سجّلي أول يوم من الدورة للبدء — تتعلّم ميرا متوسّط دورتكِ كلما أضفتِ المزيد.",
+    "Period started today":"بدأت الدورة اليوم","…or a past date":"…أو تاريخ سابق","Typical cycle (days)":"طول الدورة المعتاد (أيام)","Period length (days)":"مدة الحيض (أيام)",
+    "General, phase-based guidance — not medical advice. Cycles vary; see a professional for irregular cycles or any concern.":"إرشادات عامة حسب المرحلة — وليست نصيحة طبية. تختلف الدورات؛ راجعي مختصًّا عند عدم الانتظام أو أي قلق.",
+    "Day":"اليوم","days to period":"يوم حتى الدورة","overdue?":"متأخّرة؟","avg cycle":"متوسّط الدورة","due":"مستحقّة",
+    "You're past your expected cycle length — if your period has started, log it below.":"لقد تجاوزتِ طول دورتكِ المتوقّع — إن بدأت دورتكِ فسجّليها بالأسفل.",
+    "Next period around":"الدورة القادمة قرابة","fertile window now":"نافذة الخصوبة الآن","phase":"مرحلة","Nutrition":"التغذية","General guidance, not medical advice.":"إرشاد عام وليس نصيحة طبية.","Log a period":"سجّلي دورة","current cycle":"الدورة الحالية",
+    "Menstrual":"الحيض","Follicular":"الجُريبية","Ovulation":"الإباضة","Luteal":"الأصفرية",
+    "Energy often dips — keep it easy and listen to your body. Light movement can ease cramps.":"غالبًا تنخفض الطاقة — خفّفي وأنصتي لجسمكِ. الحركة الخفيفة تخفّف التقلّصات.",
+    "Iron-rich foods (red meat, lentils, spinach) to replace losses, and stay well hydrated.":"أطعمة غنية بالحديد (لحم أحمر، عدس، سبانخ) لتعويض الفاقد، وحافظي على الترطيب.",
+    "Rising energy — a strong window to push intensity and chase strength PRs.":"طاقة متصاعدة — نافذة قوية لرفع الشدّة ومطاردة أرقامكِ القياسية.",
+    "Fuel the harder sessions with enough carbs and protein.":"زوّدي الجلسات الأصعب بكربوهيدرات وبروتين كافيين.",
+    "Peak strength for many — go for PRs, but warm up thoroughly (joints are a touch more lax).":"ذروة القوة لدى كثيرات — اذهبي للأرقام القياسية، لكن أحمي المفاصل بإحماء جيّد (المفاصل أكثر ليونة قليلًا).",
+    "Keep protein high, plenty of veg and fibre.":"أبقي البروتين مرتفعًا مع خضار وألياف وفيرة.",
+    "Energy tapers and effort feels harder — moderate the intensity and prioritise sleep and recovery.":"تتراجع الطاقة ويصبح المجهود أثقل — اعتدلي في الشدّة وأعطي الأولوية للنوم والتعافي.",
+    "Calorie needs rise slightly and cravings are normal; magnesium and complex carbs can ease PMS.":"ترتفع الحاجة للسعرات قليلًا والاشتهاء طبيعي؛ المغنيسيوم والكربوهيدرات المعقّدة تخفّف أعراض ما قبل الطمث.",
     "Wellness check-in":"تسجيل العافية","How are you feeling today?":"كيف تشعر اليوم؟","What's affecting today?":"ما الذي يؤثّر على يومك؟","optional":"اختياري",
     "One good thing today":"شيء جميل واحد اليوم","A small win, a moment, someone…":"إنجاز صغير، لحظة، شخص…","Journal":"مذكرات","private":"خاص","Whatever's on your mind…":"أي شيء يدور في بالك…",
     "Save today's check-in":"احفظ تسجيل اليوم","Today's wellness":"عافية اليوم","Ask MIRA how I'm doing":"اسأل ميرا كيف حالي","Recent check-ins":"التسجيلات الأخيرة","Talk to MIRA":"تحدّث إلى ميرا","Another":"آخر",
@@ -3193,6 +3209,7 @@ const BLANK = () => ({
   workouts: [],       // {id, date, name, items:[{name, muscle, sets:[{reps, weight}], note}], ts}
   hyrox: [],          // Hyrox race simulations {id, date, runs:[8 sec], stations:[8 sec], total, note}
   cardio: [],         // cardio sessions {id, date, modality, effort, distanceKm, seconds, note, ts}
+  cycle: {starts: [], periodLen: 5, avgCycle: null},   // menstrual cycle: period start dates + settings
   routines: [],       // {id, name, items:[{name, muscle}]}
   program: null,      // active training program {id,name,goal,level,place,daysPerWeek,weeks,phase,cursor,days:[{name,focus,exercises:[{name,muscle,sets,reps,rest,note}]}],progression,createdAt,startDate}
   exDemos: {},        // exercise name -> cached form demo {setup, steps[], mistakes[], breathing, search, ts}
@@ -3279,6 +3296,8 @@ function migrateChats(){
   if (!Array.isArray(S.workouts)) S.workouts = [];
   if (!Array.isArray(S.hyrox)) S.hyrox = [];
   if (!Array.isArray(S.cardio)) S.cardio = [];
+  if (!S.cycle || typeof S.cycle !== "object" || Array.isArray(S.cycle)) S.cycle = {starts: [], periodLen: 5, avgCycle: null};
+  if (!Array.isArray(S.cycle.starts)) S.cycle.starts = [];
   if (!Array.isArray(S.routines)) S.routines = [];
   if (!Array.isArray(S.followers)) S.followers = [];
   if (S.program && (!Array.isArray(S.program.days) || !S.program.days.length)) S.program = null;
@@ -9547,8 +9566,84 @@ function achievementsHTML(){
 }
 
 /* ---- view ---- */
+/* ---------------- Menstrual cycle tracker ---------------- */
+function hcDays(a, b){ const pa = a.split("-").map(Number), pb = b.split("-").map(Number);
+  return Math.round((Date.UTC(pb[0], pb[1] - 1, pb[2]) - Date.UTC(pa[0], pa[1] - 1, pa[2])) / 86400000); }
+function hcAddDays(dateStr, n){ const p = dateStr.split("-").map(Number); const d = new Date(Date.UTC(p[0], p[1] - 1, p[2]));
+  d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
+const CYCLE_PHASES = {
+  menstrual: {label: "Menstrual", train: "Energy often dips — keep it easy and listen to your body. Light movement can ease cramps.", food: "Iron-rich foods (red meat, lentils, spinach) to replace losses, and stay well hydrated."},
+  follicular: {label: "Follicular", train: "Rising energy — a strong window to push intensity and chase strength PRs.", food: "Fuel the harder sessions with enough carbs and protein."},
+  ovulation: {label: "Ovulation", train: "Peak strength for many — go for PRs, but warm up thoroughly (joints are a touch more lax).", food: "Keep protein high, plenty of veg and fibre."},
+  luteal: {label: "Luteal", train: "Energy tapers and effort feels harder — moderate the intensity and prioritise sleep and recovery.", food: "Calorie needs rise slightly and cravings are normal; magnesium and complex carbs can ease PMS."}
+};
+function cycleStats(){
+  const cy = S.cycle || {};
+  const starts = [...(cy.starts || [])].filter(Boolean).sort();
+  if (!starts.length) return null;
+  const diffs = []; for (let i = 1; i < starts.length; i++){ const d = hcDays(starts[i - 1], starts[i]); if (d >= 15 && d <= 60) diffs.push(d); }
+  const avgCycle = diffs.length ? Math.round(diffs.reduce((a, x) => a + x, 0) / diffs.length) : (num(cy.avgCycle) || 28);
+  const periodLen = num(cy.periodLen) || 5;
+  const last = starts[starts.length - 1], today = todayStr();
+  let day = hcDays(last, today) + 1; if (day < 1) day = 1;
+  const nextDate = hcAddDays(last, avgCycle), daysUntil = hcDays(today, nextDate);
+  const ovDay = Math.max(1, avgCycle - 14);
+  let phase = day <= periodLen ? "menstrual" : day < ovDay - 1 ? "follicular" : day <= ovDay + 1 ? "ovulation" : "luteal";
+  // a cycle that's run well past the expected length — prediction is stale
+  const overdue = day > avgCycle + 2;
+  const fertile = day >= ovDay - 3 && day <= ovDay + 1;
+  return {starts, avgCycle, periodLen, last, day, phase, nextDate, daysUntil, ovDay, fertile, overdue, diffs};
+}
+function healthCycleHTML(){
+  const cy = S.cycle || {starts: []}, st = cycleStats();
+  const setRow = `<div class="grid2" style="margin-top:2px">
+    <div class="field"><label>${tr("Typical cycle (days)")}</label><input type="number" inputmode="numeric" min="15" max="60" value="${esc(cy.avgCycle || (st ? st.avgCycle : ""))}" placeholder="${st ? st.avgCycle : 28}" oninput="M.cycleSet('avgCycle',this.value)"></div>
+    <div class="field"><label>${tr("Period length (days)")}</label><input type="number" inputmode="numeric" min="1" max="10" value="${esc(cy.periodLen || 5)}" oninput="M.cycleSet('periodLen',this.value)"></div>
+  </div>`;
+  const logRow = `<div class="grid2" style="margin-top:6px">
+    <button class="btn" onclick="M.cycleStart()">${ic("plus", 15)} ${tr("Period started today")}</button>
+    <div class="field" style="margin:0"><label>${tr("…or a past date")}</label><input type="date" max="${todayStr()}" onchange="M.cycleStartDate(this.value)"></div>
+  </div>`;
+
+  if (!st){
+    return `<div class="tiny" style="margin:2px 2px 12px;color:var(--txt2)">${tr("Track your cycle to time training and nutrition to each phase. Everything stays on your device.")}</div>
+      <div class="card hx-card"><h3>${ic("plus", 15)} ${tr("Start tracking")}</h3>
+        <div class="tiny" style="margin:6px 2px 8px;color:var(--txt3)">${tr("Log the first day of your period to begin — MIRA learns your average cycle as you add more.")}</div>
+        ${logRow}${setRow}
+        <div class="tiny" style="margin-top:12px;color:var(--txt3);line-height:1.45">${ic("alert", 12)} ${tr("General, phase-based guidance — not medical advice. Cycles vary; see a professional for irregular cycles or any concern.")}</div>
+      </div>`;
+  }
+
+  const ph = CYCLE_PHASES[st.phase];
+  const phName = tr(ph.label);
+  const starts = [...st.starts].reverse();
+  return `
+    <div class="hx-stats">
+      <div class="hx-stat"><div class="hx-v">${tr("Day")} ${st.day}</div><div class="hx-l">${phName}</div></div>
+      <div class="hx-stat"><div class="hx-v">${st.overdue ? "—" : st.daysUntil <= 0 ? tr("due") : st.daysUntil}</div><div class="hx-l">${st.overdue ? tr("overdue?") : tr("days to period")}</div></div>
+      <div class="hx-stat"><div class="hx-v" style="color:var(--acc)">${st.avgCycle}</div><div class="hx-l">${tr("avg cycle")}</div></div>
+    </div>
+    ${st.overdue ? `<div class="csp-note" style="margin-bottom:12px">${ic("alert", 13)}<span>${tr("You're past your expected cycle length — if your period has started, log it below.")}</span></div>`
+      : `<div class="csp-note" style="margin-bottom:12px">${ic("target", 13)}<span>${tr("Next period around")} <b>${fmtDate(st.nextDate)}</b>${st.fertile ? ` · ${tr("fertile window now")}` : ""}.</span></div>`}
+
+    <div class="card hx-card" style="margin-bottom:14px">
+      <h3>${ic("target", 15)} ${phName} ${tr("phase")}</h3>
+      <div class="csp-note" style="margin-top:8px">${ic("flame", 13)}<span><b>${tr("Training")}:</b> ${ph.train}</span></div>
+      <div class="csp-note" style="margin-top:8px">${ic("food", 13)}<span><b>${tr("Nutrition")}:</b> ${ph.food}</span></div>
+      <div class="tiny" style="margin-top:10px;color:var(--txt3)">${ic("alert", 12)} ${tr("General guidance, not medical advice.")}</div>
+    </div>
+
+    <div class="card hx-card" style="margin-bottom:14px"><h3>${ic("plus", 15)} ${tr("Log a period")}</h3>${logRow}${setRow}</div>
+
+    <div class="card hx-card"><h3>${ic("clock", 15)} ${tr("History")} <span class="tiny" style="margin-inline-start:auto;font-weight:400;color:var(--txt3)">${starts.length}</span></h3>
+      ${starts.map((s, i) => { const nextS = starts[i - 1]; const len = nextS ? hcDays(s, nextS) : null;
+        return `<div class="set-row"><div><div class="k">${fmtDate(s)}</div><div class="desc">${len ? `${tr("cycle")} ${len} ${tr("days")}` : (i === 0 ? tr("current cycle") : "")}</div></div>
+          <span class="end"><button class="btn sm danger" aria-label="${tr("Delete")}" onclick="M.cycleDel('${s}')">${ic("trash", 13)}</button></span></div>`; }).join("")}
+    </div>`;
+}
+
 function healthHTML(){
-  const tabs = [["snacks","Snacks"],["supps","Supplements"],["sleep","Sleep"],["habits","Habits"],["fasting","Fasting"],["mood","Mood"],["review","Review"]];
+  const tabs = [["snacks","Snacks"],["supps","Supplements"],["sleep","Sleep"],["cycle","Cycle"],["habits","Habits"],["fasting","Fasting"],["mood","Mood"],["review","Review"]];
   return `
     <button class="cat-back" onclick="M.healthBack()">${ic("back", 18)} ${tr("Health")}</button>
     <div class="cat-title"><div class="ch-nm">${tr("Health")}</div><div class="ch-ds">${tr("Snacks · supplements · sleep · review")}</div></div>
@@ -9558,6 +9653,7 @@ function healthHTML(){
       R.healthTab === "snacks" ? healthSnacksHTML() :
       R.healthTab === "supps" ? healthSuppHTML() :
       R.healthTab === "sleep" ? healthSleepHTML() :
+      R.healthTab === "cycle" ? healthCycleHTML() :
       R.healthTab === "habits" ? healthHabitsHTML() :
       R.healthTab === "fasting" ? healthFastHTML() :
       R.healthTab === "mood" ? healthMoodHTML() : healthReviewHTML()
@@ -12278,6 +12374,16 @@ window.M = {
     toast(`Cardio saved · ~${n0(cardioBurn({modality: f.modality, distanceKm: km, seconds: sec}))} kcal ✓`);
   },
   cardioDel(id){ S.cardio = (S.cardio || []).filter(x => x.id !== id); save(); render(); },
+  cycleStart(){ M.cycleStartDate(todayStr()); },
+  cycleStartDate(d){ if (!d) return; if (!S.cycle || typeof S.cycle !== "object") S.cycle = {starts: [], periodLen: 5};
+    if (!Array.isArray(S.cycle.starts)) S.cycle.starts = [];
+    if (!S.cycle.starts.includes(d)) S.cycle.starts.push(d);
+    S.cycle.starts.sort();
+    buzz(); save(); render(); toast(`Period logged: ${fmtDate(d)} ✓`); },
+  cycleDel(d){ if (S.cycle && Array.isArray(S.cycle.starts)) S.cycle.starts = S.cycle.starts.filter(x => x !== d); save(); render(); },
+  cycleSet(k, v){ if (!S.cycle || typeof S.cycle !== "object") S.cycle = {starts: [], periodLen: 5};
+    S.cycle[k] = k === "periodLen" ? Math.max(1, Math.min(10, num(v))) : Math.max(15, Math.min(60, num(v)));
+    save(); render(); },
   woStart(){ R.trainWO = {id: uid(), date: todayStr(), name: "Workout", items: []}; R.trainTab = "today"; render(); },
   /* ---- Strava sync ---- */
   stravaFormToggle(){ R.stravaFormOpen = !R.stravaFormOpen; render(); },
