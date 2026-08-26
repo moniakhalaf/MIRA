@@ -1646,7 +1646,7 @@ html[data-setpage="privacy"] .set-page[data-page="privacy"]{display:block}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.202";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.203";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -2215,6 +2215,7 @@ const TR = {
     "Prefer a photo? Use “Snap a meal” at the top, then tap the bookmark on the result to save it here.":"تفضّل الصورة؟ استخدم «صوّر وجبة» بالأعلى، ثم اضغط الإشارة المرجعية على النتيجة لحفظها هنا.",
     "Snap a meal → macros":"صوّر وجبة ← ماكروز","Photo of your plate or a label — MIRA reads the macros. Include a fork, hand or the whole plate so it can size the portion.":"صورة لطبقك أو لملصق — تقرأ ميرا الماكروز. أدرِج شوكة أو يدًا أو الطبق كاملًا لتقدير حجم الحصّة.",
     "Likely range":"النطاق المرجّح","a photo estimate. Correct any value and MIRA remembers it for next time.":"تقدير من صورة. صحّح أي قيمة وستتذكّرها ميرا في المرّة القادمة.",
+    "Estimated at":"مُقدّر عند","set your real weight and the macros scale to it.":"أدخِل وزنك الفعلي وتتناسب الماكروز معه.",
     "Cooked ahead? Register a portion and its macros here without logging it — then tap Log now when you actually eat it.":"طبخت مسبقًا؟ سجّل هنا حصّة وماكروزها دون إضافتها لليوم — ثم اضغط «سجّل الآن» عندما تأكلها فعلًا.",
     "Cooked ahead? Register portions and give each a meal — then Log all of a meal in one tap, or Log now item by item.":"طبخت مسبقًا؟ سجّل الحصص وامنح كلًّا منها وجبة — ثم «سجّل الكل» لوجبة بضغطة واحدة، أو «سجّل الآن» عنصرًا عنصرًا.",
     "Nothing prepped yet. Fill in a food in Log food above, then tap “Save for later (meal prep)”.":"لا يوجد تحضير بعد. أدخِل طعامًا في «تسجيل الطعام» أعلاه، ثم اضغط «احفظ لوقت لاحق (تحضير الوجبات)».",
@@ -8383,7 +8384,7 @@ async function extractPhoto(){
 1) A PRINTED NUTRITION LABEL: use its values EXACTLY (conf "official"). The macros MUST correspond to "basis" of "unit": if the label gives values per reference amount, set "basis" to that number and "unit" to g/ml/serving/piece and put the per-basis macros in kcal/p/c/f (per 100 ml → basis 100, unit "ml"). If the package's total net quantity is printed (a 320 ml can, a 200 g bag), set "pkg" to that number in the SAME unit. Never guess a printed value you cannot read.
 2) A PHOTO OF ACTUAL FOOD (a plate, dish, snack, drink, meal): identify each food you can see — you know cuisines worldwide, including Gulf/Khaleeji (machboos, harees, luqaimat…), Levantine, Egyptian, pan-Arab and all international foods. Estimate the visible portion size from visual cues (plate/bowl size, cutlery, hand, packaging). For a mixed plate, list each DISTINCT component as its own item (e.g. rice, grilled chicken, salad) so the user can adjust or drop parts. BUT when several pieces of the SAME food are shown (e.g. 6 identical mini donuts, 4 identical kebabs, a handful of dates), return them as ONE single item — put the count in "amount" (e.g. "6 pieces") and give the macros for the WHOLE quantity together. Never output the same food as multiple separate entries. Base macros on standard food-composition data (USDA and regional tables) for the estimated portion — conf "estimate", and state the identified dish and assumed portion in "note". Cooking method matters (grilled vs fried). Estimating from a photo is expected and welcome — do it for any recognizable food; only skip an item you genuinely cannot identify.
 3) A MENU, RECEIPT OR APP SCREENSHOT listing foods: extract the items with estimated macros per typical serving (conf "estimate").
-Reply with ONLY a JSON array: [{"name":str,"amount":str,"kcal":num,"p":num,"c":num,"f":num,"conf":"official"|"estimate","note":str,"basis":num,"unit":str,"pkg":num}]. Omit basis/unit/pkg for estimated food photos (they are for labels). For ESTIMATED items, energy MUST be internally consistent: verify kcal ≈ 4·p + 4·c + 9·f and correct the macros if it does not hold within ~10% (labels are transcribed exactly and are exempt).${replyLangNote()}`,
+Reply with ONLY a JSON array: [{"name":str,"amount":str,"kcal":num,"p":num,"c":num,"f":num,"conf":"official"|"estimate","note":str,"basis":num,"unit":str,"pkg":num,"grams":num}]. Omit basis/unit/pkg for estimated food photos (they are for labels). For an ESTIMATED food photo, ALSO set "grams" to your best estimate of that portion's total edible weight in grams — kcal/p/c/f stay the totals for that weight — so the user can fine-tune by weight; omit grams for menus/receipts where weight is unknown. For ESTIMATED items, energy MUST be internally consistent: verify kcal ≈ 4·p + 4·c + 9·f and correct the macros if it does not hold within ~10% (labels are transcribed exactly and are exempt).${replyLangNote()}`,
         [block, {type: "text", text: "Read this image. If it's a nutrition label, extract it exactly with the per-amount basis and package total. If it's a photo of actual food, identify the dishes and estimate portions and macros."}],
         1600);
       let arr;
@@ -8400,6 +8401,14 @@ Reply with ONLY a JSON array: [{"name":str,"amount":str,"kcal":num,"p":num,"c":n
           it.baseMacros = {kcal: num(j.kcal), p: num(j.p), c: num(j.c), f: num(j.f)};
           it.had = String(basis);
           if (!it.amount) it.amount = basis + " " + unit;
+        } else if (it.conf === "estimate" && num(j.grams) > 0){
+          // Estimated food photo: expose a gram-level portion scaler so the user
+          // can dial the weight — the biggest accuracy lever for photo estimates.
+          it.basis = Math.round(num(j.grams)); it.unit = "g";
+          it.baseMacros = {kcal: num(j.kcal), p: num(j.p), c: num(j.c), f: num(j.f)};
+          it.had = String(it.basis);
+          it.scaleNote = `${tr("Estimated at")} ${it.basis} g — ${tr("set your real weight and the macros scale to it.")}`;
+          if (!it.amount) it.amount = it.basis + " g";
         }
         return it;
       });
