@@ -1406,6 +1406,24 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
 .prep-step button{min-width:34px;min-height:32px;padding:0;background:var(--bg2);color:var(--txt);font-size:17px;line-height:1;border:none}
 .prep-step button:active{background:var(--line)}
 .prep-step b{min-width:26px;text-align:center;font-size:13px}
+.hx-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px}
+.hx-stat{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:12px 8px;text-align:center}
+.hx-stat .hx-v{font-size:19px;font-weight:700;font-variant-numeric:tabular-nums}
+.hx-stat .hx-l{font-size:11px;color:var(--txt3);margin-top:3px}
+.hx-form{display:flex;flex-direction:column;gap:7px}
+.hx-in-row{display:flex;align-items:center;gap:10px}
+.hx-in-row .hx-lbl{flex:1;min-width:0;font-size:13.5px;color:var(--txt2)}
+.hx-in-row .hx-in{flex:0 0 92px;min-height:40px;text-align:center;font-variant-numeric:tabular-nums}
+.hx-in-row:nth-child(odd) .hx-lbl{color:var(--txt3);font-size:12.5px}
+.hx-note{margin-top:10px;min-height:42px}
+.hx-table-wrap{overflow-x:auto}
+.hx-table{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+.hx-table th{text-align:start;font-size:11px;color:var(--txt3);font-weight:600;padding:4px 8px 8px;text-transform:uppercase;letter-spacing:.03em}
+.hx-table td{padding:6px 8px;border-top:1px solid var(--line)}
+.hx-table td:first-child{color:var(--txt2)}
+.hx-table .hx-slow{color:#e0724c;font-weight:600}
+.hx-table .hx-fast{color:var(--acc);font-weight:600}
+.hx-pb{font-size:10px;font-weight:700;color:var(--acc);background:color-mix(in srgb,var(--acc) 16%,transparent);border-radius:20px;padding:1px 7px;margin-inline-start:6px;vertical-align:middle}
 .dom-color{width:16px;height:16px;border-radius:50%}
 /* ---- Settings: sectioned, best-in-class layout ---- */
 .set-hero{display:flex;align-items:center;gap:15px;padding:17px 18px;margin-bottom:8px;border:1px solid var(--line);border-radius:22px;
@@ -1646,7 +1664,7 @@ html[data-setpage="privacy"] .set-page[data-page="privacy"]{display:block}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.203";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.204";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -2319,6 +2337,15 @@ const TR = {
     "Library · tracking · coach":"مكتبة · تتبّع · مدرّب","Workout":"تمرين","Library":"المكتبة","History":"السجل","Coach":"المدرّب",
     "Start a workout":"ابدأ تمرينًا","Start blank workout":"ابدأ تمرينًا فارغًا",
     "Log your session set by set. Add exercises from the library, or anything custom.":"سجّل جلستك مجموعة بمجموعة. أضِف تمارين من المكتبة أو أي شيء مخصص.",
+    "Hyrox":"هايروكس","Run":"جري",
+    "SkiErg 1000 m":"سكي إرغ 1000 م","Sled Push 50 m":"دفع الزلّاجة 50 م","Sled Pull 50 m":"سحب الزلّاجة 50 م","Burpee Broad Jumps 80 m":"بيربي بقفزات عريضة 80 م","Row 1000 m":"تجديف 1000 م","Farmers Carry 200 m":"حمل المزارع 200 م","Sandbag Lunges 100 m":"طعنات بكيس الرمل 100 م","Wall Balls × 100":"كرات الحائط × 100",
+    "Track full Hyrox simulations — 8 runs and 8 stations. MIRA finds your best per segment and your ideal finish: the race you'd run hitting every personal best at once.":"تتبّع محاكاة هايروكس كاملة — 8 جريات و8 محطات. تجد ميرا أفضل زمن لكل مقطع وزمن نهايتك المثالي: السباق الذي تحقّق فيه كل أرقامك القياسية دفعة واحدة.",
+    "Best finish":"أفضل زمن نهاية","Last":"الأخير","Ideal finish":"النهاية المثالية",
+    "Log a couple of full simulations to unlock your ideal finish.":"سجّل محاكاتين كاملتين لفتح زمن نهايتك المثالي.",
+    "Your ideal finish is":"زمن نهايتك المثالي هو","that's every segment at its best. The gap to your last race is where the time is.":"هذا كل مقطع في أفضل حالاته. الفارق عن سباقك الأخير هو حيث يكمن الوقت.",
+    "Where you lose time":"أين تخسر الوقت","last vs your best":"الأخير مقابل أفضلك","Segment":"المقطع","Best":"الأفضل","Δ":"الفرق",
+    "Log a simulation":"سجّل محاكاة","Enter each segment as minutes:seconds (e.g. 4:45). Leave blanks — the total still adds up.":"أدخِل كل مقطع بصيغة دقائق:ثوانٍ (مثال 4:45). اترك الفراغات — يبقى المجموع صحيحًا.",
+    "Note (venue, how it felt…)":"ملاحظة (المكان، الإحساس…)","Save simulation":"احفظ المحاكاة","Simulation saved":"تم حفظ المحاكاة","PB":"أفضل رقم",
     "Sync & import from fitness apps":"المزامنة والاستيراد من تطبيقات اللياقة","Sync now":"مزامنة الآن","Connect Strava — automatic sync":"اربط سترافا — مزامنة تلقائية",
     "Activity file":"ملف النشاط","Screenshot":"لقطة شاشة","Repeat a recent session":"كرّر جلسة سابقة","Repeat":"تكرار","Your routines":"روتيناتك",
     "Healthy recipes":"وصفات صحية","Your recipe box — import from a link, discover with MIRA, or add your own":"صندوق وصفاتك — استورد من رابط، اكتشف مع ميرا، أو أضِف وصفتك",
@@ -3159,6 +3186,7 @@ const BLANK = () => ({
   nudgeDismissed: null, // {date, ids[]} — Home reminder nudges dismissed for the day
   exercises: [],      // user-added exercises {id, n, m, e, c, source}
   workouts: [],       // {id, date, name, items:[{name, muscle, sets:[{reps, weight}], note}], ts}
+  hyrox: [],          // Hyrox race simulations {id, date, runs:[8 sec], stations:[8 sec], total, note}
   routines: [],       // {id, name, items:[{name, muscle}]}
   program: null,      // active training program {id,name,goal,level,place,daysPerWeek,weeks,phase,cursor,days:[{name,focus,exercises:[{name,muscle,sets,reps,rest,note}]}],progression,createdAt,startDate}
   exDemos: {},        // exercise name -> cached form demo {setup, steps[], mistakes[], breathing, search, ts}
@@ -3243,6 +3271,7 @@ function migrateChats(){
   if (!Array.isArray(S.meals)) S.meals = [];
   if (!Array.isArray(S.exercises)) S.exercises = [];
   if (!Array.isArray(S.workouts)) S.workouts = [];
+  if (!Array.isArray(S.hyrox)) S.hyrox = [];
   if (!Array.isArray(S.routines)) S.routines = [];
   if (!Array.isArray(S.followers)) S.followers = [];
   if (S.program && (!Array.isArray(S.program.days) || !S.program.days.length)) S.program = null;
@@ -3313,6 +3342,7 @@ function migrateChats(){
   S.notes = rec(S.notes); S.trips = rec(S.trips); S.sleep = rec(S.sleep); S.inbody = rec(S.inbody); S.checkins = rec(S.checkins); S.expenses = rec(S.expenses);
   S.recipes = rec(S.recipes).map(r => ({...r, name: str(r.name, "Recipe"), per: (r.per && typeof r.per === "object") ? r.per : {kcal: 0, p: 0, c: 0, f: 0}}));
   S.workouts = rec(S.workouts).map(w => ({...w, items: Array.isArray(w.items) ? w.items : []}));
+  S.hyrox = rec(S.hyrox).map(h => ({...h, runs: Array.isArray(h.runs) ? h.runs : [], stations: Array.isArray(h.stations) ? h.stations : []}));
   S.meals = rec(S.meals).map(m => ({...m, name: str(m.name, "Meal"), items: Array.isArray(m.items) ? m.items : []}));
 }
 migrateChats();
@@ -3545,7 +3575,8 @@ const R = {
   followerAddOpen: false, // paste-a-code panel expanded
   followerId: null,   // follower whose detail sheet is open
   circleImport: "",   // paste buffer for adding a follower
-  trainTab: "today",  // today | program | library | history | coach
+  trainTab: "today",  // today | program | library | hyrox | history | coach
+  hyroxForm: null,    // in-progress Hyrox simulation entry (mm:ss strings)
   trainWO: null,      // in-progress workout being logged
   libQuery: "",
   libMuscle: "All",
@@ -8754,8 +8785,102 @@ function plateHTML(){
 }
 
 /* ---------- Training view ---------- */
+/* ---------------- Hyrox race tracker ---------------- */
+// Official Hyrox order: 8 × 1 km runs alternating with 8 functional stations.
+const HYROX_STATIONS = [
+  ["ski", "SkiErg 1000 m"], ["push", "Sled Push 50 m"], ["pull", "Sled Pull 50 m"],
+  ["burpee", "Burpee Broad Jumps 80 m"], ["row", "Row 1000 m"], ["farmers", "Farmers Carry 200 m"],
+  ["lunges", "Sandbag Lunges 100 m"], ["wall", "Wall Balls × 100"]
+];
+// Parse "m:ss" (or plain seconds, or "m.ss") into seconds; blank/invalid → 0.
+function hxParse(str){
+  const s = String(str == null ? "" : str).trim();
+  if (!s) return 0;
+  if (s.includes(":")){ const [m, sec] = s.split(":"); return Math.max(0, (parseInt(m, 10) || 0) * 60 + (parseInt(sec, 10) || 0)); }
+  const n = parseFloat(s.replace(",", "."));
+  if (!(n > 0)) return 0;
+  return s.includes(".") ? Math.round((Math.floor(n) * 60) + (n - Math.floor(n)) * 100) : Math.round(n);
+}
+function hxFmt(sec){ sec = Math.max(0, Math.round(num(sec))); const m = Math.floor(sec / 60), s = sec % 60; return m + ":" + String(s).padStart(2, "0"); }
+function hxFmtTotal(sec){ sec = Math.max(0, Math.round(num(sec))); const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60; return (h ? h + ":" + String(m).padStart(2, "0") : m) + ":" + String(s).padStart(2, "0"); }
+function hxSimTotal(sim){ return (sim.runs || []).reduce((a, x) => a + num(x), 0) + (sim.stations || []).reduce((a, x) => a + num(x), 0); }
+// Best-ever time per segment across all saved simulations (ignoring blanks).
+function hxSegmentBests(){
+  const runs = Array(8).fill(0), stations = Array(8).fill(0);
+  (S.hyrox || []).forEach(sim => {
+    for (let i = 0; i < 8; i++){
+      const r = num((sim.runs || [])[i]); if (r > 0 && (runs[i] === 0 || r < runs[i])) runs[i] = r;
+      const st = num((sim.stations || [])[i]); if (st > 0 && (stations[i] === 0 || st < stations[i])) stations[i] = st;
+    }
+  });
+  return {runs, stations};
+}
+function hxFormObj(){
+  if (!R.hyroxForm) R.hyroxForm = {runs: Array(8).fill(""), stations: Array(8).fill(""), note: ""};
+  return R.hyroxForm;
+}
+function trainHyroxHTML(){
+  const f = hxFormObj();
+  const liveTotal = f.runs.reduce((a, x) => a + hxParse(x), 0) + f.stations.reduce((a, x) => a + hxParse(x), 0);
+  const sims = [...(S.hyrox || [])].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : (b.ts || 0) - (a.ts || 0)));
+  const pbTotal = sims.length ? Math.min(...sims.map(hxSimTotal).filter(x => x > 0)) : 0;
+  const last = sims[0];
+  const bests = hxSegmentBests();
+  const idealHave = [...bests.runs, ...bests.stations].every(x => x > 0);
+  const ideal = bests.runs.reduce((a, x) => a + x, 0) + bests.stations.reduce((a, x) => a + x, 0);
+
+  const runLabel = i => `${tr("Run")} ${i + 1}`;
+  const rowInput = (kind, i, label) => `<div class="hx-in-row">
+    <span class="hx-lbl">${label}</span>
+    <input class="hx-in" inputmode="numeric" placeholder="m:ss" value="${esc(kind === "run" ? f.runs[i] : f.stations[i])}"
+      oninput="M.hyroxField('${kind}',${i},this.value)">
+  </div>`;
+
+  const formRows = HYROX_STATIONS.map(([, name], i) =>
+    rowInput("run", i, runLabel(i)) + rowInput("station", i, tr(name))).join("");
+
+  // Breakdown: each segment, your best, last sim, delta vs best (where you lose time)
+  const segRow = (label, bestSec, lastSec) => {
+    const d = lastSec > 0 && bestSec > 0 ? lastSec - bestSec : 0;
+    return `<tr><td>${label}</td><td>${bestSec > 0 ? hxFmt(bestSec) : "—"}</td><td>${lastSec > 0 ? hxFmt(lastSec) : "—"}</td><td class="${d > 0 ? "hx-slow" : d < 0 ? "hx-fast" : ""}">${d ? (d > 0 ? "+" : "") + hxFmt(Math.abs(d)) : ""}</td></tr>`;
+  };
+  const breakdown = last ? HYROX_STATIONS.map(([, name], i) =>
+    segRow(runLabel(i), bests.runs[i], num((last.runs || [])[i])) +
+    segRow(tr(name), bests.stations[i], num((last.stations || [])[i]))).join("") : "";
+
+  return `
+    <div class="tiny" style="margin:2px 2px 12px;color:var(--txt2)">${tr("Track full Hyrox simulations — 8 runs and 8 stations. MIRA finds your best per segment and your ideal finish: the race you'd run hitting every personal best at once.")}</div>
+
+    ${sims.length ? `<div class="hx-stats">
+      <div class="hx-stat"><div class="hx-v">${pbTotal > 0 ? hxFmtTotal(pbTotal) : "—"}</div><div class="hx-l">${tr("Best finish")}</div></div>
+      <div class="hx-stat"><div class="hx-v">${last ? hxFmtTotal(hxSimTotal(last)) : "—"}</div><div class="hx-l">${tr("Last")}</div></div>
+      <div class="hx-stat"><div class="hx-v" style="color:var(--acc)">${idealHave ? hxFmtTotal(ideal) : "—"}</div><div class="hx-l">${tr("Ideal finish")}</div></div>
+    </div>
+    ${!idealHave ? `<div class="tiny" style="margin:-4px 2px 10px;color:var(--txt3)">${tr("Log a couple of full simulations to unlock your ideal finish.")}</div>` : `<div class="csp-note" style="margin-bottom:12px">${ic("target", 13)}<span>${tr("Your ideal finish is")} <b>${hxFmtTotal(ideal)}</b> — ${tr("that's every segment at its best. The gap to your last race is where the time is.")}</span></div>`}` : ""}
+
+    ${last ? `<div class="card hx-card" style="margin-bottom:14px"><h3>${ic("trend", 15)} ${tr("Where you lose time")} <span class="tiny" style="margin-inline-start:auto;font-weight:400;color:var(--txt3)">${tr("last vs your best")}</span></h3>
+      <div class="hx-table-wrap"><table class="hx-table">
+        <thead><tr><th>${tr("Segment")}</th><th>${tr("Best")}</th><th>${tr("Last")}</th><th>${tr("Δ")}</th></tr></thead>
+        <tbody>${breakdown}</tbody>
+      </table></div></div>` : ""}
+
+    <div class="card hx-card">
+      <h3>${ic("plus", 15)} ${tr("Log a simulation")}${liveTotal > 0 ? ` <span class="tiny" style="margin-inline-start:auto;font-weight:600;color:var(--acc)">${hxFmtTotal(liveTotal)}</span>` : ""}</h3>
+      <div class="tiny" style="margin:6px 2px 10px;color:var(--txt3)">${tr("Enter each segment as minutes:seconds (e.g. 4:45). Leave blanks — the total still adds up.")}</div>
+      <div class="hx-form">${formRows}</div>
+      <input class="hx-note" value="${esc(f.note)}" placeholder="${tr("Note (venue, how it felt…)")}" dir="auto" oninput="R.hyroxForm.note=this.value">
+      <button class="btn" style="width:100%;margin-top:12px" onclick="M.hyroxSave()">${ic("check", 15)} ${tr("Save simulation")}</button>
+    </div>
+
+    ${sims.length ? `<div class="card hx-card" style="margin-top:14px"><h3>${ic("clock", 15)} ${tr("History")} <span class="tiny" style="margin-inline-start:auto;font-weight:400;color:var(--txt3)">${sims.length}</span></h3>
+      ${sims.map(s => `<div class="set-row"><div><div class="k">${hxFmtTotal(hxSimTotal(s))}${hxSimTotal(s) === pbTotal ? ` <span class="hx-pb">${tr("PB")}</span>` : ""}</div><div class="desc">${fmtDate(s.date)}${s.note ? " · " + esc(s.note) : ""}</div></div>
+        <span class="end"><button class="btn sm danger" aria-label="${tr("Delete")}" onclick="M.hyroxDel('${s.id}')">${ic("trash", 13)}</button></span></div>`).join("")}
+    </div>` : ""}
+  `;
+}
+
 function trainHTML(){
-  const tabs = [["today","Workout"],["program","Program"],["library","Library"],["history","History"],["coach","Coach"]];
+  const tabs = [["today","Workout"],["program","Program"],["library","Library"],["hyrox","Hyrox"],["history","History"],["coach","Coach"]];
   return `
     <button class="cat-back" onclick="M.trainBack()">${ic("back", 18)} ${tr("Fitness")}</button>
     <div class="cat-title"><div class="ch-nm">${tr("Training")}</div><div class="ch-ds">${tr("Program · tracking · coach")}</div></div>
@@ -8765,6 +8890,7 @@ function trainHTML(){
       R.trainTab === "today" ? trainTodayHTML() :
       R.trainTab === "program" ? trainProgramHTML() :
       R.trainTab === "library" ? trainLibHTML() :
+      R.trainTab === "hyrox" ? trainHyroxHTML() :
       R.trainTab === "history" ? trainHistHTML() : trainCoachHTML()
     }</div>${R.demoName ? exDemoSheetHTML() : ""}`;
 }
@@ -12042,6 +12168,21 @@ window.M = {
   goTrain(sub){ R.tab = "train"; R.trainTab = sub || "today"; R.homeCat = null; R.sheet = null; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
   trainBack(){ R.tab = "home"; R.homeSection = "fitness"; R.homeCat = null; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
   trainGo(t){ R.trainTab = t; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
+  hyroxField(kind, i, val){ const f = hxFormObj(); (kind === "run" ? f.runs : f.stations)[i] = val;
+    // live total updates without a full re-render (keeps keyboard focus)
+    const lt = f.runs.reduce((a, x) => a + hxParse(x), 0) + f.stations.reduce((a, x) => a + hxParse(x), 0);
+    const h = document.querySelector(".hx-card h3 span"); if (h && lt > 0) h.textContent = hxFmtTotal(lt); },
+  hyroxSave(){
+    const f = hxFormObj();
+    const runs = f.runs.map(hxParse), stations = f.stations.map(hxParse);
+    const total = runs.reduce((a, x) => a + x, 0) + stations.reduce((a, x) => a + x, 0);
+    if (total <= 0){ toast("Enter at least one segment time."); return; }
+    S.hyrox.unshift({id: uid(), date: todayStr(), runs, stations, total, note: (f.note || "").trim(), ts: Date.now()});
+    R.hyroxForm = null;
+    buzz(); save(); render();
+    toast(`Simulation saved: ${hxFmtTotal(total)} ✓`);
+  },
+  hyroxDel(id){ S.hyrox = (S.hyrox || []).filter(x => x.id !== id); save(); render(); },
   woStart(){ R.trainWO = {id: uid(), date: todayStr(), name: "Workout", items: []}; R.trainTab = "today"; render(); },
   /* ---- Strava sync ---- */
   stravaFormToggle(){ R.stravaFormOpen = !R.stravaFormOpen; render(); },
