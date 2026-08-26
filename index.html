@@ -1673,7 +1673,7 @@ html[data-setpage="privacy"] .set-page[data-page="privacy"]{display:block}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.208";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.209";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -2678,6 +2678,9 @@ const TR = {
     "high sugar": "سكر عالٍ",
     "high sodium": "صوديوم عالٍ",
     "Ask MIRA for a tailored plan": "اطلب من ميرا خطة مخصّصة",
+    "Looking at what I've logged today, assess my food choices for my goal to":"بالنظر إلى ما سجّلته اليوم، قيّم خياراتي الغذائية لهدفي في","and give me 3 specific, practical improvements for today and tomorrow. Be concise and evidence-based.":"وأعطني 3 تحسينات عملية محدّدة لليوم وغدًا. كن موجزًا ومبنيًّا على الأدلّة.",
+    "lose fat":"إنقاص الدهون","build muscle":"بناء العضلات","maintain":"المحافظة",
+    "MIRA can already see today's food — send this or ask your own question.":"تستطيع ميرا رؤية طعام اليوم — أرسل هذا أو اطرح سؤالك الخاص.",
     "General guidance from your logged data — not medical advice.": "إرشاد عام من بياناتك المُسجّلة — وليس نصيحة طبية.",
     "You average": "متوسطك",
     "g protein on training days vs": "غ بروتين في أيام التدريب مقابل",
@@ -6320,10 +6323,13 @@ function foodTips(aim, tot, tg){
   if (sodLimit && tot.sodium > sodLimit) push("alert", tr("Sodium is over your limit — go easy on salt, sauces and processed foods."));
   return tips.slice(0, 4);
 }
+// A SHORT starter question — MIRA already receives today's full food log,
+// totals and remaining-vs-targets via liveContext(), so there's no need to
+// paste the whole day into a visible message. The user can send this as-is
+// or replace it with their own question.
 function foodCoachPrompt(){
-  const today = todayStr(), tot = dayTotals(today), tg = S.settings.targets || {}, aim = nutritionAim();
-  const items = dayFoods(today).map(f => `${f.name}${f.amount ? ` (${f.amount})` : ""}: ${n0(f.kcal)}kcal ${n1(f.p)}P/${n1(f.c)}C/${n1(f.f)}F`).join("; ");
-  return `[NUTRITION COACH] My goal is to ${AIM_LABEL[aim].toLowerCase()}. Today I ate: ${items || "nothing yet"}. Totals: ${n0(tot.kcal)} kcal, ${n1(tot.p)}g protein, ${n1(tot.c)}g carbs, ${n1(tot.f)}g fat${tg.kcal ? `, against targets ${n0(tg.kcal)} kcal / ${n0(tg.protein)}g protein${tg.carbs ? ` / ${n0(tg.carbs)}g carbs` : ""}${tg.fat ? ` / ${n0(tg.fat)}g fat` : ""}` : ""}. Assess my food choices and give me 3 specific, practical ways to improve today and tomorrow to reach my goal. Be concise and evidence-based.`;
+  const aim = nutritionAim();
+  return `${tr("Looking at what I've logged today, assess my food choices for my goal to")} ${tr(AIM_LABEL[aim].toLowerCase())} ${tr("and give me 3 specific, practical improvements for today and tomorrow. Be concise and evidence-based.")}`;
 }
 // Nutrition coach: did I hit each macro, a quick read of today's food, and
 // guidance tailored to my aim (lose fat / maintain / build muscle).
@@ -12441,9 +12447,16 @@ window.M = {
     R.mode = (S.domains.find(d => d.id === "health") || S.domains[0] || {}).id || "work";
     R.tab = "chat"; R.convId = null; R.deepSolve = false;
     render();
+    // Prefill a short starter but DON'T auto-send — MIRA already sees today's
+    // food via context, so the user can send this or type their own question.
     const ta = $("#chatIn");
-    if (ta) ta.value = foodCoachPrompt();
-    await sendChat();
+    if (ta){
+      ta.value = foodCoachPrompt();
+      ta.focus();
+      try { ta.setSelectionRange(ta.value.length, ta.value.length); } catch (e) {}
+      ta.dispatchEvent(new Event("input", {bubbles: true}));
+    }
+    toast(tr("MIRA can already see today's food — send this or ask your own question."), 4200);
   },
   /* ---- global search ---- */
   searchOpen(){ R.searchOpen = true; R.searchQ = ""; render(); const el = $("#globalSearch"); if (el) el.focus(); },
