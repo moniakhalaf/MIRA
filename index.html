@@ -1673,7 +1673,7 @@ html[data-setpage="privacy"] .set-page[data-page="privacy"]{display:block}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.207";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.208";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1924,6 +1924,7 @@ const TR = {
     "Camera unavailable — snap a photo of the barcode instead.":"الكاميرا غير متاحة — التقط صورة للباركود بدلًا من ذلك.",
     "Could not read a barcode — try a closer, sharper shot.":"تعذّرت قراءة الباركود — جرّب لقطة أقرب وأوضح.",
     "Could not read a barcode in that photo — try a closer, sharper shot.":"تعذّرت قراءة الباركود في الصورة — جرّب لقطة أقرب وأوضح.",
+    "No barcode found — reading it as food instead…":"لم يُعثر على باركود — تُقرأ كطعام بدلًا من ذلك…",
     "Could not read any items from that file.":"تعذّرت قراءة أي عناصر من هذا الملف.",
     "Rest done — next set.":"انتهت الراحة — المجموعة التالية.",
     "Couldn't process that image.":"تعذّرت معالجة الصورة.","Couldn't read that image.":"تعذّرت قراءة الصورة.",
@@ -6632,6 +6633,10 @@ function foodHTML(){
               <span class="ft-ic">${ic("barcode", 18)}</span>
               <span class="ft-tx"><b>${t("Barcode")}</b><small>${barcodeBusy ? t("Looking up…") : t("Scan a package")}</small></span>
             </button>
+            <button class="ft-tile" onclick="M.extractPhoto()" ${extractBusy ? "disabled" : ""}>
+              <span class="ft-ic">${ic("camera", 18)}</span>
+              <span class="ft-tx"><b>${t("Snap food / label")}</b><small>${extractBusy ? t("Reading…") : t("Photo → macros")}</small></span>
+            </button>
             <button class="ft-tile" onclick="M.scToggle()">
               <span class="ft-ic">${ic("sliders", 18)}</span>
               <span class="ft-tx"><b>${t("Portion scaler")}</b><small>${t("Scale to your amount")}</small></span>
@@ -8373,7 +8378,7 @@ async function scanBarcodePhoto(){
       code = String(tryParseJson(txt).code || "").replace(/\D/g, "");
     } catch (e) { toast("Barcode read failed: " + e.message, 4200); barcodeBusy = false; render(); return; }
     barcodeBusy = false;
-    if (!code){ toast("Could not read a barcode in that photo — try a closer, sharper shot."); render(); return; }
+    if (!code){ toast(tr("No barcode found — reading it as food instead…"), 3000); analyzeFoodImage(file); return; }
     barcodeLookup(code);
   });
 }
@@ -8453,7 +8458,13 @@ function mergeIdenticalItems(items){
 }
 async function extractPhoto(){
   if (!S.settings.apiKey){ toast("Add your API key in Settings first."); return; }
-  pickFile(async file => {
+  pickFile(analyzeFoodImage);
+}
+// Read an already-picked image/PDF as food/label → reviewItems. Shared by the
+// "Snap food / label" tool and the barcode path's no-barcode fallback.
+async function analyzeFoodImage(file){
+  if (!file) return;
+  {
     extractBusy = true; render();
     try {
       const block = file.kind === "pdf"
@@ -8495,7 +8506,7 @@ Reply with ONLY a JSON array: [{"name":str,"amount":str,"kcal":num,"p":num,"c":n
       if (!reviewItems.length){ reviewItems = null; toast("Could not read any items from that file."); }
     } catch (e) { toast("Could not read the file: " + e.message, 4000); }
     extractBusy = false; render();
-  });
+  }
 }
 </script>
 <script>
