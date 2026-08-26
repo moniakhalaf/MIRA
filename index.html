@@ -1664,7 +1664,7 @@ html[data-setpage="privacy"] .set-page[data-page="privacy"]{display:block}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.204";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.205";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -2338,6 +2338,11 @@ const TR = {
     "Start a workout":"ابدأ تمرينًا","Start blank workout":"ابدأ تمرينًا فارغًا",
     "Log your session set by set. Add exercises from the library, or anything custom.":"سجّل جلستك مجموعة بمجموعة. أضِف تمارين من المكتبة أو أي شيء مخصص.",
     "Hyrox":"هايروكس","Run":"جري",
+    "Cardio":"كارديو","Log runs and cardio — distance and time give you pace and an estimated burn, which counts toward today's exercise calories.":"سجّل الجري والكارديو — المسافة والزمن يعطيانك السرعة وتقديرًا للسعرات المحروقة، وتُحتسب ضمن سعرات تمارين اليوم.",
+    "This week":"هذا الأسبوع","Time · 7d":"الزمن · 7 أيام","Avg run pace":"متوسّط سرعة الجري","Log cardio":"سجّل كارديو",
+    "Type":"النوع","Bike":"دراجة","Row":"تجديف","Swim":"سباحة","Other":"أخرى",
+    "Effort":"الجهد","Easy":"سهل","Tempo":"إيقاع","Interval":"متقطّع","Long":"طويل","Race":"سباق",
+    "Distance (km)":"المسافة (كم)","/km":"/كم","km/h":"كم/س","Note (route, how it felt…)":"ملاحظة (المسار، الإحساس…)","Save session":"احفظ الجلسة","Recent":"الأخيرة","e.g. 5":"مثال 5",
     "SkiErg 1000 m":"سكي إرغ 1000 م","Sled Push 50 m":"دفع الزلّاجة 50 م","Sled Pull 50 m":"سحب الزلّاجة 50 م","Burpee Broad Jumps 80 m":"بيربي بقفزات عريضة 80 م","Row 1000 m":"تجديف 1000 م","Farmers Carry 200 m":"حمل المزارع 200 م","Sandbag Lunges 100 m":"طعنات بكيس الرمل 100 م","Wall Balls × 100":"كرات الحائط × 100",
     "Track full Hyrox simulations — 8 runs and 8 stations. MIRA finds your best per segment and your ideal finish: the race you'd run hitting every personal best at once.":"تتبّع محاكاة هايروكس كاملة — 8 جريات و8 محطات. تجد ميرا أفضل زمن لكل مقطع وزمن نهايتك المثالي: السباق الذي تحقّق فيه كل أرقامك القياسية دفعة واحدة.",
     "Best finish":"أفضل زمن نهاية","Last":"الأخير","Ideal finish":"النهاية المثالية",
@@ -3187,6 +3192,7 @@ const BLANK = () => ({
   exercises: [],      // user-added exercises {id, n, m, e, c, source}
   workouts: [],       // {id, date, name, items:[{name, muscle, sets:[{reps, weight}], note}], ts}
   hyrox: [],          // Hyrox race simulations {id, date, runs:[8 sec], stations:[8 sec], total, note}
+  cardio: [],         // cardio sessions {id, date, modality, effort, distanceKm, seconds, note, ts}
   routines: [],       // {id, name, items:[{name, muscle}]}
   program: null,      // active training program {id,name,goal,level,place,daysPerWeek,weeks,phase,cursor,days:[{name,focus,exercises:[{name,muscle,sets,reps,rest,note}]}],progression,createdAt,startDate}
   exDemos: {},        // exercise name -> cached form demo {setup, steps[], mistakes[], breathing, search, ts}
@@ -3272,6 +3278,7 @@ function migrateChats(){
   if (!Array.isArray(S.exercises)) S.exercises = [];
   if (!Array.isArray(S.workouts)) S.workouts = [];
   if (!Array.isArray(S.hyrox)) S.hyrox = [];
+  if (!Array.isArray(S.cardio)) S.cardio = [];
   if (!Array.isArray(S.routines)) S.routines = [];
   if (!Array.isArray(S.followers)) S.followers = [];
   if (S.program && (!Array.isArray(S.program.days) || !S.program.days.length)) S.program = null;
@@ -3343,6 +3350,7 @@ function migrateChats(){
   S.recipes = rec(S.recipes).map(r => ({...r, name: str(r.name, "Recipe"), per: (r.per && typeof r.per === "object") ? r.per : {kcal: 0, p: 0, c: 0, f: 0}}));
   S.workouts = rec(S.workouts).map(w => ({...w, items: Array.isArray(w.items) ? w.items : []}));
   S.hyrox = rec(S.hyrox).map(h => ({...h, runs: Array.isArray(h.runs) ? h.runs : [], stations: Array.isArray(h.stations) ? h.stations : []}));
+  S.cardio = rec(S.cardio);
   S.meals = rec(S.meals).map(m => ({...m, name: str(m.name, "Meal"), items: Array.isArray(m.items) ? m.items : []}));
 }
 migrateChats();
@@ -3577,6 +3585,7 @@ const R = {
   circleImport: "",   // paste buffer for adding a follower
   trainTab: "today",  // today | program | library | hyrox | history | coach
   hyroxForm: null,    // in-progress Hyrox simulation entry (mm:ss strings)
+  cardioForm: null,   // in-progress cardio session {modality, effort, dist, time, note}
   trainWO: null,      // in-progress workout being logged
   libQuery: "",
   libMuscle: "All",
@@ -6366,7 +6375,7 @@ function macroBreakdownHTML(tot, tg){
 // a conservative burn estimate, and OFF by default so a weight-loss deficit
 // isn't quietly cancelled. The user opts in to add None / Half / All back.
 function workoutBurn(w){ let sets = 0; (w.items || []).forEach(it => sets += (it.sets || []).length); if (!sets) return 0; return Math.min(500, Math.max(80, sets * 5)); }
-function todayBurn(){ const t = todayStr(); return (S.workouts || []).filter(w => w.date === t).reduce((a, w) => a + workoutBurn(w), 0); }
+function todayBurn(){ const t = todayStr(); return (S.workouts || []).filter(w => w.date === t).reduce((a, w) => a + workoutBurn(w), 0) + (S.cardio || []).filter(c => c.date === t).reduce((a, c) => a + cardioBurn(c), 0); }
 function eatBackFrac(){ return ({half: 0.5, full: 1})[S.settings.eatBack] || 0; }
 function exerciseCalHTML(burned, added){
   if (!(burned > 0)) return "";
@@ -8785,6 +8794,79 @@ function plateHTML(){
 }
 
 /* ---------- Training view ---------- */
+/* ---------------- Cardio / running tracker ---------------- */
+const CARDIO_MODALITIES = [["run", "Run"], ["bike", "Bike"], ["row", "Row"], ["swim", "Swim"], ["other", "Other"]];
+const CARDIO_EFFORTS = [["easy", "Easy"], ["tempo", "Tempo"], ["interval", "Interval"], ["long", "Long"], ["race", "Race"]];
+// Parse "h:mm:ss" / "m:ss" / plain minutes into seconds.
+function parseClock(str){
+  const s = String(str == null ? "" : str).trim();
+  if (!s) return 0;
+  if (s.includes(":")){ return Math.max(0, s.split(":").reduce((acc, p) => acc * 60 + (parseInt(p, 10) || 0), 0)); }
+  const n = parseFloat(s.replace(",", "."));
+  return n > 0 ? Math.round(n * 60) : 0;   // a bare number means minutes
+}
+function cdFmt(sec){ sec = Math.max(0, Math.round(num(sec))); const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
+  return (h ? h + ":" + String(m).padStart(2, "0") : m) + ":" + String(s).padStart(2, "0"); }
+function cardioPace(c){ const km = num(c.distanceKm), sec = num(c.seconds); return (km > 0 && sec > 0) ? sec / km : 0; }   // sec per km
+// MET/energy-based burn: running ≈ 1.036 kcal per kg per km (net, well-cited);
+// other modalities use standard MET values × bodyweight × hours.
+function cardioBurn(c){
+  const w = latestWeightKg() || 70, hrs = num(c.seconds) / 3600, km = num(c.distanceKm);
+  if (c.modality === "run" && km > 0) return Math.round(km * w * 1.036);
+  const MET = ({run: 9.5, bike: 8, row: 7, swim: 8, other: 7})[c.modality] || 7;
+  return Math.round(MET * w * hrs);
+}
+function cardioFormObj(){
+  if (!R.cardioForm) R.cardioForm = {modality: "run", effort: "easy", dist: "", time: "", note: ""};
+  return R.cardioForm;
+}
+function trainCardioHTML(){
+  const f = cardioFormObj();
+  const preview = {modality: f.modality, distanceKm: num(f.dist), seconds: parseClock(f.time)};
+  const pace = cardioPace(preview), burn = cardioBurn(preview);
+  const speed = preview.seconds > 0 ? preview.distanceKm / (preview.seconds / 3600) : 0;
+  const list = [...(S.cardio || [])].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : (b.ts || 0) - (a.ts || 0)));
+  // this week (last 7 days) summary
+  const p = todayStr().split("-").map(Number), base = new Date(p[0], p[1] - 1, p[2]); base.setDate(base.getDate() - 6);
+  const weekAgo = base.toLocaleDateString("en-CA");
+  const wk = list.filter(c => c.date >= weekAgo);
+  const wkKm = wk.reduce((a, c) => a + num(c.distanceKm), 0), wkSec = wk.reduce((a, c) => a + num(c.seconds), 0);
+  const runWk = wk.filter(c => c.modality === "run" && num(c.distanceKm) > 0);
+  const runKm = runWk.reduce((a, c) => a + num(c.distanceKm), 0), runSec = runWk.reduce((a, c) => a + num(c.seconds), 0);
+  const seg = (k, opts, cur) => `<div class="seg seg-wrap">${opts.map(([v, l]) => `<button class="${cur === v ? "on" : ""}" onclick="M.cardioField('${k}','${v}')">${tr(l)}</button>`).join("")}</div>`;
+
+  return `
+    <div class="tiny" style="margin:2px 2px 12px;color:var(--txt2)">${tr("Log runs and cardio — distance and time give you pace and an estimated burn, which counts toward today's exercise calories.")}</div>
+
+    ${wk.length ? `<div class="hx-stats">
+      <div class="hx-stat"><div class="hx-v">${n1(wkKm)}<span style="font-size:12px"> km</span></div><div class="hx-l">${tr("This week")}</div></div>
+      <div class="hx-stat"><div class="hx-v">${cdFmt(wkSec)}</div><div class="hx-l">${tr("Time · 7d")}</div></div>
+      <div class="hx-stat"><div class="hx-v" style="color:var(--acc)">${runKm > 0 && runSec > 0 ? cdFmt(runSec / runKm) : "—"}</div><div class="hx-l">${tr("Avg run pace")}</div></div>
+    </div>` : ""}
+
+    <div class="card hx-card">
+      <h3>${ic("plus", 15)} ${tr("Log cardio")}${burn > 0 ? ` <span class="tiny" style="margin-inline-start:auto;font-weight:600;color:var(--acc)">~${n0(burn)} kcal</span>` : ""}</h3>
+      <div class="field" style="margin-top:8px"><label>${tr("Type")}</label>${seg("modality", CARDIO_MODALITIES, f.modality)}</div>
+      <div class="field"><label>${tr("Effort")}</label>${seg("effort", CARDIO_EFFORTS, f.effort)}</div>
+      <div class="grid2">
+        <div class="field"><label>${tr("Distance (km)")}</label><input type="number" inputmode="decimal" value="${esc(f.dist)}" placeholder="${tr("e.g. 5")}" oninput="M.cardioField('dist',this.value)"></div>
+        <div class="field"><label>${tr("Time")}</label><input inputmode="numeric" value="${esc(f.time)}" placeholder="h:mm:ss" oninput="M.cardioField('time',this.value)"></div>
+      </div>
+      ${(pace > 0 || speed > 0) ? `<div class="csp-note" style="margin-bottom:10px">${ic("trend", 13)}<span>${pace > 0 ? `<b>${cdFmt(pace)}</b> ${tr("/km")}` : ""}${pace > 0 && speed > 0 ? " · " : ""}${speed > 0 ? `<b>${n1(speed)}</b> ${tr("km/h")}` : ""}${burn > 0 ? ` · ~<b>${n0(burn)}</b> kcal` : ""}</span></div>` : ""}
+      <input class="hx-note" value="${esc(f.note)}" placeholder="${tr("Note (route, how it felt…)")}" dir="auto" oninput="R.cardioForm.note=this.value">
+      <button class="btn" style="width:100%;margin-top:12px" onclick="M.cardioSave()">${ic("check", 15)} ${tr("Save session")}</button>
+    </div>
+
+    ${list.length ? `<div class="card hx-card" style="margin-top:14px"><h3>${ic("clock", 15)} ${tr("Recent")} <span class="tiny" style="margin-inline-start:auto;font-weight:400;color:var(--txt3)">${list.length}</span></h3>
+      ${list.slice(0, 30).map(c => { const pc = cardioPace(c), mod = tr((CARDIO_MODALITIES.find(m => m[0] === c.modality) || [, "Run"])[1]), eff = tr((CARDIO_EFFORTS.find(e => e[0] === c.effort) || [, ""])[1]);
+        const rate = pc > 0 ? (c.modality === "run" ? ` · ${cdFmt(pc)}/km` : ` · ${n1(num(c.distanceKm) / (num(c.seconds) / 3600))} ${tr("km/h")}`) : "";
+        return `<div class="set-row"><div style="flex:1;min-width:0"><div class="k" dir="auto">${mod}${c.effort ? ` · ${eff}` : ""}${num(c.distanceKm) > 0 ? ` · ${n1(num(c.distanceKm))} km` : ""}</div>
+          <div class="desc">${fmtDate(c.date)} · ${cdFmt(num(c.seconds))}${rate} · ~${n0(cardioBurn(c))} kcal${c.note ? " · " + esc(c.note) : ""}</div></div>
+          <span class="end"><button class="btn sm danger" aria-label="${tr("Delete")}" onclick="M.cardioDel('${c.id}')">${ic("trash", 13)}</button></span></div>`; }).join("")}
+    </div>` : ""}
+  `;
+}
+
 /* ---------------- Hyrox race tracker ---------------- */
 // Official Hyrox order: 8 × 1 km runs alternating with 8 functional stations.
 const HYROX_STATIONS = [
@@ -8880,7 +8962,7 @@ function trainHyroxHTML(){
 }
 
 function trainHTML(){
-  const tabs = [["today","Workout"],["program","Program"],["library","Library"],["hyrox","Hyrox"],["history","History"],["coach","Coach"]];
+  const tabs = [["today","Workout"],["program","Program"],["library","Library"],["cardio","Cardio"],["hyrox","Hyrox"],["history","History"],["coach","Coach"]];
   return `
     <button class="cat-back" onclick="M.trainBack()">${ic("back", 18)} ${tr("Fitness")}</button>
     <div class="cat-title"><div class="ch-nm">${tr("Training")}</div><div class="ch-ds">${tr("Program · tracking · coach")}</div></div>
@@ -8890,6 +8972,7 @@ function trainHTML(){
       R.trainTab === "today" ? trainTodayHTML() :
       R.trainTab === "program" ? trainProgramHTML() :
       R.trainTab === "library" ? trainLibHTML() :
+      R.trainTab === "cardio" ? trainCardioHTML() :
       R.trainTab === "hyrox" ? trainHyroxHTML() :
       R.trainTab === "history" ? trainHistHTML() : trainCoachHTML()
     }</div>${R.demoName ? exDemoSheetHTML() : ""}`;
@@ -12183,6 +12266,18 @@ window.M = {
     toast(`Simulation saved: ${hxFmtTotal(total)} ✓`);
   },
   hyroxDel(id){ S.hyrox = (S.hyrox || []).filter(x => x.id !== id); save(); render(); },
+  cardioField(k, v){ cardioFormObj()[k] = v; render(); },
+  cardioSave(){
+    const f = cardioFormObj();
+    const km = num(f.dist), sec = parseClock(f.time);
+    if (!(km > 0) && !(sec > 0)){ toast("Add a distance or a time."); return; }
+    S.cardio.unshift({id: uid(), date: todayStr(), modality: f.modality || "run", effort: f.effort || "",
+      distanceKm: km, seconds: sec, note: (f.note || "").trim(), ts: Date.now()});
+    R.cardioForm = null;
+    buzz(); save(); render();
+    toast(`Cardio saved · ~${n0(cardioBurn({modality: f.modality, distanceKm: km, seconds: sec}))} kcal ✓`);
+  },
+  cardioDel(id){ S.cardio = (S.cardio || []).filter(x => x.id !== id); save(); render(); },
   woStart(){ R.trainWO = {id: uid(), date: todayStr(), name: "Workout", items: []}; R.trainTab = "today"; render(); },
   /* ---- Strava sync ---- */
   stravaFormToggle(){ R.stravaFormOpen = !R.stravaFormOpen; render(); },
