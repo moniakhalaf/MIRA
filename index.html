@@ -1096,6 +1096,12 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
 .cbank .cb-balance.pos .cb-bv{color:var(--green)}
 .cbank .cb-balance.neg .cb-bv{color:var(--amber)}
 .cbank .cb-bl{font-size:12.5px;color:var(--txt2)}
+.cb-macros{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0 0 6px}
+.cb-mac{background:var(--card2);border:1px solid var(--line);border-radius:11px;padding:9px 4px;text-align:center}
+.cb-mac .cb-mv{display:block;font-size:16px;font-weight:700;font-variant-numeric:tabular-nums;direction:ltr}
+.cb-mac.pos .cb-mv{color:var(--green)}
+.cb-mac.neg .cb-mv{color:var(--amber)}
+.cb-mac .cb-ml{font-size:11px;color:var(--txt3)}
 .cb-strip{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
 .cb-day{display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 2px;border-radius:10px;background:var(--card2);border:1px solid var(--line2)}
 .cb-day .cb-dl{font-size:11px;color:var(--txt3);font-weight:600}
@@ -1682,7 +1688,7 @@ html[data-setpage="privacy"] .set-page[data-page="privacy"]{display:block}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.210";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.211";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -2458,6 +2464,7 @@ const TR = {
     "Today: over by": "اليوم: أكثر بـ",
     "kcal so far.": "سعرة حتى الآن.",
     "Calorie bank": "بنك السعرات",
+    "Macros you've banked the same way — carbs and fat left under target build room for a treat.":"ماكروزك المُدّخرة بالطريقة نفسها — الكربوهيدرات والدهون تحت الهدف تتيح مساحة لوجبة مميّزة.",
     "weigh-ins":"قياسات وزن","Circle — progress sharing":"الدائرة — مشاركة التقدّم","Share only your weight and nutrition adherence with a coach or family — never your food diary, chat or budget. Private and on your device.":"شاركي وزنك والتزامك الغذائي فقط مع مدرّب أو العائلة — دون مذكّرة طعامك أو محادثاتك أو ميزانيتك. خاص وعلى جهازك.","Share my progress":"شارك تقدّمي","Hide":"إخفاء","Get my code":"احصل على رمزي","Copy code":"انسخ الرمز","Send this to whoever tracks you. Re-send it any time to update them.":"أرسلي هذا لمن يتابع تقدّمك. أعيدي إرساله في أي وقت للتحديث.","Follow someone":"تابِع شخصاً","Paste the code they sent you":"الصق الرمز الذي أرسلوه لك","Paste their progress code (starts with MIRA-PROGRESS)":"الصق رمز تقدّمهم (يبدأ بـ MIRA-PROGRESS)","Add / update":"إضافة / تحديث","People I follow":"الأشخاص الذين أتابعهم","Someone":"شخص","updated":"حُدّث","shared: weight + nutrition only":"المُشارَك: الوزن والتغذية فقط","Weight & body":"الوزن والجسم","Latest kg":"آخر كغ","Change kg":"التغيّر كغ","InBody":"إن بودي","No weigh-ins shared yet.":"لا قياسات وزن مُشارَكة بعد.","Nutrition adherence":"الالتزام الغذائي","Days logged":"أيام مُسجّلة","Avg kcal":"متوسط السعرات","On target":"ضمن الهدف","logged days":"أيام مُسجّلة","Last 14 logged days (kcal)":"آخر 14 يوماً مُسجّلاً (سعرات)","No nutrition logged yet.":"لا تغذية مُسجّلة بعد.","Remove from my circle":"إزالة من دائرتي","Circle":"الدائرة","Progress code copied ✓":"نُسخ رمز التقدّم ✓","Select the code and copy it.":"حدّد الرمز وانسخه.","That code didn't read — copy the whole thing and try again.":"تعذّرت قراءة الرمز — انسخه كاملاً وحاول مجدداً.","progress updated ✓":"حُدّث التقدّم ✓","Remove this person from your circle?":"إزالة هذا الشخص من دائرتك؟",
     "kcal in your bank":"سعرة في بنكك","Banked":"مُدّخر","Your bank has room for a cheat meal — enjoy it, it draws from what you've saved.":"بنكك يتّسع لوجبة حرة — استمتعي بها، تُخصم مما ادّخرتِه.",
     "Sun–Thu": "الأحد–الخميس",
@@ -6127,29 +6134,39 @@ function calorieBank(offset){
 // cheat meal (on any day) withdraw. This is the pot a cheat meal draws from —
 // it carries over week to week instead of resetting.
 function calorieBankTotal(){
-  const tg = num((S.settings.targets || {}).kcal);
+  const tgt = S.settings.targets || {};
+  const tg = num(tgt.kcal);
   if (!tg) return null;
+  // Per-macro targets — a macro only banks if you've set a target for it.
+  const MAC = [["k", tg], ["p", num(tgt.protein)], ["c", num(tgt.carbs)], ["f", num(tgt.fat)]];
   const {from, to} = bankWindow();
   const today = todayStr();
   const normalByDay = {}, cheats = [];
   S.foods.forEach(f => {
     if (!f.date || f.date > today) return;                                       // not the future
-    if (isCheat(f)) cheats.push({date: f.date, name: f.name || "Cheat meal", kcal: num(f.kcal), dow: new Date(f.date + "T00:00:00").getDay()});
-    else normalByDay[f.date] = (normalByDay[f.date] || 0) + num(f.kcal);
+    if (isCheat(f)) cheats.push({date: f.date, name: f.name || "Cheat meal", kcal: num(f.kcal), p: num(f.p), c: num(f.c), f: num(f.f), dow: new Date(f.date + "T00:00:00").getDay()});
+    else { const d = normalByDay[f.date] || (normalByDay[f.date] = {k: 0, p: 0, c: 0, f: 0}); d.k += num(f.kcal); d.p += num(f.p); d.c += num(f.c); d.f += num(f.f); }
   });
-  let saved = 0, over = 0, days = 0;
+  const sv = {k: 0, p: 0, c: 0, f: 0}, ov = {k: 0, p: 0, c: 0, f: 0};
+  let days = 0;
   Object.keys(normalByDay).forEach(date => {
     if (date >= today) return;                                                   // today is still in progress — banks tonight
     const dow = new Date(date + "T00:00:00").getDay();
     if (dow < from || dow > to) return;                                          // only your chosen weekdays deposit
     days++;
-    const diff = tg - normalByDay[date];
-    if (diff >= 0) saved += diff; else over += -diff;
+    const d = normalByDay[date];
+    MAC.forEach(([key, t]) => { if (!(t > 0)) return; const diff = t - d[key]; if (diff >= 0) sv[key] += diff; else ov[key] += -diff; });
   });
-  const cheatTotal = cheats.reduce((a, c) => a + c.kcal, 0);
+  const cheatSum = {k: 0, p: 0, c: 0, f: 0};
+  cheats.forEach(c => { cheatSum.k += c.kcal; cheatSum.p += c.p; cheatSum.c += c.c; cheatSum.f += c.f; });
   cheats.sort((a, b) => a.date < b.date ? 1 : a.date > b.date ? -1 : 0);
-  return {tg, saved: Math.round(saved), over: Math.round(over), cheatTotal: Math.round(cheatTotal),
-    cheatCount: cheats.length, balance: Math.round(saved - over - cheatTotal), days, cheats};
+  const bal = {};
+  MAC.forEach(([key, t]) => { bal[key] = (t > 0) ? Math.round(sv[key] - ov[key] - cheatSum[key]) : null; });
+  // macros the user has a target for (protein/carbs/fat), for the saved-macros line
+  const macros = [["p", "Protein", tgt.protein], ["c", "Carbs", tgt.carbs], ["f", "Fat", tgt.fat]]
+    .filter(([, , t]) => num(t) > 0).map(([key, label]) => ({key, label, balance: bal[key]}));
+  return {tg, saved: Math.round(sv.k), over: Math.round(ov.k), cheatTotal: Math.round(cheatSum.k),
+    cheatCount: cheats.length, balance: Math.round(sv.k - ov.k - cheatSum.k), days, cheats, macros, bal};
 }
 // "12–16 Jul" style range, localised, month shown once when it doesn't change.
 function bankRange(a, b){
@@ -6199,6 +6216,8 @@ function calorieBankHTML(){
         <div class="cb-bv">${bal >= 0 ? "+" : "−"}${n0(Math.abs(bal))}</div>
         <div class="cb-bl">${tr("kcal in your bank")}</div>
       </div>
+      ${T.macros && T.macros.length ? `<div class="cb-macros">${T.macros.map(m => `<div class="cb-mac ${m.balance >= 0 ? "pos" : "neg"}"><span class="cb-mv">${m.balance >= 0 ? "+" : "−"}${n0(Math.abs(m.balance))}g</span><span class="cb-ml">${tr(m.label)}</span></div>`).join("")}</div>
+      <div class="tiny" style="text-align:center;color:var(--txt3);margin:-2px 2px 10px">${tr("Macros you've banked the same way — carbs and fat left under target build room for a treat.")}</div>` : ""}
       ${T.saved || T.cheatTotal || T.over ? `<div class="cb-meta">${tr("Banked")} <b>+${n0(T.saved)}</b>${T.cheatTotal ? ` · ${tr("Cheat meals")} <b>−${n0(T.cheatTotal)}</b>` : ""}${T.over ? ` · ${tr("Over target")} <b>−${n0(T.over)}</b>` : ""}</div>` : ""}
       <div class="cb-week-h">${tr("This week")}</div>
       <div class="cb-strip" style="grid-template-columns:repeat(${b.days.length}, 1fr)">${strip}</div>
