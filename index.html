@@ -1688,7 +1688,7 @@ html[data-setpage="privacy"] .set-page[data-page="privacy"]{display:block}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.211";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.212";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -6162,8 +6162,10 @@ function calorieBankTotal(){
   cheats.sort((a, b) => a.date < b.date ? 1 : a.date > b.date ? -1 : 0);
   const bal = {};
   MAC.forEach(([key, t]) => { bal[key] = (t > 0) ? Math.round(sv[key] - ov[key] - cheatSum[key]) : null; });
-  // macros the user has a target for (protein/carbs/fat), for the saved-macros line
-  const macros = [["p", "Protein", tgt.protein], ["c", "Carbs", tgt.carbs], ["f", "Fat", tgt.fat]]
+  // Only carbs and fat are "banked": protein is a daily floor you aim to hit or
+  // exceed, not something to save, so it isn't shown. Cheat meals still draw
+  // down the carb and fat balances (their macros are subtracted above).
+  const macros = [["c", "Carbs", tgt.carbs], ["f", "Fat", tgt.fat]]
     .filter(([, , t]) => num(t) > 0).map(([key, label]) => ({key, label, balance: bal[key]}));
   return {tg, saved: Math.round(sv.k), over: Math.round(ov.k), cheatTotal: Math.round(cheatSum.k),
     cheatCount: cheats.length, balance: Math.round(sv.k - ov.k - cheatSum.k), days, cheats, macros, bal};
@@ -6216,7 +6218,7 @@ function calorieBankHTML(){
         <div class="cb-bv">${bal >= 0 ? "+" : "−"}${n0(Math.abs(bal))}</div>
         <div class="cb-bl">${tr("kcal in your bank")}</div>
       </div>
-      ${T.macros && T.macros.length ? `<div class="cb-macros">${T.macros.map(m => `<div class="cb-mac ${m.balance >= 0 ? "pos" : "neg"}"><span class="cb-mv">${m.balance >= 0 ? "+" : "−"}${n0(Math.abs(m.balance))}g</span><span class="cb-ml">${tr(m.label)}</span></div>`).join("")}</div>
+      ${T.macros && T.macros.length ? `<div class="cb-macros" style="grid-template-columns:repeat(${T.macros.length},1fr)">${T.macros.map(m => `<div class="cb-mac ${m.balance >= 0 ? "pos" : "neg"}"><span class="cb-mv">${m.balance >= 0 ? "+" : "−"}${n0(Math.abs(m.balance))}g</span><span class="cb-ml">${tr(m.label)}</span></div>`).join("")}</div>
       <div class="tiny" style="text-align:center;color:var(--txt3);margin:-2px 2px 10px">${tr("Macros you've banked the same way — carbs and fat left under target build room for a treat.")}</div>` : ""}
       ${T.saved || T.cheatTotal || T.over ? `<div class="cb-meta">${tr("Banked")} <b>+${n0(T.saved)}</b>${T.cheatTotal ? ` · ${tr("Cheat meals")} <b>−${n0(T.cheatTotal)}</b>` : ""}${T.over ? ` · ${tr("Over target")} <b>−${n0(T.over)}</b>` : ""}</div>` : ""}
       <div class="cb-week-h">${tr("This week")}</div>
