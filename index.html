@@ -1147,6 +1147,7 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
 .cb-cheatrow,.cbh-food{display:flex;align-items:baseline;justify-content:space-between;gap:10px;font-size:13px}
 .cb-cheatrow .cc-nm,.cbh-food .cf-nm{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cb-cheatrow .cc-mt,.cbh-food .cf-mt{color:var(--amber);white-space:nowrap;font-variant-numeric:tabular-nums;direction:ltr}
+.cb-cheatrow .cc-mac{color:var(--txt3);font-weight:600;font-size:11px;margin-inline-start:2px}
 .cbh-foods{margin-top:7px;display:flex;flex-direction:column;gap:5px}
 .cbh-food{font-size:12.5px}
 .cbh-food .cf-mt{font-size:12px}
@@ -1688,7 +1689,7 @@ html[data-setpage="privacy"] .set-page[data-page="privacy"]{display:block}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.212";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.213";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -6223,7 +6224,7 @@ function calorieBankHTML(){
       ${T.saved || T.cheatTotal || T.over ? `<div class="cb-meta">${tr("Banked")} <b>+${n0(T.saved)}</b>${T.cheatTotal ? ` · ${tr("Cheat meals")} <b>−${n0(T.cheatTotal)}</b>` : ""}${T.over ? ` · ${tr("Over target")} <b>−${n0(T.over)}</b>` : ""}</div>` : ""}
       <div class="cb-week-h">${tr("This week")}</div>
       <div class="cb-strip" style="grid-template-columns:repeat(${b.days.length}, 1fr)">${strip}</div>
-      ${T.cheats.length ? `<div class="cb-cheatlist">${T.cheats.slice(0, 6).map(c => `<div class="cb-cheatrow"><span class="cc-nm" dir="auto">${esc(c.name)}</span><span class="cc-mt">${esc(new Date(c.date + "T00:00:00").toLocaleDateString(uiLang() || "en", {day: "numeric", month: "short"}))} · <b>−${n0(c.kcal)}</b></span></div>`).join("")}</div>` : ""}
+      ${T.cheats.length ? `<div class="cb-cheatlist">${T.cheats.slice(0, 6).map(c => `<div class="cb-cheatrow"><span class="cc-nm" dir="auto">${esc(c.name)}</span><span class="cc-mt">${esc(new Date(c.date + "T00:00:00").toLocaleDateString(uiLang() || "en", {day: "numeric", month: "short"}))} · <b>−${n0(c.kcal)}</b>${(c.c > 0 || c.f > 0) ? ` <span class="cc-mac">−${n0(c.c)}g C · −${n0(c.f)}g F</span>` : ""}</span></div>`).join("")}</div>` : ""}
       ${todayLine}
       <div class="tiny cb-note">${ready
         ? tr("Your bank has room for a cheat meal — enjoy it, it draws from what you've saved.")
