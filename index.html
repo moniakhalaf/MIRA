@@ -1689,7 +1689,7 @@ html[data-setpage="privacy"] .set-page[data-page="privacy"]{display:block}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.213";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.214";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -2466,6 +2466,7 @@ const TR = {
     "kcal so far.": "سعرة حتى الآن.",
     "Calorie bank": "بنك السعرات",
     "Macros you've banked the same way — carbs and fat left under target build room for a treat.":"ماكروزك المُدّخرة بالطريقة نفسها — الكربوهيدرات والدهون تحت الهدف تتيح مساحة لوجبة مميّزة.",
+    "Macros you've banked the same way — under target builds room; days over target and cheat meals draw it back.":"ماكروزك المُدّخرة بالطريقة نفسها — ما دون الهدف يبني مساحة؛ والأيام فوق الهدف ووجبات الغش تسحب منها.",
     "weigh-ins":"قياسات وزن","Circle — progress sharing":"الدائرة — مشاركة التقدّم","Share only your weight and nutrition adherence with a coach or family — never your food diary, chat or budget. Private and on your device.":"شاركي وزنك والتزامك الغذائي فقط مع مدرّب أو العائلة — دون مذكّرة طعامك أو محادثاتك أو ميزانيتك. خاص وعلى جهازك.","Share my progress":"شارك تقدّمي","Hide":"إخفاء","Get my code":"احصل على رمزي","Copy code":"انسخ الرمز","Send this to whoever tracks you. Re-send it any time to update them.":"أرسلي هذا لمن يتابع تقدّمك. أعيدي إرساله في أي وقت للتحديث.","Follow someone":"تابِع شخصاً","Paste the code they sent you":"الصق الرمز الذي أرسلوه لك","Paste their progress code (starts with MIRA-PROGRESS)":"الصق رمز تقدّمهم (يبدأ بـ MIRA-PROGRESS)","Add / update":"إضافة / تحديث","People I follow":"الأشخاص الذين أتابعهم","Someone":"شخص","updated":"حُدّث","shared: weight + nutrition only":"المُشارَك: الوزن والتغذية فقط","Weight & body":"الوزن والجسم","Latest kg":"آخر كغ","Change kg":"التغيّر كغ","InBody":"إن بودي","No weigh-ins shared yet.":"لا قياسات وزن مُشارَكة بعد.","Nutrition adherence":"الالتزام الغذائي","Days logged":"أيام مُسجّلة","Avg kcal":"متوسط السعرات","On target":"ضمن الهدف","logged days":"أيام مُسجّلة","Last 14 logged days (kcal)":"آخر 14 يوماً مُسجّلاً (سعرات)","No nutrition logged yet.":"لا تغذية مُسجّلة بعد.","Remove from my circle":"إزالة من دائرتي","Circle":"الدائرة","Progress code copied ✓":"نُسخ رمز التقدّم ✓","Select the code and copy it.":"حدّد الرمز وانسخه.","That code didn't read — copy the whole thing and try again.":"تعذّرت قراءة الرمز — انسخه كاملاً وحاول مجدداً.","progress updated ✓":"حُدّث التقدّم ✓","Remove this person from your circle?":"إزالة هذا الشخص من دائرتك؟",
     "kcal in your bank":"سعرة في بنكك","Banked":"مُدّخر","Your bank has room for a cheat meal — enjoy it, it draws from what you've saved.":"بنكك يتّسع لوجبة حرة — استمتعي بها، تُخصم مما ادّخرتِه.",
     "Sun–Thu": "الأحد–الخميس",
@@ -6168,8 +6169,10 @@ function calorieBankTotal(){
   // down the carb and fat balances (their macros are subtracted above).
   const macros = [["c", "Carbs", tgt.carbs], ["f", "Fat", tgt.fat]]
     .filter(([, , t]) => num(t) > 0).map(([key, label]) => ({key, label, balance: bal[key]}));
+  const overMac = {c: Math.round(ov.c), f: Math.round(ov.f)};   // carbs/fat drawn back by over-target days
+  const cheatMac = {c: Math.round(cheatSum.c), f: Math.round(cheatSum.f)};
   return {tg, saved: Math.round(sv.k), over: Math.round(ov.k), cheatTotal: Math.round(cheatSum.k),
-    cheatCount: cheats.length, balance: Math.round(sv.k - ov.k - cheatSum.k), days, cheats, macros, bal};
+    cheatCount: cheats.length, balance: Math.round(sv.k - ov.k - cheatSum.k), days, cheats, macros, bal, overMac, cheatMac};
 }
 // "12–16 Jul" style range, localised, month shown once when it doesn't change.
 function bankRange(a, b){
@@ -6220,7 +6223,12 @@ function calorieBankHTML(){
         <div class="cb-bl">${tr("kcal in your bank")}</div>
       </div>
       ${T.macros && T.macros.length ? `<div class="cb-macros" style="grid-template-columns:repeat(${T.macros.length},1fr)">${T.macros.map(m => `<div class="cb-mac ${m.balance >= 0 ? "pos" : "neg"}"><span class="cb-mv">${m.balance >= 0 ? "+" : "−"}${n0(Math.abs(m.balance))}g</span><span class="cb-ml">${tr(m.label)}</span></div>`).join("")}</div>
-      <div class="tiny" style="text-align:center;color:var(--txt3);margin:-2px 2px 10px">${tr("Macros you've banked the same way — carbs and fat left under target build room for a treat.")}</div>` : ""}
+      <div class="tiny" style="text-align:center;color:var(--txt3);margin:-2px 2px ${(T.overMac.c || T.overMac.f || T.cheatMac.c || T.cheatMac.f) ? "6px" : "10px"}">${tr("Macros you've banked the same way — under target builds room; days over target and cheat meals draw it back.")}</div>
+      ${(T.overMac.c || T.overMac.f || T.cheatMac.c || T.cheatMac.f) ? `<div class="cb-meta" style="text-align:center;margin-top:0">${
+        (T.overMac.c || T.overMac.f) ? `${tr("Over target")} ${T.overMac.c ? `<b>−${n0(T.overMac.c)}g ${tr("carbs")}</b>` : ""}${T.overMac.c && T.overMac.f ? " · " : ""}${T.overMac.f ? `<b>−${n0(T.overMac.f)}g ${tr("fat")}</b>` : ""}` : ""
+      }${(T.overMac.c || T.overMac.f) && (T.cheatMac.c || T.cheatMac.f) ? " · " : ""}${
+        (T.cheatMac.c || T.cheatMac.f) ? `${tr("Cheat meals")} ${T.cheatMac.c ? `<b>−${n0(T.cheatMac.c)}g ${tr("carbs")}</b>` : ""}${T.cheatMac.c && T.cheatMac.f ? " · " : ""}${T.cheatMac.f ? `<b>−${n0(T.cheatMac.f)}g ${tr("fat")}</b>` : ""}` : ""
+      }</div>` : ""}` : ""}
       ${T.saved || T.cheatTotal || T.over ? `<div class="cb-meta">${tr("Banked")} <b>+${n0(T.saved)}</b>${T.cheatTotal ? ` · ${tr("Cheat meals")} <b>−${n0(T.cheatTotal)}</b>` : ""}${T.over ? ` · ${tr("Over target")} <b>−${n0(T.over)}</b>` : ""}</div>` : ""}
       <div class="cb-week-h">${tr("This week")}</div>
       <div class="cb-strip" style="grid-template-columns:repeat(${b.days.length}, 1fr)">${strip}</div>
