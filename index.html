@@ -1351,8 +1351,10 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
 .upd-bar .ub:active{transform:scale(.96)}
 .upd-bar .ux{flex:0 0 auto;color:var(--txt3);background:none;padding:6px 8px;font-size:15px;line-height:1}
 /* food entry edit button */
-.food-it .edit,.food-it .mmove{flex:0 0 auto;color:var(--txt3);min-width:34px;min-height:36px;display:flex;align-items:center;justify-content:center;border-radius:9px;background:none}
-.food-it .edit:active,.food-it .mmove:active{background:var(--key);color:var(--acc)}
+.food-it .edit,.food-it .mmove,.food-it .fi-copy{flex:0 0 auto;color:var(--txt3);min-width:34px;min-height:36px;display:flex;align-items:center;justify-content:center;border-radius:9px;background:none}
+.food-it .edit:active,.food-it .mmove:active,.food-it .fi-copy:active{background:var(--key);color:var(--acc)}
+.food-it .fi-copy{margin-inline-start:auto}
+.food-it .fi-copy ~ .del{margin-inline-start:0}
 .food-it .mmove.on{color:var(--acc);background:var(--acc-soft)}
 .meal-pick{display:flex;gap:6px;padding:8px 14px 11px;background:var(--bg2);border-top:1px solid var(--line)}
 .meal-pick button{flex:1 1 0;padding:8px 4px;border-radius:8px;border:1px solid var(--line2);background:var(--card);color:var(--txt2);font-size:12px;font-weight:600}
@@ -1689,7 +1691,7 @@ html[data-setpage="privacy"] .set-page[data-page="privacy"]{display:block}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.214";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.215";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -6028,6 +6030,7 @@ function foodItemHTML(f){
   return `<div class="food-it">
     <div><div class="nm" dir="auto">${esc(f.name)} ${f.conf && f.conf !== "user" ? `<span class="badge ${f.conf}">${f.conf}</span>` : ""}</div>
     <div class="meta">${entryTime(f) ? `<span class="fi-time">${esc(entryTime(f))}</span> · ` : ""}${f.amount ? esc(f.amount) + " · " : ""}${n0(f.kcal)} kcal · ${n1(f.p)}P · ${n1(f.c)}C · ${n1(f.f)}F</div></div>
+    ${f.date && f.date !== todayStr() ? `<button class="fi-copy" aria-label="${t("Copy to today")}" title="${t("Copy to today")}" onclick="M.copyItemToToday('${f.id}')">${ic("copy", 13)}</button>` : ""}
     <button class="mmove ${menu ? "on" : ""}" aria-label="Change meal for ${esc(f.name)}" onclick="M.mealMenu('${f.id}')">${ic("refresh", 13)}</button>
     <button class="edit" aria-label="Edit ${esc(f.name)}" onclick="M.foodEdit('${f.id}')">${ic("edit", 14)}</button>
     <button class="del" aria-label="Delete ${esc(f.name)}" onclick="M.foodDel('${f.id}')">✕</button>
@@ -13845,6 +13848,13 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
     R.openDays.add(today); save(); render();
     const label = (FOOD_MEALS.find(([k]) => k === mk) || [])[1] || "";
     toast(`${tr("Copied")} ${tr(label)} ${tr("to today")} ✓`);
+  },
+  copyItemToToday(id){
+    const f = S.foods.find(x => x.id === id); if (!f) return;
+    const today = todayStr();
+    S.foods.push({...f, id: uid(), date: today, ts: Date.now()});
+    R.openDays.add(today); save(); render();
+    toast(`${tr("Copied")} ${f.name} ${tr("to today")} ✓`);
   },
   foodSave: foodSaveDirect,
   prepSave: prepSaveDirect,
