@@ -798,6 +798,17 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
 .nudge .nz-t{font-size:13.5px;line-height:1.4;flex:1;min-width:0}
 .nudge .nz-go{flex:0 0 auto;font-size:12.5px;font-weight:700;color:var(--gold);background:none;padding:6px 4px}
 .nudge .nz-x{flex:0 0 auto;color:var(--txt3);background:none;padding:6px;min-width:30px;min-height:30px}
+.today-brief{padding:16px 16px 14px;margin-bottom:14px;border-radius:16px;border:1px solid var(--line2);
+  background:linear-gradient(150deg,var(--acc-soft),transparent 72%)}
+.today-brief .tb-head{display:flex;align-items:center;gap:9px;font-size:16px;font-weight:700;letter-spacing:-.2px;line-height:1.25}
+.today-brief .tb-dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto}
+.today-brief .tb-lines{margin-top:11px;display:flex;flex-direction:column;gap:8px}
+.today-brief .tb-line{display:flex;align-items:center;gap:9px;font-size:13.5px;line-height:1.4;color:var(--txt2)}
+.today-brief .tb-line svg{flex:0 0 auto;color:var(--txt3)}
+.today-brief .tb-line b{color:var(--txt);font-weight:700}
+.today-brief .tb-acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:13px}
+.today-brief .tb-act{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;padding:8px 12px;border-radius:11px;background:var(--card);border:1px solid var(--line2);color:var(--txt)}
+.today-brief .tb-act:active{background:var(--acc-soft);border-color:var(--acc);color:var(--acc)}
 .rc-filters{display:flex;gap:7px;overflow-x:auto;padding-bottom:11px;scrollbar-width:none}
 .rc-filters::-webkit-scrollbar{display:none}
 .rc-chip{flex:0 0 auto;padding:7px 13px;border-radius:18px;background:var(--card2);border:1px solid var(--line2);color:var(--txt2);font-size:13px;font-weight:500}
@@ -1691,7 +1702,7 @@ html[data-setpage="privacy"] .set-page[data-page="privacy"]{display:block}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.215";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.216";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -2698,6 +2709,28 @@ const TR = {
     "high sugar": "سكر عالٍ",
     "high sodium": "صوديوم عالٍ",
     "Ask MIRA for a tailored plan": "اطلب من ميرا خطة مخصّصة",
+    "Menstrual phase — be kind to yourself": "طور الحيض — كوني لطيفة مع نفسك",
+    "Follicular phase — energy is rising": "الطور الجُريبي — الطاقة في ارتفاع",
+    "Ovulation — peak power": "الإباضة — ذروة القوة",
+    "Luteal phase — steady, fuel well": "الطور الأصفري — ثبات وتغذية جيدة",
+    "Cycle day": "يوم الدورة",
+    "fertile window": "نافذة الخصوبة",
+    "Cycle & phase": "الدورة والطور",
+    "kcal to fuel your day": "سعرة لتغذية يومك",
+    "kcal left": "سعرة متبقّية",
+    "protein to go": "بروتين متبقٍّ",
+    "kcal over target": "سعرة فوق الهدف",
+    "to go": "متبقٍّ",
+    "Ready when you are": "جاهزة متى استعددت",
+    "On track today": "على المسار اليوم",
+    "Over target today": "فوق الهدف اليوم",
+    "Let's make today count": "لنجعل هذا اليوم مثمرًا",
+    "Morning check-in": "تسجيل الصباح",
+    "Full brief": "الملخّص الكامل",
+    "Prime — push": "ممتازة — ادفعي",
+    "Good — train as planned": "جيدة — تدرّبي كما هو مخطّط",
+    "Moderate — dial it back": "متوسّطة — خفّفي قليلًا",
+    "Recover — go easy": "تعافي — خذيها بهدوء",
     "Looking at what I've logged today, assess my food choices for my goal to":"بالنظر إلى ما سجّلته اليوم، قيّم خياراتي الغذائية لهدفي في","and give me 3 specific, practical improvements for today and tomorrow. Be concise and evidence-based.":"وأعطني 3 تحسينات عملية محدّدة لليوم وغدًا. كن موجزًا ومبنيًّا على الأدلّة.",
     "lose fat":"إنقاص الدهون","build muscle":"بناء العضلات","maintain":"المحافظة",
     "MIRA can already see today's food — send this or ask your own question.":"تستطيع ميرا رؤية طعام اليوم — أرسل هذا أو اطرح سؤالك الخاص.",
@@ -4109,9 +4142,75 @@ function homeTilesHTML(){
   }).join("");
   return `<div class="dash-sec-h">${t("Your areas")}</div><div class="home-tiles">${tiles}</div>`;
 }
+// A single glanceable "brief" that synthesises today's real signals —
+// readiness, cycle phase, fuel left and hydration — into one card with a
+// headline verdict and a couple of contextual next steps. Every line is
+// derived from logged data or a clearly-labelled estimate; a signal with no
+// data simply doesn't appear, and if nothing can be said the card is hidden.
+const BRIEF_PHASE_HEAD = {menstrual: "Menstrual phase — be kind to yourself", follicular: "Follicular phase — energy is rising", ovulation: "Ovulation — peak power", luteal: "Luteal phase — steady, fuel well"};
+function todayBriefHTML(){
+  const day = todayStr();
+  const hour = new Date().getHours();
+  const tg = S.settings.targets || {};
+  const lines = [];
+  let head = null, headColor = "var(--acc)";
+
+  // Readiness (only when the user has logged today's check-in)
+  const ry = (typeof readyToday === "function") ? readyToday() : null;
+  if (ry){
+    const sc = readinessScore(ry), band = readinessBand(sc.score);
+    head = tr(band.label); headColor = band.color;
+    lines.push({icon: "activity", html: `${tr("Readiness")} <b>${sc.score}</b> ${tr("today")}`});
+  }
+
+  // Menstrual-cycle phase (only when tracking, and prediction is fresh)
+  const cyc = (typeof cycleStats === "function") ? cycleStats() : null;
+  if (cyc && !cyc.overdue){
+    const ph = CYCLE_PHASES[cyc.phase];
+    lines.push({icon: "target", html: `${tr("Cycle day")} ${cyc.day} · <b>${tr(ph.label)}</b>${cyc.fertile ? ` · ${tr("fertile window")}` : ""}`});
+    if (!head){ head = tr(BRIEF_PHASE_HEAD[cyc.phase] || ph.label); headColor = "var(--gold)"; }
+  }
+
+  // Fuel — calories & protein still to go today (burn adds room back)
+  if (tg.kcal){
+    const tot = dayTotals(day);
+    const burn = (typeof todayBurn === "function") ? todayBurn() : 0;
+    const remain = Math.round(tg.kcal + burn - tot.kcal);
+    const pLeft = tg.protein ? Math.max(0, Math.round(tg.protein - tot.p)) : null;
+    let fuel;
+    if (tot.kcal === 0) fuel = `<b>${n0(tg.kcal)}</b> ${tr("kcal to fuel your day")}${pLeft != null ? ` · ${pLeft}g ${tr("protein")}` : ""}`;
+    else if (remain >= 0) fuel = `<b>${n0(remain)}</b> ${tr("kcal left")}${pLeft ? ` · <b>${pLeft}g</b> ${tr("protein to go")}` : ""}`;
+    else fuel = `<b>${n0(-remain)}</b> ${tr("kcal over target")}${pLeft ? ` · ${pLeft}g ${tr("protein to go")}` : ""}`;
+    lines.push({icon: "flame", html: fuel});
+    if (!head) head = tot.kcal === 0 ? tr("Ready when you are") : remain >= 0 ? tr("On track today") : tr("Over target today");
+  }
+
+  // Hydration — from mid-morning on, or once any water is logged
+  const glasses = S.water[day] || 0, goalGl = Math.max(1, Math.ceil((S.settings.waterGoal || 2500) / 250));
+  if (glasses || hour >= 11){
+    const left = Math.max(0, goalGl - glasses);
+    lines.push({icon: "droplet", html: left > 0 ? `${tr("Water")} ${glasses}/${goalGl} · <b>${left}</b> ${tr("to go")}` : `${tr("Water goal hit")} ✓`});
+  }
+
+  if (!lines.length) return "";   // nothing meaningful to synthesise yet
+  if (!head) head = tr("Let's make today count");
+
+  // Contextual next steps — avoid duplicating the reminder nudges above
+  const acts = [];
+  if (!ry && hour < 15) acts.push(`<button class="tb-act" onclick="M.goTrain('ready')">${ic("activity", 14)} ${tr("Morning check-in")}</button>`);
+  if (cyc && !cyc.overdue) acts.push(`<button class="tb-act" onclick="M.goHealth('cycle')">${ic("target", 14)} ${tr("Cycle & phase")}</button>`);
+  acts.push(`<button class="tb-act" onclick="M.dailyBrief()">${ic("sun", 14)} ${tr("Full brief")}</button>`);
+
+  return `<div class="today-brief">
+    <div class="tb-head"><span class="tb-dot" style="background:${headColor}"></span>${head}</div>
+    <div class="tb-lines">${lines.map(l => `<div class="tb-line">${ic(l.icon, 15)}<span>${l.html}</span></div>`).join("")}</div>
+    <div class="tb-acts">${acts.join("")}</div>
+  </div>`;
+}
 function todayOverviewHTML(){
   const dash = homeDashHTML();
   return `
+    ${todayBriefHTML()}
     ${dash || `<div class="today-empty">${ic("target", 18)}<div><b>${t("Your day starts here.")}</b><div class="muted" style="margin-top:3px">${t("Log something with the + button, pick an area above, or ask MIRA anything.")}</div></div></div>`}
     ${homeTilesHTML()}
     ${(typeof achievementsHTML === "function") ? achievementsHTML() : ""}
