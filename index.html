@@ -962,6 +962,10 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
 .rep-h{display:flex;align-items:center;gap:8px;font-weight:700;font-size:13px;letter-spacing:.02em;color:var(--txt);margin:0 2px 11px}
 .rep-h svg{color:var(--acc)}
 .rep-h-sub{margin-inline-start:auto;font-size:11px;font-weight:600;color:var(--txt3);text-transform:uppercase;letter-spacing:.05em}
+.nw-phase{font-size:15px;font-weight:700;color:var(--acc);margin:0 2px 8px}
+.nw-line{display:flex;align-items:flex-start;gap:8px;font-size:13px;line-height:1.45;color:var(--txt2);margin:6px 2px}
+.nw-line svg{flex:0 0 auto;margin-top:2px;color:var(--txt3)}
+.nw-line b{color:var(--txt)}
 /* target scorecard rows */
 .tg-row{display:flex;gap:12px;align-items:flex-start;padding:13px 14px;background:var(--card);border:1px solid var(--line2);border-radius:14px;margin-bottom:8px}
 .tg-row.empty{opacity:.62}
@@ -1715,7 +1719,7 @@ html[data-setpage="privacy"] .set-page[data-page="privacy"]{display:block}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.218";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.219";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -2727,6 +2731,11 @@ const TR = {
     "One tap logs it to the current meal — adjust it anytime.": "نقرة واحدة تسجّله في وجبة الوقت الحالي — عدّله متى شئت.",
     "Logged": "تم التسجيل",
     "Removed": "تم الحذف",
+    "The week ahead": "الأسبوع القادم",
+    "cycle outlook": "توقّعات الدورة",
+    "Period likely around": "الدورة متوقّعة نحو",
+    "A phase estimate from your average cycle — general guidance, not medical advice.": "تقدير للطور من متوسّط دورتك — إرشاد عام وليس نصيحة طبية.",
+    "Your week in review is ready — see how your last 7 days went.": "مراجعة أسبوعك جاهزة — شاهدي كيف مرّت أيامك الـ7 الأخيرة.",
     "items detected": "عناصر تم اكتشافها",
     "need a fix": "تحتاج تعديلًا",
     "Adjust or drop anything below first — or log each one on its own.": "عدّل أو احذف أي عنصر بالأسفل أولًا — أو سجّل كلًّا على حدة.",
@@ -4251,6 +4260,14 @@ function homeNudgesHTML(){
   if (glasses < goalGl && hour >= 15){ const left = goalGl - glasses; n.push({id: "water", icon: "droplet", t: `${left} more glass${left === 1 ? "" : "es"} to reach your water goal today.`, go: "M.goTab('food')"}); }
   const foods = (typeof dayFoods === "function") ? dayFoods(t) : [];
   if (!foods.length && hour >= 12) n.push({id: "food", icon: "plus", t: "Nothing in your food diary yet today.", go: "M.qa('food')"});
+  // End-of-week prompt to revisit the weekly review — the "reason to return".
+  // GCC week ends Thu, so the weekend (Fri/Sat) and a fresh Sunday are natural
+  // reflection points. Only when there's a scored week to look back on.
+  const dow = new Date().getDay();   // 0 Sun … 6 Sat
+  if (dow === 5 || dow === 6 || dow === 0){
+    const perf = (typeof weekPerf === "function") ? weekPerf() : null;
+    if (perf && perf.score != null) n.unshift({id: "review", icon: "chart", t: "Your week in review is ready — see how your last 7 days went.", go: "M.openReview()"});
+  }
   const age = (typeof backupAgeDays === "function") ? backupAgeDays() : null;
   const hasData = (S.foods.length + ((S.convs || []).length)) > 3;
   if (hasData && (age === null || age >= 14)) n.push({id: "backup", icon: "database", t: age === null ? "Back up your data so nothing is lost." : `It's been ${age} days since your last backup.`, go: "M.goBackup()"});
@@ -4553,6 +4570,7 @@ function weeklyReviewHTML(){
     ${fitSec}
     ${winWatch}
     ${otherSec}
+    ${(typeof nextWeekOutlookHTML === "function") ? nextWeekOutlookHTML() : ""}
     <button class="btn wr-ai" onclick="M.genReview()">${ic("chat", 17)} ${tr("Ask MIRA to explain my week")}</button>
     <div class="wr-note" style="margin-top:12px">${ic("check", 13)} ${tr("Every number is from what you actually logged. Blank rows mean nothing was recorded — not zero progress.")}</div>`;
 }
@@ -9936,6 +9954,43 @@ function cycleStats(){
   const overdue = day > avgCycle + 2;
   const fertile = day >= ovDay - 3 && day <= ovDay + 1;
   return {starts, avgCycle, periodLen, last, day, phase, nextDate, daysUntil, ovDay, fertile, overdue, diffs};
+}
+// Predict the cycle phase for a future (or past) date, wrapping into the next
+// predicted cycle when the date runs past the expected length. An estimate
+// from the user's average cycle — used for the "week ahead" outlook.
+function cyclePhaseForDate(dateStr){
+  const st = cycleStats(); if (!st) return null;
+  let day = hcDays(st.last, dateStr) + 1; if (day < 1) return null;
+  day = ((day - 1) % st.avgCycle) + 1;   // wrap into the current predicted cycle
+  const od = st.ovDay;
+  const phase = day <= st.periodLen ? "menstrual" : day < od - 1 ? "follicular" : day <= od + 1 ? "ovulation" : "luteal";
+  return {day, phase};
+}
+// A forward look for the weekly review: the cycle phase(s) across the next 7
+// days, the training/nutrition pointer for the dominant phase, and whether a
+// period is predicted in that window. Empty when the user isn't tracking.
+function nextWeekOutlookHTML(){
+  const st = cycleStats(); if (!st) return "";
+  const seq = [], counts = {};
+  for (let i = 1; i <= 7; i++){
+    const r = cyclePhaseForDate(hcAddDays(todayStr(), i)); if (!r) continue;
+    if (seq[seq.length - 1] !== r.phase) seq.push(r.phase);
+    counts[r.phase] = (counts[r.phase] || 0) + 1;
+  }
+  if (!seq.length) return "";
+  const primary = Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0];
+  const ph = CYCLE_PHASES[primary];
+  const label = seq.map(p => tr(CYCLE_PHASES[p].label)).join(" → ");
+  const du = st.overdue ? null : hcDays(todayStr(), st.nextDate);
+  const periodLine = (du != null && du >= 1 && du <= 7)
+    ? `<div class="nw-line">${ic("target", 13)}<span>${tr("Period likely around")} <b>${fmtDate(st.nextDate)}</b>.</span></div>` : "";
+  return `<div class="rep-sec"><div class="rep-h">${ic("target", 15)} ${tr("The week ahead")}<span class="rep-h-sub">${tr("cycle outlook")}</span></div>
+    <div class="nw-phase"><b>${label}</b></div>
+    ${periodLine}
+    <div class="nw-line">${ic("flame", 13)}<span><b>${tr("Training")}:</b> ${ph.train}</span></div>
+    <div class="nw-line">${ic("food", 13)}<span><b>${tr("Nutrition")}:</b> ${ph.food}</span></div>
+    <div class="tiny" style="margin-top:8px;color:var(--txt3)">${ic("alert", 12)} ${tr("A phase estimate from your average cycle — general guidance, not medical advice.")}</div>
+  </div>`;
 }
 function healthCycleHTML(){
   const cy = S.cycle || {starts: []}, st = cycleStats();
