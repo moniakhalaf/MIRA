@@ -1304,6 +1304,12 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
 .portion-adj .pa-unit{color:var(--txt2);font-size:13px;min-width:20px}
 .portion-adj .pa-hint{margin-top:7px;color:var(--txt3);line-height:1.5}
 .review-item{background:var(--bg2);border:1px solid var(--line2);border-radius:12px;padding:12px;margin-bottom:10px}
+.rv-plate{background:linear-gradient(150deg,var(--acc-soft),transparent 78%);border:1px solid var(--acc);border-radius:12px;padding:12px;margin-bottom:12px}
+.rv-plate .rvp-top{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.rv-plate .rvp-top b{font-size:14.5px}
+.rv-plate .rvp-tot{font-size:12.5px;font-weight:700;color:var(--acc)}
+.rv-plate .rvp-all{width:100%;margin-top:10px}
+.rv-plate .rvp-hint{margin-top:8px;color:var(--txt3)}
 .rv-warn{display:flex;gap:8px;align-items:flex-start;background:color-mix(in srgb,var(--amber) 13%,transparent);border:1px solid color-mix(in srgb,var(--amber) 40%,transparent);border-radius:10px;padding:9px 11px;margin-bottom:9px;font-size:12px;line-height:1.5;color:var(--txt)}
 .rv-warn svg{flex:0 0 auto;color:var(--amber);margin-top:1px}
 .rv-warn b{color:var(--amber)}
@@ -1709,7 +1715,7 @@ html[data-setpage="privacy"] .set-page[data-page="privacy"]{display:block}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.217";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.218";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -2721,6 +2727,9 @@ const TR = {
     "One tap logs it to the current meal — adjust it anytime.": "نقرة واحدة تسجّله في وجبة الوقت الحالي — عدّله متى شئت.",
     "Logged": "تم التسجيل",
     "Removed": "تم الحذف",
+    "items detected": "عناصر تم اكتشافها",
+    "need a fix": "تحتاج تعديلًا",
+    "Adjust or drop anything below first — or log each one on its own.": "عدّل أو احذف أي عنصر بالأسفل أولًا — أو سجّل كلًّا على حدة.",
     "Menstrual phase — be kind to yourself": "طور الحيض — كوني لطيفة مع نفسك",
     "Follicular phase — energy is rising": "الطور الجُريبي — الطاقة في ارتفاع",
     "Ovulation — peak power": "الإباضة — ذروة القوة",
@@ -7259,9 +7268,16 @@ function reviewHTML(){
       it._origP100 = itemPer100(it);
     }
   });
+  const multi = reviewItems.length >= 2;
+  const sum = reviewItems.reduce((a, it) => ({k: a.k + num(it.kcal), p: a.p + num(it.p), c: a.c + num(it.c), f: a.f + num(it.f)}), {k: 0, p: 0, c: 0, f: 0});
   return `<div style="margin-top:14px">
     <b style="font-size:14px">Review before saving</b>
     <div class="tiny" style="margin-bottom:8px">MIRA never saves extracted or looked-up values without your review.</div>
+    ${multi ? `<div class="rv-plate">
+      <div class="rvp-top"><b>${reviewItems.length} ${tr("items detected")}</b><span class="rvp-tot">${n0(sum.k)} kcal · ${n1(sum.p)}P · ${n1(sum.c)}C · ${n1(sum.f)}F</span></div>
+      <button class="btn rvp-all" onclick="M.reviewAcceptAll()">${ic("check", 15)} ${tr("Log all")} ${reviewItems.length} ${tr("items")}</button>
+      <div class="tiny rvp-hint">${tr("Adjust or drop anything below first — or log each one on its own.")}</div>
+    </div>` : ""}
     ${reviewItems.map((it, i) => {
       const s = sanity(it);
       return `<div class="review-item">
@@ -8670,7 +8686,7 @@ async function analyzeFoodImage(file){
         : {type: "image", source: {type: "base64", media_type: file.media_type, data: file.data}};
       const txt = await llmJsonCall(`You are MIRA's food photo analyst. The image is ONE of these — detect which and act accordingly:
 1) A PRINTED NUTRITION LABEL: use its values EXACTLY (conf "official"). The macros MUST correspond to "basis" of "unit": if the label gives values per reference amount, set "basis" to that number and "unit" to g/ml/serving/piece and put the per-basis macros in kcal/p/c/f (per 100 ml → basis 100, unit "ml"). If the package's total net quantity is printed (a 320 ml can, a 200 g bag), set "pkg" to that number in the SAME unit. Never guess a printed value you cannot read.
-2) A PHOTO OF ACTUAL FOOD (a plate, dish, snack, drink, meal): identify each food you can see — you know cuisines worldwide, including Gulf/Khaleeji (machboos, harees, luqaimat…), Levantine, Egyptian, pan-Arab and all international foods. Estimate the visible portion size from visual cues (plate/bowl size, cutlery, hand, packaging). For a mixed plate, list each DISTINCT component as its own item (e.g. rice, grilled chicken, salad) so the user can adjust or drop parts. BUT when several pieces of the SAME food are shown (e.g. 6 identical mini donuts, 4 identical kebabs, a handful of dates), return them as ONE single item — put the count in "amount" (e.g. "6 pieces") and give the macros for the WHOLE quantity together. Never output the same food as multiple separate entries. Base macros on standard food-composition data (USDA and regional tables) for the estimated portion — conf "estimate", and state the identified dish and assumed portion in "note". Cooking method matters (grilled vs fried). Estimating from a photo is expected and welcome — do it for any recognizable food; only skip an item you genuinely cannot identify.
+2) A PHOTO OF ACTUAL FOOD (a plate, dish, snack, drink, meal): scan the ENTIRE image and account for EVERY distinct food and drink you can see — do not stop at the most prominent item. You know cuisines worldwide, including Gulf/Khaleeji (machboos, harees, luqaimat…), Levantine, Egyptian, pan-Arab and all international foods. Estimate the visible portion size from visual cues (plate/bowl size, cutlery, hand, packaging). For a mixed plate or a table with several dishes, list each DISTINCT component as its own item (e.g. rice, grilled chicken, salad, the side of hummus, the glass of juice) so the user can adjust or drop parts — return every component you can identify, not a single combined entry. BUT when several pieces of the SAME food are shown (e.g. 6 identical mini donuts, 4 identical kebabs, a handful of dates), return them as ONE single item — put the count in "amount" (e.g. "6 pieces") and give the macros for the WHOLE quantity together. Never output the same food as multiple separate entries. Base macros on standard food-composition data (USDA and regional tables) for the estimated portion — conf "estimate", and state the identified dish and assumed portion in "note". Cooking method matters (grilled vs fried). Estimating from a photo is expected and welcome — do it for any recognizable food; only skip an item you genuinely cannot identify.
 3) A MENU, RECEIPT OR APP SCREENSHOT listing foods: extract the items with estimated macros per typical serving (conf "estimate").
 Reply with ONLY a JSON array: [{"name":str,"amount":str,"kcal":num,"p":num,"c":num,"f":num,"conf":"official"|"estimate","note":str,"basis":num,"unit":str,"pkg":num,"grams":num}]. Omit basis/unit/pkg for estimated food photos (they are for labels). For an ESTIMATED food photo, ALSO set "grams" to your best estimate of that portion's total edible weight in grams — kcal/p/c/f stay the totals for that weight — so the user can fine-tune by weight; omit grams for menus/receipts where weight is unknown. For ESTIMATED items, energy MUST be internally consistent: verify kcal ≈ 4·p + 4·c + 9·f and correct the macros if it does not hold within ~10% (labels are transcribed exactly and are exempt).${replyLangNote()}`,
         [block, {type: "text", text: "Read this image. If it's a nutrition label, extract it exactly with the per-amount basis and package total. If it's a photo of actual food, identify the dishes and estimate portions and macros."}],
@@ -14212,6 +14228,28 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
     // clear the add-food form too, so the looked-up name/amount don't linger
     Object.assign(foodForm, {name: "", amount: "", kcal: "", p: "", c: "", f: "", conf: "user", scOpen: false, portion: null, portG: ""});
     render();
+  },
+  // Log every reviewed item at once — the "whole plate" flow. Items that fail a
+  // sanity check are kept back for a fix; everything valid is logged and learned.
+  reviewAcceptAll(){
+    if (!Array.isArray(reviewItems) || !reviewItems.length) return;
+    const items = reviewItems.slice();
+    const bad = [];
+    let logged = 0;
+    items.forEach(it => {
+      if (sanity(it).errors.length){ bad.push(it); return; }
+      logFood(it);
+      if (it.conf === "community" && it.communityId) communityUse(it.communityId);
+      learnFromReview(it);
+      logged++;
+    });
+    reviewItems = bad.length ? bad : null;
+    Object.assign(foodForm, {name: "", amount: "", kcal: "", p: "", c: "", f: "", conf: "user", scOpen: false, portion: null, portG: ""});
+    render();
+    if (logged) buzz();
+    toast(bad.length
+      ? `${tr("Logged")} ${logged} · ${bad.length} ${tr("need a fix")}`
+      : `${tr("Logged")} ${logged} ${logged === 1 ? tr("item") : tr("items")} ✓`);
   },
   // Save a reviewed item (from a photo, label, scan or search) to the prep shelf
   // instead of logging it — so a photographed meal can be prepped for later.
