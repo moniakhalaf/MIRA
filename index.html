@@ -422,6 +422,21 @@ body.kb .fab{display:none}
 .onb-nav .onb-back{flex:0 0 auto;width:auto;min-width:104px}
 .onb-nav .onb-next{flex:1 1 auto;width:auto}
 @media(prefers-reduced-motion:reduce){.onb-step{animation:none}}
+.onb-welcome{padding:6px 4px}
+.onb-prop{display:flex;align-items:flex-start;gap:13px;padding:12px 12px}
+.onb-prop + .onb-prop{border-top:1px solid var(--line2)}
+.onb-prop .op-ic{flex:0 0 auto;width:38px;height:38px;display:flex;align-items:center;justify-content:center;border-radius:11px;background:var(--acc-soft);color:var(--acc)}
+.onb-prop .op-tx{display:flex;flex-direction:column;gap:3px;min-width:0}
+.onb-prop .op-tx b{font-size:14.5px;color:var(--txt)}
+.onb-prop .op-tx span{font-size:12.5px;color:var(--txt2);line-height:1.42}
+.onb-note{display:flex;align-items:flex-start;gap:8px;margin:8px 8px 4px;padding:11px 12px;border-radius:11px;background:var(--gold-soft);font-size:12px;color:var(--txt2);line-height:1.45}
+.onb-note svg{flex:0 0 auto;margin-top:1px;color:var(--gold)}
+.onb-key-steps{margin-bottom:14px}
+.onb-key-step{display:flex;align-items:flex-start;gap:11px;padding:9px 2px;font-size:13.5px;color:var(--txt);line-height:1.45}
+.onb-key-step + .onb-key-step{border-top:1px solid var(--line2)}
+.onb-key-step .oks-n{flex:0 0 auto;width:24px;height:24px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:var(--acc);color:#fff;font-size:13px;font-weight:700}
+.onb-key-step a{color:var(--acc);font-weight:600}
+.onb-skip{width:100%;margin-top:12px;background:none;border:none;color:var(--txt3);font-size:12.5px;font-weight:600;padding:8px;text-decoration:underline}
 .field{margin-bottom:16px}
 .field label{display:block;font-size:13px;font-weight:600;color:var(--txt2);margin-bottom:6px;letter-spacing:.02em}
 .seg{display:flex;gap:8px;flex-wrap:wrap}
@@ -1719,7 +1734,7 @@ html[data-setpage="privacy"] .set-page[data-page="privacy"]{display:block}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.219";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.220";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -5337,14 +5352,23 @@ function signupHTML(){
 const onb = {step: 0, name: "", profession: "", goal: "", style: "balanced", depth: "balanced", lang: "match", key: "", domSel: new Set(["work","health","fitness","life"]), custom: []};
 function onbHTML(){
   const segBtn = (group, val, label) => `<button class="${onb[group] === val ? "on" : ""}" onclick="M.onbSeg('${group}','${val}')">${label}</button>`;
-  const STEPS = 4;
+  const STEPS = 5;
   const step = Math.max(0, Math.min(STEPS - 1, onb.step || 0));
   const dots = `<div class="onb-dots">${Array.from({length: STEPS}, (_, i) => `<span class="onb-dot ${i === step ? "on" : ""} ${i < step ? "done" : ""}"></span>`).join("")}</div>`;
   const head = (t, s) => `<div class="onb-head"><div class="onb-t">${t}</div>${s ? `<div class="onb-s">${s}</div>` : ""}</div>`;
 
   let body = "";
   if (step === 0){
-    body = `${head("Welcome to MIRA", "Let's set up your assistant — this takes a minute.")}
+    const prop = (icon, t, s) => `<div class="onb-prop"><span class="op-ic">${ic(icon, 20)}</span><span class="op-tx"><b>${t}</b><span>${s}</span></span></div>`;
+    body = `${head("Meet MIRA", "Your private assistant for nutrition, training, health and life — in one place.")}
+      <div class="card onb-welcome">
+        ${prop("lock", "Private by design", "Everything you log stays on this device. No account, no server — your data is never sent to us.")}
+        ${prop("check", "Honest by default", "Every fact is checked against trusted sources, or clearly labelled an estimate. No made-up numbers.")}
+        ${prop("target", "Built around you", "Calories, macros, workouts, your cycle, recovery and more — all tuned to your own goals.")}
+        <div class="onb-note">${ic("key", 13)} <span>MIRA runs on your own Anthropic API key, billed to you. We'll help you add it in a moment — or you can skip and add it later.</span></div>
+      </div>`;
+  } else if (step === 1){
+    body = `${head("Welcome to MIRA", "First, a little about you — all optional except your name.")}
       <div class="card">
         <div class="field"><label>Your name</label>
           <input id="onbName" value="${esc(onb.name)}" placeholder="How should MIRA address you?" oninput="onb.name=this.value"></div>
@@ -5353,7 +5377,7 @@ function onbHTML(){
         <div class="field"><label>Your main goal right now <span class="opt">optional</span></label>
           <input id="onbGoal" value="${esc(onb.goal)}" placeholder="e.g. Lose 4 kg, ship my thesis, build strength" dir="auto" oninput="onb.goal=this.value"></div>
       </div>`;
-  } else if (step === 1){
+  } else if (step === 2){
     body = `${head("How should MIRA talk to you?", "You can change these anytime in Settings.")}
       <div class="card">
         <div class="field"><label>Coaching style</label>
@@ -5366,7 +5390,7 @@ function onbHTML(){
             ${LANGUAGES.map(([code, en, native]) => `<option value="${code}" ${onb.lang === code ? "selected" : ""}>${native}${native === en ? "" : " — " + en}</option>`).join("")}
           </select></div>
       </div>`;
-  } else if (step === 2){
+  } else if (step === 3){
     body = `${head("Your areas", "Pick the specialist modes you want — add custom ones now or later.")}
       <div class="card">
         <div class="seg" style="flex-wrap:wrap">
@@ -5376,10 +5400,17 @@ function onbHTML(){
         <button class="btn sm sec" style="margin-top:10px" onclick="M.onbCustomAdd()">${ic("plus", 15)} Add a custom domain</button>
       </div>`;
   } else {
-    body = `${head("Connect your key", "MIRA runs on your own Anthropic key.")}
+    const stepRow = (n, html) => `<div class="onb-key-step"><span class="oks-n">${n}</span><span class="oks-tx">${html}</span></div>`;
+    body = `${head("Connect your key", "One quick setup and MIRA is ready. Takes about a minute.")}
       <div class="card">
-        <div class="muted" style="margin-bottom:10px">Billed to your own account, stored only in this browser and sent only to api.anthropic.com. Get one at <a href="https://console.anthropic.com" target="_blank" rel="noopener">console.anthropic.com</a>. You can also add it later in Settings.</div>
+        <div class="onb-key-steps">
+          ${stepRow(1, `Open <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a> and sign in (or create a free account).`)}
+          ${stepRow(2, `Go to <b>API keys</b> → <b>Create key</b>, give it a name like "MIRA".`)}
+          ${stepRow(3, `Copy the key (it starts with <b>sk-ant-</b>) and paste it below.`)}
+        </div>
         <input id="onbKey" type="password" value="${esc(onb.key)}" placeholder="sk-ant-…" oninput="onb.key=this.value" autocomplete="off">
+        <div class="onb-note" style="margin-top:10px">${ic("lock", 13)} <span>Stored only in this browser and sent only to api.anthropic.com — never to us. Usage is billed to your own Anthropic account.</span></div>
+        <button class="onb-skip" onclick="M.onbDone()">Skip for now — I'll add it in Settings</button>
       </div>`;
   }
 
@@ -13780,7 +13811,7 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
   pin: pinPress,
   pinDel(){ R.pending = R.pending.slice(0, -1); render(); },
 
-  onbNext(){ onb.step = Math.min(3, (onb.step || 0) + 1); render(); const c = $(".content"); if (c) c.scrollTop = 0; },
+  onbNext(){ onb.step = Math.min(4, (onb.step || 0) + 1); render(); const c = $(".content"); if (c) c.scrollTop = 0; },
   onbPrev(){ onb.step = Math.max(0, (onb.step || 0) - 1); render(); const c = $(".content"); if (c) c.scrollTop = 0; },
   onbSeg(g, v){ onb[g] = v; render(); },
   onbDom(id){ onb.domSel.has(id) ? onb.domSel.delete(id) : onb.domSel.add(id); render(); },
