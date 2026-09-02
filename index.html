@@ -1280,6 +1280,17 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
 .meal-macros .mm-leg span{display:inline-flex;align-items:center;gap:5px}
 .meal-macros .mm-leg i{width:8px;height:8px;border-radius:2px;flex:0 0 auto}
 .meal-macros .mm-leg b{color:var(--txt);font-weight:700}
+.meal-macros .mm-cap{color:var(--txt3);font-size:10.5px;text-transform:uppercase;letter-spacing:.04em}
+.macro-cap{display:flex;align-items:flex-start;gap:6px;margin-top:10px;font-size:11.5px;line-height:1.45;color:var(--txt3)}
+.macro-cap svg{flex:0 0 auto;margin-top:1px}
+.hist-ctrl{margin:6px 2px 12px}
+.hist-h{display:flex;align-items:center;justify-content:space-between;gap:10px;font-weight:700;font-size:13.5px;color:var(--txt);margin-bottom:10px}
+.hist-h svg{color:var(--acc);vertical-align:-2px;margin-inline-end:5px}
+.hist-range-lbl{font-size:11.5px;font-weight:600;color:var(--txt3)}
+.hist-range{display:flex;gap:10px;margin-top:11px}
+.hist-range .field{flex:1;margin:0}
+.hist-empty{display:flex;align-items:center;gap:9px;padding:16px;border-radius:13px;background:var(--card);border:1px solid var(--line2);color:var(--txt2);font-size:13px;margin-bottom:12px}
+.hist-empty svg{color:var(--txt3)}
 .food-it .nm{font-size:14.5px;font-weight:500}
 .food-it .meta{font-size:12px;color:var(--txt2)}
 .food-it .del{margin-inline-start:auto;color:var(--txt3);font-size:17px;min-width:40px;min-height:40px;display:flex;align-items:center;justify-content:center;border-radius:9px}
@@ -1741,7 +1752,7 @@ html[data-setpage="privacy"] .set-page[data-page="privacy"]{display:block}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.221";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.222";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -2753,6 +2764,18 @@ const TR = {
     "One tap logs it to the current meal — adjust it anytime.": "نقرة واحدة تسجّله في وجبة الوقت الحالي — عدّله متى شئت.",
     "Logged": "تم التسجيل",
     "Removed": "تم الحذف",
+    "of calories": "من السعرات",
+    "Percentages show each macro's share of calories — fat carries 9 kcal/g vs 4 for protein and carbs, so it can lead even with fewer grams.": "النِّسب تُظهر حصّة كل عنصر من السعرات — الدهون 9 سعرات/غرام مقابل 4 للبروتين والكربوهيدرات، لذا قد تتصدّر حتى بغرامات أقل.",
+    "Food history": "سجلّ الطعام",
+    "7 days": "7 أيام",
+    "30 days": "30 يومًا",
+    "This month": "هذا الشهر",
+    "Custom": "مخصّص",
+    "All": "الكل",
+    "All time": "كل الوقت",
+    "From": "من",
+    "To": "إلى",
+    "No logs in this range.": "لا سجلّات في هذا النطاق.",
     "The week ahead": "الأسبوع القادم",
     "cycle outlook": "توقّعات الدورة",
     "Period likely around": "الدورة متوقّعة نحو",
@@ -6634,6 +6657,7 @@ function macroBreakdownHTML(tot, tg){
       ${macroDonutSVG(macs.map(m => ({v: m[2], color: m[3]})), n0(num(tot.kcal)), "kcal")}
       <div class="budget-legend">${legend}</div>
     </div>
+    <div class="macro-cap">${ic("info", 12)} ${tr("Percentages show each macro's share of calories — fat carries 9 kcal/g vs 4 for protein and carbs, so it can lead even with fewer grams.")}</div>
     ${micros.length ? `<div class="macro-micros">${micros.map(([l, v, goal, unit, limit]) => { const pct = goal > 0 ? Math.round(v / goal * 100) : null, over = limit && goal > 0 && v > goal;
       return `<div class="mm-row"><span>${tr(l)}</span><span class="mm-v ${over ? "over" : ""}">${unit === "mg" ? n0(v) : n1(v)}${unit}${goal > 0 ? ` / ${n0(goal)}${unit}` : ""}${pct != null ? ` · ${pct}%` : ""}</span></div>`; }).join("")}</div>` : ""}
   </div>`;
@@ -6641,13 +6665,45 @@ function macroBreakdownHTML(tot, tg){
 // Per-meal macro split — the calorie share of protein/carbs/fat for a whole
 // meal (all its items combined), shown as a slim stacked bar under the meal
 // header. Same colours as the day breakdown, so lunch (say) reads at a glance.
+// Resolve the active food-history window from R.foodRange. Default: last 7 days.
+function foodHistRange(){
+  const today = todayStr();
+  const back = n => new Date(Date.now() - n * 864e5).toLocaleDateString("en-CA");
+  const r = R.foodRange || {};
+  if (r.mode === "custom"){
+    let from = r.from || back(6), to = r.to || today;
+    if (from > to){ const t = from; from = to; to = t; }
+    return {mode: "custom", from, to};
+  }
+  if (r.mode === "30") return {mode: "30", from: back(29), to: today};
+  if (r.mode === "month"){ const p = today.split("-"); return {mode: "month", from: `${p[0]}-${p[1]}-01`, to: today}; }
+  if (r.mode === "all") return {mode: "all", from: "0000-01-01", to: today};
+  return {mode: "7", from: back(6), to: today};
+}
+// A modern range control: preset chips + a custom From/To picker for older logs.
+function foodHistControlHTML(range){
+  const today = todayStr();
+  const r = R.foodRange || {};
+  const chip = (mode, label) => `<button class="rc-chip ${range.mode === mode ? "on" : ""}" onclick="M.foodRangeMode('${mode}')">${tr(label)}</button>`;
+  const label = range.mode === "all" ? tr("All time") : `${fmtDate(range.from)} – ${fmtDate(range.to)}`;
+  return `<div class="hist-ctrl">
+    <div class="hist-h"><span>${ic("calendar", 15)} ${tr("Food history")}</span><span class="hist-range-lbl">${label}</span></div>
+    <div class="rc-filters">
+      ${chip("7", "7 days")}${chip("30", "30 days")}${chip("month", "This month")}${chip("custom", "Custom")}${chip("all", "All")}
+    </div>
+    ${range.mode === "custom" ? `<div class="hist-range">
+      <div class="field"><label>${tr("From")}</label><input type="date" max="${today}" value="${esc(r.from || range.from)}" onchange="M.foodRangeFrom(this.value)"></div>
+      <div class="field"><label>${tr("To")}</label><input type="date" max="${today}" value="${esc(r.to || range.to)}" onchange="M.foodRangeTo(this.value)"></div>
+    </div>` : ""}
+  </div>`;
+}
 function mealMacroSplitHTML(mt){
   const pk = num(mt.p) * 4, ck = num(mt.c) * 4, fk = num(mt.f) * 9, sum = pk + ck + fk;
   if (sum <= 0) return "";
   const pp = Math.round(pk / sum * 100), pc = Math.round(ck / sum * 100), pf = Math.max(0, 100 - pp - pc);
   return `<div class="meal-macros">
     <div class="mm-bar" aria-hidden="true"><span style="width:${pk / sum * 100}%;background:#4CC4E0"></span><span style="width:${ck / sum * 100}%;background:#F5B851"></span><span style="width:${fk / sum * 100}%;background:#A78BFA"></span></div>
-    <div class="mm-leg"><span><i style="background:#4CC4E0"></i>${tr("Protein")} <b>${pp}%</b></span><span><i style="background:#F5B851"></i>${tr("Carbs")} <b>${pc}%</b></span><span><i style="background:#A78BFA"></i>${tr("Fat")} <b>${pf}%</b></span></div>
+    <div class="mm-leg"><span><i style="background:#4CC4E0"></i>${tr("Protein")} <b>${pp}%</b></span><span><i style="background:#F5B851"></i>${tr("Carbs")} <b>${pc}%</b></span><span><i style="background:#A78BFA"></i>${tr("Fat")} <b>${pf}%</b></span><span class="mm-cap">${tr("of calories")}</span></div>
   </div>`;
 }
 // Eat-back exercise calories (MyFitnessPal's net-calories model) — but honest:
@@ -6803,8 +6859,13 @@ function foodHTML(){
   const litres = glasses * 0.25;
   const wPct = Math.min(100, (glasses * 250 / S.settings.waterGoal) * 100);
 
-  const dates = [...new Set(S.foods.map(f => f.date))].sort().reverse();
-  if (!dates.includes(today)) dates.unshift(today);
+  // Day history: last 7 days by default; a range picker reveals older logs.
+  const allDates = [...new Set(S.foods.map(f => f.date))].sort().reverse();
+  if (!allDates.includes(today)) allDates.unshift(today);
+  const back6 = new Date(Date.now() - 6 * 864e5).toLocaleDateString("en-CA");
+  const hasOlder = allDates.some(d => d < back6);
+  const range = foodHistRange();
+  const dates = allDates.filter(d => d >= range.from && d <= range.to);
 
   const burned = todayBurn();
   const added = Math.round(burned * eatBackFrac());
@@ -6970,6 +7031,8 @@ function foodHTML(){
 
   ${insightsHTML()}
 
+  ${hasOlder ? foodHistControlHTML(range) : ""}
+  ${dates.length ? "" : `<div class="hist-empty">${ic("calendar", 16)} ${tr("No logs in this range.")}</div>`}
   ${dates.map(d => {
     const items = dayFoods(d);
     const dt = dayTotals(d);
@@ -14135,6 +14198,14 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
     const yst = new Date(Date.now() - 864e5).toLocaleDateString("en-CA");
     this.copyDayToToday(yst);
   },
+  foodRangeMode(mode){
+    const prev = foodHistRange();
+    R.foodRange = Object.assign({}, R.foodRange, {mode});
+    if (mode === "custom"){ if (!R.foodRange.from) R.foodRange.from = prev.from; if (!R.foodRange.to) R.foodRange.to = prev.to; }
+    render();
+  },
+  foodRangeFrom(v){ R.foodRange = Object.assign({}, R.foodRange, {mode: "custom", from: v}); render(); },
+  foodRangeTo(v){ R.foodRange = Object.assign({}, R.foodRange, {mode: "custom", to: v}); render(); },
   copyItemToToday(id){
     const f = S.foods.find(x => x.id === id); if (!f) return;
     const today = todayStr();
