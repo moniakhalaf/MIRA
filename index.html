@@ -1291,7 +1291,10 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
 .hist-range .field{flex:1;margin:0}
 .hist-empty{display:flex;align-items:center;gap:9px;padding:16px;border-radius:13px;background:var(--card);border:1px solid var(--line2);color:var(--txt2);font-size:13px;margin-bottom:12px}
 .hist-empty svg{color:var(--txt3)}
-.food-subtabs{position:sticky;top:0;z-index:5;margin:0 0 14px;padding:8px 0;background:var(--bg);backdrop-filter:saturate(1.4) blur(6px)}
+/* Sticky sub-tab bar: pinned flush to the very top and full-bleed across the
+   content's 12/14px padding, with an opaque background, so no sliver of the
+   scrolling cards shows above or beside it (iOS shows content in the padding). */
+.food-subtabs{position:sticky;top:-12px;z-index:20;margin:0 -14px 12px;padding:12px 14px 10px;background:var(--bg);border-bottom:1px solid var(--line)}
 .day-today{margin-bottom:14px}
 .food-it .nm{font-size:14.5px;font-weight:500}
 .food-it .meta{font-size:12px;color:var(--txt2)}
@@ -1754,7 +1757,7 @@ html[data-setpage="privacy"] .set-page[data-page="privacy"]{display:block}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.223";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.224";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
