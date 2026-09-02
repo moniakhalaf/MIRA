@@ -1273,6 +1273,13 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
 .meal-h .meal-copy:first-of-type{margin-inline-start:auto}
 .meal-h .meal-save:active,.meal-h .meal-copy:active{color:var(--acc);background:var(--acc-soft)}
 .meal-h .meal-save + .mh-sum,.meal-h .meal-copy + .mh-sum{margin-inline-start:9px}
+.meal-macros{padding:2px 14px 9px}
+.meal-macros .mm-bar{display:flex;height:6px;border-radius:4px;overflow:hidden;background:var(--line2)}
+.meal-macros .mm-bar span{display:block;height:100%}
+.meal-macros .mm-leg{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:6px;font-size:11.5px;color:var(--txt2)}
+.meal-macros .mm-leg span{display:inline-flex;align-items:center;gap:5px}
+.meal-macros .mm-leg i{width:8px;height:8px;border-radius:2px;flex:0 0 auto}
+.meal-macros .mm-leg b{color:var(--txt);font-weight:700}
 .food-it .nm{font-size:14.5px;font-weight:500}
 .food-it .meta{font-size:12px;color:var(--txt2)}
 .food-it .del{margin-inline-start:auto;color:var(--txt3);font-size:17px;min-width:40px;min-height:40px;display:flex;align-items:center;justify-content:center;border-radius:9px}
@@ -1734,7 +1741,7 @@ html[data-setpage="privacy"] .set-page[data-page="privacy"]{display:block}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.220";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.221";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -6631,6 +6638,18 @@ function macroBreakdownHTML(tot, tg){
       return `<div class="mm-row"><span>${tr(l)}</span><span class="mm-v ${over ? "over" : ""}">${unit === "mg" ? n0(v) : n1(v)}${unit}${goal > 0 ? ` / ${n0(goal)}${unit}` : ""}${pct != null ? ` · ${pct}%` : ""}</span></div>`; }).join("")}</div>` : ""}
   </div>`;
 }
+// Per-meal macro split — the calorie share of protein/carbs/fat for a whole
+// meal (all its items combined), shown as a slim stacked bar under the meal
+// header. Same colours as the day breakdown, so lunch (say) reads at a glance.
+function mealMacroSplitHTML(mt){
+  const pk = num(mt.p) * 4, ck = num(mt.c) * 4, fk = num(mt.f) * 9, sum = pk + ck + fk;
+  if (sum <= 0) return "";
+  const pp = Math.round(pk / sum * 100), pc = Math.round(ck / sum * 100), pf = Math.max(0, 100 - pp - pc);
+  return `<div class="meal-macros">
+    <div class="mm-bar" aria-hidden="true"><span style="width:${pk / sum * 100}%;background:#4CC4E0"></span><span style="width:${ck / sum * 100}%;background:#F5B851"></span><span style="width:${fk / sum * 100}%;background:#A78BFA"></span></div>
+    <div class="mm-leg"><span><i style="background:#4CC4E0"></i>${tr("Protein")} <b>${pp}%</b></span><span><i style="background:#F5B851"></i>${tr("Carbs")} <b>${pc}%</b></span><span><i style="background:#A78BFA"></i>${tr("Fat")} <b>${pf}%</b></span></div>
+  </div>`;
+}
 // Eat-back exercise calories (MyFitnessPal's net-calories model) — but honest:
 // a conservative burn estimate, and OFF by default so a weight-loss deficit
 // isn't quietly cancelled. The user opts in to add None / Half / All back.
@@ -6963,8 +6982,8 @@ function foodHTML(){
       ${open ? `<div class="day-items">${d !== todayStr() && items.length ? `<button class="day-copy" onclick="M.copyDayToToday('${d}')">${ic("copy", 14)} ${t("Copy this day to today")}</button>` : ""}${items.length ? FOOD_MEALS.map(([mk, ml]) => {
         const mi = items.filter(f => entryMeal(f) === mk).sort((a, b) => { const ta = entryTime(a), tb = entryTime(b); return ta < tb ? -1 : ta > tb ? 1 : (a.ts || 0) - (b.ts || 0); });
         if (!mi.length) return "";
-        const mt = mi.reduce((a, x) => ({k: a.k + num(x.kcal), p: a.p + num(x.p)}), {k: 0, p: 0});
-        return `<div class="meal-h"><span>${esc(t(ml))}</span>${mi.length > 1 ? `<button class="meal-save" aria-label="${t("Combine into a dish")}" title="${t("Combine into a dish & save as recipe")}" onclick="M.mealToDish('${d}','${mk}')">${ic("book", 13)}</button>` : ""}${d !== todayStr() ? `<button class="meal-copy" aria-label="${t("Copy to today")}" title="${t("Copy to today")}" onclick="M.copyMealToToday('${d}','${mk}')">${ic("copy", 13)}</button>` : ""}<span class="mh-sum">${n0(mt.k)} kcal · ${n1(mt.p)}P</span></div>${mi.map(foodItemHTML).join("")}`;
+        const mt = mi.reduce((a, x) => ({k: a.k + num(x.kcal), p: a.p + num(x.p), c: a.c + num(x.c), f: a.f + num(x.f)}), {k: 0, p: 0, c: 0, f: 0});
+        return `<div class="meal-h"><span>${esc(t(ml))}</span>${mi.length > 1 ? `<button class="meal-save" aria-label="${t("Combine into a dish")}" title="${t("Combine into a dish & save as recipe")}" onclick="M.mealToDish('${d}','${mk}')">${ic("book", 13)}</button>` : ""}${d !== todayStr() ? `<button class="meal-copy" aria-label="${t("Copy to today")}" title="${t("Copy to today")}" onclick="M.copyMealToToday('${d}','${mk}')">${ic("copy", 13)}</button>` : ""}<span class="mh-sum">${n0(mt.k)} kcal · ${n1(mt.p)}P · ${n1(mt.c)}C · ${n1(mt.f)}F</span></div>${mealMacroSplitHTML(mt)}${mi.map(foodItemHTML).join("")}`;
       }).join("") : `<div class="food-it"><span class="muted">${tr("Nothing logged.")}</span></div>`}</div>` : ""}
     </div>`;
   }).join("")}`;
