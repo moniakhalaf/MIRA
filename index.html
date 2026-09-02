@@ -1765,7 +1765,7 @@ html[data-setpage="privacy"] .set-page[data-page="privacy"]{display:block}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.226";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.227";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -7590,6 +7590,9 @@ function foodSaveDirect(){
   const s = sanity(it);
   if (s.errors.length){ toast(s.errors[0], 4200); return; }
   if (s.warnings.length) toast(s.warnings[0], 3600);
+  // Drop focus first so the re-render doesn't restore a stale value into the
+  // (now cleared) inputs — iOS otherwise keeps the last food's text in the field.
+  try { if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); } catch (e) {}
   const clearForm = {name: "", amount: "", time: "", meal: "", kcal: "", p: "", c: "", f: "", fiber: "", sugar: "", sodium: "", conf: "user", scOpen: false, micrOpen: false, portion: null, portG: ""};
   if (R.editFoodId){
     const f = S.foods.find(x => x.id === R.editFoodId);
@@ -14183,7 +14186,18 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
   },
   dayToggle(d){ R.openDays.has(d) ? R.openDays.delete(d) : R.openDays.add(d); render(); },
   ffName(v){ foodForm.name = v; R.acPickedName = null; acRender(v); },
-  foodMeal(m){ foodForm.meal = m; render(); },
+  foodMeal(m){
+    foodForm.meal = m;
+    // Update the highlight in place. A full re-render on each tap can drop the
+    // touch on mobile (keyboard/focus interplay) — which felt like the meal
+    // buttons "not responding" while editing. Toggling classes is instant.
+    const btns = document.querySelectorAll('#addFoodCard .seg button[onclick*="M.foodMeal("]');
+    if (btns.length){
+      btns.forEach(btnEl => { const mm = (btnEl.getAttribute("onclick") || "").match(/M\.foodMeal\('([^']+)'\)/); btnEl.classList.toggle("on", !!mm && mm[1] === m); });
+      return;
+    }
+    render();
+  },
   async finishSuggest(){
     if (!S.settings.apiKey){ toast("Add your API key in Settings first."); R.tab = "set"; render(); return; }
     const t = todayStr(); const tot = dayTotals(t); const tg = S.settings.targets || {};
@@ -14517,6 +14531,7 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
     reviewItems.splice(i, 1);
     if (!reviewItems.length) reviewItems = null;
     // clear the add-food form too, so the looked-up name/amount don't linger
+    try { if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); } catch (e) {}
     Object.assign(foodForm, {name: "", amount: "", kcal: "", p: "", c: "", f: "", conf: "user", scOpen: false, portion: null, portG: ""});
     render();
   },
@@ -14535,6 +14550,7 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
       logged++;
     });
     reviewItems = bad.length ? bad : null;
+    try { if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); } catch (e) {}
     Object.assign(foodForm, {name: "", amount: "", kcal: "", p: "", c: "", f: "", conf: "user", scOpen: false, portion: null, portG: ""});
     render();
     if (logged) buzz();
@@ -14560,6 +14576,7 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
     R.prepOpen = true;
     reviewItems.splice(i, 1);
     if (!reviewItems.length) reviewItems = null;
+    try { if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); } catch (e) {}
     Object.assign(foodForm, {name: "", amount: "", kcal: "", p: "", c: "", f: "", conf: "user", scOpen: false, portion: null, portG: ""});
     save(); render();
     toast(`Saved for later: ${entry.name} ✓`);
