@@ -1765,7 +1765,7 @@ html[data-setpage="privacy"] .set-page[data-page="privacy"]{display:block}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.227";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.228";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -14360,7 +14360,9 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
   },
   foodEdit(id){
     const f = S.foods.find(x => x.id === id); if (!f) return;
-    R.editFoodId = id; R.tab = "food"; R.homeCat = null;
+    // The edit form lives on the Log sub-tab — switch to it, otherwise tapping
+    // edit from the Today/History tabs would set state with no form on screen.
+    R.editFoodId = id; R.tab = "food"; R.foodTab = "log"; R.logFoodOpen = true; R.homeCat = null;
     // Set up the amount rescaler from the entry itself, so changing the amount
     // updates the macros (e.g. 150 g / 247 kcal → 200 g rescales everything).
     const pp = parsePortion(f.amount);
