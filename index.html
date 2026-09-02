@@ -1757,7 +1757,7 @@ html[data-setpage="privacy"] .set-page[data-page="privacy"]{display:block}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.224";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.225";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -4320,6 +4320,11 @@ function homeNudgesHTML(){
   if (dow === 5 || dow === 6 || dow === 0){
     const perf = (typeof weekPerf === "function") ? weekPerf() : null;
     if (perf && perf.score != null) n.unshift({id: "review", icon: "chart", t: "Your week in review is ready — see how your last 7 days went.", go: "M.openReview()"});
+  }
+  // Weekly macro check-in — the adaptive-targets prompt comes to you (MacroFactor-
+  // style): only when a week has passed and there's enough data to recompute.
+  if (typeof checkinDue === "function" && checkinDue() && typeof adaptiveTargets === "function" && adaptiveTargets()){
+    n.unshift({id: "recalc", icon: "trend", t: "Your weekly check-in is ready — refresh your targets from this week's data.", go: "M.goCheckin()"});
   }
   const age = (typeof backupAgeDays === "function") ? backupAgeDays() : null;
   const hasData = (S.foods.length + ((S.convs || []).length)) > 3;
@@ -7058,6 +7063,7 @@ function foodHTML(){
   ` : ""}
 
   ${ft === "today" ? `
+  ${(typeof checkinCardHTML === "function") ? checkinCardHTML() : ""}
   ${foodSummaryCardHTML()}
   ${exerciseCalHTML(burned, added)}
   ${macroBreakdownHTML(tot, tg)}
@@ -14232,6 +14238,7 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
   foodRangeFrom(v){ R.foodRange = Object.assign({}, R.foodRange, {mode: "custom", from: v}); render(); },
   foodRangeTo(v){ R.foodRange = Object.assign({}, R.foodRange, {mode: "custom", to: v}); render(); },
   foodTab(id){ R.foodTab = id; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
+  goCheckin(){ R.tab = "food"; R.foodTab = "today"; R.homeCat = null; R.sheet = null; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
   copyItemToToday(id){
     const f = S.foods.find(x => x.id === id); if (!f) return;
     const today = todayStr();
