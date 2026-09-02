@@ -1291,6 +1291,8 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
 .hist-range .field{flex:1;margin:0}
 .hist-empty{display:flex;align-items:center;gap:9px;padding:16px;border-radius:13px;background:var(--card);border:1px solid var(--line2);color:var(--txt2);font-size:13px;margin-bottom:12px}
 .hist-empty svg{color:var(--txt3)}
+.food-subtabs{position:sticky;top:0;z-index:5;margin:0 0 14px;padding:8px 0;background:var(--bg);backdrop-filter:saturate(1.4) blur(6px)}
+.day-today{margin-bottom:14px}
 .food-it .nm{font-size:14.5px;font-weight:500}
 .food-it .meta{font-size:12px;color:var(--txt2)}
 .food-it .del{margin-inline-start:auto;color:var(--txt3);font-size:17px;min-width:40px;min-height:40px;display:flex;align-items:center;justify-content:center;border-radius:9px}
@@ -1752,7 +1754,7 @@ html[data-setpage="privacy"] .set-page[data-page="privacy"]{display:block}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.222";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.223";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -2764,6 +2766,9 @@ const TR = {
     "One tap logs it to the current meal — adjust it anytime.": "نقرة واحدة تسجّله في وجبة الوقت الحالي — عدّله متى شئت.",
     "Logged": "تم التسجيل",
     "Removed": "تم الحذف",
+    "Log": "تسجيل",
+    "History": "السجل",
+    "No past days in this range.": "لا أيام سابقة في هذا النطاق.",
     "of calories": "من السعرات",
     "Percentages show each macro's share of calories — fat carries 9 kcal/g vs 4 for protein and carbs, so it can lead even with fewer grams.": "النِّسب تُظهر حصّة كل عنصر من السعرات — الدهون 9 سعرات/غرام مقابل 4 للبروتين والكربوهيدرات، لذا قد تتصدّر حتى بغرامات أقل.",
     "Food history": "سجلّ الطعام",
@@ -6850,30 +6855,14 @@ function quickLogHTML(){
     <div class="tiny ql-hint">${t("One tap logs it to the current meal — adjust it anytime.")}</div>
   </div>`;
 }
-function foodHTML(){
-  const today = todayStr();   // NB: keep this named `today` — the global t() is the translator
+// Today summary — macro bars + remaining. Self-contained so any food sub-tab can show it.
+function foodSummaryCardHTML(){
+  const today = todayStr();
   const tot = dayTotals(today);
   const tg = S.settings.targets;
-  const glasses = S.water[today] || 0;
-  const goalGl = Math.max(1, Math.ceil(S.settings.waterGoal / 250));
-  const litres = glasses * 0.25;
-  const wPct = Math.min(100, (glasses * 250 / S.settings.waterGoal) * 100);
-
-  // Day history: last 7 days by default; a range picker reveals older logs.
-  const allDates = [...new Set(S.foods.map(f => f.date))].sort().reverse();
-  if (!allDates.includes(today)) allDates.unshift(today);
-  const back6 = new Date(Date.now() - 6 * 864e5).toLocaleDateString("en-CA");
-  const hasOlder = allDates.some(d => d < back6);
-  const range = foodHistRange();
-  const dates = allDates.filter(d => d >= range.from && d <= range.to);
-
-  const burned = todayBurn();
-  const added = Math.round(burned * eatBackFrac());
+  const added = Math.round(todayBurn() * eatBackFrac());
   const adjKcal = num(tg.kcal) + added;
-
-  return `
-  <button class="cat-back" aria-label="Back to Home" onclick="M.backToHome('health')">${ic("back", 18)} ${t("Home")}</button>
-  <div class="card">
+  return `<div class="card">
     <h3>${ic("target", 16)} ${t("Today")} <span class="tiny" style="margin-inline-start:auto;font-weight:400">${new Date().toLocaleDateString(uiLang() || "en-GB",{day:"numeric",month:"long"})}</span></h3>
     <div class="bars">
       ${macroBar(t("Calories"), tot.kcal, adjKcal, "kcal", "var(--acc)")}
@@ -6884,28 +6873,64 @@ function foodHTML(){
     <div class="muted" style="margin-top:9px">${t("Remaining")}: <b>${n0(Math.max(0, adjKcal - tot.kcal))} kcal</b> · <b>${n1(Math.max(0, tg.protein - tot.p))} ${tr("g protein")}</b>${tg.carbs ? ` · ${n1(Math.max(0, tg.carbs - tot.c))} ${tr("g carbs")}` : ""}${tg.fat ? ` · ${n1(Math.max(0, tg.fat - tot.f))} ${tr("g fat")}` : ""}</div>
     ${added > 0 ? `<div class="tiny" style="margin-top:5px;color:var(--txt2)">${ic("flame", 11)} ${tr("Includes")} +${n0(added)} ${tr("kcal from exercise")}</div>` : ""}
     ${microStripHTML(tot)}
-  </div>
-
-  ${quickLogHTML()}
-
-  ${exerciseCalHTML(burned, added)}
-
-  ${macroBreakdownHTML(tot, tg)}
-
-  ${closeDayHTML()}
-
-  ${foodCoachHTML(today, tot, tg)}
-
-  ${calorieBankHTML()}
-
-  ${finishDayCardHTML()}
-
-  <div class="card">
+  </div>`;
+}
+function hydrationCardHTML(){
+  const today = todayStr();
+  const glasses = S.water[today] || 0;
+  const goalGl = Math.max(1, Math.ceil(S.settings.waterGoal / 250));
+  const litres = glasses * 0.25;
+  const wPct = Math.min(100, (glasses * 250 / S.settings.waterGoal) * 100);
+  return `<div class="card">
     <h3>${ic("droplet", 16)} ${t("Hydration")} <span class="tiny" style="margin-inline-start:auto;font-weight:400">${glasses} ${tr("glasses")} · ${litres.toFixed(2)} L / ${(S.settings.waterGoal/1000).toFixed(2)} L</span></h3>
     <div class="glasses">${Array.from({length: goalGl}, (_, i) =>
       `<button class="glass ${i < glasses ? "f" : ""}" aria-label="Glass ${i + 1} of ${goalGl}" aria-pressed="${i < glasses}" onclick="M.water(${i})">${glassSvg(i < glasses)}</button>`).join("")}</div>
     <div class="bar"><i style="width:${wPct}%;background:var(--water)"></i></div>
-  </div>
+  </div>`;
+}
+// One logged day, rendered as a collapsible group with per-meal macro splits.
+// forceOpen keeps today expanded in the Today tab.
+function dayGroupHTML(d, forceOpen){
+  const items = dayFoods(d);
+  const dt = dayTotals(d);
+  const open = forceOpen || R.openDays.has(d);
+  return `<div class="day-group ${open ? "openday" : ""}">
+      <button class="day-head" onclick="M.dayToggle('${d}')">
+        <span class="chev">▶</span><span class="dt">${fmtDate(d)}</span>
+        <span class="sum">${n0(dt.kcal)} kcal · ${n1(dt.p)}P · ${n1(dt.c)}C · ${n1(dt.f)}F</span>
+      </button>
+      ${open ? `<div class="day-items">${d !== todayStr() && items.length ? `<button class="day-copy" onclick="M.copyDayToToday('${d}')">${ic("copy", 14)} ${t("Copy this day to today")}</button>` : ""}${items.length ? FOOD_MEALS.map(([mk, ml]) => {
+        const mi = items.filter(f => entryMeal(f) === mk).sort((a, b) => { const ta = entryTime(a), tb = entryTime(b); return ta < tb ? -1 : ta > tb ? 1 : (a.ts || 0) - (b.ts || 0); });
+        if (!mi.length) return "";
+        const mt = mi.reduce((a, x) => ({k: a.k + num(x.kcal), p: a.p + num(x.p), c: a.c + num(x.c), f: a.f + num(x.f)}), {k: 0, p: 0, c: 0, f: 0});
+        return `<div class="meal-h"><span>${esc(t(ml))}</span>${mi.length > 1 ? `<button class="meal-save" aria-label="${t("Combine into a dish")}" title="${t("Combine into a dish & save as recipe")}" onclick="M.mealToDish('${d}','${mk}')">${ic("book", 13)}</button>` : ""}${d !== todayStr() ? `<button class="meal-copy" aria-label="${t("Copy to today")}" title="${t("Copy to today")}" onclick="M.copyMealToToday('${d}','${mk}')">${ic("copy", 13)}</button>` : ""}<span class="mh-sum">${n0(mt.k)} kcal · ${n1(mt.p)}P · ${n1(mt.c)}C · ${n1(mt.f)}F</span></div>${mealMacroSplitHTML(mt)}${mi.map(foodItemHTML).join("")}`;
+      }).join("") : `<div class="food-it"><span class="muted">${tr("Nothing logged.")}</span></div>`}</div>` : ""}
+    </div>`;
+}
+function foodHTML(){
+  const today = todayStr();   // NB: keep this named `today` — the global t() is the translator
+  const tot = dayTotals(today);
+  const tg = S.settings.targets;
+  const burned = todayBurn();
+  const added = Math.round(burned * eatBackFrac());
+  const ft = ["log", "today", "history"].includes(R.foodTab) ? R.foodTab : "log";
+
+  // History tab: last 7 days by default (today lives in its own tab); a range picker reveals older logs.
+  const allDates = [...new Set(S.foods.map(f => f.date))].sort().reverse().filter(d => d !== today);
+  const back6 = new Date(Date.now() - 6 * 864e5).toLocaleDateString("en-CA");
+  const hasOlder = allDates.some(d => d < back6);
+  const range = foodHistRange();
+  const pastDates = allDates.filter(d => d >= range.from && d <= range.to);
+  const tabBtn = (id, label) => `<button class="${ft === id ? "on" : ""}" onclick="M.foodTab('${id}')">${tr(label)}</button>`;
+
+  return `
+  <button class="cat-back" aria-label="Back to Home" onclick="M.backToHome('health')">${ic("back", 18)} ${t("Home")}</button>
+  <div class="seg food-subtabs">${tabBtn("log", "Log")}${tabBtn("today", "Today")}${tabBtn("history", "History")}</div>
+
+  ${ft === "log" ? `
+  ${foodSummaryCardHTML()}
+
+  ${quickLogHTML()}
 
   <div class="card fold ${(reviewItems || R.editFoodId || R.logFoodOpen === true) ? "open" : ""}" id="addFoodCard">
     <h3 onclick="M.fold('logFoodOpen', this)">${ic(R.editFoodId ? "edit" : "plus", 16)} ${R.editFoodId ? t("Edit entry") : t("Log food")} <span class="chev">▶</span></h3>
@@ -7026,30 +7051,27 @@ function foodHTML(){
       }).join("") : `<div class="muted">Save a day's log as a reusable meal (e.g. "my usual breakfast"), then log it in one tap.</div>`}
     </div>
   </div>
+  ${hydrationCardHTML()}
+  ` : ""}
 
-  ${foodReportCardHTML()}
+  ${ft === "today" ? `
+  ${foodSummaryCardHTML()}
+  ${exerciseCalHTML(burned, added)}
+  ${macroBreakdownHTML(tot, tg)}
+  <div class="day-today">${dayGroupHTML(today, true)}</div>
+  ${foodCoachHTML(today, tot, tg)}
+  ${closeDayHTML()}
+  ${finishDayCardHTML()}
+  ` : ""}
 
-  ${insightsHTML()}
-
+  ${ft === "history" ? `
   ${hasOlder ? foodHistControlHTML(range) : ""}
-  ${dates.length ? "" : `<div class="hist-empty">${ic("calendar", 16)} ${tr("No logs in this range.")}</div>`}
-  ${dates.map(d => {
-    const items = dayFoods(d);
-    const dt = dayTotals(d);
-    const open = R.openDays.has(d);
-    return `<div class="day-group ${open ? "openday" : ""}">
-      <button class="day-head" onclick="M.dayToggle('${d}')">
-        <span class="chev">▶</span><span class="dt">${fmtDate(d)}</span>
-        <span class="sum">${n0(dt.kcal)} kcal · ${n1(dt.p)}P · ${n1(dt.c)}C · ${n1(dt.f)}F</span>
-      </button>
-      ${open ? `<div class="day-items">${d !== todayStr() && items.length ? `<button class="day-copy" onclick="M.copyDayToToday('${d}')">${ic("copy", 14)} ${t("Copy this day to today")}</button>` : ""}${items.length ? FOOD_MEALS.map(([mk, ml]) => {
-        const mi = items.filter(f => entryMeal(f) === mk).sort((a, b) => { const ta = entryTime(a), tb = entryTime(b); return ta < tb ? -1 : ta > tb ? 1 : (a.ts || 0) - (b.ts || 0); });
-        if (!mi.length) return "";
-        const mt = mi.reduce((a, x) => ({k: a.k + num(x.kcal), p: a.p + num(x.p), c: a.c + num(x.c), f: a.f + num(x.f)}), {k: 0, p: 0, c: 0, f: 0});
-        return `<div class="meal-h"><span>${esc(t(ml))}</span>${mi.length > 1 ? `<button class="meal-save" aria-label="${t("Combine into a dish")}" title="${t("Combine into a dish & save as recipe")}" onclick="M.mealToDish('${d}','${mk}')">${ic("book", 13)}</button>` : ""}${d !== todayStr() ? `<button class="meal-copy" aria-label="${t("Copy to today")}" title="${t("Copy to today")}" onclick="M.copyMealToToday('${d}','${mk}')">${ic("copy", 13)}</button>` : ""}<span class="mh-sum">${n0(mt.k)} kcal · ${n1(mt.p)}P · ${n1(mt.c)}C · ${n1(mt.f)}F</span></div>${mealMacroSplitHTML(mt)}${mi.map(foodItemHTML).join("")}`;
-      }).join("") : `<div class="food-it"><span class="muted">${tr("Nothing logged.")}</span></div>`}</div>` : ""}
-    </div>`;
-  }).join("")}`;
+  ${pastDates.length ? pastDates.map(d => dayGroupHTML(d)).join("") : `<div class="hist-empty">${ic("calendar", 16)} ${tr("No past days in this range.")}</div>`}
+  ${calorieBankHTML()}
+  ${insightsHTML()}
+  ${foodReportCardHTML()}
+  ` : ""}
+  `;
 }
 
 /* Meal-prep shelf card: portions registered ahead of time, not yet logged.
@@ -14206,6 +14228,7 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
   },
   foodRangeFrom(v){ R.foodRange = Object.assign({}, R.foodRange, {mode: "custom", from: v}); render(); },
   foodRangeTo(v){ R.foodRange = Object.assign({}, R.foodRange, {mode: "custom", to: v}); render(); },
+  foodTab(id){ R.foodTab = id; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
   copyItemToToday(id){
     const f = S.foods.find(x => x.id === id); if (!f) return;
     const today = todayStr();
