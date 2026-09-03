@@ -1765,7 +1765,7 @@ html[data-setpage="privacy"] .set-page[data-page="privacy"]{display:block}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.228";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.229";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -12824,7 +12824,7 @@ window.M = {
   // Opening the chat surface always starts a FRESH conversation; previous
   // chats stay saved and are reachable via the Chats (clock) button.
   tab(t){ R.tab = t; R.setPage = null; R.homeCat = null; R.reviewOpen = false; R.quickOpen = false; R.widgetsOpen = false; R.sheet = null; R.finishIdeas = null; R.snackIdeas = null; if (t === "chat") R.convId = null; render(); },
-  goTab(t){ R.tab = t; R.setPage = null; R.homeCat = null; R.reviewOpen = false; R.quickOpen = false; R.widgetsOpen = false; R.sheet = null; R.finishIdeas = null; R.snackIdeas = null; if (t === "chat") R.convId = null; render(); },
+  goTab(t, sub){ R.tab = t; R.setPage = null; R.homeCat = null; R.reviewOpen = false; R.quickOpen = false; R.widgetsOpen = false; R.sheet = null; R.finishIdeas = null; R.snackIdeas = null; if (t === "chat") R.convId = null; if (t === "food") R.foodTab = sub || "log"; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
   home(catId){ R.homeCat = catId; R.reviewOpen = false; render(); },
   homeBack(){ R.homeCat = null; render(); },
   homeSection(id){ R.tab = "home"; R.homeSection = id; R.homeCat = null; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
@@ -12903,7 +12903,7 @@ window.M = {
   qa(a){
     R.quickOpen = false;
     if (a === "water"){ const t = todayStr(); S.water[t] = (S.water[t] || 0) + 1; save(); render(); toast(`Water +1 glass · ${(S.water[t] * 0.25).toFixed(2)} L today`); return; }
-    if (a === "food"){ R.tab = "food"; R.homeCat = null; R.logFoodOpen = true; render(); const c = $("#content"); if (c) c.scrollTop = 0; const nm = $("#ffName"); if (nm) nm.focus(); return; }
+    if (a === "food"){ R.tab = "food"; R.foodTab = "log"; R.homeCat = null; R.logFoodOpen = true; render(); const c = $("#content"); if (c) c.scrollTop = 0; const nm = $("#ffName"); if (nm) nm.focus(); return; }
     if (a === "workout"){ M.goTrain("today"); return; }
     if (a === "weight"){ R.tab = "body"; R.homeCat = null; render(); const c = $("#content"); if (c) c.scrollTop = 0; return; }
     if (a === "task"){ M.goWork("tasks"); return; }
@@ -12958,7 +12958,7 @@ window.M = {
     switch (type){
       case "task": R.tab = "work"; R.workTab = "tasks"; R.noteId = null; break;
       case "note": R.tab = "work"; R.workTab = "notes"; R.noteId = id; break;
-      case "food": R.tab = "food"; break;
+      case "food": R.tab = "food"; R.foodTab = "log"; break;
       case "workout": R.tab = "train"; R.trainTab = "history"; break;
       case "exercise": R.tab = "train"; R.trainTab = "library"; break;
       case "supp": R.tab = "health"; R.healthTab = "supps"; break;
@@ -13985,7 +13985,7 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
   chatSheet(){ R.sheet = "chats"; render(); },
   sheetClose(){ R.sheet = null; render(); },
   openConv(id){ R.convId = id; R.sheet = null; render(); },
-  openFoodLog(){ R.tab = "food"; R.homeCat = null; R.mealsOpen = false; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
+  openFoodLog(){ R.tab = "food"; R.foodTab = "today"; R.homeCat = null; R.mealsOpen = false; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
   // ---- calorie bank: configurable window + history ----
   bankEditToggle(){ R.bankEdit = !R.bankEdit; if (R.bankEdit) R.bankOpen = true; render(); },
   bankSetFrom(v){ const from = Math.max(0, Math.min(6, +v)); let to = (S.settings.bankTo == null ? 4 : +S.settings.bankTo); if (to < from) to = from; S.settings.bankFrom = from; S.settings.bankTo = to; save(); render(); },
@@ -14467,7 +14467,7 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
     dishForm.res = {items: resItems};
     dishForm.cookedG = ""; dishForm.perServingG = ""; dishForm.ateG = "";
     dishForm.open = true; R.dishRecipeList = false;
-    R.tab = "food"; R.homeCat = null; R.reviewOpen = false; R.logFoodOpen = true;
+    R.tab = "food"; R.foodTab = "log"; R.homeCat = null; R.reviewOpen = false; R.logFoodOpen = true;
     render();
     setTimeout(() => { const el = $("#addFoodCard"); if (el){ el.classList.add("open"); el.scrollIntoView({behavior: "smooth", block: "start"}); } }, 60);
     toast(`${tr("Combined")} ${resItems.length} ${resItems.length === 1 ? tr("item") : tr("items")} ${tr("— name it and Save as recipe")} ✓`, 4500);
@@ -14480,7 +14480,7 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
   /* ---- food-log report (date range, multi-format) ---- */
   reportToggle(){ R.reportOpen = !R.reportOpen; render(); },
   openFoodReport(){
-    R.tab = "food"; R.homeCat = null; R.reviewOpen = false; R.quickOpen = false; R.reportOpen = true;
+    R.tab = "food"; R.foodTab = "history"; R.homeCat = null; R.reviewOpen = false; R.quickOpen = false; R.reportOpen = true;
     render();
     setTimeout(() => { const el = $("#reportCard"); if (el) el.scrollIntoView({behavior: "smooth", block: "start"}); }, 70);
   },
@@ -14891,7 +14891,7 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
           note: `${tr("Portion of your saved recipe")}${j.note ? " — " + j.note : ""}`,
           basis, unit, baseMacros: base, had: String(had), scaleNote,
         }];
-        R.recipeId = null; R.tab = "food"; R.homeCat = null; R.logFoodOpen = true;
+        R.recipeId = null; R.tab = "food"; R.foodTab = "log"; R.homeCat = null; R.logFoodOpen = true;
         render();
         setTimeout(() => { const z = $("#reviewZone"); if (z) z.scrollIntoView({behavior: "smooth", block: "nearest"}); }, 60);
       } catch (e) {
@@ -14930,7 +14930,7 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
       dishForm.cookedG = r.cookedWeight ? String(r.cookedWeight) : "";
       dishForm.perServingG = (r.cookedWeight && r.servings) ? String(Math.round(r.cookedWeight / r.servings)) : "";
       dishForm.ateG = ""; dishForm.open = true; R.dishRecipeList = false;
-      R.recipeId = null; R.tab = "food"; R.homeCat = null; R.logFoodOpen = true;
+      R.recipeId = null; R.tab = "food"; R.foodTab = "log"; R.homeCat = null; R.logFoodOpen = true;
       render();
       setTimeout(() => { const el = $("#addFoodCard"); if (el){ el.classList.add("open"); el.scrollIntoView({behavior: "smooth", block: "start"}); } }, 60);
       toast(dd.removed ? `${tr("Loaded — removed a duplicate ingredient. Review, then Update recipe.")}` : tr("Loaded — add or adjust ingredients, then Update recipe."), 4500);
@@ -14952,7 +14952,7 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
     dishForm.ings = rows.length ? rows : [{n: "", a: ""}, {n: "", a: ""}];
     dishForm.res = null;
     dishForm.open = true;
-    R.recipeId = null; R.tab = "food"; R.homeCat = null;
+    R.recipeId = null; R.tab = "food"; R.foodTab = "log"; R.homeCat = null;
     render();
     setTimeout(() => { const el = $("#addFoodCard"); if (el){ el.classList.add("open"); el.scrollIntoView({behavior: "smooth", block: "start"}); } }, 60);
     toast("Loaded into the dish builder — tap “Get macros from ingredients”.", 4200);
