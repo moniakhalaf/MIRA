@@ -1765,7 +1765,7 @@ html[data-setpage="privacy"] .set-page[data-page="privacy"]{display:block}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.230";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.231";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -2779,6 +2779,9 @@ const TR = {
     "Removed": "تم الحذف",
     "Log": "تسجيل",
     "History": "السجل",
+    "A food — or a whole meal like ‘2 eggs & toast’": "طعام — أو وجبة كاملة مثل ‹بيضتان وخبز محمّص›",
+    "Itemise this meal": "قسّم هذه الوجبة",
+    "Working…": "جارٍ…",
     "What should I eat?": "ماذا آكل؟",
     "for": "لـ",
     "Here's what's left to hit your targets today:": "إليك ما تبقّى لبلوغ أهدافك اليوم:",
@@ -7039,7 +7042,7 @@ function foodHTML(){
       ${(!R.editFoodId && !reviewItems) ? `<button class="btn snap-hero" style="width:100%;margin-bottom:12px" onclick="M.extractPhoto()" ${extractBusy ? "disabled" : ""}>${ic("camera", 18)} ${extractBusy ? t("Reading…") : t("Snap a meal → macros")}</button>
       <div class="tiny snap-hero-hint">${t("Photo of your plate or a label — MIRA reads the macros. Include a fork, hand or the whole plate so it can size the portion.")}</div>` : ""}
       <div class="field ac-wrap"><label>${t("Food name")}</label>
-        <input id="ffName" value="${esc(foodForm.name)}" placeholder="Start typing — saved foods appear" dir="auto" autocomplete="off" style="padding-right:44px"
+        <input id="ffName" value="${esc(foodForm.name)}" placeholder="${t("A food — or a whole meal like ‘2 eggs & toast’")}" dir="auto" autocomplete="off" style="padding-right:44px"
           oninput="M.ffName(this.value)" onfocus="acRender(this.value)" onblur="setTimeout(()=>M.acHide(),180)">
         <button class="in-mic" aria-label="Voice input" onmousedown="event.preventDefault()" onclick="M.voiceFood()">${ic("mic", 17)}</button>
         <div id="acList"></div>
@@ -7085,7 +7088,7 @@ function foodHTML(){
       <button class="btn sm sec" style="width:100%;margin-bottom:8px" onclick="M.prepSave()">${ic("bookmark", 15)} ${t("Save for later (meal prep)")}</button>
       <div class="tiny" style="margin:0 2px 12px;color:var(--txt3)">${t("Prefer a photo? Use “Snap a meal” at the top, then tap the bookmark on the result to save it here.")}</div>`}
       `}
-      <button class="btn sm sec" style="width:100%;margin-bottom:8px" onclick="M.findMacros()" ${findBusy ? "disabled" : ""}>${findBusy ? "Searching…" : ic("search", 15) + " " + t("Find macros")}</button>
+      <button class="btn sm sec" style="width:100%;margin-bottom:8px" onclick="M.findMacros()" ${findBusy ? "disabled" : ""}>${findBusy ? t("Working…") : ic("search", 15) + " " + (looksMultiItem(foodForm.name.trim() || foodForm.amount.trim()) ? t("Itemise this meal") : t("Find macros"))}</button>
       <div class="food-tools-wrap ${(R.foodToolsOpen || foodForm.scOpen || dishForm.open || extractBusy || barcodeBusy) ? "open" : ""}">
         <button class="btn sm sec ft-toggle" style="width:100%" aria-expanded="${R.foodToolsOpen ? "true" : "false"}" onclick="M.foodTools(this)">${ic("plus", 16)} ${t("More ways to add this")} <span class="chev">▶</span></button>
         <div class="ft-body">
@@ -8172,7 +8175,62 @@ function reconcileEstimate(o){
   return o;
 }
 
+// Turn an array of AI food items (from a photo OR a typed meal) into review
+// rows — reconciling estimates, exposing a gram scaler, and keeping labels
+// verbatim. Shared so the photo and natural-language paths behave identically.
+function estimateItemsToReview(arr){
+  return (Array.isArray(arr) ? arr : [arr]).map(j => {
+    if (j && j.conf !== "official") reconcileEstimate(j);
+    const it = {name: j.name || "Item", amount: j.amount || "", kcal: j.kcal, p: j.p, c: j.c, f: j.f,
+      conf: j.conf === "official" ? "official" : "estimate", note: j.note || ""};
+    const basis = num(j.basis), unit = String(j.unit || "").trim().toLowerCase();
+    if (basis > 0 && unit){
+      it.basis = basis; it.unit = unit; it.pkg = num(j.pkg) || 0;
+      it.baseMacros = {kcal: num(j.kcal), p: num(j.p), c: num(j.c), f: num(j.f)};
+      it.had = String(basis);
+      if (!it.amount) it.amount = basis + " " + unit;
+    } else if (it.conf === "estimate" && num(j.grams) > 0){
+      it.basis = Math.round(num(j.grams)); it.unit = "g";
+      it.baseMacros = {kcal: num(j.kcal), p: num(j.p), c: num(j.c), f: num(j.f)};
+      it.had = String(it.basis);
+      it.scaleNote = `${tr("Estimated at")} ${it.basis} g — ${tr("set your real weight and the macros scale to it.")}`;
+      if (!it.amount) it.amount = it.basis + " g";
+    }
+    return it;
+  });
+}
+// Does the typed text describe more than one food? A separator between words is
+// the signal; a single dish that happens to contain "and" (mac and cheese) is
+// still sent to the parser, which correctly returns it as one item.
+function looksMultiItem(s){
+  s = String(s || "").trim();
+  if (s.split(/\s+/).length < 3) return false;   // "2 eggs" is one item
+  return /,|\+|\n|\band\b|&|\bwith\b|\bplus\b|\bثم\b|\bمع\b|و /i.test(s);
+}
+// Natural-language logging: parse a plain-language meal ("2 eggs, toast and
+// black coffee") into separate itemised review rows with per-item macros.
+async function mealItemize(text){
+  if (!S.settings.apiKey){ toast("Add your API key in Settings to itemise a meal in words — or add items one by one.", 5200); return false; }
+  findBusy = true; render();
+  try {
+    const sys = `You are MIRA's meal parser. Split the user's plain-language meal into SEPARATE food and drink items, each with realistic per-item macros. You know world cuisines — Gulf/Khaleeji (machboos, harees, luqaimat, balaleet…), Levantine, Egyptian, pan-Arab and all international/packaged foods — and Arabic script and transliteration. Rules: a single named dish stays ONE item (e.g. "mac and cheese", "peanut butter sandwich", "chicken shawarma"), while a list of distinct foods ("2 eggs and toast", "chicken, rice and salad") becomes one item each. Respect stated counts/amounts, and cooking method — air-fried/"no oil" ≈ roasted (light or no oil), NOT deep-fried. When several identical pieces are given, return ONE item with the count in "amount" and macros for the whole quantity. Base every value on standard food-composition data (USDA / McCance & Widdowson / regional tables). Reply IMMEDIATELY with "[" — ONLY a JSON array, no prose, no code fence; each item {"name":str,"amount":str,"kcal":num,"p":num,"c":num,"f":num,"conf":"official"|"estimate","note":str(short, the reference food/serving assumed),"grams":num(edible weight for scaling)}. Energy MUST be consistent: kcal ≈ 4·p + 4·c + 9·f (correct the macros if not, within ~10%).${replyLangNote()}`;
+    const arr = (await llmJsonArray(sys, `Meal: ${text}`, 1500)).filter(x => x && x.name);
+    reviewItems = estimateItemsToReview(arr);
+    reviewItems = mergeIdenticalItems(reviewItems);
+    if (!reviewItems.length){ reviewItems = null; findBusy = false; render(); toast("Couldn't read that meal — try rephrasing.", 4200); return true; }
+    findBusy = false; render();
+    const z = $("#reviewZone"); if (z) z.scrollIntoView({behavior: "smooth", block: "nearest"});
+    return true;
+  } catch (e) {
+    findBusy = false; render();
+    toast("Couldn't itemise that meal: " + (e.message || "try again"), 4600);
+    return true;
+  }
+}
 async function findMacros(){
+  // A plain-language meal with several foods → itemise into separate review rows.
+  const desc = (foodForm.name.trim() || foodForm.amount.trim());
+  if (looksMultiItem(desc) && S.settings.apiKey){ const handled = await mealItemize(desc); if (handled) return; }
   // Be forgiving about which field the food went in: if "Food name" is empty
   // but the user typed something in "Amount eaten", treat that as the food.
   const nameField = foodForm.name.trim();
@@ -8950,28 +9008,7 @@ Reply with ONLY a JSON array: [{"name":str,"amount":str,"kcal":num,"p":num,"c":n
       let arr;
       try { arr = tryParseJson(txt); }
       catch (e) { arr = salvageObjects(txt).filter(o => o.name); if (!arr.length) throw e; }
-      reviewItems = (Array.isArray(arr) ? arr : [arr]).map(j => {
-        // reconcile only estimated foods; a printed label is transcribed as-is
-        if (j && j.conf !== "official") reconcileEstimate(j);
-        const it = {name: j.name || "Item", amount: j.amount || "", kcal: j.kcal, p: j.p, c: j.c, f: j.f,
-          conf: j.conf === "official" ? "official" : "estimate", note: j.note || ""};
-        const basis = num(j.basis), unit = String(j.unit || "").trim().toLowerCase();
-        if (basis > 0 && unit){
-          it.basis = basis; it.unit = unit; it.pkg = num(j.pkg) || 0;
-          it.baseMacros = {kcal: num(j.kcal), p: num(j.p), c: num(j.c), f: num(j.f)};
-          it.had = String(basis);
-          if (!it.amount) it.amount = basis + " " + unit;
-        } else if (it.conf === "estimate" && num(j.grams) > 0){
-          // Estimated food photo: expose a gram-level portion scaler so the user
-          // can dial the weight — the biggest accuracy lever for photo estimates.
-          it.basis = Math.round(num(j.grams)); it.unit = "g";
-          it.baseMacros = {kcal: num(j.kcal), p: num(j.p), c: num(j.c), f: num(j.f)};
-          it.had = String(it.basis);
-          it.scaleNote = `${tr("Estimated at")} ${it.basis} g — ${tr("set your real weight and the macros scale to it.")}`;
-          if (!it.amount) it.amount = it.basis + " g";
-        }
-        return it;
-      });
+      reviewItems = estimateItemsToReview(arr);
       reviewItems = mergeIdenticalItems(reviewItems);                          // collapse repeated identical pieces
       if (!reviewItems.length){ reviewItems = null; toast("Could not read any items from that file."); }
     } catch (e) { toast("Could not read the file: " + e.message, 4000); }
