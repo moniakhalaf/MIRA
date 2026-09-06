@@ -1765,7 +1765,7 @@ html[data-setpage="privacy"] .set-page[data-page="privacy"]{display:block}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.231";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.232";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -2779,6 +2779,11 @@ const TR = {
     "Removed": "تم الحذف",
     "Log": "تسجيل",
     "History": "السجل",
+    "MIRA's read on your data": "قراءة ميرا لبياناتك",
+    "Let MIRA scan your last few weeks for real patterns across food, training, sleep and cycle.": "دع ميرا تفحص أسابيعك الأخيرة بحثًا عن أنماط حقيقية في الطعام والتدريب والنوم والدورة.",
+    "Analysing…": "جارٍ التحليل…",
+    "Find my patterns": "اكتشف أنماطي",
+    "Refresh patterns": "حدّث الأنماط",
     "A food — or a whole meal like ‘2 eggs & toast’": "طعام — أو وجبة كاملة مثل ‹بيضتان وخبز محمّص›",
     "Itemise this meal": "قسّم هذه الوجبة",
     "Working…": "جارٍ…",
@@ -4892,6 +4897,7 @@ function trendsHTML(){
     ${expenditureCardHTML()}
     ${coachingCardHTML()}
     ${weightProjectionHTML()}
+    ${aiInsightsCardHTML()}
     ${patternsCardHTML()}
     <div class="ins-range-row"><span class="tiny" style="color:var(--txt2)">${tr("Time range")}</span>${insRangeBarHTML()}</div>
     <div class="wr-note">${ic("check", 13)} ${tr("Trends are drawn only from what you logged. A chart appears once there are at least two data points; until then it says so.")}</div>
@@ -5292,6 +5298,51 @@ function logStreak(getHas){
     else break;
   }
   return streak;
+}
+// A compact, honest digest of the last 4 weeks for the AI analyst: one line per
+// day that has any data, plus targets and the weight trend. Only real logged
+// values — never invented — so the model can only reason from what happened.
+function insightsDigest(){
+  const tw = (typeof trendWeightData === "function") ? trendWeightData() : null;
+  const days = [];
+  for (let o = 27; o >= 0; o--){
+    const d = new Date(Date.now() - o * 864e5).toLocaleDateString("en-CA");
+    const tot = dayTotals(d);
+    const trained = (S.workouts || []).some(w => w.date === d) || (S.cardio || []).some(c => c.date === d);
+    const sl = (S.sleep || []).find(s => s.date === d);
+    const ci = (S.checkins || []).find(c => c.date === d);
+    const rd = (S.readiness || []).find(r => r.date === d);
+    if (!tot.kcal && !trained && !sl && !ci && !rd) continue;   // skip fully empty days
+    const ph = (typeof cyclePhaseForDate === "function") ? cyclePhaseForDate(d) : null;
+    const dow = new Date(d + "T00:00:00").toLocaleDateString("en-US", {weekday: "short"});
+    const parts = [`${d}(${dow})`];
+    if (tot.kcal) parts.push(`${n0(tot.kcal)}kcal`, `${n0(tot.p)}P/${n0(tot.c)}C/${n0(tot.f)}F`);
+    if (trained) parts.push("trained");
+    if (sl && +sl.hours) parts.push(`sleep${sl.hours}h`);
+    if (rd && typeof readinessScore === "function") parts.push(`ready${readinessScore(rd).score}`);
+    if (ci && typeof checkinScore === "function"){ const s = checkinScore(ci); if (s != null) parts.push(`mood${s}`); }
+    if (ph) parts.push(ph.phase);
+    days.push(parts.join(" "));
+  }
+  const tg = S.settings.targets || {};
+  let head = `Targets: ${n0(tg.kcal || 0)} kcal, ${n0(tg.protein || 0)} g protein${tg.carbs ? `, ${n0(tg.carbs)} g carbs` : ""}${tg.fat ? `, ${n0(tg.fat)} g fat` : ""}.`;
+  if (tw) head += ` Weight trend ${tw.trend} kg (${tw.perWk > 0 ? "+" : ""}${tw.perWk} kg/wk).`;
+  return {head, days, n: days.length};
+}
+// AI analyst card: on demand, MIRA scans the digest for specific, quantified
+// patterns across food, training, sleep, readiness and cycle. Read-only,
+// honest, and gated on having enough logged days.
+function aiInsightsCardHTML(){
+  const dig = insightsDigest();
+  if (dig.n < 6) return "";
+  const ins = R.aiInsights || [];
+  return `<div class="card">
+    <h3>${ic("chart", 16)} ${tr("MIRA's read on your data")} <span class="badge estimate" style="margin-inline-start:auto">AI</span></h3>
+    <div class="muted" style="margin:8px 0 10px">${tr("Let MIRA scan your last few weeks for real patterns across food, training, sleep and cycle.")}</div>
+    <button class="btn sm" onclick="M.aiInsights()" ${R.aiInsightsBusy ? "disabled" : ""}>${R.aiInsightsBusy ? tr("Analysing…") : ic("search", 15) + " " + (ins.length ? tr("Refresh patterns") : tr("Find my patterns"))}</button>
+    ${ins.length ? `<div style="margin-top:6px">${ins.map(x => `<div class="wr-note" style="margin-top:8px" dir="auto">${ic("check", 13)} ${esc(x)}</div>`).join("")}</div>
+    <div class="tiny" style="margin-top:9px;color:var(--txt2)">${tr("Associations from your own logs — patterns to notice, not medical advice.")}</div>` : ""}
+  </div>`;
 }
 function patternsCardHTML(){
   const tiles = [], notes = [];
@@ -14283,6 +14334,23 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
     toast(`Logged: ${s.name} ✓`);
   },
   finishClear(){ R.finishIdeas = null; render(); },
+  async aiInsights(){
+    if (!S.settings.apiKey){ toast("Add your API key in Settings to find patterns."); R.tab = "set"; render(); return; }
+    const dig = insightsDigest();
+    if (dig.n < 8){ toast("Log a bit more first — patterns need one to two weeks of data.", 4600); return; }
+    R.aiInsightsBusy = true; render();
+    try {
+      const sys = `You are MIRA's personal data analyst. You are given the user's recent daily log. Find 3-5 SPECIFIC, honest patterns or correlations grounded ONLY in this data — quantify wherever possible (e.g. "protein averages 150 g on training days vs 110 g on rest days", "readiness runs lower in your luteal phase", "you exceed your calorie target most on weekends"). If a pattern is actionable, add a short practical suggestion in the same sentence. Never invent numbers, never give medical advice, and if the data is too thin for a real pattern, say that honestly rather than forcing one. Reply IMMEDIATELY with "[" — ONLY a JSON array of short plain strings, each ≤ 24 words.${replyLangNote()}`;
+      const usr = `${dig.head}\nDaily log (${dig.n} days, most recent last):\n${dig.days.join("\n")}`;
+      const arr = (await llmJsonArray(sys, usr, 900)).filter(x => typeof x === "string" && x.trim()).slice(0, 5);
+      R.aiInsights = arr; R.aiInsightsBusy = false; render();
+      toast(arr.length ? "Patterns ready ✓" : "No clear patterns yet — keep logging.");
+    } catch (e) {
+      R.aiInsightsBusy = false; render();
+      toast("Couldn't analyse: " + (e.message || "try again"), 4600);
+    }
+  },
+  aiInsightsClear(){ R.aiInsights = null; render(); },
   acHide(){ const el = $("#acList"); if (el) el.innerHTML = ""; },
   acPick(i){
     const f = S.savedFoods[i];
