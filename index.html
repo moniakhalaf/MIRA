@@ -1765,7 +1765,7 @@ html[data-setpage="privacy"] .set-page[data-page="privacy"]{display:block}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.232";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.233";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -2779,6 +2779,10 @@ const TR = {
     "Removed": "تم الحذف",
     "Log": "تسجيل",
     "History": "السجل",
+    "Save to meal prep": "احفظ في تحضير الوجبات",
+    "Saved to meal prep": "حُفظ في تحضير الوجبات",
+    "serving": "حصة",
+    "servings": "حصص",
     "MIRA's read on your data": "قراءة ميرا لبياناتك",
     "Let MIRA scan your last few weeks for real patterns across food, training, sleep and cycle.": "دع ميرا تفحص أسابيعك الأخيرة بحثًا عن أنماط حقيقية في الطعام والتدريب والنوم والدورة.",
     "Analysing…": "جارٍ التحليل…",
@@ -10794,6 +10798,7 @@ function recipeDetailHTML(){
       <button class="btn" style="flex:1" onclick="M.recipeLog('${r.id}')">${ic("plus", 16)} ${tr("Log a serving")}</button>
       <button class="btn sec" style="flex:1" onclick="M.planAddRecipe('${r.id}')">${ic("calendar", 15)} ${tr("Add to plan")}</button>
     </div>
+    <button class="btn sec" style="width:100%;margin:0 0 4px" onclick="M.recipeToPrep('${r.id}')">${ic("bookmark", 15)} ${tr("Save to meal prep")}${(r.servings || 1) > 1 ? ` · ${r.servings} ${tr("servings")}` : ""}</button>
     ${recipeGramCardHTML(r)}
     <div class="card"><h3>${ic("list", 16)} ${tr("Ingredients")}</h3>
       <ul class="rc-list">${(r.ingredients || []).length ? r.ingredients.map(i => `<li dir="auto">${esc(i)}</li>`).join("") : `<li class="muted">Not listed.</li>`}</ul>
@@ -14943,6 +14948,23 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
   recipeLog(id){
     const r = S.recipes.find(x => x.id === id); if (!r) return;
     logFood({name: r.name, amount: "1 serving", kcal: r.per.kcal, p: r.per.p, c: r.per.c, f: r.per.f, conf: "estimate"});
+  },
+  // Save a cooked recipe to the meal-prep shelf as a batch of its servings —
+  // each ticks down and logs in one tap later, like any prepped portion.
+  recipeToPrep(id){
+    const r = S.recipes.find(x => x.id === id); if (!r) return;
+    const per = r.per || {};
+    if (!num(per.kcal) && !num(per.p) && !num(per.c) && !num(per.f)){ toast("Set this recipe's macros first (Recalculate), then save it to prep."); return; }
+    const q = Math.max(1, num(r.servings) || 1);
+    const meal = FOOD_MEALS.some(([k]) => k === r.meal) ? r.meal : "";
+    S.prep = S.prep || [];
+    S.prep.unshift({id: uid(), name: r.name, amount: "1 serving", meal,
+      kcal: num(per.kcal), p: num(per.p), c: num(per.c), f: num(per.f),
+      fiber: 0, sugar: 0, sodium: 0, conf: "estimate", ts: Date.now(), qty: q});
+    if (S.prep.length > 200) S.prep.pop();
+    R.prepOpen = true;
+    buzz(); save(); render();
+    toast(`${tr("Saved to meal prep")}: ${q} ${q === 1 ? tr("serving") : tr("servings")} ✓`);
   },
   /* ---- log a recipe by cooked weight (per-gram) ---- */
   recipeCooked(id, v){
