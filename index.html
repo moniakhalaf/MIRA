@@ -1787,7 +1787,7 @@ html[data-setpage="privacy"] .set-page[data-page="privacy"]{display:block}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.235";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.236";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -4162,6 +4162,7 @@ function domFeatures(d){
     go("weight", "Body composition", "InBody log & metrics", "body", "Track"),
     go("trend", "Log weight", "Quick entry + chart", "body", "Track"),
     {icon: "list", label: "Exercise library", desc: "Cited how-to · add your own", g: "Plan", on: `M.goTrain('library')`},
+    {icon: "barbell", label: "Train by muscle", desc: "Tap a muscle → its exercises", g: "Plan", on: `M.goTrain('muscles')`},
     {icon: "chart", label: "Analyse my trend", desc: "From your InBody log", g: "Plan", on: `M.ibAnalyse()`},
     {icon: "share", label: "Coach report", desc: "Share progress with a coach", g: "Tools", on: `M.goTrain('coach')`},
     ask("activity", "Training programme", "Evidence-based plan", "training"),
