@@ -1656,6 +1656,7 @@ html[data-setpage="privacy"] .set-page[data-page="privacy"]{display:block}
 .bodymap .mz{fill:var(--line2);stroke:var(--bg);stroke-width:.9;stroke-linejoin:round;cursor:pointer;transition:fill .12s,opacity .12s}
 .bodymap .mz:hover{fill:var(--acc-soft)}
 .bodymap .mz.on{fill:var(--acc)}
+.bodymap .mdef{fill:none;stroke:var(--bg);stroke-width:1;stroke-linecap:round;stroke-linejoin:round;opacity:.55;pointer-events:none}
 .msel-h{display:flex;align-items:baseline;gap:8px;margin:6px 2px 10px}
 .msel-h b{font-size:15px}
 .msel-h .cnt{color:var(--txt3);font-size:12px}
@@ -1787,7 +1788,7 @@ html[data-setpage="privacy"] .set-page[data-page="privacy"]{display:block}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.237";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.238";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -2168,7 +2169,17 @@ const TR = {
     "Olympic":"أولمبي",
     "Muscles":"العضلات",
     "Train by muscle":"تمرّن حسب العضلة",
+    "Tap a muscle to see exercises for it.":"اضغط على عضلة لعرض تمارينها.",
     "Tap a muscle group to see exercises for it.":"اضغط على مجموعة عضلية لعرض تمارينها.",
+    "Lats":"العضلات الجانبية",
+    "Upper back":"أعلى الظهر",
+    "Lower back":"أسفل الظهر",
+    "Biceps":"العضلة ذات الرأسين",
+    "Triceps":"العضلة ثلاثية الرؤوس",
+    "Abs":"عضلات البطن",
+    "Quads":"العضلة الرباعية",
+    "Hamstrings":"أوتار الركبة",
+    "Calves":"عضلات الساق",
     "Front":"أمام",
     "By muscle":"حسب العضلة",
     "exercise":"تمرين",
@@ -9130,62 +9141,77 @@ Reply with ONLY a JSON array: [{"name":str,"amount":str,"kcal":num,"p":num,"c":n
 const MUSCLES = ["Chest","Back","Shoulders","Legs","Glutes","Arms","Core","Cardio","Olympic"];
 
 /* Curated starter library. Technique cues follow standard strength-and-
-   conditioning guidance (NSCA / ACE). n=name, m=muscle, e=equipment, c=cue. */
+   conditioning guidance (NSCA / ACE). n=name, m=muscle group, sm=sub-muscle
+   (for the body-map picker), e=equipment, c=cue. */
 const EXERCISE_LIBRARY = [
-  {n:"Barbell Bench Press",m:"Chest",e:"Barbell",c:"Retract scapula, lower bar to mid-chest, press up and slightly back."},
-  {n:"Incline Dumbbell Press",m:"Chest",e:"Dumbbell",c:"30–45° bench, press dumbbells up over upper chest, control the descent."},
-  {n:"Push-up",m:"Chest",e:"Bodyweight",c:"Rigid plank, elbows ~45°, lower chest to floor, press to full lockout."},
-  {n:"Cable Fly",m:"Chest",e:"Cable",c:"Slight elbow bend fixed, hug the arms together in front, squeeze."},
-  {n:"Machine Chest Press",m:"Chest",e:"Machine",c:"Handles at mid-chest, press without flaring elbows, don't lock harshly."},
-  {n:"Dip",m:"Chest",e:"Bodyweight",c:"Lean forward for chest, lower to ~90° elbow, press up under control."},
-  {n:"Conventional Deadlift",m:"Back",e:"Barbell",c:"Neutral spine, bar over mid-foot, drive floor away, hips and bar rise together."},
-  {n:"Pull-up",m:"Back",e:"Bodyweight",c:"Full hang, pull elbows to ribs, chin over bar, control down."},
-  {n:"Bent-over Barbell Row",m:"Back",e:"Barbell",c:"Hinge ~45°, flat back, row to lower chest, squeeze lats."},
-  {n:"Lat Pulldown",m:"Back",e:"Cable",c:"Slight lean, pull bar to collarbone, drive elbows down, no swinging."},
-  {n:"Seated Cable Row",m:"Back",e:"Cable",c:"Tall chest, pull to navel, retract shoulder blades, control return."},
-  {n:"Single-arm Dumbbell Row",m:"Back",e:"Dumbbell",c:"Braced on bench, row to hip, no torso rotation."},
-  {n:"Face Pull",m:"Back",e:"Cable",c:"Rope to eye level, pull to face, externally rotate, squeeze rear delts."},
-  {n:"Overhead Press",m:"Shoulders",e:"Barbell",c:"Brace core, press bar overhead, move head through, lock out."},
-  {n:"Dumbbell Shoulder Press",m:"Shoulders",e:"Dumbbell",c:"Press dumbbells overhead, ribs down, no excessive arch."},
-  {n:"Lateral Raise",m:"Shoulders",e:"Dumbbell",c:"Slight bend, raise to shoulder height, lead with elbows, control down."},
-  {n:"Rear Delt Fly",m:"Shoulders",e:"Dumbbell",c:"Hinge forward, raise arms wide, squeeze rear delts, no momentum."},
-  {n:"Upright Row",m:"Shoulders",e:"Barbell",c:"Pull bar to chest height, elbows lead, keep close to body."},
-  {n:"Back Squat",m:"Legs",e:"Barbell",c:"Bar on traps, brace, sit down and back, knees track toes, drive up."},
-  {n:"Front Squat",m:"Legs",e:"Barbell",c:"Elbows high, upright torso, sit between hips, drive through mid-foot."},
-  {n:"Leg Press",m:"Legs",e:"Machine",c:"Feet shoulder-width, lower to ~90°, press without locking knees."},
-  {n:"Romanian Deadlift",m:"Legs",e:"Barbell",c:"Soft knees, hinge hips back, bar close, feel hamstrings, stand tall."},
-  {n:"Walking Lunge",m:"Legs",e:"Dumbbell",c:"Long step, drop back knee, drive through front heel, alternate."},
-  {n:"Leg Extension",m:"Legs",e:"Machine",c:"Extend knees fully, brief squeeze, control the negative."},
-  {n:"Lying Leg Curl",m:"Legs",e:"Machine",c:"Curl heels to glutes, hips down, control the return."},
-  {n:"Standing Calf Raise",m:"Legs",e:"Machine",c:"Full stretch at bottom, rise to toes, pause, lower slowly."},
-  {n:"Bulgarian Split Squat",m:"Legs",e:"Dumbbell",c:"Rear foot elevated, drop straight down, drive through front foot."},
-  {n:"Barbell Hip Thrust",m:"Glutes",e:"Barbell",c:"Shoulders on bench, drive hips up, squeeze glutes, ribs down."},
-  {n:"Glute Bridge",m:"Glutes",e:"Bodyweight",c:"Drive heels, lift hips to a line, squeeze at top."},
-  {n:"Cable Kickback",m:"Glutes",e:"Cable",c:"Hinge slightly, drive heel back, squeeze glute, no lower-back arch."},
-  {n:"Barbell Curl",m:"Arms",e:"Barbell",c:"Elbows pinned, curl up, control down, no swinging."},
-  {n:"Dumbbell Curl",m:"Arms",e:"Dumbbell",c:"Supinate as you curl, elbows still, full range."},
-  {n:"Hammer Curl",m:"Arms",e:"Dumbbell",c:"Neutral grip, curl up, control down, targets brachialis."},
-  {n:"Triceps Pushdown",m:"Arms",e:"Cable",c:"Elbows pinned, extend fully, squeeze triceps, control up."},
-  {n:"Overhead Triceps Extension",m:"Arms",e:"Dumbbell",c:"Elbows high, lower behind head, extend to lockout."},
-  {n:"Close-grip Bench Press",m:"Arms",e:"Barbell",c:"Shoulder-width grip, elbows tucked, press, triceps-focused."},
-  {n:"Preacher Curl",m:"Arms",e:"Machine",c:"Arms on pad, curl up, full stretch at bottom, no bouncing."},
-  {n:"Plank",m:"Core",e:"Bodyweight",c:"Forearms down, straight line, brace abs and glutes, breathe."},
-  {n:"Hanging Leg Raise",m:"Core",e:"Bodyweight",c:"Hang, raise legs to hips, control down, minimize swing."},
-  {n:"Cable Crunch",m:"Core",e:"Cable",c:"Kneel, rope by head, crunch ribs to pelvis, control up."},
-  {n:"Russian Twist",m:"Core",e:"Bodyweight",c:"Lean back, feet up, rotate side to side under control."},
-  {n:"Ab Wheel Rollout",m:"Core",e:"Wheel",c:"Brace hard, roll out as far as control allows, pull back with abs."},
-  {n:"Treadmill Run",m:"Cardio",e:"Machine",c:"Log time/distance; steady or intervals per your plan."},
-  {n:"Rowing Machine",m:"Cardio",e:"Machine",c:"Drive legs, then lean, then arms; reverse the order back."},
-  {n:"Cycling",m:"Cardio",e:"Machine",c:"Log time/distance; keep cadence smooth."},
-  {n:"Stair Climber",m:"Cardio",e:"Machine",c:"Tall posture, don't lean on rails, steady pace."},
-  {n:"Jump Rope",m:"Cardio",e:"Bodyweight",c:"Light bounces, wrists turn the rope, log time or rounds."},
-  {n:"Incline Walk",m:"Cardio",e:"Machine",c:"Raise incline, brisk pace, low-impact conditioning."},
-  {n:"Clean and Jerk",m:"Olympic",e:"Barbell",c:"Explosive pull to shoulders, dip and drive overhead. Coach-guided."},
-  {n:"Snatch",m:"Olympic",e:"Barbell",c:"One explosive pull from floor to overhead. Technical — coach-guided."},
-  {n:"Power Clean",m:"Olympic",e:"Barbell",c:"Triple extension, pull under, catch on shoulders."},
-  {n:"Kettlebell Swing",m:"Olympic",e:"Kettlebell",c:"Hip hinge, snap hips, float bell to chest height, brace."},
-  {n:"Thruster",m:"Olympic",e:"Barbell",c:"Front squat into overhead press in one fluid drive."},
+  {n:"Barbell Bench Press",m:"Chest",sm:"chest",e:"Barbell",c:"Retract scapula, lower bar to mid-chest, press up and slightly back."},
+  {n:"Incline Dumbbell Press",m:"Chest",sm:"chest",e:"Dumbbell",c:"30–45° bench, press dumbbells up over upper chest, control the descent."},
+  {n:"Push-up",m:"Chest",sm:"chest",e:"Bodyweight",c:"Rigid plank, elbows ~45°, lower chest to floor, press to full lockout."},
+  {n:"Cable Fly",m:"Chest",sm:"chest",e:"Cable",c:"Slight elbow bend fixed, hug the arms together in front, squeeze."},
+  {n:"Machine Chest Press",m:"Chest",sm:"chest",e:"Machine",c:"Handles at mid-chest, press without flaring elbows, don't lock harshly."},
+  {n:"Dip",m:"Chest",sm:"chest",e:"Bodyweight",c:"Lean forward for chest, lower to ~90° elbow, press up under control."},
+  {n:"Conventional Deadlift",m:"Back",sm:"lowerback",e:"Barbell",c:"Neutral spine, bar over mid-foot, drive floor away, hips and bar rise together."},
+  {n:"Back Extension",m:"Back",sm:"lowerback",e:"Bodyweight",c:"Hinge over a pad, raise to a straight line, squeeze glutes and erectors, no hyperextension."},
+  {n:"Pull-up",m:"Back",sm:"lats",e:"Bodyweight",c:"Full hang, pull elbows to ribs, chin over bar, control down."},
+  {n:"Lat Pulldown",m:"Back",sm:"lats",e:"Cable",c:"Slight lean, pull bar to collarbone, drive elbows down, no swinging."},
+  {n:"Single-arm Dumbbell Row",m:"Back",sm:"lats",e:"Dumbbell",c:"Braced on bench, row to hip, no torso rotation."},
+  {n:"Bent-over Barbell Row",m:"Back",sm:"upperback",e:"Barbell",c:"Hinge ~45°, flat back, row to lower chest, squeeze lats."},
+  {n:"Seated Cable Row",m:"Back",sm:"upperback",e:"Cable",c:"Tall chest, pull to navel, retract shoulder blades, control return."},
+  {n:"Face Pull",m:"Back",sm:"upperback",e:"Cable",c:"Rope to eye level, pull to face, externally rotate, squeeze rear delts."},
+  {n:"Overhead Press",m:"Shoulders",sm:"shoulders",e:"Barbell",c:"Brace core, press bar overhead, move head through, lock out."},
+  {n:"Dumbbell Shoulder Press",m:"Shoulders",sm:"shoulders",e:"Dumbbell",c:"Press dumbbells overhead, ribs down, no excessive arch."},
+  {n:"Lateral Raise",m:"Shoulders",sm:"shoulders",e:"Dumbbell",c:"Slight bend, raise to shoulder height, lead with elbows, control down."},
+  {n:"Rear Delt Fly",m:"Shoulders",sm:"shoulders",e:"Dumbbell",c:"Hinge forward, raise arms wide, squeeze rear delts, no momentum."},
+  {n:"Upright Row",m:"Shoulders",sm:"shoulders",e:"Barbell",c:"Pull bar to chest height, elbows lead, keep close to body."},
+  {n:"Back Squat",m:"Legs",sm:"quads",e:"Barbell",c:"Bar on traps, brace, sit down and back, knees track toes, drive up."},
+  {n:"Front Squat",m:"Legs",sm:"quads",e:"Barbell",c:"Elbows high, upright torso, sit between hips, drive through mid-foot."},
+  {n:"Leg Press",m:"Legs",sm:"quads",e:"Machine",c:"Feet shoulder-width, lower to ~90°, press without locking knees."},
+  {n:"Walking Lunge",m:"Legs",sm:"quads",e:"Dumbbell",c:"Long step, drop back knee, drive through front heel, alternate."},
+  {n:"Leg Extension",m:"Legs",sm:"quads",e:"Machine",c:"Extend knees fully, brief squeeze, control the negative."},
+  {n:"Bulgarian Split Squat",m:"Legs",sm:"quads",e:"Dumbbell",c:"Rear foot elevated, drop straight down, drive through front foot."},
+  {n:"Romanian Deadlift",m:"Legs",sm:"hamstrings",e:"Barbell",c:"Soft knees, hinge hips back, bar close, feel hamstrings, stand tall."},
+  {n:"Lying Leg Curl",m:"Legs",sm:"hamstrings",e:"Machine",c:"Curl heels to glutes, hips down, control the return."},
+  {n:"Standing Calf Raise",m:"Legs",sm:"calves",e:"Machine",c:"Full stretch at bottom, rise to toes, pause, lower slowly."},
+  {n:"Seated Calf Raise",m:"Legs",sm:"calves",e:"Machine",c:"Pad on knees, drive through the balls of the feet, full range, slow."},
+  {n:"Barbell Hip Thrust",m:"Glutes",sm:"glutes",e:"Barbell",c:"Shoulders on bench, drive hips up, squeeze glutes, ribs down."},
+  {n:"Glute Bridge",m:"Glutes",sm:"glutes",e:"Bodyweight",c:"Drive heels, lift hips to a line, squeeze at top."},
+  {n:"Cable Kickback",m:"Glutes",sm:"glutes",e:"Cable",c:"Hinge slightly, drive heel back, squeeze glute, no lower-back arch."},
+  {n:"Barbell Curl",m:"Arms",sm:"biceps",e:"Barbell",c:"Elbows pinned, curl up, control down, no swinging."},
+  {n:"Dumbbell Curl",m:"Arms",sm:"biceps",e:"Dumbbell",c:"Supinate as you curl, elbows still, full range."},
+  {n:"Hammer Curl",m:"Arms",sm:"biceps",e:"Dumbbell",c:"Neutral grip, curl up, control down, targets brachialis."},
+  {n:"Preacher Curl",m:"Arms",sm:"biceps",e:"Machine",c:"Arms on pad, curl up, full stretch at bottom, no bouncing."},
+  {n:"Triceps Pushdown",m:"Arms",sm:"triceps",e:"Cable",c:"Elbows pinned, extend fully, squeeze triceps, control up."},
+  {n:"Overhead Triceps Extension",m:"Arms",sm:"triceps",e:"Dumbbell",c:"Elbows high, lower behind head, extend to lockout."},
+  {n:"Close-grip Bench Press",m:"Arms",sm:"triceps",e:"Barbell",c:"Shoulder-width grip, elbows tucked, press, triceps-focused."},
+  {n:"Plank",m:"Core",sm:"abs",e:"Bodyweight",c:"Forearms down, straight line, brace abs and glutes, breathe."},
+  {n:"Hanging Leg Raise",m:"Core",sm:"abs",e:"Bodyweight",c:"Hang, raise legs to hips, control down, minimize swing."},
+  {n:"Cable Crunch",m:"Core",sm:"abs",e:"Cable",c:"Kneel, rope by head, crunch ribs to pelvis, control up."},
+  {n:"Russian Twist",m:"Core",sm:"abs",e:"Bodyweight",c:"Lean back, feet up, rotate side to side under control."},
+  {n:"Ab Wheel Rollout",m:"Core",sm:"abs",e:"Wheel",c:"Brace hard, roll out as far as control allows, pull back with abs."},
+  {n:"Treadmill Run",m:"Cardio",sm:"cardio",e:"Machine",c:"Log time/distance; steady or intervals per your plan."},
+  {n:"Rowing Machine",m:"Cardio",sm:"cardio",e:"Machine",c:"Drive legs, then lean, then arms; reverse the order back."},
+  {n:"Cycling",m:"Cardio",sm:"cardio",e:"Machine",c:"Log time/distance; keep cadence smooth."},
+  {n:"Stair Climber",m:"Cardio",sm:"cardio",e:"Machine",c:"Tall posture, don't lean on rails, steady pace."},
+  {n:"Jump Rope",m:"Cardio",sm:"cardio",e:"Bodyweight",c:"Light bounces, wrists turn the rope, log time or rounds."},
+  {n:"Incline Walk",m:"Cardio",sm:"cardio",e:"Machine",c:"Raise incline, brisk pace, low-impact conditioning."},
+  {n:"Clean and Jerk",m:"Olympic",sm:"olympic",e:"Barbell",c:"Explosive pull to shoulders, dip and drive overhead. Coach-guided."},
+  {n:"Snatch",m:"Olympic",sm:"olympic",e:"Barbell",c:"One explosive pull from floor to overhead. Technical — coach-guided."},
+  {n:"Power Clean",m:"Olympic",sm:"olympic",e:"Barbell",c:"Triple extension, pull under, catch on shoulders."},
+  {n:"Kettlebell Swing",m:"Olympic",sm:"olympic",e:"Kettlebell",c:"Hip hinge, snap hips, float bell to chest height, brace."},
+  {n:"Thruster",m:"Olympic",sm:"olympic",e:"Barbell",c:"Front squat into overhead press in one fluid drive."},
 ];
+/* sub-muscle → parent group (fallback for untagged/custom exercises) and labels */
+const SUB_PARENT = {chest:"Chest", shoulders:"Shoulders", lats:"Back", upperback:"Back", lowerback:"Back",
+  biceps:"Arms", triceps:"Arms", abs:"Core", glutes:"Glutes", quads:"Legs", hamstrings:"Legs", calves:"Legs",
+  cardio:"Cardio", olympic:"Olympic"};
+const SUB_LABEL = {chest:"Chest", shoulders:"Shoulders", lats:"Lats", upperback:"Upper back", lowerback:"Lower back",
+  biceps:"Biceps", triceps:"Triceps", abs:"Abs", glutes:"Glutes", quads:"Quads", hamstrings:"Hamstrings", calves:"Calves",
+  cardio:"Cardio", olympic:"Olympic"};
+// exercises for a sub-muscle: tagged matches, plus untagged customs whose parent group matches
+function exercisesForSub(sub){
+  const parent = SUB_PARENT[sub];
+  return libAll().filter(x => x.sm ? x.sm === sub : x.m === parent);
+}
 
 /* combined library: built-in + user-added (user entries flagged) */
 function libAll(){
@@ -9895,35 +9921,43 @@ function exItemHTML(it, i, m){
    the front and back figure. */
 function muscleFigure(view){
   const sel = R.muscleSel;
-  const reg = (m, inner) => `<g class="mz${sel === m ? " on" : ""}" tabindex="0" role="button" aria-label="${tr(m)}" onclick="M.muscleSel('${m}')">${inner}</g>`;
-  // a proportioned human silhouette (shoulders wider than hips, tapered waist)
-  // sits behind the muscle regions so the figure reads as a body, not blobs.
+  const reg = (m, inner) => `<g class="mz${sel === m ? " on" : ""}" tabindex="0" role="button" aria-label="${tr(SUB_LABEL[m] || m)}" onclick="M.muscleSel('${m}')">${inner}</g>`;
+  // proportioned athletic silhouette (V-taper: broad shoulders, narrow waist)
   const SIL = `<path class="mzb" d="M60 6c8 0 14 6 14 14 0 5-2 9-5 11 5 1 9 3 12 7 3 3 5 7 8 9 4 3 8 8 10 15 2 6 4 14 4 19 0 4-4 6-7 4-2-1-3-3-4-5 1 8 1 15 0 21-1 5-3 9-4 14 3 10 4 22 3 35-1 14-3 30-6 45-1 6-2 12-4 16-1 3-6 3-7 0-2-9-4-22-5-36-1-9-2-17-9-17s-8 8-9 17c-1 14-3 27-5 36-1 3-6 3-7 0-2-4-3-10-4-16-3-15-5-31-6-45-1-13 0-25 3-35-1-5-3-9-4-14-1-6-1-13 0-21-1 2-2 4-4 5-3 2-7 0-7-4 0-5 2-13 4-19 2-7 6-12 10-15 3-2 5-6 8-9 3-4 7-6 12-7-3-2-5-6-5-11 0-8 6-14 14-14z"/>`;
   const head = `<ellipse class="mzb" cx="60" cy="19" rx="13" ry="14"/>`;
+  const foreL = `<path class="mzb" d="M26 97c-3 8-5 26-3 38 1 6 8 7 11 2 3-6 2-26 0-38-1-4-6-5-8-2z"/>`;
+  const foreR = `<path class="mzb" d="M94 97c3 8 5 26 3 38-1 6-8 7-11 2-3-6-2-26 0-38 1-4 6-5 8-2z"/>`;
   if (view === "front"){
     return `<svg class="bodymap" viewBox="0 0 120 250" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMin meet">
       ${SIL}${head}
-      ${reg("Shoulders", `<path d="M39 47c-8 2-14 8-15 17-1 6 4 10 11 8 7-2 10-11 9-21-1-4-3-5-5-4z"/><path d="M81 47c8 2 14 8 15 17 1 6-4 10-11 8-7-2-10-11-9-21 1-4 3-5 5-4z"/>`)}
-      ${reg("Chest", `<path d="M45 49c8-2 13 0 14 6v17c0 5-8 7-14 4-8-4-9-22 0-27z"/><path d="M75 49c-8-2-13 0-14 6v17c0 5 8 7 14 4 8-4 9-22 0-27z"/>`)}
-      ${reg("Arms", `<path d="M33 56c-6 4-9 20-7 38 1 8 8 10 13 5 4-5 4-27 2-39-1-4-5-6-8-4z"/><path d="M26 97c-3 8-5 26-3 38 1 6 8 7 11 2 3-6 2-26 0-38-1-4-6-5-8-2z"/><path d="M87 56c6 4 9 20 7 38-1 8-8 10-13 5-4-5-4-27-2-39 1-4 5-6 8-4z"/><path d="M94 97c3 8 5 26 3 38-1 6-8 7-11 2-3-6-2-26 0-38 1-4 6-5 8-2z"/>`)}
-      ${reg("Core", `<path d="M50 78h20c2 12 2 27-2 40-3 8-13 8-16 0-4-13-4-28-2-40z"/>`)}
-      ${reg("Legs", `<path d="M51 130c-5 10-6 39-3 62 1 8 11 8 12 0l1-58c-2-7-6-8-10-4z"/><path d="M49 196c-3 12-3 31 0 42 1 6 9 6 10 0l1-40c-2-4-9-6-11-2z"/><path d="M69 130c5 10 6 39 3 62-1 8-11 8-12 0l-1-58c2-7 6-8 10-4z"/><path d="M71 196c3 12 3 31 0 42-1 6-9 6-10 0l-1-40c2-4 9-6 11-2z"/>`)}
+      ${reg("shoulders", `<path d="M39 47c-8 2-14 8-15 17-1 6 4 10 11 8 7-2 10-11 9-21-1-4-3-5-5-4z"/><path d="M81 47c8 2 14 8 15 17 1 6-4 10-11 8-7-2-10-11-9-21 1-4 3-5 5-4z"/>`)}
+      ${reg("chest", `<path d="M45 49c8-2 13 0 14 6v17c0 5-8 7-14 4-8-4-9-22 0-27z"/><path d="M75 49c-8-2-13 0-14 6v17c0 5 8 7 14 4 8-4 9-22 0-27z"/>`)}
+      ${reg("biceps", `<path d="M33 56c-6 4-9 20-7 38 1 8 8 10 13 5 4-5 4-27 2-39-1-4-5-6-8-4z"/><path d="M87 56c6 4 9 20 7 38-1 8-8 10-13 5-4-5-4-27-2-39 1-4 5-6 8-4z"/>`)}
+      ${foreL}${foreR}
+      ${reg("abs", `<path d="M50 78h20c2 12 2 27-2 40-3 8-13 8-16 0-4-13-4-28-2-40z"/>`)}
+      ${reg("quads", `<path d="M51 130c-5 10-6 39-3 62 1 8 11 8 12 0l1-58c-2-7-6-8-10-4z"/><path d="M69 130c5 10 6 39 3 62-1 8-11 8-12 0l-1-58c2-7 6-8 10-4z"/>`)}
+      <g class="mdef"><path d="M60 49v22M47 48c5-3 8-2 13 1M73 48c-5-3-8-2-13 1"/><path d="M60 80v34M53 90h14M53 100h14M54 109h12"/><path d="M56 140c-1 16-1 36 1 50M64 140c1 16 1 36-1 50"/></g>
     </svg>`;
   }
   return `<svg class="bodymap" viewBox="0 0 120 250" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMin meet">
     ${SIL}${head}
-    ${reg("Shoulders", `<path d="M39 47c-8 2-14 8-15 17-1 6 4 10 11 8 7-2 10-11 9-21-1-4-3-5-5-4z"/><path d="M81 47c8 2 14 8 15 17 1 6-4 10-11 8-7-2-10-11-9-21 1-4 3-5 5-4z"/>`)}
-    ${reg("Back", `<path d="M46 46c5-2 23-2 28 0-2 8-8 12-14 12s-12-4-14-12z"/><path d="M43 58c6-2 28-2 34 0 2 12-3 34-9 50-4 10-12 10-16 0-6-16-11-38-9-50z"/>`)}
-    ${reg("Arms", `<path d="M33 56c-6 4-9 20-7 38 1 8 8 10 13 5 4-5 4-27 2-39-1-4-5-6-8-4z"/><path d="M26 97c-3 8-5 26-3 38 1 6 8 7 11 2 3-6 2-26 0-38-1-4-6-5-8-2z"/><path d="M87 56c6 4 9 20 7 38-1 8-8 10-13 5-4-5-4-27-2-39 1-4 5-6 8-4z"/><path d="M94 97c3 8 5 26 3 38-1 6-8 7-11 2-3-6-2-26 0-38 1-4 6-5 8-2z"/>`)}
-    ${reg("Glutes", `<path d="M48 116c0-6 5-9 12-9 1 8 1 18-2 24-6 4-11-6-10-15z"/><path d="M72 116c0-6-5-9-12-9-1 8-1 18 2 24 6 4 11-6 10-15z"/>`)}
-    ${reg("Legs", `<path d="M51 136c-5 10-6 37-3 58 1 8 11 8 12 0l1-54c-2-7-6-8-10-4z"/><path d="M49 198c-3 12-3 31 0 42 1 6 9 6 10 0l1-40c-2-4-9-6-11-2z"/><path d="M69 136c5 10 6 37 3 58-1 8-11 8-12 0l-1-54c2-7 6-8 10-4z"/><path d="M71 198c3 12 3 31 0 42-1 6-9 6-10 0l-1-40c2-4 9-6 11-2z"/>`)}
+    ${reg("shoulders", `<path d="M39 47c-8 2-14 8-15 17-1 6 4 10 11 8 7-2 10-11 9-21-1-4-3-5-5-4z"/><path d="M81 47c8 2 14 8 15 17 1 6-4 10-11 8-7-2-10-11-9-21 1-4 3-5 5-4z"/>`)}
+    ${reg("upperback", `<path d="M46 46c5-2 23-2 28 0-2 8-8 12-14 12s-12-4-14-12z"/>`)}
+    ${reg("lats", `<path d="M44 58c5-2 27-2 32 0 1 9-2 21-6 30-4 9-10 9-14 1-4-9-8-22-12-31z"/>`)}
+    ${reg("lowerback", `<path d="M48 90c3-2 21-2 24 0 2 7 1 16-2 22-3 6-15 6-18 0-3-6-4-15-4-22z"/>`)}
+    ${reg("triceps", `<path d="M33 56c-6 4-9 20-7 38 1 8 8 10 13 5 4-5 4-27 2-39-1-4-5-6-8-4z"/><path d="M87 56c6 4 9 20 7 38-1 8-8 10-13 5-4-5-4-27-2-39 1-4 5-6 8-4z"/>`)}
+    ${foreL}${foreR}
+    ${reg("glutes", `<path d="M48 116c0-6 5-9 12-9 1 8 1 18-2 24-6 4-11-6-10-15z"/><path d="M72 116c0-6-5-9-12-9-1 8-1 18 2 24 6 4 11-6 10-15z"/>`)}
+    ${reg("hamstrings", `<path d="M51 136c-5 10-6 37-3 58 1 8 11 8 12 0l1-54c-2-7-6-8-10-4z"/><path d="M69 136c5 10 6 37 3 58-1 8-11 8-12 0l-1-54c2-7 6-8 10-4z"/>`)}
+    ${reg("calves", `<path d="M49 198c-3 12-3 31 0 42 1 6 9 6 10 0l1-40c-2-4-9-6-11-2z"/><path d="M71 198c3 12 3 31 0 42-1 6-9 6-10 0l-1-40c2-4 9-6 11-2z"/>`)}
+    <g class="mdef"><path d="M60 60v56"/><path d="M50 64c-2 12 0 22 5 30M70 64c2 12 0 22-5 30"/><path d="M56 140v52M64 140v52"/><path d="M55 202v34M65 202v34"/></g>
   </svg>`;
 }
-// Pick a small, balanced set of exercises for a muscle group — compound
+// Pick a small, balanced set of exercises for a sub-muscle — compound
 // movements first, then spread across equipment for variety.
-function pickMuscleExercises(muscle, n){
+function pickMuscleExercises(sub, n){
   const rank = {Barbell: 0, Bodyweight: 1, Dumbbell: 2, Kettlebell: 2, Machine: 3, Cable: 4, Wheel: 5};
-  const all = libAll().filter(x => x.m === muscle);
+  const all = exercisesForSub(sub);
   const sorted = all.slice().sort((a, b) => (rank[a.e] ?? 3) - (rank[b.e] ?? 3));
   const picked = [], usedEq = new Set();
   for (const x of sorted){ if (picked.length >= n) break; if (!usedEq.has(x.e)){ picked.push(x); usedEq.add(x.e); } }
@@ -9931,9 +9965,10 @@ function pickMuscleExercises(muscle, n){
   return picked;
 }
 function trainMusclesHTML(){
-  const sel = R.muscleSel;
-  const list = sel ? libAll().filter(x => x.m === sel) : [];
+  const sel = R.muscleSel;                             // a sub-muscle key, e.g. "biceps"
+  const list = sel ? exercisesForSub(sel) : [];
   R._libList = list;                                   // so M.libPick(i) matches library behaviour
+  const selLabel = sel ? tr(SUB_LABEL[sel] || sel) : "";
   const adding = R.trainWO ? "workout" : (R.progAddEx != null && S.program ? "program" : null);
   return `
     ${adding ? `<div class="card prog-guided"><div class="row" style="align-items:center">
@@ -9941,19 +9976,19 @@ function trainMusclesHTML(){
         <div class="tiny" style="color:var(--txt2)">${tr("Tap a muscle, then tap an exercise to add it.")}</div></div></div>` : ""}
     <div class="card">
       <h3>${ic("barbell", 16)} ${tr("Train by muscle")}</h3>
-      <div class="muted" style="margin:-2px 0 8px">${tr("Tap a muscle group to see exercises for it.")}</div>
+      <div class="muted" style="margin:-2px 0 8px">${tr("Tap a muscle to see exercises for it.")}</div>
       <div class="bodywrap">
         <div class="bodycol">${muscleFigure("front")}<span class="bl">${tr("Front")}</span></div>
         <div class="bodycol">${muscleFigure("back")}<span class="bl">${tr("Back")}</span></div>
       </div>
       <div class="mus-extra">
-        <button class="chip ${sel === "Cardio" ? "on" : ""}" onclick="M.muscleSel('Cardio')">${tr("Cardio")}</button>
-        <button class="chip ${sel === "Olympic" ? "on" : ""}" onclick="M.muscleSel('Olympic')">${tr("Olympic")}</button>
+        <button class="chip ${sel === "cardio" ? "on" : ""}" onclick="M.muscleSel('cardio')">${tr("Cardio")}</button>
+        <button class="chip ${sel === "olympic" ? "on" : ""}" onclick="M.muscleSel('olympic')">${tr("Olympic")}</button>
       </div>
     </div>
     ${sel ? `
-      <div class="msel-h"><b dir="auto">${tr(sel)}</b><span class="cnt">${list.length} ${list.length === 1 ? tr("exercise") : tr("exercises")}</span></div>
-      ${list.length ? `<button class="btn" style="width:100%;margin:0 0 10px" onclick="M.muscleBuild()">${ic("barbell", 15)} ${R.trainWO ? tr("Add these to my workout") : `${tr("Build a workout for")} ${tr(sel)}`}</button>` : ""}
+      <div class="msel-h"><b dir="auto">${selLabel}</b><span class="cnt">${list.length} ${list.length === 1 ? tr("exercise") : tr("exercises")}</span></div>
+      ${list.length ? `<button class="btn" style="width:100%;margin:0 0 10px" onclick="M.muscleBuild()">${ic("barbell", 15)} ${R.trainWO ? tr("Add these to my workout") : `${tr("Build a workout for")} ${selLabel}`}</button>` : ""}
       <div class="lib-list">
         ${list.length ? list.map((x, i) => `<div class="lib-item">
           <button class="feat-card" style="flex:1;min-width:0" onclick="M.libPick(${i})">
@@ -13474,14 +13509,15 @@ window.M = {
   muscleSel(m){ R.muscleSel = R.muscleSel === m ? null : m; buzz(); render(); const c = $("#content"); if (c && R.muscleSel) setTimeout(() => { const h = document.querySelector(".msel-h"); if (h) h.scrollIntoView({behavior: "smooth", block: "start"}); }, 40); },
   muscleBuild(){
     const m = R.muscleSel; if (!m) return;
-    const ex = pickMuscleExercises(m, m === "Cardio" ? 2 : 4);
+    const label = SUB_LABEL[m] || m;
+    const ex = pickMuscleExercises(m, m === "cardio" ? 2 : 4);
     if (!ex.length){ toast(tr("No exercises to build from.")); return; }
-    if (!R.trainWO) R.trainWO = {id: uid(), date: todayStr(), name: m, items: []};
+    if (!R.trainWO) R.trainWO = {id: uid(), date: todayStr(), name: label, items: []};
     const have = new Set(R.trainWO.items.map(it => it.name.toLowerCase()));
     let added = 0;
     ex.forEach(x => { if (!have.has(x.n.toLowerCase())){ R.trainWO.items.push({name: x.n, muscle: x.m, sets: [], note: ""}); added++; } });
     R.trainTab = "today"; buzz(); render(); const c = $("#content"); if (c) c.scrollTop = 0;
-    toast(`${tr("Added")}: ${added} ${added === 1 ? tr("exercise") : tr("exercises")} · ${tr(m)}`);
+    toast(`${tr("Added")}: ${added} ${added === 1 ? tr("exercise") : tr("exercises")} · ${tr(label)}`);
   },
   // Pre-fill the reps/weight inputs with the coach's next-step suggestion.
   woUseSuggest(i){
