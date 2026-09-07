@@ -1709,6 +1709,15 @@ html[data-setpage="privacy"] .set-page[data-page="privacy"]{display:block}
 .ppl-it{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--bg2);border-radius:10px;padding:11px 12px;text-align:start;width:100%}
 .ppl-nm{font-size:13.5px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ppl-mac{color:var(--txt3);font-size:11.5px;white-space:nowrap;flex:0 0 auto}
+/* auto-plan preview sheet */
+.ap-meals{display:flex;flex-direction:column;gap:10px;max-height:46vh;overflow-y:auto;margin:2px 0 4px}
+.ap-meal{background:var(--bg2);border-radius:12px;padding:9px 11px}
+.ap-meal-h{display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:700;color:var(--txt2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px}
+.ap-mk{color:var(--txt3);font-weight:600;text-transform:none;letter-spacing:0}
+.ap-it{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:3px 0}
+.ap-nm{font-size:13.5px;line-height:1.35;min-width:0}
+.ap-im{color:var(--txt3);font-size:11.5px;white-space:nowrap;flex:0 0 auto}
+.ap-tot{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 2px 2px;border-top:1px solid var(--line);font-size:13.5px;color:var(--txt2)}
 
 /* ---------- grocery list ---------- */
 .grocery{display:flex;flex-direction:column}
@@ -1765,7 +1774,7 @@ html[data-setpage="privacy"] .set-page[data-page="privacy"]{display:block}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.233";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.234";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -2800,6 +2809,16 @@ const TR = {
     "Ideas that fit — one tap to log": "أفكار تناسبك — سجّلها بنقرة",
     "Log to": "سجّل في",
     "Estimates from your foods & trusted data, logged to the current meal. Ideas clear when you leave.": "تقديرات من أطعمتك ومصادر موثوقة، تُسجَّل في وجبة الوقت الحالي. تختفي الأفكار عند مغادرتك.",
+    "Auto-plan tomorrow": "خطّط الغد تلقائيًا",
+    "Tomorrow, from your usual foods": "الغد، من أطعمتك المعتادة",
+    "Day total": "إجمالي اليوم",
+    "Every item is something you've logged before, at the portions you usually eat. Tweak anything after.": "كل عنصر هو شيء سجّلته من قبل، بالكميات التي تتناولينها عادة. عدّلي ما تشائين بعد ذلك.",
+    "Shuffle": "خلط",
+    "Use this plan": "استخدم هذه الخطة",
+    "Not enough history yet to plan a full day — log a few more meals and try again.": "لا يوجد سجل كافٍ بعد لتخطيط يوم كامل — سجّلي بعض الوجبات وحاولي مجددًا.",
+    "Log a few more meals first — I plan tomorrow from what you actually eat.": "سجّلي بعض الوجبات أولًا — أخطّط الغد مما تأكلينه فعلًا.",
+    "Planned tomorrow": "خُطّط الغد",
+    "Nothing to plan yet.": "لا شيء للتخطيط بعد.",
     "Progress": "التقدّم",
     "Now · trend": "الآن · الاتجاه",
     "Change": "التغيّر",
@@ -3831,6 +3850,7 @@ const R = {
   insRange: 14,        // Insights time window in days (7 | 14 | 30 | 90 | 0=all)
   planWeek: 0,         // meal-planner week offset (0 = this week)
   planPick: null,      // {date, meal} while the "add to plan" picker sheet is open
+  autoPlan: null,      // {date, seed, meals} preview while the auto-plan sheet is open
   groceryOpen: false,  // grocery-list view open
   groceryChecked: new Set(), // ephemeral ticked grocery items
   _dek: null, _enc: null, _encBusy: false, _encErr: "", _faceTried: false, encSetup: null,  // encryption runtime
@@ -11081,6 +11101,109 @@ function planItems(date, meal){ const d = S.mealPlan[date]; return (d && d[meal]
 function planDayTotals(date){ const d = S.mealPlan[date] || {}; let k = 0, p = 0, n = 0; FOOD_MEALS.forEach(([m]) => (d[m] || []).forEach(it => { k += num(it.kcal); p += num(it.p); n++; })); return {k, p, n}; }
 function planWeekLabel(off){ return off === 0 ? "This week" : off === 1 ? "Next week" : off === -1 ? "Last week" : (off > 0 ? `In ${off} weeks` : `${-off} weeks ago`); }
 
+/* -------- Auto-plan tomorrow (grounded in your own history) ------------
+   Reconstructs a day from the foods you actually log — per meal, at the
+   portions and macros you usually eat. Nothing is invented: every item in
+   the plan already exists in your food history. */
+function mealHistoryProfile(){
+  const slots = {breakfast: new Map(), lunch: new Map(), dinner: new Map(), snack: new Map()};
+  const dayK  = {breakfast: {}, lunch: {}, dinner: {}, snack: {}};   // date -> summed kcal in that slot
+  (S.foods || []).forEach(f => {
+    if (!f.name || f.cheat || f.meal === "cheat") return;
+    if (num(f.kcal) <= 0) return;
+    const m = entryMeal(f); if (!slots[m]) return;
+    const key = f.name.trim().toLowerCase(); if (!key) return;
+    const mp = slots[m];
+    const e = mp.get(key) || {name: f.name, count: 0, ts: -1, kcal: 0, p: 0, c: 0, f: 0, amount: ""};
+    e.count++;
+    if ((f.ts || 0) >= e.ts){ e.ts = f.ts || 0; e.kcal = num(f.kcal); e.p = num(f.p); e.c = num(f.c); e.f = num(f.f); e.amount = f.amount || ""; e.name = f.name; }
+    mp.set(key, e);
+    if (f.date) dayK[m][f.date] = (dayK[m][f.date] || 0) + num(f.kcal);
+  });
+  const out = {};
+  ["breakfast", "lunch", "dinner", "snack"].forEach(m => {
+    const ranked = [...slots[m].values()].sort((a, b) => b.count - a.count || b.ts - a.ts);
+    const days = Object.values(dayK[m]);
+    out[m] = {ranked, avgK: days.length ? days.reduce((a, b) => a + b, 0) / days.length : 0, days: days.length};
+  });
+  return out;
+}
+function autoPlanReady(){
+  const p = mealHistoryProfile();
+  const nonEmpty = ["breakfast", "lunch", "dinner", "snack"].filter(m => p[m].ranked.length).length;
+  const entries = (S.foods || []).filter(f => num(f.kcal) > 0).length;
+  return nonEmpty >= 2 && entries >= 6;
+}
+function buildAutoPlan(date, seed){
+  seed = seed || 0;
+  const prof = mealHistoryProfile();
+  const tg = S.settings.targets || {};
+  const targetK = num(tg.kcal) || 0;
+  const share = {breakfast: 0.25, lunch: 0.35, dinner: 0.30, snack: 0.10};
+  const meals = {};
+  ["breakfast", "lunch", "dinner", "snack"].forEach(m => {
+    const pool = prof[m].ranked;
+    if (!pool.length){ meals[m] = []; return; }
+    const budget = prof[m].avgK > 0 ? prof[m].avgK : (targetK ? targetK * share[m] : 600);
+    const rot = seed % pool.length;                      // re-rolls draw different favourites
+    const seq = pool.slice(rot).concat(pool.slice(0, rot));
+    const chosen = []; let k = 0;
+    for (const e of seq){
+      if (chosen.length >= 3) break;
+      if (chosen.length && k >= budget * 0.9) break;
+      if (chosen.some(x => x.name.toLowerCase() === e.name.toLowerCase())) continue;
+      chosen.push(e); k += e.kcal;
+      if (k >= budget * 1.05) break;
+    }
+    meals[m] = chosen.map(e => ({
+      name: e.name, kcal: Math.round(e.kcal), p: +num(e.p).toFixed(1), c: +num(e.c).toFixed(1), f: +num(e.f).toFixed(1),
+      amount: e.amount || "", ing: [[e.amount, e.name].filter(Boolean).join(" ").trim()].filter(Boolean)
+    }));
+  });
+  return {date, seed, meals};
+}
+function autoPlanTotals(plan){
+  let k = 0, p = 0, n = 0;
+  ["breakfast", "lunch", "dinner", "snack"].forEach(m => (plan.meals[m] || []).forEach(it => { k += num(it.kcal); p += num(it.p); n++; }));
+  return {k, p, n};
+}
+function weekOffsetFor(date){
+  const mondayOf = d => { const x = new Date(d); x.setHours(0, 0, 0, 0); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x; };
+  return Math.round((mondayOf(new Date(date + "T00:00:00")) - mondayOf(new Date())) / (7 * 864e5));
+}
+function autoPlanSheetHTML(){
+  const plan = R.autoPlan; if (!plan) return "";
+  const dstr = new Date(plan.date + "T00:00:00").toLocaleDateString(uiLang() || "en-GB", {weekday: "long", day: "numeric", month: "short"});
+  const tot = autoPlanTotals(plan);
+  const tgK = num((S.settings.targets || {}).kcal) || 0;
+  const diff = tgK ? Math.round(tot.k - tgK) : 0;
+  const meals = ["breakfast", "lunch", "dinner", "snack"].filter(m => (plan.meals[m] || []).length);
+  return `<div class="sheet-mask show" onclick="M.autoPlanClose()"></div>
+    <div class="sheet show" onclick="event.stopPropagation()">
+      <div class="grab"></div>
+      <h3 style="margin:0 0 2px">${ic("calendar", 17)} ${tr("Tomorrow, from your usual foods")}</h3>
+      <div class="tiny" style="color:var(--txt2);margin-bottom:10px">${esc(dstr)}</div>
+      ${meals.length ? `<div class="ap-meals">
+        ${meals.map(m => {
+          const items = plan.meals[m];
+          const mk = items.reduce((a, x) => a + num(x.kcal), 0);
+          return `<div class="ap-meal">
+            <div class="ap-meal-h"><span>${tr(mealLabel(m))}</span><span class="ap-mk">${n0(mk)} kcal</span></div>
+            ${items.map(it => `<div class="ap-it"><span class="ap-nm" dir="auto">${it.amount ? `<span style="color:var(--txt3)">${esc(it.amount)} · </span>` : ""}${esc(it.name)}</span><span class="ap-im">${n0(it.kcal)} · ${n1(it.p)}P</span></div>`).join("")}
+          </div>`;
+        }).join("")}
+      </div>
+      <div class="ap-tot"><span>${tr("Day total")}</span>
+        <span><b style="color:var(--acc)">${n0(tot.k)}</b> kcal · ${n1(tot.p)}P${tgK ? ` <span class="tiny" style="color:var(--txt3)">/ ${n0(tgK)} ${tr("target")}${diff ? ` · ${diff > 0 ? "+" : ""}${n0(diff)}` : ""}</span>` : ""}</span></div>
+      <div class="tiny" style="color:var(--txt2);margin:8px 0 12px">${tr("Every item is something you've logged before, at the portions you usually eat. Tweak anything after.")}</div>
+      <div class="row" style="gap:8px">
+        <button class="btn sec" style="flex:1" onclick="M.autoPlanShuffle()">${ic("refresh", 15)} ${tr("Shuffle")}</button>
+        <button class="btn" style="flex:2" onclick="M.autoPlanApply()">${ic("check", 15)} ${tr("Use this plan")}</button>
+      </div>` : `<div class="muted" style="margin:8px 0 12px">${tr("Not enough history yet to plan a full day — log a few more meals and try again.")}</div>`}
+      <button class="btn sec" style="width:100%;margin-top:8px" onclick="M.autoPlanClose()">${tr("Cancel")}</button>
+    </div>`;
+}
+
 function plannerHTML(){
   if (R.groceryOpen) return groceryHTML();
   const off = R.planWeek || 0;
@@ -11097,6 +11220,7 @@ function plannerHTML(){
       <span class="plan-wk">${t(planWeekLabel(off))}</span>
       <button class="btn sm sec" aria-label="Next week" onclick="M.planWeek(1)">${ic("chevR", 15)}</button>
     </div>
+    ${autoPlanReady() ? `<button class="btn" style="width:100%;margin-bottom:10px" onclick="M.autoPlanTomorrow()">${ic("calendar", 16)} ${t("Auto-plan tomorrow")}</button>` : ""}
     <div class="row" style="gap:8px;margin-bottom:12px">
       <button class="btn sec" style="flex:1" onclick="M.groceryShow()">${ic("list", 15)} ${t("Grocery list")}</button>
       ${anyPlanned ? `<button class="btn sm sec" onclick="M.planClearWeek()">${ic("trash", 14)} ${t("Clear week")}</button>` : ""}
@@ -11126,7 +11250,8 @@ function plannerHTML(){
       </div>`;
     }).join("")}
     <div class="tiny" style="text-align:center;color:var(--txt2);margin:6px 0 2px">Macros shown are per planned serving from your recipes & saved meals — estimates where the source didn't publish exact values.</div>
-    ${R.planPick ? planPickSheetHTML() : ""}`;
+    ${R.planPick ? planPickSheetHTML() : ""}
+    ${R.autoPlan ? autoPlanSheetHTML() : ""}`;
 }
 
 function planPickSheetHTML(){
@@ -15102,13 +15227,36 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
   },
   recipeDel(id){ S.recipes = S.recipes.filter(x => x.id !== id); R.recipeId = null; save(); render(); toast("Recipe removed."); },
   /* ---- weekly meal planner + grocery list ---- */
-  goPlanner(){ R.tab = "plan"; R.homeCat = null; R.reviewOpen = false; R.quickOpen = false; R.groceryOpen = false; R.planPick = null; save(); render(); const c = $("#content"); if (c) c.scrollTop = 0; },
+  goPlanner(){ R.tab = "plan"; R.homeCat = null; R.reviewOpen = false; R.quickOpen = false; R.groceryOpen = false; R.planPick = null; R.autoPlan = null; save(); render(); const c = $("#content"); if (c) c.scrollTop = 0; },
   insRange(v){ R.insRange = v; save(); render(); },
   planWeek(delta){ R.planWeek = (R.planWeek || 0) + delta; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
   planClearWeek(){
     const week = planWeekDates(R.planWeek || 0);
     week.forEach(d => delete S.mealPlan[d]);
     save(); render(); toast("Week cleared.");
+  },
+  autoPlanTomorrow(){
+    if (!autoPlanReady()){ toast(tr("Log a few more meals first — I plan tomorrow from what you actually eat.")); return; }
+    const tmr = new Date(Date.now() + 864e5).toLocaleDateString("en-CA");
+    R.autoPlan = buildAutoPlan(tmr, 0);
+    buzz(); render();
+  },
+  autoPlanShuffle(){ if (!R.autoPlan) return; R.autoPlan = buildAutoPlan(R.autoPlan.date, (R.autoPlan.seed || 0) + 1); buzz(); render(); },
+  autoPlanClose(){ R.autoPlan = null; render(); },
+  autoPlanApply(){
+    const plan = R.autoPlan; if (!plan) return;
+    const tot = autoPlanTotals(plan);
+    if (!tot.n){ toast(tr("Nothing to plan yet.")); return; }
+    S.mealPlan[plan.date] = S.mealPlan[plan.date] || {};
+    ["breakfast", "lunch", "dinner", "snack"].forEach(m => {
+      const items = plan.meals[m] || []; if (!items.length) return;
+      S.mealPlan[plan.date][m] = (S.mealPlan[plan.date][m] || [])
+        .concat(items.map(it => ({name: it.name, kcal: it.kcal, p: it.p, c: it.c, f: it.f, ing: it.ing || []})));
+    });
+    R.autoPlan = null;
+    R.planWeek = weekOffsetFor(plan.date);   // show the week that holds tomorrow
+    buzz(); save(); render();
+    toast(`${tr("Planned tomorrow")}: ${n0(tot.k)} kcal ✓`);
   },
   planPick(date, meal){ R.planPick = {date, meal}; render(); setTimeout(() => { const el = $("#planFree"); if (el) el.focus(); }, 60); },
   planPickClose(){ R.planPick = null; render(); },
