@@ -1647,6 +1647,19 @@ html[data-setpage="privacy"] .set-page[data-page="privacy"]{display:block}
 .lib-item{display:flex;gap:8px;align-items:stretch;margin-bottom:8px}
 .lib-item .feat-card{margin-bottom:0}
 .lib-demo{flex:0 0 auto;align-self:center}
+/* muscle body-map picker */
+.bodywrap{display:flex;gap:6px;justify-content:center;align-items:flex-start;margin:2px 0 4px}
+.bodycol{flex:1;min-width:0;max-width:180px;display:flex;flex-direction:column;align-items:center}
+.bodycol .bl{font-size:10.5px;color:var(--txt3);text-transform:uppercase;letter-spacing:.06em;margin-top:2px}
+.bodymap{width:100%;height:auto;max-height:240px;display:block;touch-action:manipulation;overflow:visible}
+.bodymap .mz{fill:var(--line2);stroke:var(--card);stroke-width:.7;cursor:pointer;transition:fill .12s}
+.bodymap .mz:hover{fill:var(--acc-soft)}
+.bodymap .mz.on{fill:var(--acc)}
+.bodymap .mzb{fill:var(--line);stroke:var(--card);stroke-width:.7}
+.msel-h{display:flex;align-items:baseline;gap:8px;margin:6px 2px 10px}
+.msel-h b{font-size:15px}
+.msel-h .cnt{color:var(--txt3);font-size:12px}
+.mus-extra{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:4px}
 .demo-btn{background:var(--bg2);border:1px solid var(--line);color:var(--txt2)}
 .demo-step{display:flex;gap:10px;margin:9px 0;font-size:14px;line-height:1.5}
 .demo-step .n{flex:0 0 auto;width:22px;height:22px;border-radius:50%;background:var(--acc-soft);color:var(--acc);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:1px}
@@ -1774,7 +1787,7 @@ html[data-setpage="privacy"] .set-page[data-page="privacy"]{display:block}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.234";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.235";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -2153,6 +2166,17 @@ const TR = {
     "Core":"الجذع",
     "Cardio":"كارديو",
     "Olympic":"أولمبي",
+    "Muscles":"العضلات",
+    "Train by muscle":"تمرّن حسب العضلة",
+    "Tap a muscle group to see exercises for it.":"اضغط على مجموعة عضلية لعرض تمارينها.",
+    "Front":"أمام",
+    "By muscle":"حسب العضلة",
+    "exercise":"تمرين",
+    "Adding to your workout":"الإضافة إلى تمرينك",
+    "Adding to your program":"الإضافة إلى برنامجك",
+    "Tap a muscle, then tap an exercise to add it.":"اضغط على عضلة، ثم اضغط على تمرين لإضافته.",
+    "No exercises here yet — add one in the Library with “Find (AI)” or “Add exercise”.":"لا توجد تمارين هنا بعد — أضِف واحدًا من المكتبة عبر «بحث (ذكاء اصطناعي)» أو «أضف تمرين».",
+    "Nothing selected yet — tap a muscle above.":"لم تختر شيئًا بعد — اضغط على عضلة بالأعلى.",
     "Barbell":"بار حديد",
     "Dumbbell":"دمبل",
     "Cable":"كيبل",
@@ -3827,6 +3851,7 @@ const R = {
   trainWO: null,      // in-progress workout being logged
   libQuery: "",
   libMuscle: "All",
+  muscleSel: null,     // selected muscle group in the visual "Muscles" picker
   exForm: {open: false, n: "", m: "Chest", e: "", c: ""},
   aiExBusy: false,
   progEx: "",
@@ -9691,7 +9716,7 @@ function trainHyroxHTML(){
 }
 
 function trainHTML(){
-  const tabs = [["today","Workout"],["ready","Readiness"],["program","Program"],["library","Library"],["cardio","Cardio"],["hyrox","Hyrox"],["history","History"],["coach","Coach"]];
+  const tabs = [["today","Workout"],["ready","Readiness"],["program","Program"],["muscles","Muscles"],["library","Library"],["cardio","Cardio"],["hyrox","Hyrox"],["history","History"],["coach","Coach"]];
   return `
     <button class="cat-back" onclick="M.trainBack()">${ic("back", 18)} ${tr("Fitness")}</button>
     <div class="cat-title"><div class="ch-nm">${tr("Training")}</div><div class="ch-ds">${tr("Program · tracking · coach")}</div></div>
@@ -9701,6 +9726,7 @@ function trainHTML(){
       R.trainTab === "today" ? trainTodayHTML() :
       R.trainTab === "ready" ? trainReadyHTML() :
       R.trainTab === "program" ? trainProgramHTML() :
+      R.trainTab === "muscles" ? trainMusclesHTML() :
       R.trainTab === "library" ? trainLibHTML() :
       R.trainTab === "cardio" ? trainCardioHTML() :
       R.trainTab === "hyrox" ? trainHyroxHTML() :
@@ -9783,7 +9809,10 @@ function trainTodayHTML(){
     ${R.plateOpen ? plateHTML() : ""}
     ${restControlHTML()}
     ${woItemsHTML(wo.items)}
-    <button class="btn sec" style="margin-bottom:12px" onclick="M.trainGo('library')">${ic("plus", 15)} Add exercise</button>
+    <div class="row" style="margin-bottom:12px">
+      <button class="btn sec" style="flex:1" onclick="M.trainGo('library')">${ic("plus", 15)} ${tr("Add exercise")}</button>
+      <button class="btn sec" style="flex:1" onclick="M.trainGo('muscles')">${ic("barbell", 15)} ${tr("By muscle")}</button>
+    </div>
     <div class="row" style="margin-bottom:10px">
       <button class="btn" style="flex:1.6" onclick="M.woFinish()">${ic("check", 16)} Finish & save</button>
       <button class="btn sec danger" onclick="M.woDiscard()">Discard</button>
@@ -9854,6 +9883,70 @@ function exItemHTML(it, i, m){
     </div>
     <input class="ex-note" value="${esc(it.note || "")}" oninput="R.trainWO.items[${i}].note=this.value" placeholder="${tr("Note (optional)")}" dir="auto">
   </div>`;
+}
+
+/* ---- MuscleWiki-style visual picker: tap a body region → its exercises ----
+   Regions map to the muscle groups the library already uses, so every tap
+   returns real, cited exercises. One selection highlights the region on both
+   the front and back figure. */
+function muscleFigure(view){
+  const sel = R.muscleSel;
+  const reg = (m, inner) => `<g class="mz${sel === m ? " on" : ""}" tabindex="0" role="button" aria-label="${tr(m)}" onclick="M.muscleSel('${m}')">${inner}</g>`;
+  const head = `<circle class="mzb" cx="50" cy="16" r="12"/><rect class="mzb" x="44" y="26" width="12" height="8" rx="3"/>`;
+  if (view === "front"){
+    return `<svg class="bodymap" viewBox="0 0 100 210" xmlns="http://www.w3.org/2000/svg">
+      ${head}
+      ${reg("Shoulders", `<ellipse cx="28" cy="44" rx="11" ry="8.5"/><ellipse cx="72" cy="44" rx="11" ry="8.5"/>`)}
+      ${reg("Chest", `<rect x="33" y="40" width="16" height="23" rx="6"/><rect x="51" y="40" width="16" height="23" rx="6"/>`)}
+      ${reg("Arms", `<ellipse cx="20" cy="61" rx="7.5" ry="15"/><ellipse cx="16" cy="90" rx="6.5" ry="15"/><ellipse cx="80" cy="61" rx="7.5" ry="15"/><ellipse cx="84" cy="90" rx="6.5" ry="15"/>`)}
+      ${reg("Core", `<rect x="40" y="65" width="20" height="30" rx="5"/>`)}
+      <rect class="mzb" x="38" y="94" width="24" height="11" rx="5"/>
+      ${reg("Legs", `<ellipse cx="41" cy="122" rx="10" ry="27"/><ellipse cx="40" cy="170" rx="7.5" ry="22"/><ellipse cx="59" cy="122" rx="10" ry="27"/><ellipse cx="60" cy="170" rx="7.5" ry="22"/>`)}
+    </svg>`;
+  }
+  return `<svg class="bodymap" viewBox="0 0 100 210" xmlns="http://www.w3.org/2000/svg">
+    ${head}
+    ${reg("Shoulders", `<ellipse cx="28" cy="44" rx="11" ry="8.5"/><ellipse cx="72" cy="44" rx="11" ry="8.5"/>`)}
+    ${reg("Back", `<path d="M40 37 h20 l-3 9 h-14 z"/><path d="M35 47 h30 a5 5 0 0 1 5 5 l-3 24 a6 6 0 0 1 -6 5 h-22 a6 6 0 0 1 -6 -5 l-3 -24 a5 5 0 0 1 5 -5 z"/>`)}
+    ${reg("Arms", `<ellipse cx="20" cy="61" rx="7.5" ry="15"/><ellipse cx="16" cy="90" rx="6.5" ry="15"/><ellipse cx="80" cy="61" rx="7.5" ry="15"/><ellipse cx="84" cy="90" rx="6.5" ry="15"/>`)}
+    ${reg("Glutes", `<ellipse cx="42" cy="101" rx="10" ry="9.5"/><ellipse cx="58" cy="101" rx="10" ry="9.5"/>`)}
+    ${reg("Legs", `<ellipse cx="41" cy="132" rx="10" ry="25"/><ellipse cx="40" cy="176" rx="7.5" ry="19"/><ellipse cx="59" cy="132" rx="10" ry="25"/><ellipse cx="60" cy="176" rx="7.5" ry="19"/>`)}
+  </svg>`;
+}
+function trainMusclesHTML(){
+  const sel = R.muscleSel;
+  const list = sel ? libAll().filter(x => x.m === sel) : [];
+  R._libList = list;                                   // so M.libPick(i) matches library behaviour
+  const adding = R.trainWO ? "workout" : (R.progAddEx != null && S.program ? "program" : null);
+  return `
+    ${adding ? `<div class="card prog-guided"><div class="row" style="align-items:center">
+      <div style="flex:1"><b class="tiny">${ic("plus", 13)} ${adding === "workout" ? tr("Adding to your workout") : tr("Adding to your program")}</b>
+        <div class="tiny" style="color:var(--txt2)">${tr("Tap a muscle, then tap an exercise to add it.")}</div></div></div>` : ""}
+    <div class="card">
+      <h3>${ic("barbell", 16)} ${tr("Train by muscle")}</h3>
+      <div class="muted" style="margin:-2px 0 8px">${tr("Tap a muscle group to see exercises for it.")}</div>
+      <div class="bodywrap">
+        <div class="bodycol">${muscleFigure("front")}<span class="bl">${tr("Front")}</span></div>
+        <div class="bodycol">${muscleFigure("back")}<span class="bl">${tr("Back")}</span></div>
+      </div>
+      <div class="mus-extra">
+        <button class="chip ${sel === "Cardio" ? "on" : ""}" onclick="M.muscleSel('Cardio')">${tr("Cardio")}</button>
+        <button class="chip ${sel === "Olympic" ? "on" : ""}" onclick="M.muscleSel('Olympic')">${tr("Olympic")}</button>
+      </div>
+    </div>
+    ${sel ? `
+      <div class="msel-h"><b dir="auto">${tr(sel)}</b><span class="cnt">${list.length} ${list.length === 1 ? tr("exercise") : tr("exercises")}</span></div>
+      <div class="lib-list">
+        ${list.length ? list.map((x, i) => `<div class="lib-item">
+          <button class="feat-card" style="flex:1;min-width:0" onclick="M.libPick(${i})">
+            <span class="fc-tx"><span class="fc-nm" dir="auto">${esc(x.n)}${x.user ? ` <span class="tiny">· ${tr("yours")}</span>` : ""}</span>
+              <span class="fc-ds">${esc(tr(x.m))}${x.e ? " · " + esc(tr(x.e)) : ""}</span></span>
+            <span class="fc-ar">${adding ? ic("plus", 17) : ic("chevR", 16)}</span>
+          </button>
+          <button class="icon-btn demo-btn lib-demo" aria-label="${tr("How-to")}" data-n="${esc(x.n)}" onclick="M.exDemo(this.dataset.n)">${ic("book", 17)}</button>
+        </div>`).join("") : `<div class="muted" style="padding:6px 2px">${tr("No exercises here yet — add one in the Library with “Find (AI)” or “Add exercise”.")}</div>`}
+      </div>`
+    : `<div class="muted" style="text-align:center;padding:4px 2px 2px">${tr("Nothing selected yet — tap a muscle above.")}</div>`}`;
 }
 
 function trainLibHTML(){
@@ -13360,6 +13453,7 @@ window.M = {
     M.woAddExercise(x);
   },
   libMuscle(m){ R.libMuscle = m; render(); },
+  muscleSel(m){ R.muscleSel = R.muscleSel === m ? null : m; buzz(); render(); const c = $("#content"); if (c && R.muscleSel) setTimeout(() => { const h = document.querySelector(".msel-h"); if (h) h.scrollIntoView({behavior: "smooth", block: "start"}); }, 40); },
   // Pre-fill the reps/weight inputs with the coach's next-step suggestion.
   woUseSuggest(i){
     const it = R.trainWO && R.trainWO.items[i]; if (!it) return;
