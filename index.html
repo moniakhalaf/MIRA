@@ -1651,7 +1651,7 @@ html[data-setpage="privacy"] .set-page[data-page="privacy"]{display:block}
 .bodywrap{display:flex;gap:6px;justify-content:center;align-items:flex-start;margin:2px 0 4px}
 .bodycol{flex:1;min-width:0;max-width:180px;display:flex;flex-direction:column;align-items:center}
 .bodycol .bl{font-size:10.5px;color:var(--txt3);text-transform:uppercase;letter-spacing:.06em;margin-top:2px}
-.bodymap{width:100%;height:auto;max-height:270px;display:block;touch-action:manipulation;overflow:visible}
+.bodymap{width:100%;height:auto;max-height:330px;display:block;touch-action:manipulation;overflow:visible}
 .bodymap .mzb{fill:var(--card2)}
 .bodymap .mz{fill:var(--line2);stroke:var(--bg);stroke-width:.9;stroke-linejoin:round;cursor:pointer;transition:fill .12s,opacity .12s}
 .bodymap .mz:hover{fill:var(--acc-soft)}
@@ -1788,7 +1788,7 @@ html[data-setpage="privacy"] .set-page[data-page="privacy"]{display:block}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.238";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.239";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -9922,35 +9922,46 @@ function exItemHTML(it, i, m){
 function muscleFigure(view){
   const sel = R.muscleSel;
   const reg = (m, inner) => `<g class="mz${sel === m ? " on" : ""}" tabindex="0" role="button" aria-label="${tr(SUB_LABEL[m] || m)}" onclick="M.muscleSel('${m}')">${inner}</g>`;
-  // proportioned athletic silhouette (V-taper: broad shoulders, narrow waist)
-  const SIL = `<path class="mzb" d="M60 6c8 0 14 6 14 14 0 5-2 9-5 11 5 1 9 3 12 7 3 3 5 7 8 9 4 3 8 8 10 15 2 6 4 14 4 19 0 4-4 6-7 4-2-1-3-3-4-5 1 8 1 15 0 21-1 5-3 9-4 14 3 10 4 22 3 35-1 14-3 30-6 45-1 6-2 12-4 16-1 3-6 3-7 0-2-9-4-22-5-36-1-9-2-17-9-17s-8 8-9 17c-1 14-3 27-5 36-1 3-6 3-7 0-2-4-3-10-4-16-3-15-5-31-6-45-1-13 0-25 3-35-1-5-3-9-4-14-1-6-1-13 0-21-1 2-2 4-4 5-3 2-7 0-7-4 0-5 2-13 4-19 2-7 6-12 10-15 3-2 5-6 8-9 3-4 7-6 12-7-3-2-5-6-5-11 0-8 6-14 14-14z"/>`;
-  const head = `<ellipse class="mzb" cx="60" cy="19" rx="13" ry="14"/>`;
-  const foreL = `<path class="mzb" d="M26 97c-3 8-5 26-3 38 1 6 8 7 11 2 3-6 2-26 0-38-1-4-6-5-8-2z"/>`;
-  const foreR = `<path class="mzb" d="M94 97c3 8 5 26 3 38-1 6-8 7-11 2-3-6-2-26 0-38 1-4 6-5 8-2z"/>`;
+  // A properly proportioned athletic figure (~7.5 heads): neck, V-taper torso,
+  // arms with hands slightly abducted, long legs with knees, calves and feet.
+  // Base body parts share one fill; muscle regions and definition lines sit on top.
+  const BASE = `
+    <ellipse class="mzb" cx="60" cy="24" rx="12" ry="15"/>
+    <path class="mzb" d="M54 37h12v8c0 3-12 3-12 0z"/>
+    <path class="mzb" d="M42 54C40 51 80 51 78 54 82 68 83 92 80 112 78 126 77 138 76 150 70 156 50 156 44 150 43 138 42 126 40 112 37 92 38 68 42 54Z"/>
+    <path class="mzb" d="M43 55C33 58 27 86 25 112 24 128 23 150 23 166 23 173 31 173 32 166 34 148 36 126 40 104 42 86 45 66 47 57Z"/>
+    <path class="mzb" d="M77 55C87 58 93 86 95 112 96 128 97 150 97 166 97 173 89 173 88 166 86 148 84 126 80 104 78 86 75 66 73 57Z"/>
+    <ellipse class="mzb" cx="27" cy="172" rx="6" ry="8.5"/><ellipse class="mzb" cx="93" cy="172" rx="6" ry="8.5"/>
+    <path class="mzb" d="M45 150C42 172 42 200 45 218 43 242 43 264 46 280 47 287 57 287 58 280 59 264 59 242 58 218 60 200 60 172 58 152 54 148 49 148 45 150Z"/>
+    <path class="mzb" d="M75 150C78 172 78 200 75 218 77 242 77 264 74 280 73 287 63 287 62 280 61 264 61 242 62 218 60 200 60 172 62 152 66 148 71 148 75 150Z"/>
+    <path class="mzb" d="M45 282C44 288 45 292 49 292L57 292C60 292 60 286 59 282Z"/>
+    <path class="mzb" d="M75 282C76 288 75 292 71 292L63 292C60 292 60 286 61 282Z"/>`;
   if (view === "front"){
-    return `<svg class="bodymap" viewBox="0 0 120 250" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMin meet">
-      ${SIL}${head}
-      ${reg("shoulders", `<path d="M39 47c-8 2-14 8-15 17-1 6 4 10 11 8 7-2 10-11 9-21-1-4-3-5-5-4z"/><path d="M81 47c8 2 14 8 15 17 1 6-4 10-11 8-7-2-10-11-9-21 1-4 3-5 5-4z"/>`)}
-      ${reg("chest", `<path d="M45 49c8-2 13 0 14 6v17c0 5-8 7-14 4-8-4-9-22 0-27z"/><path d="M75 49c-8-2-13 0-14 6v17c0 5 8 7 14 4 8-4 9-22 0-27z"/>`)}
-      ${reg("biceps", `<path d="M33 56c-6 4-9 20-7 38 1 8 8 10 13 5 4-5 4-27 2-39-1-4-5-6-8-4z"/><path d="M87 56c6 4 9 20 7 38-1 8-8 10-13 5-4-5-4-27-2-39 1-4 5-6 8-4z"/>`)}
-      ${foreL}${foreR}
-      ${reg("abs", `<path d="M50 78h20c2 12 2 27-2 40-3 8-13 8-16 0-4-13-4-28-2-40z"/>`)}
-      ${reg("quads", `<path d="M51 130c-5 10-6 39-3 62 1 8 11 8 12 0l1-58c-2-7-6-8-10-4z"/><path d="M69 130c5 10 6 39 3 62-1 8-11 8-12 0l-1-58c2-7 6-8 10-4z"/>`)}
-      <g class="mdef"><path d="M60 49v22M47 48c5-3 8-2 13 1M73 48c-5-3-8-2-13 1"/><path d="M60 80v34M53 90h14M53 100h14M54 109h12"/><path d="M56 140c-1 16-1 36 1 50M64 140c1 16 1 36-1 50"/></g>
+    return `<svg class="bodymap" viewBox="0 0 120 300" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMin meet">
+      ${BASE}
+      ${reg("shoulders", `<path d="M47 53C37 51 28 57 26 68 25 74 31 77 37 74 43 71 46 62 47 53Z"/><path d="M73 53C83 51 92 57 94 68 95 74 89 77 83 74 77 71 74 62 73 53Z"/>`)}
+      ${reg("chest", `<path d="M47 57C55 54 59 56 59 63L59 83C59 88 49 90 44 85 38 79 40 63 47 57Z"/><path d="M73 57C65 54 61 56 61 63L61 83C61 88 71 90 76 85 82 79 80 63 73 57Z"/>`)}
+      ${reg("biceps", `<path d="M35 62C29 68 26 90 28 110 29 118 37 119 41 112 44 98 44 78 43 66 42 62 38 60 35 62Z"/><path d="M85 62C91 68 94 90 92 110 91 118 83 119 79 112 76 98 76 78 77 66 78 62 82 60 85 62Z"/>`)}
+      <path class="mzb" d="M28 114C25 126 24 148 26 164 27 170 35 170 37 164 39 148 38 128 36 116 35 112 30 111 28 114Z"/>
+      <path class="mzb" d="M92 114C95 126 96 148 94 164 93 170 85 170 83 164 81 148 82 128 84 116 85 112 90 111 92 114Z"/>
+      ${reg("abs", `<path d="M50 88h20c2 14 2 30-2 44-3 8-13 8-16 0-4-14-4-30-2-44z"/>`)}
+      ${reg("quads", `<path d="M48 152C43 168 43 198 47 214 49 222 58 222 59 214L60 158C58 151 52 150 48 152Z"/><path d="M72 152C77 168 77 198 73 214 71 222 62 222 61 214L60 158C62 151 68 150 72 152Z"/>`)}
+      <g class="mdef"><path d="M60 57v26M48 55c5-3 8-2 12 1M72 55c-5-3-8-2-12 1"/><path d="M60 90v42M52 100h16M52 111h16M53 121h14"/><path d="M56 160c-1 18-1 38 1 52M64 160c1 18 1 38-1 52"/></g>
     </svg>`;
   }
-  return `<svg class="bodymap" viewBox="0 0 120 250" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMin meet">
-    ${SIL}${head}
-    ${reg("shoulders", `<path d="M39 47c-8 2-14 8-15 17-1 6 4 10 11 8 7-2 10-11 9-21-1-4-3-5-5-4z"/><path d="M81 47c8 2 14 8 15 17 1 6-4 10-11 8-7-2-10-11-9-21 1-4 3-5 5-4z"/>`)}
-    ${reg("upperback", `<path d="M46 46c5-2 23-2 28 0-2 8-8 12-14 12s-12-4-14-12z"/>`)}
-    ${reg("lats", `<path d="M44 58c5-2 27-2 32 0 1 9-2 21-6 30-4 9-10 9-14 1-4-9-8-22-12-31z"/>`)}
-    ${reg("lowerback", `<path d="M48 90c3-2 21-2 24 0 2 7 1 16-2 22-3 6-15 6-18 0-3-6-4-15-4-22z"/>`)}
-    ${reg("triceps", `<path d="M33 56c-6 4-9 20-7 38 1 8 8 10 13 5 4-5 4-27 2-39-1-4-5-6-8-4z"/><path d="M87 56c6 4 9 20 7 38-1 8-8 10-13 5-4-5-4-27-2-39 1-4 5-6 8-4z"/>`)}
-    ${foreL}${foreR}
-    ${reg("glutes", `<path d="M48 116c0-6 5-9 12-9 1 8 1 18-2 24-6 4-11-6-10-15z"/><path d="M72 116c0-6-5-9-12-9-1 8-1 18 2 24 6 4 11-6 10-15z"/>`)}
-    ${reg("hamstrings", `<path d="M51 136c-5 10-6 37-3 58 1 8 11 8 12 0l1-54c-2-7-6-8-10-4z"/><path d="M69 136c5 10 6 37 3 58-1 8-11 8-12 0l-1-54c2-7 6-8 10-4z"/>`)}
-    ${reg("calves", `<path d="M49 198c-3 12-3 31 0 42 1 6 9 6 10 0l1-40c-2-4-9-6-11-2z"/><path d="M71 198c3 12 3 31 0 42-1 6-9 6-10 0l-1-40c2-4 9-6 11-2z"/>`)}
-    <g class="mdef"><path d="M60 60v56"/><path d="M50 64c-2 12 0 22 5 30M70 64c2 12 0 22-5 30"/><path d="M56 140v52M64 140v52"/><path d="M55 202v34M65 202v34"/></g>
+  return `<svg class="bodymap" viewBox="0 0 120 300" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMin meet">
+    ${BASE}
+    ${reg("shoulders", `<path d="M47 53C37 51 28 57 26 68 25 74 31 77 37 74 43 71 46 62 47 53Z"/><path d="M73 53C83 51 92 57 94 68 95 74 89 77 83 74 77 71 74 62 73 53Z"/>`)}
+    ${reg("upperback", `<path d="M50 50c6-3 14-3 20 0-1 11-6 18-10 18-4 0-9-7-10-18z"/>`)}
+    ${reg("lats", `<path d="M45 66C53 63 67 63 75 66 77 82 71 98 64 102L56 102C49 98 43 82 45 66Z"/>`)}
+    ${reg("lowerback", `<path d="M51 102h18c2 9 1 18-2 24-3 6-13 6-16 0-3-6-3-15 0-24z"/>`)}
+    ${reg("triceps", `<path d="M35 62C29 68 26 90 28 110 29 118 37 119 41 112 44 98 44 78 43 66 42 62 38 60 35 62Z"/><path d="M85 62C91 68 94 90 92 110 91 118 83 119 79 112 76 98 76 78 77 66 78 62 82 60 85 62Z"/>`)}
+    <path class="mzb" d="M28 114C25 126 24 148 26 164 27 170 35 170 37 164 39 148 38 128 36 116 35 112 30 111 28 114Z"/>
+    <path class="mzb" d="M92 114C95 126 96 148 94 164 93 170 85 170 83 164 81 148 82 128 84 116 85 112 90 111 92 114Z"/>
+    ${reg("glutes", `<path d="M48 130C48 125 56 123 59 128 60 137 60 150 57 154 50 157 46 141 48 130Z"/><path d="M72 130C72 125 64 123 61 128 60 137 60 150 63 154 70 157 74 141 72 130Z"/>`)}
+    ${reg("hamstrings", `<path d="M48 156C43 172 43 200 47 214 49 222 58 222 59 214L60 160C58 153 52 152 48 156Z"/><path d="M72 156C77 172 77 200 73 214 71 222 62 222 61 214L60 160C62 153 68 152 72 156Z"/>`)}
+    ${reg("calves", `<path d="M47 218C43 230 43 252 46 266 48 274 57 274 58 266 60 252 59 232 57 220 54 216 50 216 47 218Z"/><path d="M73 218C77 230 77 252 74 266 72 274 63 274 62 266 60 252 61 232 63 220 66 216 70 216 73 218Z"/>`)}
+    <g class="mdef"><path d="M60 62v66"/><path d="M51 70c-2 12 0 24 6 30M69 70c2 12 0 24-6 30"/><path d="M56 160v54M64 160v54"/><path d="M55 222v42M65 222v42"/><path d="M60 128v24"/></g>
   </svg>`;
 }
 // Pick a small, balanced set of exercises for a sub-muscle — compound
