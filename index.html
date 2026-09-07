@@ -1651,11 +1651,11 @@ html[data-setpage="privacy"] .set-page[data-page="privacy"]{display:block}
 .bodywrap{display:flex;gap:6px;justify-content:center;align-items:flex-start;margin:2px 0 4px}
 .bodycol{flex:1;min-width:0;max-width:180px;display:flex;flex-direction:column;align-items:center}
 .bodycol .bl{font-size:10.5px;color:var(--txt3);text-transform:uppercase;letter-spacing:.06em;margin-top:2px}
-.bodymap{width:100%;height:auto;max-height:240px;display:block;touch-action:manipulation;overflow:visible}
-.bodymap .mz{fill:var(--line2);stroke:var(--card);stroke-width:.7;cursor:pointer;transition:fill .12s}
+.bodymap{width:100%;height:auto;max-height:270px;display:block;touch-action:manipulation;overflow:visible}
+.bodymap .mzb{fill:var(--card2)}
+.bodymap .mz{fill:var(--line2);stroke:var(--bg);stroke-width:.9;stroke-linejoin:round;cursor:pointer;transition:fill .12s,opacity .12s}
 .bodymap .mz:hover{fill:var(--acc-soft)}
 .bodymap .mz.on{fill:var(--acc)}
-.bodymap .mzb{fill:var(--line);stroke:var(--card);stroke-width:.7}
 .msel-h{display:flex;align-items:baseline;gap:8px;margin:6px 2px 10px}
 .msel-h b{font-size:15px}
 .msel-h .cnt{color:var(--txt3);font-size:12px}
@@ -1787,7 +1787,7 @@ html[data-setpage="privacy"] .set-page[data-page="privacy"]{display:block}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.236";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.237";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -2177,6 +2177,9 @@ const TR = {
     "Tap a muscle, then tap an exercise to add it.":"اضغط على عضلة، ثم اضغط على تمرين لإضافته.",
     "No exercises here yet — add one in the Library with “Find (AI)” or “Add exercise”.":"لا توجد تمارين هنا بعد — أضِف واحدًا من المكتبة عبر «بحث (ذكاء اصطناعي)» أو «أضف تمرين».",
     "Nothing selected yet — tap a muscle above.":"لم تختر شيئًا بعد — اضغط على عضلة بالأعلى.",
+    "Build a workout for":"ابنِ تمرينًا لـ",
+    "Add these to my workout":"أضِف هذه إلى تمريني",
+    "No exercises to build from.":"لا توجد تمارين للبناء منها.",
     "Barbell":"بار حديد",
     "Dumbbell":"دمبل",
     "Cable":"كيبل",
@@ -9893,26 +9896,39 @@ function exItemHTML(it, i, m){
 function muscleFigure(view){
   const sel = R.muscleSel;
   const reg = (m, inner) => `<g class="mz${sel === m ? " on" : ""}" tabindex="0" role="button" aria-label="${tr(m)}" onclick="M.muscleSel('${m}')">${inner}</g>`;
-  const head = `<circle class="mzb" cx="50" cy="16" r="12"/><rect class="mzb" x="44" y="26" width="12" height="8" rx="3"/>`;
+  // a proportioned human silhouette (shoulders wider than hips, tapered waist)
+  // sits behind the muscle regions so the figure reads as a body, not blobs.
+  const SIL = `<path class="mzb" d="M60 6c8 0 14 6 14 14 0 5-2 9-5 11 5 1 9 3 12 7 3 3 5 7 8 9 4 3 8 8 10 15 2 6 4 14 4 19 0 4-4 6-7 4-2-1-3-3-4-5 1 8 1 15 0 21-1 5-3 9-4 14 3 10 4 22 3 35-1 14-3 30-6 45-1 6-2 12-4 16-1 3-6 3-7 0-2-9-4-22-5-36-1-9-2-17-9-17s-8 8-9 17c-1 14-3 27-5 36-1 3-6 3-7 0-2-4-3-10-4-16-3-15-5-31-6-45-1-13 0-25 3-35-1-5-3-9-4-14-1-6-1-13 0-21-1 2-2 4-4 5-3 2-7 0-7-4 0-5 2-13 4-19 2-7 6-12 10-15 3-2 5-6 8-9 3-4 7-6 12-7-3-2-5-6-5-11 0-8 6-14 14-14z"/>`;
+  const head = `<ellipse class="mzb" cx="60" cy="19" rx="13" ry="14"/>`;
   if (view === "front"){
-    return `<svg class="bodymap" viewBox="0 0 100 210" xmlns="http://www.w3.org/2000/svg">
-      ${head}
-      ${reg("Shoulders", `<ellipse cx="28" cy="44" rx="11" ry="8.5"/><ellipse cx="72" cy="44" rx="11" ry="8.5"/>`)}
-      ${reg("Chest", `<rect x="33" y="40" width="16" height="23" rx="6"/><rect x="51" y="40" width="16" height="23" rx="6"/>`)}
-      ${reg("Arms", `<ellipse cx="20" cy="61" rx="7.5" ry="15"/><ellipse cx="16" cy="90" rx="6.5" ry="15"/><ellipse cx="80" cy="61" rx="7.5" ry="15"/><ellipse cx="84" cy="90" rx="6.5" ry="15"/>`)}
-      ${reg("Core", `<rect x="40" y="65" width="20" height="30" rx="5"/>`)}
-      <rect class="mzb" x="38" y="94" width="24" height="11" rx="5"/>
-      ${reg("Legs", `<ellipse cx="41" cy="122" rx="10" ry="27"/><ellipse cx="40" cy="170" rx="7.5" ry="22"/><ellipse cx="59" cy="122" rx="10" ry="27"/><ellipse cx="60" cy="170" rx="7.5" ry="22"/>`)}
+    return `<svg class="bodymap" viewBox="0 0 120 250" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMin meet">
+      ${SIL}${head}
+      ${reg("Shoulders", `<path d="M39 47c-8 2-14 8-15 17-1 6 4 10 11 8 7-2 10-11 9-21-1-4-3-5-5-4z"/><path d="M81 47c8 2 14 8 15 17 1 6-4 10-11 8-7-2-10-11-9-21 1-4 3-5 5-4z"/>`)}
+      ${reg("Chest", `<path d="M45 49c8-2 13 0 14 6v17c0 5-8 7-14 4-8-4-9-22 0-27z"/><path d="M75 49c-8-2-13 0-14 6v17c0 5 8 7 14 4 8-4 9-22 0-27z"/>`)}
+      ${reg("Arms", `<path d="M33 56c-6 4-9 20-7 38 1 8 8 10 13 5 4-5 4-27 2-39-1-4-5-6-8-4z"/><path d="M26 97c-3 8-5 26-3 38 1 6 8 7 11 2 3-6 2-26 0-38-1-4-6-5-8-2z"/><path d="M87 56c6 4 9 20 7 38-1 8-8 10-13 5-4-5-4-27-2-39 1-4 5-6 8-4z"/><path d="M94 97c3 8 5 26 3 38-1 6-8 7-11 2-3-6-2-26 0-38 1-4 6-5 8-2z"/>`)}
+      ${reg("Core", `<path d="M50 78h20c2 12 2 27-2 40-3 8-13 8-16 0-4-13-4-28-2-40z"/>`)}
+      ${reg("Legs", `<path d="M51 130c-5 10-6 39-3 62 1 8 11 8 12 0l1-58c-2-7-6-8-10-4z"/><path d="M49 196c-3 12-3 31 0 42 1 6 9 6 10 0l1-40c-2-4-9-6-11-2z"/><path d="M69 130c5 10 6 39 3 62-1 8-11 8-12 0l-1-58c2-7 6-8 10-4z"/><path d="M71 196c3 12 3 31 0 42-1 6-9 6-10 0l-1-40c2-4 9-6 11-2z"/>`)}
     </svg>`;
   }
-  return `<svg class="bodymap" viewBox="0 0 100 210" xmlns="http://www.w3.org/2000/svg">
-    ${head}
-    ${reg("Shoulders", `<ellipse cx="28" cy="44" rx="11" ry="8.5"/><ellipse cx="72" cy="44" rx="11" ry="8.5"/>`)}
-    ${reg("Back", `<path d="M40 37 h20 l-3 9 h-14 z"/><path d="M35 47 h30 a5 5 0 0 1 5 5 l-3 24 a6 6 0 0 1 -6 5 h-22 a6 6 0 0 1 -6 -5 l-3 -24 a5 5 0 0 1 5 -5 z"/>`)}
-    ${reg("Arms", `<ellipse cx="20" cy="61" rx="7.5" ry="15"/><ellipse cx="16" cy="90" rx="6.5" ry="15"/><ellipse cx="80" cy="61" rx="7.5" ry="15"/><ellipse cx="84" cy="90" rx="6.5" ry="15"/>`)}
-    ${reg("Glutes", `<ellipse cx="42" cy="101" rx="10" ry="9.5"/><ellipse cx="58" cy="101" rx="10" ry="9.5"/>`)}
-    ${reg("Legs", `<ellipse cx="41" cy="132" rx="10" ry="25"/><ellipse cx="40" cy="176" rx="7.5" ry="19"/><ellipse cx="59" cy="132" rx="10" ry="25"/><ellipse cx="60" cy="176" rx="7.5" ry="19"/>`)}
+  return `<svg class="bodymap" viewBox="0 0 120 250" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMin meet">
+    ${SIL}${head}
+    ${reg("Shoulders", `<path d="M39 47c-8 2-14 8-15 17-1 6 4 10 11 8 7-2 10-11 9-21-1-4-3-5-5-4z"/><path d="M81 47c8 2 14 8 15 17 1 6-4 10-11 8-7-2-10-11-9-21 1-4 3-5 5-4z"/>`)}
+    ${reg("Back", `<path d="M46 46c5-2 23-2 28 0-2 8-8 12-14 12s-12-4-14-12z"/><path d="M43 58c6-2 28-2 34 0 2 12-3 34-9 50-4 10-12 10-16 0-6-16-11-38-9-50z"/>`)}
+    ${reg("Arms", `<path d="M33 56c-6 4-9 20-7 38 1 8 8 10 13 5 4-5 4-27 2-39-1-4-5-6-8-4z"/><path d="M26 97c-3 8-5 26-3 38 1 6 8 7 11 2 3-6 2-26 0-38-1-4-6-5-8-2z"/><path d="M87 56c6 4 9 20 7 38-1 8-8 10-13 5-4-5-4-27-2-39 1-4 5-6 8-4z"/><path d="M94 97c3 8 5 26 3 38-1 6-8 7-11 2-3-6-2-26 0-38 1-4 6-5 8-2z"/>`)}
+    ${reg("Glutes", `<path d="M48 116c0-6 5-9 12-9 1 8 1 18-2 24-6 4-11-6-10-15z"/><path d="M72 116c0-6-5-9-12-9-1 8-1 18 2 24 6 4 11-6 10-15z"/>`)}
+    ${reg("Legs", `<path d="M51 136c-5 10-6 37-3 58 1 8 11 8 12 0l1-54c-2-7-6-8-10-4z"/><path d="M49 198c-3 12-3 31 0 42 1 6 9 6 10 0l1-40c-2-4-9-6-11-2z"/><path d="M69 136c5 10 6 37 3 58-1 8-11 8-12 0l-1-54c2-7 6-8 10-4z"/><path d="M71 198c3 12 3 31 0 42-1 6-9 6-10 0l-1-40c2-4 9-6 11-2z"/>`)}
   </svg>`;
+}
+// Pick a small, balanced set of exercises for a muscle group — compound
+// movements first, then spread across equipment for variety.
+function pickMuscleExercises(muscle, n){
+  const rank = {Barbell: 0, Bodyweight: 1, Dumbbell: 2, Kettlebell: 2, Machine: 3, Cable: 4, Wheel: 5};
+  const all = libAll().filter(x => x.m === muscle);
+  const sorted = all.slice().sort((a, b) => (rank[a.e] ?? 3) - (rank[b.e] ?? 3));
+  const picked = [], usedEq = new Set();
+  for (const x of sorted){ if (picked.length >= n) break; if (!usedEq.has(x.e)){ picked.push(x); usedEq.add(x.e); } }
+  for (const x of sorted){ if (picked.length >= n) break; if (!picked.includes(x)) picked.push(x); }
+  return picked;
 }
 function trainMusclesHTML(){
   const sel = R.muscleSel;
@@ -9937,6 +9953,7 @@ function trainMusclesHTML(){
     </div>
     ${sel ? `
       <div class="msel-h"><b dir="auto">${tr(sel)}</b><span class="cnt">${list.length} ${list.length === 1 ? tr("exercise") : tr("exercises")}</span></div>
+      ${list.length ? `<button class="btn" style="width:100%;margin:0 0 10px" onclick="M.muscleBuild()">${ic("barbell", 15)} ${R.trainWO ? tr("Add these to my workout") : `${tr("Build a workout for")} ${tr(sel)}`}</button>` : ""}
       <div class="lib-list">
         ${list.length ? list.map((x, i) => `<div class="lib-item">
           <button class="feat-card" style="flex:1;min-width:0" onclick="M.libPick(${i})">
@@ -13455,6 +13472,17 @@ window.M = {
   },
   libMuscle(m){ R.libMuscle = m; render(); },
   muscleSel(m){ R.muscleSel = R.muscleSel === m ? null : m; buzz(); render(); const c = $("#content"); if (c && R.muscleSel) setTimeout(() => { const h = document.querySelector(".msel-h"); if (h) h.scrollIntoView({behavior: "smooth", block: "start"}); }, 40); },
+  muscleBuild(){
+    const m = R.muscleSel; if (!m) return;
+    const ex = pickMuscleExercises(m, m === "Cardio" ? 2 : 4);
+    if (!ex.length){ toast(tr("No exercises to build from.")); return; }
+    if (!R.trainWO) R.trainWO = {id: uid(), date: todayStr(), name: m, items: []};
+    const have = new Set(R.trainWO.items.map(it => it.name.toLowerCase()));
+    let added = 0;
+    ex.forEach(x => { if (!have.has(x.n.toLowerCase())){ R.trainWO.items.push({name: x.n, muscle: x.m, sets: [], note: ""}); added++; } });
+    R.trainTab = "today"; buzz(); render(); const c = $("#content"); if (c) c.scrollTop = 0;
+    toast(`${tr("Added")}: ${added} ${added === 1 ? tr("exercise") : tr("exercises")} · ${tr(m)}`);
+  },
   // Pre-fill the reps/weight inputs with the coach's next-step suggestion.
   woUseSuggest(i){
     const it = R.trainWO && R.trainWO.items[i]; if (!it) return;
