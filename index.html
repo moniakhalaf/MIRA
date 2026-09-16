@@ -1593,6 +1593,7 @@ html[data-setpage="nutrition"] .set-page[data-page="nutrition"],
 html[data-setpage="domains"] .set-page[data-page="domains"],
 html[data-setpage="assistant"] .set-page[data-page="assistant"],
 html[data-setpage="privacy"] .set-page[data-page="privacy"],
+html[data-setpage="subscription"] .set-page[data-page="subscription"],
 html[data-setpage="legal"] .set-page[data-page="legal"]{display:block}
 .set-group-label{font-size:11px;font-weight:750;letter-spacing:.1em;text-transform:uppercase;color:var(--txt3);margin:22px 6px 10px;display:flex;align-items:center;gap:8px}
 .set-group-label::before{content:"";width:3px;height:12px;border-radius:2px;background:var(--acc);opacity:.85}
@@ -1693,6 +1694,40 @@ html[data-setpage="legal"] .set-page[data-page="legal"]{display:block}
 .legal p{font-size:13.5px;line-height:1.62;margin:0 0 11px;color:var(--txt2)}
 .legal p:last-child{margin-bottom:0}
 .legal p b{color:var(--txt)}
+/* ---- subscription + admin console ---- */
+.sub-cur{display:flex;align-items:center;justify-content:space-between;gap:12px;color:#fff;background:linear-gradient(135deg,var(--acc),color-mix(in srgb,var(--acc) 60%,#000));border:none}
+.sub-cur.sub-team{background:linear-gradient(135deg,var(--gold),color-mix(in srgb,var(--gold) 60%,#000))}
+.sub-pname{font-size:22px;font-weight:800;margin:2px 0 4px}
+.sub-manage{background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:9px;padding:8px 13px;font-weight:700;font-size:12.5px;flex:0 0 auto}
+.uplan{position:relative}
+.uplan.hi{border:1.5px solid var(--acc)}
+.uplan-top{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px}
+.uplan-pr{font-size:20px;font-weight:800}.uplan-pr span{font-size:12px;color:var(--txt3);font-weight:600}
+.uplan-feats{list-style:none;padding:0;margin:0 0 12px}
+.uplan-feats li{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--txt2);margin:8px 0}
+.uplan-feats li svg{color:var(--acc);flex:0 0 auto}
+.uplan-tag{position:absolute;top:-9px;right:14px;background:var(--acc);color:#fff;font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px}
+.adm-kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.adm-kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:13px 14px}
+.adm-kpi .kl{display:block;color:var(--txt3);font-size:12px;font-weight:600}
+.adm-kpi .kv{display:block;font-size:22px;font-weight:800;margin-top:3px}
+.adm-bar-row{display:flex;align-items:center;gap:10px;margin:9px 0}
+.adm-bl{flex:0 0 74px}
+.adm-bar{flex:1;height:9px;border-radius:6px;background:var(--line2);overflow:hidden}
+.adm-bar span{display:block;height:100%;border-radius:6px}
+.p-free{background:var(--txt3)}.p-pro{background:var(--acc)}.p-team{background:var(--gold)}
+.adm-row{display:flex;align-items:center;gap:11px;padding:11px 14px;border-top:1px solid var(--line2)}
+.card.np .adm-row:first-child{border-top:none}
+.adm-ava{width:34px;height:34px;border-radius:50%;background:var(--acc-soft);color:var(--acc);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;flex:0 0 auto}
+.adm-row-tx{flex:1;min-width:0}.adm-row-tx b{font-size:14px}.adm-row-tx small{display:block;color:var(--txt3);font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.adm-row-badges{display:flex;gap:5px;flex:0 0 auto;flex-wrap:wrap;justify-content:flex-end}
+.adm-pl{font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:6px}
+.adm-pl.p-free{background:var(--line2);color:var(--txt2)}.adm-pl.p-pro{background:var(--acc-soft);color:var(--acc)}.adm-pl.p-team{background:var(--gold-soft);color:var(--gold)}
+.adm-st{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:20px}
+.adm-st.s-active{background:var(--acc-soft);color:var(--acc)}.adm-st.s-trial{background:color-mix(in srgb,#4c7df0 16%,transparent);color:#4c7df0}.adm-st.s-pastdue{background:var(--gold-soft);color:var(--gold)}.adm-st.s-cancelled{background:var(--line2);color:var(--txt3)}
+.adm-search{flex:1}
+.adm-plans{display:flex;flex-direction:column;gap:11px}
+.card.np{padding:2px 0}
 .demo-btn{background:var(--bg2);border:1px solid var(--line);color:var(--txt2)}
 .demo-step{display:flex;gap:10px;margin:9px 0;font-size:14px;line-height:1.5}
 .demo-step .n{flex:0 0 auto;width:22px;height:22px;border-radius:50%;background:var(--acc-soft);color:var(--acc);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:1px}
@@ -1828,7 +1863,7 @@ html[data-setpage="legal"] .set-page[data-page="legal"]{display:block}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.246";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.247";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -1984,6 +2019,14 @@ const DEFAULT_DOMAINS = [
    desc: "Everything else: purchases and comparisons, travel, technology, finance and legal information (presented as facts to decide from, not advice), and local practical matters — especially Kuwait / GCC. Same evidence standard as the professional modes."},
 ];
 const DOMAIN_COLORS = ["#6E9BF6","#4CC4E0","#F97362","#A78BFA","#45C4C0","#F5B851","#EC7BB0","#86C265"];
+/* subscription tiers (prototype — real billing/enforcement needs a backend + Stripe) */
+const PLANS = [
+  {id: "free", name: "Free", price: 0, per: "", feats: ["On-device tracking", "Manual food & workout log", "Basic muscle map"]},
+  {id: "pro", name: "Pro", price: 6.99, per: "/mo", popular: true, feats: ["Everything in Free", "AI photo & meal scanning", "Adaptive coaching & auto-plan", "Full 3D muscle map + insights"]},
+  {id: "team", name: "Team", price: 19.99, per: "/mo", feats: ["Everything in Pro", "Coach + up to 10 clients", "Shared progress dashboard", "Priority support"]},
+];
+const planById = id => PLANS.find(p => p.id === id) || PLANS[0];
+const MEMBER_STATUS = ["active", "trial", "past due", "cancelled"];
 /* old default accents → refined emerald-era palette (existing installs pick up the new colours) */
 const COLOR_MIGRATE = {
   "#5B8DEF":"#6E9BF6","#7396E2":"#6E9BF6",
@@ -2515,6 +2558,11 @@ const TR = {
     "Your domains":"مجالاتك","Domains":"المجالات","Remove":"إزالة","New domain (any subject)":"مجال جديد (أي موضوع)","Add":"إضافة",
     "Assistant":"المساعد","API & model":"مفتاح API والنموذج","Connected":"متصل","No key":"لا يوجد مفتاح","Anthropic API key":"مفتاح Anthropic API",
     "Model":"النموذج","Live web search":"البحث المباشر على الويب","On":"تشغيل","Off":"إيقاف","Privacy & data":"الخصوصية والبيانات","Terms & privacy":"الشروط والخصوصية","How MIRA handles your data":"كيف تتعامل ميرا مع بياناتك",
+    "Subscription":"الاشتراك","YOUR PLAN":"خطتك","Change plan":"تغيير الخطة","On-device · no charge":"على الجهاز · بدون رسوم","Renews":"يتجدّد","Current":"الحالية","Current plan":"الخطة الحالية","Upgrade to":"الترقية إلى","Downgrade":"تخفيض الخطة",
+    "Prototype — plans switch on this device only. Real billing arrives with the hosted backend.":"نموذج أولي — تتبدّل الخطط على هذا الجهاز فقط. الفوترة الحقيقية تصل مع الخادم المُستضاف.","Switched to Free":"تم التحويل إلى المجاني","Now on":"أنت الآن على",
+    "Admin console":"لوحة الإدارة","Members & subscriptions":"الأعضاء والاشتراكات","Members · subscriptions · overview":"الأعضاء · الاشتراكات · نظرة عامة","Dashboard":"لوحة المعلومات","Members":"الأعضاء","Plans":"الخطط","Paying":"مدفوع","MRR":"الإيراد الشهري","Free / Pro / Team":"مجاني / برو / فريق","Recent members":"الأعضاء الجدد","View all":"عرض الكل","No members match.":"لا أعضاء مطابقون.",
+    "Prototype pricing. Connect Stripe to charge and enforce these plans.":"تسعير تجريبي. اربط Stripe لتحصيل هذه الخطط وتطبيقها.","Add member":"إضافة عضو","Edit member":"تعديل عضو","Email":"البريد الإلكتروني","Status":"الحالة","Enter a name.":"أدخل اسمًا.","Remove this member?":"إزالة هذا العضو؟","Member removed":"أُزيل العضو","Saved":"حُفظ","Remove":"إزالة",
+    "Pro":"برو","Team":"فريق","active":"نشط","trial":"تجريبي","past due":"متأخر","cancelled":"ملغى",
     "Account":"الحساب","Sharing":"المشاركة","Preferences":"التفضيلات","App lock":"قفل التطبيق","Edit profile":"تعديل الملف الشخصي","Private · on this device":"خاص · على هذا الجهاز",
     "My Integrated Reasoning Assistant · standalone edition":"مساعد الاستدلال المتكامل · إصدار مستقل","Every fact checked against trusted sources, or honestly labelled an estimate.":"كل معلومة مُتحقَّق منها من مصادر موثوقة، أو موسومة بصدق كتقدير.","Build":"إصدار",
     "Security":"الأمان","PIN on":"الرمز مفعّل","No PIN":"لا يوجد رمز","Change PIN":"تغيير الرمز","Set PIN":"تعيين رمز","Remove PIN":"إزالة الرمز",
@@ -3500,8 +3548,11 @@ const BLANK = () => ({
     profession: "",
     goal: "",
     widgets: ["cal", "protein", "water", "task", "bill"],
+    plan: "free",       // this device's subscription tier (free|pro|team) — prototype
+    owner: false,       // unlocks the Admin console (prototype; a real backend gates this server-side)
   },
   domains: JSON.parse(JSON.stringify(DEFAULT_DOMAINS)),
+  admin: {members: [], seeded: false},   // prototype members store for the Admin console
   convs: [],          // [{id, dom, title, ts, msgs: [{role, content, ts, att}]}]
   foods: [],          // {id, date, name, amount, kcal, p, c, f, conf, ts}
   savedFoods: [],     // {name, amount, kcal, p, c, f}
@@ -3921,6 +3972,9 @@ const R = {
   libMuscle: "All",
   muscleSel: null,     // selected muscle group in the visual "Muscles" picker
   muscleView: "explore", // "explore" (tap for exercises) | "week" (training coverage)
+  adminTab: "dashboard", // admin console sub-tab
+  adminQuery: "",        // admin members search
+  admEdit: null,         // member id being edited ("new" for a new member)
   exForm: {open: false, n: "", m: "Chest", e: "", c: ""},
   aiExBusy: false,
   progEx: "",
@@ -4105,7 +4159,8 @@ function renderMain(){
       R.tab === "plan" ? plannerHTML() :
       R.tab === "wellness" ? wellnessHTML() :
       R.tab === "food" ? foodHTML() :
-      R.tab === "body" ? bodyHTML() : settingsHTML()
+      R.tab === "body" ? bodyHTML() :
+      R.tab === "admin" ? adminHTML() : settingsHTML()
     }</div>
     ${R.tab === "chat" ? chatbarHTML() : ""}
     ${R.tab === "home" ? fabHTML() : ""}
@@ -12988,6 +13043,109 @@ function learnedFoodsHTML(){
   </div>`;
 }
 let setDraft = null;
+/* ============================================================
+   Subscription (user) + Admin console (owner) — PROTOTYPE.
+   Members/plans live on-device; real multi-user control needs a
+   backend (Supabase auth + a members table) and Stripe billing.
+   ============================================================ */
+function subscriptionPageHTML(){
+  const cur = S.settings.plan || "free";
+  return `<div class="card sub-cur sub-${cur}">
+      <div class="sub-cur-l"><span class="tiny" style="opacity:.85">${tr("YOUR PLAN")}</span>
+        <div class="sub-pname">${tr(planById(cur).name)}</div>
+        <span class="tiny" style="opacity:.85">${cur === "free" ? tr("On-device · no charge") : `${tr("Renews")} 14 Oct · $${planById(cur).price}${planById(cur).per}`}</span></div>
+      ${cur !== "free" ? `<button class="sub-manage" onclick="M.setPlan('free')">${tr("Cancel")}</button>` : ""}
+    </div>
+    <div class="set-group-label" style="margin:6px 2px 10px">${tr("Change plan")}</div>
+    ${PLANS.map(p => {
+      const isCur = p.id === cur;
+      const idx = PLANS.findIndex(x => x.id === p.id), cidx = PLANS.findIndex(x => x.id === cur);
+      const isDown = idx < cidx;
+      return `<div class="card uplan ${p.id === "pro" ? "hi" : ""}" style="position:relative">
+        ${isCur ? `<span class="uplan-tag">${tr("Current")}</span>` : ""}
+        <div class="uplan-top"><b style="font-size:17px">${tr(p.name)}</b><span class="uplan-pr">${p.price ? "$" + p.price : "$0"}<span>${p.per}</span></span></div>
+        <ul class="uplan-feats">${p.feats.map(f => `<li>${ic("check", 14)} ${tr(f)}</li>`).join("")}</ul>
+        <button class="btn ${isCur || isDown ? "sec" : ""}" style="width:100%" ${isCur ? "disabled" : ""} onclick="M.setPlan('${p.id}')">${isCur ? tr("Current plan") : isDown ? tr("Downgrade") : `${tr("Upgrade to")} ${tr(p.name)}`}</button>
+      </div>`;
+    }).join("")}
+    <div class="tiny" style="color:var(--txt2);text-align:center;margin-top:6px">${tr("Prototype — plans switch on this device only. Real billing arrives with the hosted backend.")}</div>`;
+}
+function adminSeed(){
+  if (S.admin.seeded || (S.admin.members || []).length) return;
+  const names = [["Sara A.", "pro", "active"], ["Yousef M.", "team", "trial"], ["Lina H.", "free", "active"], ["Omar K.", "pro", "past due"], ["Noor F.", "pro", "active"], ["Ali R.", "team", "active"], ["Maya S.", "free", "active"], ["Hana Z.", "pro", "cancelled"]];
+  S.admin.members = names.map((n, i) => ({id: uid(), name: n[0], email: n[0].split(" ")[0].toLowerCase() + "@example.com", plan: n[1], status: n[2], joined: Date.now() - (i + 2) * 6 * 864e5}));
+  S.admin.seeded = true; save();
+}
+function adminStats(){
+  const m = S.admin.members || [];
+  const paying = m.filter(x => (x.plan === "pro" || x.plan === "team") && x.status === "active");
+  const mrr = paying.reduce((a, x) => a + planById(x.plan).price, 0);
+  const byPlan = {free: 0, pro: 0, team: 0}; m.forEach(x => byPlan[x.plan] = (byPlan[x.plan] || 0) + 1);
+  return {total: m.length, paying: paying.length, mrr, byPlan};
+}
+function adminHTML(){
+  adminSeed();
+  const tab = R.adminTab || "dashboard";
+  const st = adminStats();
+  const tabs = [["dashboard", "Dashboard", "grid"], ["members", "Members", "users"], ["plans", "Plans", "creditCard"]];
+  const statusPill = s => `<span class="adm-st s-${s.replace(/\s/g, "")}">${tr(s)}</span>`;
+  const planPill = p => `<span class="adm-pl p-${p}">${tr(planById(p).name)}</span>`;
+  let body = "";
+  if (tab === "dashboard"){
+    const kpis = [[tr("Members"), st.total], [tr("Paying"), st.paying], [tr("MRR"), "$" + st.mrr.toFixed(2)], [tr("Free / Pro / Team"), `${st.byPlan.free} / ${st.byPlan.pro} / ${st.byPlan.team}`]];
+    body = `<div class="adm-kpis">${kpis.map(([l, v]) => `<div class="adm-kpi"><span class="kl">${l}</span><span class="kv">${v}</span></div>`).join("")}</div>
+      <div class="card"><h3>${ic("chart", 15)} ${tr("Members by plan")}</h3>
+        ${["free", "pro", "team"].map(p => { const c = st.byPlan[p], pct = st.total ? Math.round(c / st.total * 100) : 0;
+          return `<div class="adm-bar-row"><span class="adm-bl">${planPill(p)}</span><div class="adm-bar"><span class="p-${p}" style="width:${pct}%"></span></div><b>${c}</b></div>`; }).join("")}</div>
+      <div class="card"><div class="card-h-row"><h3>${ic("users", 15)} ${tr("Recent members")}</h3><button class="lnk" onclick="M.adminTab('members')">${tr("View all")} →</button></div>
+        ${[...S.admin.members].slice(-5).reverse().map(mm => adminMemberRow(mm, planPill, statusPill)).join("")}</div>`;
+  } else if (tab === "members"){
+    const q = (R.adminQuery || "").trim().toLowerCase();
+    const filt = (S.admin.members || []).filter(mm => !q || mm.name.toLowerCase().includes(q) || (mm.email || "").toLowerCase().includes(q));
+    body = `<div class="row" style="gap:8px;margin-bottom:10px">
+        <input class="adm-search" placeholder="${tr("Search name or email…")}" value="${esc(R.adminQuery || "")}" oninput="R.adminQuery=this.value;render()">
+        <button class="btn sm" onclick="M.adminMemberEdit('new')">${ic("plus", 15)} ${tr("Add")}</button></div>
+      <div class="card np">${filt.length ? filt.map(mm => adminMemberRow(mm, planPill, statusPill, true)).join("") : `<div class="muted" style="padding:14px">${tr("No members match.")}</div>`}</div>`;
+  } else {
+    body = `<div class="adm-plans">${PLANS.map(p => { const c = (S.admin.members || []).filter(x => x.plan === p.id).length;
+      return `<div class="card uplan ${p.id === "pro" ? "hi" : ""}">
+        <div class="uplan-top"><b style="font-size:17px">${tr(p.name)}</b><span class="uplan-pr">${p.price ? "$" + p.price : "$0"}<span>${p.per}</span></span></div>
+        <div class="tiny" style="color:var(--acc);font-weight:700;margin:2px 0 8px">${c} ${tr("members")}</div>
+        <ul class="uplan-feats">${p.feats.map(f => `<li>${ic("check", 14)} ${esc(f)}</li>`).join("")}</ul></div>`; }).join("")}
+      <div class="tiny" style="color:var(--txt2);text-align:center">${tr("Prototype pricing. Connect Stripe to charge and enforce these plans.")}</div></div>`;
+  }
+  return `<button class="cat-back" onclick="M.goTab('set')">${ic("back", 18)} ${tr("Settings")}</button>
+    <div class="cat-title"><div class="ch-nm">${tr("Admin console")}</div><div class="ch-ds">${tr("Members · subscriptions · overview")}</div></div>
+    <div class="chip-row seg-tabs">${tabs.map(([k, l]) => `<button class="chip ${tab === k ? "on" : ""}" onclick="M.adminTab('${k}')">${tr(l)}</button>`).join("")}</div>
+    <div style="margin-top:12px">${body}</div>
+    ${R.admEdit ? adminEditSheetHTML() : ""}`;
+}
+function adminMemberRow(mm, planPill, statusPill, actions){
+  const init = (mm.name || "?").split(" ").map(s => s[0]).join("").slice(0, 2).toUpperCase();
+  return `<div class="adm-row">
+    <span class="adm-ava">${esc(init)}</span>
+    <div class="adm-row-tx"><b dir="auto">${esc(mm.name)}</b><small>${esc(mm.email || "")}</small></div>
+    <span class="adm-row-badges">${planPill(mm.plan)}${statusPill(mm.status)}</span>
+    ${actions ? `<button class="icon-btn" aria-label="Edit" onclick="M.adminMemberEdit('${mm.id}')">${ic("edit", 16)}</button>` : ""}
+  </div>`;
+}
+function adminEditSheetHTML(){
+  const isNew = R.admEdit === "new";
+  const m = isNew ? {name: "", email: "", plan: "free", status: "trial"} : (S.admin.members || []).find(x => x.id === R.admEdit);
+  if (!m) return "";
+  return `<div class="sheet-mask show" onclick="M.adminEditClose()"></div>
+    <div class="sheet show" onclick="event.stopPropagation()">
+      <div class="grab"></div>
+      <h3 style="margin:0 0 12px">${isNew ? tr("Add member") : tr("Edit member")}</h3>
+      <div class="field"><label>${tr("Name")}</label><input id="amName" value="${esc(m.name)}" dir="auto"></div>
+      <div class="field"><label>${tr("Email")}</label><input id="amEmail" value="${esc(m.email || "")}" inputmode="email"></div>
+      <div class="field"><label>${tr("Plan")}</label><select id="amPlan">${PLANS.map(p => `<option value="${p.id}" ${m.plan === p.id ? "selected" : ""}>${tr(p.name)}</option>`).join("")}</select></div>
+      <div class="field"><label>${tr("Status")}</label><select id="amStatus">${MEMBER_STATUS.map(s => `<option value="${s}" ${m.status === s ? "selected" : ""}>${tr(s)}</option>`).join("")}</select></div>
+      <div class="row" style="margin-top:6px"><button class="btn" style="flex:1" onclick="M.adminMemberSave()">${ic("check", 15)} ${tr("Save")}</button>
+        ${isNew ? "" : `<button class="btn sec danger" onclick="M.adminMemberRemove()">${tr("Remove")}</button>`}</div>
+      <button class="btn sec" style="width:100%;margin-top:8px" onclick="M.adminEditClose()">${tr("Cancel")}</button>
+    </div>`;
+}
 function settingsHTML(){
   const st = S.settings;
   const initial = (st.name || "M").trim().charAt(0).toUpperCase() || "M";
@@ -12998,6 +13156,7 @@ function settingsHTML(){
   const langLabel = (!st.lang || st.lang === "match") ? tr("Match what I write") : (langRow ? langRow[2] : st.lang);
   const HUB = [
     ["profile", "user", tr("Profile"), st.name ? esc(st.name) : tr("Name, goal & coaching style")],
+    ["subscription", "creditCard", tr("Subscription"), tr(planById(st.plan || "free").name)],
     ["circle", "users", tr("Circle"), tr("Share progress with a coach")],
     ["language", "globe", tr("Language"), esc(langLabel)],
     ["appearance", "sun", tr("Appearance"), esc(themeName)],
@@ -13005,6 +13164,7 @@ function settingsHTML(){
     ["domains", "grid", tr("Domains"), `${S.domains.length} ${tr("active")}`],
     ["assistant", "key", tr("Assistant"), st.apiKey ? tr("Connected") : tr("Add your API key")],
     ["privacy", "lock", tr("Privacy & data"), st.encOn ? tr("Encrypted") : (st.pinHash ? tr("PIN on") : tr("Lock, encryption, backup"))],
+    ["admin", "database", tr("Admin console"), tr("Members & subscriptions")],
     ["legal", "fileText", tr("Terms & privacy"), tr("How MIRA handles your data")],
   ];
   const titleOf = id => (HUB.find(h => h[0] === id) || [, , tr("Settings")])[2];
@@ -13020,7 +13180,7 @@ function settingsHTML(){
   </div>
   <button class="cat-back set-back" onclick="M.setBack()">${ic("back", 18)} ${tr("Settings")}</button>
   <div class="cat-title set-page-title"><div class="ch-nm">${titleOf(R.setPage)}</div></div>
-  <div class="set-hub">${HUB.map(([id, icn, ttl, dsc]) => `<button class="set-hub-row" onclick="M.setOpen('${id}')">
+  <div class="set-hub">${HUB.map(([id, icn, ttl, dsc]) => `<button class="set-hub-row" onclick="${id === "admin" ? "M.goAdmin()" : "M.setOpen('" + id + "')"}">
     <span class="shr-ic">${ic(icn, 18)}</span>
     <span class="shr-tx"><b>${ttl}</b><small dir="auto">${dsc}</small></span>
     <span class="shr-chev">▶</span>
@@ -13214,6 +13374,10 @@ function settingsHTML(){
   })()}
   </div>
 
+  <div class="set-page" data-page="subscription">
+    ${subscriptionPageHTML()}
+  </div>
+
   <div class="set-page" data-page="legal">
   <div class="card">
     <h3><span class="set-ic">${ic("fileText", 16)}</span> Terms of Use</h3>
@@ -13345,6 +13509,30 @@ window.M = {
   widgetToggle(id){ const w = S.settings.widgets; const i = w.indexOf(id); if (i >= 0) w.splice(i, 1); else w.push(id); save(); render(); },
   widgetMove(id, dir){ const w = S.settings.widgets; const i = w.indexOf(id); if (i < 0) return; const j = i + dir; if (j < 0 || j >= w.length) return; const tmp = w[i]; w[i] = w[j]; w[j] = tmp; save(); render(); },
   setOpen(id){ R.setPage = id; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
+  /* ---- subscription (user) ---- */
+  setPlan(id){ if (!planById(id)) return; S.settings.plan = id; buzz(); save(); render(); toast(id === "free" ? tr("Switched to Free") : `${tr("Now on")} ${tr(planById(id).name)} ✓`); },
+  /* ---- admin console (prototype) ---- */
+  goAdmin(){ R.tab = "admin"; R.adminTab = "dashboard"; R.setPage = null; R.homeCat = null; R.admEdit = null; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
+  adminTab(t){ R.adminTab = t; R.admEdit = null; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
+  adminMemberEdit(id){ R.admEdit = id; render(); },
+  adminEditClose(){ R.admEdit = null; render(); },
+  adminMemberSave(){
+    const name = ($("#amName") || {}).value ? $("#amName").value.trim() : "";
+    if (!name){ toast(tr("Enter a name.")); return; }
+    const email = ($("#amEmail") || {}).value ? $("#amEmail").value.trim() : "";
+    const plan = ($("#amPlan") || {}).value || "free";
+    const status = ($("#amStatus") || {}).value || "trial";
+    S.admin.members = S.admin.members || [];
+    if (R.admEdit === "new"){ S.admin.members.unshift({id: uid(), name, email, plan, status, joined: Date.now()}); }
+    else { const m = S.admin.members.find(x => x.id === R.admEdit); if (m) Object.assign(m, {name, email, plan, status}); }
+    R.admEdit = null; buzz(); save(); render(); toast(tr("Saved") + " ✓");
+  },
+  adminMemberRemove(){
+    if (!R.admEdit || R.admEdit === "new") return;
+    if (!confirm(tr("Remove this member?"))) return;
+    S.admin.members = (S.admin.members || []).filter(x => x.id !== R.admEdit);
+    R.admEdit = null; save(); render(); toast(tr("Member removed"));
+  },
   setBack(){ R.setPage = null; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
   // Deep links from elsewhere (hero edit, "Set targets", Backup) still use the old
   // section ids — map each to its new hub page and open it.
