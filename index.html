@@ -1592,7 +1592,8 @@ html[data-setpage="appearance"] .set-page[data-page="appearance"],
 html[data-setpage="nutrition"] .set-page[data-page="nutrition"],
 html[data-setpage="domains"] .set-page[data-page="domains"],
 html[data-setpage="assistant"] .set-page[data-page="assistant"],
-html[data-setpage="privacy"] .set-page[data-page="privacy"]{display:block}
+html[data-setpage="privacy"] .set-page[data-page="privacy"],
+html[data-setpage="legal"] .set-page[data-page="legal"]{display:block}
 .set-group-label{font-size:11px;font-weight:750;letter-spacing:.1em;text-transform:uppercase;color:var(--txt3);margin:22px 6px 10px;display:flex;align-items:center;gap:8px}
 .set-group-label::before{content:"";width:3px;height:12px;border-radius:2px;background:var(--acc);opacity:.85}
 .set-sub{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--txt3);margin:14px 2px 9px}
@@ -1689,6 +1690,9 @@ html[data-setpage="privacy"] .set-page[data-page="privacy"]{display:block}
 .cov-chip{display:inline-flex;align-items:center;gap:7px;padding:7px 12px;border-radius:18px;border:1px solid var(--line);background:var(--bg2);color:var(--txt2);font-size:13px;font-weight:600}
 .cov-chip.on{border-color:var(--acc);color:var(--txt);background:var(--acc-soft)}
 .cov-chip b{color:var(--acc);font-size:12.5px}
+.legal p{font-size:13.5px;line-height:1.62;margin:0 0 11px;color:var(--txt2)}
+.legal p:last-child{margin-bottom:0}
+.legal p b{color:var(--txt)}
 .demo-btn{background:var(--bg2);border:1px solid var(--line);color:var(--txt2)}
 .demo-step{display:flex;gap:10px;margin:9px 0;font-size:14px;line-height:1.5}
 .demo-step .n{flex:0 0 auto;width:22px;height:22px;border-radius:50%;background:var(--acc-soft);color:var(--acc);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:1px}
@@ -1824,7 +1828,7 @@ html[data-setpage="privacy"] .set-page[data-page="privacy"]{display:block}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.245";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.246";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -2510,7 +2514,7 @@ const TR = {
     "Water goal ml":"هدف الماء مل","Goal weight kg":"الوزن المستهدف كغ","Saved foods":"الأطعمة المحفوظة","Forget":"نسيان",
     "Your domains":"مجالاتك","Domains":"المجالات","Remove":"إزالة","New domain (any subject)":"مجال جديد (أي موضوع)","Add":"إضافة",
     "Assistant":"المساعد","API & model":"مفتاح API والنموذج","Connected":"متصل","No key":"لا يوجد مفتاح","Anthropic API key":"مفتاح Anthropic API",
-    "Model":"النموذج","Live web search":"البحث المباشر على الويب","On":"تشغيل","Off":"إيقاف","Privacy & data":"الخصوصية والبيانات",
+    "Model":"النموذج","Live web search":"البحث المباشر على الويب","On":"تشغيل","Off":"إيقاف","Privacy & data":"الخصوصية والبيانات","Terms & privacy":"الشروط والخصوصية","How MIRA handles your data":"كيف تتعامل ميرا مع بياناتك",
     "Account":"الحساب","Sharing":"المشاركة","Preferences":"التفضيلات","App lock":"قفل التطبيق","Edit profile":"تعديل الملف الشخصي","Private · on this device":"خاص · على هذا الجهاز",
     "My Integrated Reasoning Assistant · standalone edition":"مساعد الاستدلال المتكامل · إصدار مستقل","Every fact checked against trusted sources, or honestly labelled an estimate.":"كل معلومة مُتحقَّق منها من مصادر موثوقة، أو موسومة بصدق كتقدير.","Build":"إصدار",
     "Security":"الأمان","PIN on":"الرمز مفعّل","No PIN":"لا يوجد رمز","Change PIN":"تغيير الرمز","Set PIN":"تعيين رمز","Remove PIN":"إزالة الرمز",
@@ -13001,6 +13005,7 @@ function settingsHTML(){
     ["domains", "grid", tr("Domains"), `${S.domains.length} ${tr("active")}`],
     ["assistant", "key", tr("Assistant"), st.apiKey ? tr("Connected") : tr("Add your API key")],
     ["privacy", "lock", tr("Privacy & data"), st.encOn ? tr("Encrypted") : (st.pinHash ? tr("PIN on") : tr("Lock, encryption, backup"))],
+    ["legal", "fileText", tr("Terms & privacy"), tr("How MIRA handles your data")],
   ];
   const titleOf = id => (HUB.find(h => h[0] === id) || [, , tr("Settings")])[2];
   return `
@@ -13207,6 +13212,34 @@ function settingsHTML(){
     <button class="btn sm danger" onclick="M.wipe()">${tr("Erase everything on this device")}</button>
   </div>`;
   })()}
+  </div>
+
+  <div class="set-page" data-page="legal">
+  <div class="card">
+    <h3><span class="set-ic">${ic("fileText", 16)}</span> Terms of Use</h3>
+    <div class="legal">
+      <p class="tiny" style="color:var(--txt3)">Last updated: 16 September 2026 · English is the authoritative version.</p>
+      <p><b>What MIRA is.</b> MIRA is a personal, on-device assistant for your own informational use. It runs in your browser and uses your own Anthropic API key to generate responses.</p>
+      <p><b>Not professional advice.</b> Nutrition, fitness, health, medical, financial and legal information in MIRA is general information only and is not a substitute for advice from a qualified professional. Do not rely on it for medical or safety decisions. Stop any exercise or diet that causes pain or harm and consult a professional.</p>
+      <p><b>Estimates.</b> MIRA labels values as verified or as estimates. Estimates can be wrong — check anything that matters before acting on it.</p>
+      <p><b>Your API key &amp; costs.</b> You supply, and are responsible for, your Anthropic API key and any usage charges. Your use of the Anthropic API is governed by Anthropic’s own terms.</p>
+      <p><b>Your data &amp; backups.</b> Your data lives on your device (see Privacy Policy below). You are responsible for keeping backups; MIRA is not liable for lost data or for decisions you make using the app.</p>
+      <p><b>“As is”.</b> MIRA is provided “as is”, without warranties of any kind. To the extent permitted by law, the creator is not liable for any damages arising from its use.</p>
+      <p><b>Intellectual property.</b> MIRA’s original design, artwork and content are owned by its creator. Please don’t copy, resell or redistribute them without permission.</p>
+      <p><b>Changes.</b> These terms may be updated; continued use means you accept the current version.</p>
+    </div>
+  </div>
+  <div class="card">
+    <h3><span class="set-ic">${ic("lock", 16)}</span> Privacy Policy</h3>
+    <div class="legal">
+      <p><b>On your device.</b> Everything you enter — logs, chats, targets, saved foods, settings and your API key — is stored only in this browser’s local storage on your device. There is no MIRA server, and MIRA does not collect, transmit or see your data.</p>
+      <p><b>What leaves your device.</b> Only the requests you send to the Anthropic API (using your key) to get answers — handled under Anthropic’s privacy policy. Links you choose to open (for example a video or a web search) go to those third-party sites. Nothing else is sent anywhere.</p>
+      <p><b>No tracking.</b> No analytics, no advertising, no third-party trackers, and no account is required to use MIRA.</p>
+      <p><b>Your controls.</b> You can export a backup, erase everything on the device, and optionally protect your data with a PIN and on-device encryption (see Privacy &amp; data).</p>
+      <p><b>Children.</b> MIRA isn’t intended for children under 16.</p>
+      <p><b>Contact.</b> Questions about these terms or your privacy? Contact the app owner.</p>
+    </div>
+  </div>
   </div>
 
   <div class="set-foot">
