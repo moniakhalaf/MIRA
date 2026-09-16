@@ -1863,7 +1863,106 @@ html[data-setpage="legal"] .set-page[data-page="legal"]{display:block}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.247";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.248";   // bump on every deploy — shown in Settings
+
+/* ---------------- optional cloud backend (Supabase + Stripe) ----------------
+   MIRA is fully on-device by default. To turn the Subscription screen and
+   Admin console into a real multi-user product, deploy /backend and paste your
+   Supabase Project URL + anon key below. Both are SAFE to expose to the browser
+   — Row-Level Security guards the data; the service_role / Stripe secret keys
+   live only in the Edge Functions, never here. Leave these empty to stay 100%
+   on-device (nothing loads, nothing changes). */
+const CLOUD = {
+  url:  "",   // e.g. "https://xxxx.supabase.co"
+  anon: "",   // Supabase anon (public) key
+};
+const cloudEnabled = () => !!(CLOUD.url && CLOUD.anon);
+const cloudActive  = () => cloudEnabled() && !!(R.cloud && R.cloud.ready && R.cloud.user);
+const cloudAdmin   = () => cloudActive() && (R.cloud.role === "admin" || R.cloud.role === "owner");
+// Render-time source switches: cloud data when signed in, on-device prototype otherwise.
+const myPlan       = () => cloudActive() ? (R.cloud.plan || "free") : (S.settings.plan || "free");
+const adminMembers = () => cloudActive() ? (R.cloud.members || []) : (S.admin.members || []);
+
+const Cloud = {
+  sb: null,
+  async client(){
+    if (this.sb) return this.sb;
+    const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
+    this.sb = createClient(CLOUD.url, CLOUD.anon);
+    return this.sb;
+  },
+  async init(){
+    if (!cloudEnabled()) return;
+    R.cloud = R.cloud || { ready:false, user:null, role:"member", plan:"free", members:[], busy:false };
+    try {
+      const sb = await this.client();
+      const { data } = await sb.auth.getSession();
+      R.cloud.user = data && data.session ? data.session.user : null;
+      sb.auth.onAuthStateChange((_e, session) => {
+        R.cloud.user = session ? session.user : null;
+        if (R.cloud.user){ this.refresh(); }
+        else { R.cloud.plan = "free"; R.cloud.role = "member"; R.cloud.members = []; }
+        R.cloud.ready = true; render();
+      });
+      if (R.cloud.user) await this.refresh();
+    } catch (e){ console.warn("cloud init failed", e); }
+    R.cloud.ready = true; render();
+  },
+  async refresh(){
+    try {
+      const sb = await this.client();
+      const uid = R.cloud.user && R.cloud.user.id;
+      if (!uid) return;
+      const { data: prof } = await sb.from("profiles").select("role").eq("id", uid).maybeSingle();
+      R.cloud.role = (prof && prof.role) || "member";
+      const { data: sub } = await sb.from("subscriptions").select("plan,status").eq("user_id", uid).maybeSingle();
+      R.cloud.plan = (sub && sub.plan) || "free";
+      if (cloudAdmin()){
+        const { data: mem } = await sb.from("members_admin").select("*").order("created_at", { ascending:false });
+        R.cloud.members = (mem || []).map(m => ({
+          id: m.id, name: m.full_name || (m.email || "").split("@")[0], email: m.email,
+          plan: m.plan, status: (m.status || "active").replace("_", " "),
+          joined: m.created_at ? Date.parse(m.created_at) : Date.now()
+        }));
+      }
+    } catch (e){ console.warn("cloud refresh failed", e); }
+    render();
+  },
+  async signIn(email){
+    if (!email){ toast(tr("Enter your email.")); return; }
+    R.cloud.busy = true; render();
+    try {
+      const sb = await this.client();
+      const { error } = await sb.auth.signInWithOtp({ email, options:{ emailRedirectTo: location.href.split("#")[0] } });
+      if (error) throw error;
+      toast(tr("Check your email for the sign-in link."), 4200);
+    } catch (e){ toast(tr("Sign-in failed. Check the email and try again.")); }
+    R.cloud.busy = false; render();
+  },
+  async signOut(){
+    try { const sb = await this.client(); await sb.auth.signOut(); } catch (e){}
+    if (R.cloud){ R.cloud.user = null; R.cloud.plan = "free"; R.cloud.role = "member"; R.cloud.members = []; }
+    render();
+  },
+  async checkout(plan){
+    if (plan === "free"){ toast(tr("To cancel, manage your plan from the Stripe billing portal.")); return; }
+    R.cloud.busy = true; render();
+    try {
+      const sb = await this.client();
+      const { data } = await sb.auth.getSession();
+      const token = data && data.session ? data.session.access_token : "";
+      const res = await fetch(`${CLOUD.url}/functions/v1/stripe-checkout`, {
+        method:"POST",
+        headers:{ "Content-Type":"application/json", "Authorization":`Bearer ${token}`, "apikey": CLOUD.anon },
+        body: JSON.stringify({ plan })
+      });
+      const out = await res.json();
+      if (out && out.url){ location.href = out.url; return; }
+      throw new Error((out && out.error) || "no url");
+    } catch (e){ toast(tr("Could not start checkout. Please try again.")); }
+    R.cloud.busy = false; render();
+  },
+};
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -3975,6 +4074,7 @@ const R = {
   adminTab: "dashboard", // admin console sub-tab
   adminQuery: "",        // admin members search
   admEdit: null,         // member id being edited ("new" for a new member)
+  cloud: null,           // cloud backend state {ready,user,role,plan,members,busy}; null until Cloud.init()
   exForm: {open: false, n: "", m: "Chest", e: "", c: ""},
   aiExBusy: false,
   progEx: "",
@@ -13049,11 +13149,23 @@ let setDraft = null;
    backend (Supabase auth + a members table) and Stripe billing.
    ============================================================ */
 function subscriptionPageHTML(){
-  const cur = S.settings.plan || "free";
+  // Cloud backend configured but no session yet → passwordless sign-in card.
+  if (cloudEnabled() && !cloudActive()){
+    const busy = !!(R.cloud && R.cloud.busy);
+    const ready = !!(R.cloud && R.cloud.ready);
+    return `<div class="card">
+        <h3>${ic("creditCard", 15)} ${tr("Sign in to manage billing")}</h3>
+        <p class="tiny" style="color:var(--txt2);margin:2px 0 12px">${tr("Your plan and billing live in your MIRA account. Sign in with a one-time email link — no password needed. Your health data stays on this device.")}</p>
+        <div class="field"><label>${tr("Email")}</label><input id="cloudEmail" inputmode="email" placeholder="you@example.com" value="${esc((S.settings && S.settings.email) || "")}"></div>
+        <button class="btn" style="width:100%" ${busy || !ready ? "disabled" : ""} onclick="M.cloudSignIn()">${busy ? tr("Sending…") : tr("Email me a sign-in link")}</button>
+      </div>`;
+  }
+  const cur = myPlan();
+  const cloud = cloudActive();
   return `<div class="card sub-cur sub-${cur}">
       <div class="sub-cur-l"><span class="tiny" style="opacity:.85">${tr("YOUR PLAN")}</span>
         <div class="sub-pname">${tr(planById(cur).name)}</div>
-        <span class="tiny" style="opacity:.85">${cur === "free" ? tr("On-device · no charge") : `${tr("Renews")} 14 Oct · $${planById(cur).price}${planById(cur).per}`}</span></div>
+        <span class="tiny" style="opacity:.85">${cur === "free" ? tr("On-device · no charge") : (cloud ? `$${planById(cur).price}${planById(cur).per}` : `${tr("Renews")} 14 Oct · $${planById(cur).price}${planById(cur).per}`)}</span></div>
       ${cur !== "free" ? `<button class="sub-manage" onclick="M.setPlan('free')">${tr("Cancel")}</button>` : ""}
     </div>
     <div class="set-group-label" style="margin:6px 2px 10px">${tr("Change plan")}</div>
@@ -13068,16 +13180,18 @@ function subscriptionPageHTML(){
         <button class="btn ${isCur || isDown ? "sec" : ""}" style="width:100%" ${isCur ? "disabled" : ""} onclick="M.setPlan('${p.id}')">${isCur ? tr("Current plan") : isDown ? tr("Downgrade") : `${tr("Upgrade to")} ${tr(p.name)}`}</button>
       </div>`;
     }).join("")}
-    <div class="tiny" style="color:var(--txt2);text-align:center;margin-top:6px">${tr("Prototype — plans switch on this device only. Real billing arrives with the hosted backend.")}</div>`;
+    ${cloud ? `<button class="btn sec" style="width:100%;margin-top:4px" onclick="M.cloudSignOut()">${ic("lock", 14)} ${tr("Sign out")}</button>` : ""}
+    <div class="tiny" style="color:var(--txt2);text-align:center;margin-top:6px">${cloud ? tr("Billing is powered by Stripe — upgrade, downgrade or cancel anytime.") : tr("Prototype — plans switch on this device only. Real billing arrives with the hosted backend.")}</div>`;
 }
 function adminSeed(){
+  if (cloudActive()) return;   // real members come from the backend; never seed samples
   if (S.admin.seeded || (S.admin.members || []).length) return;
   const names = [["Sara A.", "pro", "active"], ["Yousef M.", "team", "trial"], ["Lina H.", "free", "active"], ["Omar K.", "pro", "past due"], ["Noor F.", "pro", "active"], ["Ali R.", "team", "active"], ["Maya S.", "free", "active"], ["Hana Z.", "pro", "cancelled"]];
   S.admin.members = names.map((n, i) => ({id: uid(), name: n[0], email: n[0].split(" ")[0].toLowerCase() + "@example.com", plan: n[1], status: n[2], joined: Date.now() - (i + 2) * 6 * 864e5}));
   S.admin.seeded = true; save();
 }
 function adminStats(){
-  const m = S.admin.members || [];
+  const m = adminMembers();
   const paying = m.filter(x => (x.plan === "pro" || x.plan === "team") && x.status === "active");
   const mrr = paying.reduce((a, x) => a + planById(x.plan).price, 0);
   const byPlan = {free: 0, pro: 0, team: 0}; m.forEach(x => byPlan[x.plan] = (byPlan[x.plan] || 0) + 1);
@@ -13087,6 +13201,8 @@ function adminHTML(){
   adminSeed();
   const tab = R.adminTab || "dashboard";
   const st = adminStats();
+  const cloud = cloudActive();          // real backend member list (read-only console)
+  const editable = !cloud;              // local prototype allows add/edit; cloud is read-only here
   const tabs = [["dashboard", "Dashboard", "grid"], ["members", "Members", "users"], ["plans", "Plans", "creditCard"]];
   const statusPill = s => `<span class="adm-st s-${s.replace(/\s/g, "")}">${tr(s)}</span>`;
   const planPill = p => `<span class="adm-pl p-${p}">${tr(planById(p).name)}</span>`;
@@ -13098,16 +13214,16 @@ function adminHTML(){
         ${["free", "pro", "team"].map(p => { const c = st.byPlan[p], pct = st.total ? Math.round(c / st.total * 100) : 0;
           return `<div class="adm-bar-row"><span class="adm-bl">${planPill(p)}</span><div class="adm-bar"><span class="p-${p}" style="width:${pct}%"></span></div><b>${c}</b></div>`; }).join("")}</div>
       <div class="card"><div class="card-h-row"><h3>${ic("users", 15)} ${tr("Recent members")}</h3><button class="lnk" onclick="M.adminTab('members')">${tr("View all")} →</button></div>
-        ${[...S.admin.members].slice(-5).reverse().map(mm => adminMemberRow(mm, planPill, statusPill)).join("")}</div>`;
+        ${[...adminMembers()].slice(-5).reverse().map(mm => adminMemberRow(mm, planPill, statusPill)).join("")}</div>`;
   } else if (tab === "members"){
     const q = (R.adminQuery || "").trim().toLowerCase();
-    const filt = (S.admin.members || []).filter(mm => !q || mm.name.toLowerCase().includes(q) || (mm.email || "").toLowerCase().includes(q));
+    const filt = adminMembers().filter(mm => !q || (mm.name || "").toLowerCase().includes(q) || (mm.email || "").toLowerCase().includes(q));
     body = `<div class="row" style="gap:8px;margin-bottom:10px">
         <input class="adm-search" placeholder="${tr("Search name or email…")}" value="${esc(R.adminQuery || "")}" oninput="R.adminQuery=this.value;render()">
-        <button class="btn sm" onclick="M.adminMemberEdit('new')">${ic("plus", 15)} ${tr("Add")}</button></div>
-      <div class="card np">${filt.length ? filt.map(mm => adminMemberRow(mm, planPill, statusPill, true)).join("") : `<div class="muted" style="padding:14px">${tr("No members match.")}</div>`}</div>`;
+        ${editable ? `<button class="btn sm" onclick="M.adminMemberEdit('new')">${ic("plus", 15)} ${tr("Add")}</button>` : ""}</div>
+      <div class="card np">${filt.length ? filt.map(mm => adminMemberRow(mm, planPill, statusPill, editable)).join("") : `<div class="muted" style="padding:14px">${tr("No members match.")}</div>`}</div>`;
   } else {
-    body = `<div class="adm-plans">${PLANS.map(p => { const c = (S.admin.members || []).filter(x => x.plan === p.id).length;
+    body = `<div class="adm-plans">${PLANS.map(p => { const c = adminMembers().filter(x => x.plan === p.id).length;
       return `<div class="card uplan ${p.id === "pro" ? "hi" : ""}">
         <div class="uplan-top"><b style="font-size:17px">${tr(p.name)}</b><span class="uplan-pr">${p.price ? "$" + p.price : "$0"}<span>${p.per}</span></span></div>
         <div class="tiny" style="color:var(--acc);font-weight:700;margin:2px 0 8px">${c} ${tr("members")}</div>
@@ -13510,7 +13626,15 @@ window.M = {
   widgetMove(id, dir){ const w = S.settings.widgets; const i = w.indexOf(id); if (i < 0) return; const j = i + dir; if (j < 0 || j >= w.length) return; const tmp = w[i]; w[i] = w[j]; w[j] = tmp; save(); render(); },
   setOpen(id){ R.setPage = id; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
   /* ---- subscription (user) ---- */
-  setPlan(id){ if (!planById(id)) return; S.settings.plan = id; buzz(); save(); render(); toast(id === "free" ? tr("Switched to Free") : `${tr("Now on")} ${tr(planById(id).name)} ✓`); },
+  setPlan(id){
+    if (!planById(id)) return;
+    if (cloudActive()){ Cloud.checkout(id); return; }   // real billing → Stripe Checkout
+    S.settings.plan = id; buzz(); save(); render(); toast(id === "free" ? tr("Switched to Free") : `${tr("Now on")} ${tr(planById(id).name)} ✓`);
+  },
+  /* ---- cloud account (only when a Supabase backend is configured) ---- */
+  cloudSignIn(){ const el = $("#cloudEmail"); const email = el ? el.value.trim() : ""; if (email && S.settings){ S.settings.email = email; save(); } Cloud.signIn(email); },
+  cloudSignOut(){ Cloud.signOut(); },
+  cloudCheckout(id){ Cloud.checkout(id); },
   /* ---- admin console (prototype) ---- */
   goAdmin(){ R.tab = "admin"; R.adminTab = "dashboard"; R.setPage = null; R.homeCat = null; R.admEdit = null; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
   adminTab(t){ R.adminTab = t; R.admEdit = null; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
@@ -16076,6 +16200,9 @@ if (location.protocol.startsWith("http")){
 /* start on a fresh chat each launch — previous conversations stay in the log */
 R.convId = null;
 render();
+/* If a Supabase backend is configured, restore the session and sync plan/members.
+   No-op (nothing loads) when CLOUD.url/anon are empty — the app stays on-device. */
+if (cloudEnabled()) Cloud.init();
 /* Strava OAuth return: exchange the code, clean the URL, run the first sync. */
 (function(){
   const q = new URLSearchParams(location.search);
