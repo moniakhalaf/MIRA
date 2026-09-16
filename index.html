@@ -1751,6 +1751,14 @@ html[data-setpage="privacy"] .set-page[data-page="privacy"]{display:block}
 .ap-nm{font-size:13.5px;line-height:1.35;min-width:0}
 .ap-im{color:var(--txt3);font-size:11.5px;white-space:nowrap;flex:0 0 auto}
 .ap-tot{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 2px 2px;border-top:1px solid var(--line);font-size:13.5px;color:var(--txt2)}
+.ap-nudge{display:flex;align-items:center;gap:9px;justify-content:center;width:100%;margin:0 0 12px;padding:9px 12px;border:1px solid var(--line);border-radius:12px;background:var(--bg2);color:var(--txt2);font-size:12.5px;font-weight:600}
+.ap-nudge .sw{width:32px;height:19px;border-radius:10px;background:var(--line2);position:relative;transition:background .15s;flex:0 0 auto}
+.ap-nudge .sw:before{content:"";position:absolute;top:2px;left:2px;width:15px;height:15px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .15s}
+.ap-nudge.on{color:var(--acc);border-color:var(--acc)}
+.ap-nudge.on .sw{background:var(--acc)}
+.ap-nudge.on .sw:before{transform:translateX(13px)}
+.ap-src{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--acc);background:var(--acc-soft);border-radius:5px;padding:1px 5px;margin-inline-start:6px;vertical-align:1px;white-space:nowrap}
+.ap-src.rec{color:var(--gold);background:var(--gold-soft)}
 
 /* ---------- grocery list ---------- */
 .grocery{display:flex;flex-direction:column}
@@ -1807,7 +1815,7 @@ html[data-setpage="privacy"] .set-page[data-page="privacy"]{display:block}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.243";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.244";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -2870,6 +2878,10 @@ const TR = {
     "Tomorrow, from your usual foods": "الغد، من أطعمتك المعتادة",
     "Day total": "إجمالي اليوم",
     "Every item is something you've logged before, at the portions you usually eat. Tweak anything after.": "كل عنصر هو شيء سجّلته من قبل، بالكميات التي تتناولينها عادة. عدّلي ما تشائين بعد ذلك.",
+    "Built from foods you log, your meal prep and recipes — at the portions you usually eat. Tweak anything after.": "مبني من أطعمتك المسجّلة وتحضيراتك ووصفاتك — بالكميات التي تتناولينها عادة. عدّلي ما تشائين بعد ذلك.",
+    "Nudge toward my target": "اضبطه نحو هدفي",
+    "prep": "محضّر",
+    "recipe": "وصفة",
     "Shuffle": "خلط",
     "Use this plan": "استخدم هذه الخطة",
     "Not enough history yet to plan a full day — log a few more meals and try again.": "لا يوجد سجل كافٍ بعد لتخطيط يوم كامل — سجّلي بعض الوجبات وحاولي مجددًا.",
@@ -3909,6 +3921,7 @@ const R = {
   planWeek: 0,         // meal-planner week offset (0 = this week)
   planPick: null,      // {date, meal} while the "add to plan" picker sheet is open
   autoPlan: null,      // {date, seed, meals} preview while the auto-plan sheet is open
+  autoPlanNudge: false, // when true, auto-plan sizes toward the calorie/protein target
   groceryOpen: false,  // grocery-list view open
   groceryChecked: new Set(), // ephemeral ticked grocery items
   _dek: null, _enc: null, _encBusy: false, _encErr: "", _faceTried: false, encSetup: null,  // encryption runtime
@@ -11295,18 +11308,31 @@ function autoPlanReady(){
   const entries = (S.foods || []).filter(f => num(f.kcal) > 0).length;
   return nonEmpty >= 2 && entries >= 6;
 }
-function buildAutoPlan(date, seed){
+function buildAutoPlan(date, seed, nudge){
   seed = seed || 0;
   const prof = mealHistoryProfile();
   const tg = S.settings.targets || {};
   const targetK = num(tg.kcal) || 0;
   const share = {breakfast: 0.25, lunch: 0.35, dinner: 0.30, snack: 0.10};
+  // your own ready meals and recipes are candidates too, per meal slot
+  const prepFor = (m) => (S.prep || []).filter(p => (p.meal || "") === m && num(p.kcal) > 0)
+    .map(p => ({name: p.name, kcal: num(p.kcal), p: num(p.p), c: num(p.c), f: num(p.f), amount: p.amount || "1 serving", count: 1, src: "prep"}));
+  const recipesFor = (m) => (S.recipes || []).filter(r => r.meal === m && r.per && num(r.per.kcal) > 0)
+    .map(r => ({name: r.name, kcal: num(r.per.kcal), p: num(r.per.p), c: num(r.per.c), f: num(r.per.f), amount: "1 serving", count: 1, src: "recipe"}));
   const meals = {};
   ["breakfast", "lunch", "dinner", "snack"].forEach(m => {
-    const pool = prof[m].ranked;
+    const seen = new Set(), pool = [];
+    [...prepFor(m), ...prof[m].ranked.map(e => ({...e, src: "log"})), ...recipesFor(m)].forEach(e => {
+      const k = (e.name || "").trim().toLowerCase(); if (k && !seen.has(k)){ seen.add(k); pool.push(e); }
+    });
     if (!pool.length){ meals[m] = []; return; }
-    const budget = prof[m].avgK > 0 ? prof[m].avgK : (targetK ? targetK * share[m] : 600);
-    const rot = seed % pool.length;                      // re-rolls draw different favourites
+    const dens = e => num(e.p) / Math.max(1, num(e.kcal));                 // protein per kcal
+    const score = e => (e.src === "prep" ? 1e6 : 0) + (nudge ? dens(e) * 3e5 : (e.count || 1));
+    pool.sort((a, b) => score(b) - score(a));
+    // nudge → aim for the day's target (per-meal share); otherwise → your usual per-meal calories
+    const budget = nudge ? (targetK ? targetK * share[m] : (prof[m].avgK || 600))
+                         : (prof[m].avgK > 0 ? prof[m].avgK : (targetK ? targetK * share[m] : 600));
+    const rot = seed % pool.length;
     const seq = pool.slice(rot).concat(pool.slice(0, rot));
     const chosen = []; let k = 0;
     for (const e of seq){
@@ -11318,10 +11344,10 @@ function buildAutoPlan(date, seed){
     }
     meals[m] = chosen.map(e => ({
       name: e.name, kcal: Math.round(e.kcal), p: +num(e.p).toFixed(1), c: +num(e.c).toFixed(1), f: +num(e.f).toFixed(1),
-      amount: e.amount || "", ing: [[e.amount, e.name].filter(Boolean).join(" ").trim()].filter(Boolean)
+      amount: e.amount || "", src: e.src, ing: [[e.amount, e.name].filter(Boolean).join(" ").trim()].filter(Boolean)
     }));
   });
-  return {date, seed, meals};
+  return {date, seed, nudge: !!nudge, meals};
 }
 function autoPlanTotals(plan){
   let k = 0, p = 0, n = 0;
@@ -11344,19 +11370,20 @@ function autoPlanSheetHTML(){
       <div class="grab"></div>
       <h3 style="margin:0 0 2px">${ic("calendar", 17)} ${tr("Tomorrow, from your usual foods")}</h3>
       <div class="tiny" style="color:var(--txt2);margin-bottom:10px">${esc(dstr)}</div>
+      ${tgK ? `<button class="ap-nudge ${plan.nudge ? "on" : ""}" onclick="M.autoPlanToggleNudge()"><span class="sw"></span>${tr("Nudge toward my target")}</button>` : ""}
       ${meals.length ? `<div class="ap-meals">
         ${meals.map(m => {
           const items = plan.meals[m];
           const mk = items.reduce((a, x) => a + num(x.kcal), 0);
           return `<div class="ap-meal">
             <div class="ap-meal-h"><span>${tr(mealLabel(m))}</span><span class="ap-mk">${n0(mk)} kcal</span></div>
-            ${items.map(it => `<div class="ap-it"><span class="ap-nm" dir="auto">${it.amount ? `<span style="color:var(--txt3)">${esc(it.amount)} · </span>` : ""}${esc(it.name)}</span><span class="ap-im">${n0(it.kcal)} · ${n1(it.p)}P</span></div>`).join("")}
+            ${items.map(it => `<div class="ap-it"><span class="ap-nm" dir="auto">${it.amount ? `<span style="color:var(--txt3)">${esc(it.amount)} · </span>` : ""}${esc(it.name)}${it.src === "prep" ? `<span class="ap-src">${tr("prep")}</span>` : it.src === "recipe" ? `<span class="ap-src rec">${tr("recipe")}</span>` : ""}</span><span class="ap-im">${n0(it.kcal)} · ${n1(it.p)}P</span></div>`).join("")}
           </div>`;
         }).join("")}
       </div>
       <div class="ap-tot"><span>${tr("Day total")}</span>
         <span><b style="color:var(--acc)">${n0(tot.k)}</b> kcal · ${n1(tot.p)}P${tgK ? ` <span class="tiny" style="color:var(--txt3)">/ ${n0(tgK)} ${tr("target")}${diff ? ` · ${diff > 0 ? "+" : ""}${n0(diff)}` : ""}</span>` : ""}</span></div>
-      <div class="tiny" style="color:var(--txt2);margin:8px 0 12px">${tr("Every item is something you've logged before, at the portions you usually eat. Tweak anything after.")}</div>
+      <div class="tiny" style="color:var(--txt2);margin:8px 0 12px">${tr("Built from foods you log, your meal prep and recipes — at the portions you usually eat. Tweak anything after.")}</div>
       <div class="row" style="gap:8px">
         <button class="btn sec" style="flex:1" onclick="M.autoPlanShuffle()">${ic("refresh", 15)} ${tr("Shuffle")}</button>
         <button class="btn" style="flex:2" onclick="M.autoPlanApply()">${ic("check", 15)} ${tr("Use this plan")}</button>
@@ -15412,10 +15439,11 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
   autoPlanTomorrow(){
     if (!autoPlanReady()){ toast(tr("Log a few more meals first — I plan tomorrow from what you actually eat.")); return; }
     const tmr = new Date(Date.now() + 864e5).toLocaleDateString("en-CA");
-    R.autoPlan = buildAutoPlan(tmr, 0);
+    R.autoPlan = buildAutoPlan(tmr, 0, R.autoPlanNudge);
     buzz(); render();
   },
-  autoPlanShuffle(){ if (!R.autoPlan) return; R.autoPlan = buildAutoPlan(R.autoPlan.date, (R.autoPlan.seed || 0) + 1); buzz(); render(); },
+  autoPlanShuffle(){ if (!R.autoPlan) return; R.autoPlan = buildAutoPlan(R.autoPlan.date, (R.autoPlan.seed || 0) + 1, R.autoPlanNudge); buzz(); render(); },
+  autoPlanToggleNudge(){ if (!R.autoPlan) return; R.autoPlanNudge = !R.autoPlanNudge; R.autoPlan = buildAutoPlan(R.autoPlan.date, R.autoPlan.seed || 0, R.autoPlanNudge); buzz(); render(); },
   autoPlanClose(){ R.autoPlan = null; render(); },
   autoPlanApply(){
     const plan = R.autoPlan; if (!plan) return;
