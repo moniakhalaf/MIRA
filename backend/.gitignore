@@ -1,0 +1,8 @@
+# Never commit real secrets — only .env.example is tracked.
+.env
+.env.*
+!.env.example
+
+# Supabase CLI local state
+.branches
+.temp
