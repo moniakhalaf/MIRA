@@ -1680,6 +1680,15 @@ html[data-setpage="privacy"] .set-page[data-page="privacy"]{display:block}
 .msel-h b{font-size:15px}
 .msel-h .cnt{color:var(--txt3);font-size:12px}
 .mus-extra{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:4px}
+/* muscle view toggle + weekly coverage */
+.mus-view{display:flex;gap:3px;background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:3px;margin-bottom:10px}
+.mus-view button{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;border:none;background:none;border-radius:9px;padding:8px 6px;color:var(--txt3);font-size:13px;font-weight:600}
+.mus-view button.on{background:var(--card);color:var(--acc);box-shadow:0 1px 4px rgba(0,0,0,.12)}
+.body3d .hot .mz.cov{fill:var(--acc);fill-opacity:var(--cv)}
+.cov-list{display:flex;flex-wrap:wrap;gap:7px}
+.cov-chip{display:inline-flex;align-items:center;gap:7px;padding:7px 12px;border-radius:18px;border:1px solid var(--line);background:var(--bg2);color:var(--txt2);font-size:13px;font-weight:600}
+.cov-chip.on{border-color:var(--acc);color:var(--txt);background:var(--acc-soft)}
+.cov-chip b{color:var(--acc);font-size:12.5px}
 .demo-btn{background:var(--bg2);border:1px solid var(--line);color:var(--txt2)}
 .demo-step{display:flex;gap:10px;margin:9px 0;font-size:14px;line-height:1.5}
 .demo-step .n{flex:0 0 auto;width:22px;height:22px;border-radius:50%;background:var(--acc-soft);color:var(--acc);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:1px}
@@ -1815,7 +1824,7 @@ html[data-setpage="privacy"] .set-page[data-page="privacy"]{display:block}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.244";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.245";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -2197,6 +2206,16 @@ const TR = {
     "Muscles":"العضلات",
     "Train by muscle":"تمرّن حسب العضلة",
     "Tap a muscle to see exercises for it.":"اضغط على عضلة لعرض تمارينها.",
+    "Explore":"استكشاف",
+    "This week":"هذا الأسبوع",
+    "Shaded by how much you trained each muscle this week.":"مُظلّل حسب مقدار تمرينك لكل عضلة هذا الأسبوع.",
+    "This week's training":"تمارين هذا الأسبوع",
+    "You trained":"درّبت",
+    "muscle groups":"مجموعات عضلية",
+    "sets":"مجموعات",
+    "Not trained this week — tap to fix":"لم تُدرَّب هذا الأسبوع — اضغط للمعالجة",
+    "Full coverage — every group trained this week.":"تغطية كاملة — دُرّبت كل مجموعة هذا الأسبوع.",
+    "No workouts logged in the last 7 days. Log a session and your coverage appears here.":"لا تمارين مسجّلة في آخر 7 أيام. سجّل جلسة وستظهر تغطيتك هنا.",
     "Tap a muscle group to see exercises for it.":"اضغط على مجموعة عضلية لعرض تمارينها.",
     "Lats":"العضلات الجانبية",
     "Upper back":"أعلى الظهر",
@@ -3897,6 +3916,7 @@ const R = {
   libQuery: "",
   libMuscle: "All",
   muscleSel: null,     // selected muscle group in the visual "Muscles" picker
+  muscleView: "explore", // "explore" (tap for exercises) | "week" (training coverage)
   exForm: {open: false, n: "", m: "Chest", e: "", c: ""},
   aiExBusy: false,
   progEx: "",
@@ -9975,11 +9995,48 @@ const MUSCLE_ZONES={
 };
 // Photorealistic 3D body: the rendered figure as an image, with transparent
 // tappable muscle zones overlaid (aligned to each view) that highlight on select.
-function muscleFigure(view){
+function muscleFigure(view, cov){
   const sel=R.muscleSel, cfg=MUSCLE_ZONES[view];
-  const zones=cfg.z.map(z=>`<g class="mz${sel===z.m?" on":""}" data-m="${z.m}" role="button" tabindex="0" aria-label="${tr(SUB_LABEL[z.m]||z.m)}" onclick="M.muscleSel('${z.m}')">${z.s}</g>`).join("");
+  const zones=cfg.z.map(z=>{
+    let cls="mz", extra="";
+    if (cov){ const s=zoneWeekSets(z.m, cov); if (s>0){ cls+=" cov"; extra=` style="--cv:${Math.min(0.6, 0.16 + s*0.05).toFixed(2)}"`; } }
+    else if (sel===z.m){ cls+=" on"; }
+    return `<g class="${cls}"${extra} data-m="${z.m}" role="button" tabindex="0" aria-label="${tr(SUB_LABEL[z.m]||z.m)}" onclick="M.muscleSel('${z.m}')">${z.s}</g>`;
+  }).join("");
   return `<div class="body3d"><img src="${BODY_IMG[view]}" alt="" draggable="false">`+
     `<svg class="hot" viewBox="0 0 ${cfg.w} ${cfg.h}" preserveAspectRatio="none">${zones}</svg></div>`;
+}
+/* ---- weekly training coverage: which muscles you hit in the last 7 days ---- */
+const COV_GROUPS = [["Chest", "chest"], ["Back", "lats"], ["Shoulders", "shoulders"], ["Arms", "biceps"], ["Legs", "quads"], ["Glutes", "glutes"], ["Core", "abs"]];
+function weeklyMuscleCoverage(){
+  const since = new Date(Date.now() - 6 * 864e5).toLocaleDateString("en-CA");
+  const bySub = {}, byGroup = {};
+  const byName = {}; libAll().forEach(x => byName[(x.n || "").trim().toLowerCase()] = x);
+  (S.workouts || []).filter(w => w.date >= since).forEach(w => (w.items || []).forEach(it => {
+    const sets = (it.sets || []).length; if (!sets) return;
+    const lx = byName[(it.name || "").trim().toLowerCase()];
+    const sub = lx && lx.sm, grp = (lx && lx.m) || it.muscle;
+    if (sub && SUB_PARENT[sub]) bySub[sub] = (bySub[sub] || 0) + sets;
+    else if (grp) byGroup[grp] = (byGroup[grp] || 0) + sets;
+  }));
+  return {bySub, byGroup, since};
+}
+function zoneWeekSets(z, cov){ return (cov.bySub[z] || 0) + (cov.byGroup[SUB_PARENT[z]] || 0); }
+function groupWeekSets(g, cov){ let s = cov.byGroup[g] || 0; Object.keys(cov.bySub).forEach(sub => { if (SUB_PARENT[sub] === g) s += cov.bySub[sub]; }); return s; }
+function coverageSummaryHTML(cov){
+  const rows = COV_GROUPS.map(([g, nav]) => ({g, nav, sets: groupWeekSets(g, cov)}));
+  const trained = rows.filter(r => r.sets > 0).sort((a, b) => b.sets - a.sets);
+  const missed = rows.filter(r => r.sets === 0);
+  const total = rows.reduce((a, r) => a + r.sets, 0);
+  return `<div class="card">
+    <h3>${ic("calendar", 15)} ${tr("This week's training")}</h3>
+    ${total ? `<div class="muted" style="margin:-2px 0 10px">${tr("You trained")} ${trained.length}/7 ${tr("muscle groups")} · ${total} ${tr("sets")}</div>
+      <div class="cov-list">${trained.map(r => `<button class="cov-chip on" onclick="M.muscleSel('${r.nav}')"><span>${tr(r.g)}</span><b>${r.sets}</b></button>`).join("")}</div>
+      ${missed.length ? `<div class="tiny" style="margin:12px 0 6px;color:var(--txt2)">${ic("alert", 12)} ${tr("Not trained this week — tap to fix")}</div>
+        <div class="cov-list">${missed.map(r => `<button class="cov-chip" onclick="M.muscleSel('${r.nav}')">${tr(r.g)}</button>`).join("")}</div>`
+        : `<div class="tiny" style="margin-top:10px;color:var(--acc)">${ic("check", 12)} ${tr("Full coverage — every group trained this week.")}</div>`}`
+      : `<div class="muted">${tr("No workouts logged in the last 7 days. Log a session and your coverage appears here.")}</div>`}
+  </div>`;
 }
 // Pick a small, balanced set of exercises for a sub-muscle — compound
 // movements first, then spread across equipment for variety.
@@ -9998,16 +10055,18 @@ function trainMusclesHTML(){
   R._libList = list;                                   // so M.libPick(i) matches library behaviour
   const selLabel = sel ? tr(SUB_LABEL[sel] || sel) : "";
   const adding = R.trainWO ? "workout" : (R.progAddEx != null && S.program ? "program" : null);
+  const week = R.muscleView === "week";
+  const cov = week ? weeklyMuscleCoverage() : null;
   return `
     ${adding ? `<div class="card prog-guided"><div class="row" style="align-items:center">
       <div style="flex:1"><b class="tiny">${ic("plus", 13)} ${adding === "workout" ? tr("Adding to your workout") : tr("Adding to your program")}</b>
         <div class="tiny" style="color:var(--txt2)">${tr("Tap a muscle, then tap an exercise to add it.")}</div></div></div>` : ""}
     <div class="card">
-      <h3>${ic("barbell", 16)} ${tr("Train by muscle")}</h3>
-      <div class="muted" style="margin:-2px 0 8px">${tr("Tap a muscle to see exercises for it.")}</div>
+      <div class="mus-view"><button class="${!week ? "on" : ""}" onclick="M.muscleView('explore')">${ic("search", 14)} ${tr("Explore")}</button><button class="${week ? "on" : ""}" onclick="M.muscleView('week')">${ic("calendar", 14)} ${tr("This week")}</button></div>
+      <div class="muted" style="margin:-2px 0 8px">${week ? tr("Shaded by how much you trained each muscle this week.") : tr("Tap a muscle to see exercises for it.")}</div>
       <div class="bodywrap">
-        <div class="bodycol">${muscleFigure("front")}<span class="bl">${tr("Front")}</span></div>
-        <div class="bodycol">${muscleFigure("back")}<span class="bl">${tr("Back")}</span></div>
+        <div class="bodycol">${muscleFigure("front", cov)}<span class="bl">${tr("Front")}</span></div>
+        <div class="bodycol">${muscleFigure("back", cov)}<span class="bl">${tr("Back")}</span></div>
       </div>
       <div class="mus-extra">
         <button class="chip ${sel === "cardio" ? "on" : ""}" onclick="M.muscleSel('cardio')">${tr("Cardio")}</button>
@@ -10027,6 +10086,7 @@ function trainMusclesHTML(){
           <button class="icon-btn demo-btn lib-demo" aria-label="${tr("How-to")}" data-n="${esc(x.n)}" onclick="M.exDemo(this.dataset.n)">${ic("book", 17)}</button>
         </div>`).join("") : `<div class="muted" style="padding:6px 2px">${tr("No exercises here yet — add one in the Library with “Find (AI)” or “Add exercise”.")}</div>`}
       </div>`
+    : week ? coverageSummaryHTML(cov)
     : `<div class="muted" style="text-align:center;padding:4px 2px 2px">${tr("Nothing selected yet — tap a muscle above.")}</div>`}`;
 }
 
@@ -13549,6 +13609,7 @@ window.M = {
   },
   libMuscle(m){ R.libMuscle = m; render(); },
   muscleSel(m){ R.muscleSel = R.muscleSel === m ? null : m; buzz(); render(); const c = $("#content"); if (c && R.muscleSel) setTimeout(() => { const h = document.querySelector(".msel-h"); if (h) h.scrollIntoView({behavior: "smooth", block: "start"}); }, 40); },
+  muscleView(v){ R.muscleView = v; if (v === "week") R.muscleSel = null; render(); },
   muscleBuild(){
     const m = R.muscleSel; if (!m) return;
     const label = SUB_LABEL[m] || m;
