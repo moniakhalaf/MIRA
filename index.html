@@ -573,6 +573,11 @@ body.kb .fab{display:none}
 }
 .chip.on{border-color:var(--acc);color:var(--txt);background:var(--acc-soft)}
 .seg-tabs{margin-bottom:2px}
+/* page tab rows (Training, etc.) as a scrollable segmented track */
+.chip-row.seg-tabs{background:var(--bg2);border:1px solid var(--line);border-radius:14px;padding:4px;gap:3px;margin-bottom:12px}
+.chip-row.seg-tabs .chip{border:none;background:none;border-radius:10px;min-height:36px;padding:8px 15px;color:var(--txt3);font-weight:600;font-size:13.5px;transition:background .15s,color .15s,box-shadow .15s}
+.chip-row.seg-tabs .chip.on{background:var(--card);color:var(--acc);box-shadow:0 1px 4px rgba(0,0,0,.13)}
+.chip-row.seg-tabs .chip:active{transform:scale(.97)}
 .grid3{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:center}
 .grid3 .btn{width:auto}
 .set-list{display:flex;flex-direction:column;gap:6px}
@@ -665,10 +670,11 @@ body.kb .fab{display:none}
 /* home segmented category control */
 .seg-nav{display:flex;gap:3px;background:var(--bg2);border:1px solid var(--line);border-radius:16px;padding:4px;margin:2px 0 14px;overflow-x:auto;scrollbar-width:none}
 .seg-nav::-webkit-scrollbar{display:none}
-.seg-item{flex:1 1 0;min-width:58px;display:flex;flex-direction:column;align-items:center;gap:4px;justify-content:center;padding:9px 4px;border:none;background:none;border-radius:12px;color:var(--txt3);font-size:11.5px;font-weight:600;white-space:nowrap;transition:background .15s,color .15s,box-shadow .15s}
+.seg-item{flex:1 1 0;min-width:58px;--mc:var(--acc);display:flex;flex-direction:column;align-items:center;gap:4px;justify-content:center;padding:9px 4px;border:none;background:none;border-radius:12px;color:var(--txt3);font-size:11.5px;font-weight:600;white-space:nowrap;transition:background .15s,color .15s,box-shadow .15s}
 .seg-item svg{width:18px;height:18px;flex:0 0 auto}
 .seg-item.on{background:var(--card);color:var(--mc);box-shadow:0 1px 4px rgba(0,0,0,.14)}
 .seg-item:active{transform:scale(.97)}
+.food-subtabs .seg-nav{margin:0;border:none;background:var(--bg2)}
 .msgs{display:flex;flex-direction:column;gap:12px;padding-bottom:8px}
 .msg{max-width:88%;padding:11px 14px;border-radius:16px;font-size:15px;overflow-wrap:break-word;word-break:break-word;box-shadow:var(--cardshadow)}
 .msg.user{align-self:flex-end;background:var(--acc-soft);border:1px solid color-mix(in srgb,var(--acc) 35%,transparent);border-bottom-right-radius:5px;white-space:pre-wrap}
@@ -1801,7 +1807,7 @@ html[data-setpage="privacy"] .set-page[data-page="privacy"]{display:block}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.242";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.243";   // bump on every deploy — shown in Settings
 
 /* ---------------- utilities ---------------- */
 const $ = s => document.querySelector(s);
@@ -7151,11 +7157,12 @@ function foodHTML(){
   const hasOlder = allDates.some(d => d < back6);
   const range = foodHistRange();
   const pastDates = allDates.filter(d => d >= range.from && d <= range.to);
-  const tabBtn = (id, label) => `<button class="${ft === id ? "on" : ""}" onclick="M.foodTab('${id}')">${tr(label)}</button>`;
+  const FT_ICON = {log: "plus", today: "target", history: "clock"};
+  const tabBtn = (id, label) => `<button class="seg-item ${ft === id ? "on" : ""}" onclick="M.foodTab('${id}')">${ic(FT_ICON[id], 17)}<span>${tr(label)}</span></button>`;
 
   return `
   <button class="cat-back" aria-label="Back to Home" onclick="M.backToHome('health')">${ic("back", 18)} ${t("Home")}</button>
-  <div class="seg food-subtabs">${tabBtn("log", "Log")}${tabBtn("today", "Today")}${tabBtn("history", "History")}</div>
+  <div class="food-subtabs"><div class="seg-nav">${tabBtn("log", "Log")}${tabBtn("today", "Today")}${tabBtn("history", "History")}</div></div>
 
   ${ft === "log" ? `
   ${foodSummaryCardHTML()}
