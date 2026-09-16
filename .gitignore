@@ -1,0 +1,5 @@
+# Local test-only tooling (headless smoke tests) — not part of the app.
+# MIRA ships as a single static index.html with no build step.
+node_modules/
+package.json
+package-lock.json
