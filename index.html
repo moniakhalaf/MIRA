@@ -1275,6 +1275,12 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
 }
 .day-head .dt{font-weight:600;font-size:14px}
 .day-head .sum{margin-inline-start:auto;font-size:12.5px;color:var(--txt2);text-align:end}
+.day-head .day-def{display:block;margin-top:3px;font-size:11px;font-weight:800;letter-spacing:.2px}
+.day-def.d-def{color:var(--green)} .day-def.d-sur{color:var(--amber)}
+.def-line{margin-top:9px;font-size:13px;display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-weight:600}
+.def-line.d-def{color:var(--green)} .def-line.d-sur{color:var(--amber)}
+.def-line .def-sub{color:var(--txt3);font-weight:400;font-size:12px}
+.def-line.def-set{color:var(--txt2);font-weight:500;cursor:pointer}
 .day-head .chev{color:var(--txt3);transition:transform .2s;font-size:12px}
 .day-group.openday .day-head{border-bottom-left-radius:0;border-bottom-right-radius:0}
 .day-group.openday .chev{transform:rotate(90deg)}
@@ -1872,7 +1878,7 @@ html[data-setpage="legal"] .set-page[data-page="legal"]{display:block}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.249";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.250";   // bump on every deploy — shown in Settings
 
 /* ---------------- optional cloud backend (Supabase + Stripe) ----------------
    MIRA is fully on-device by default. To turn the Subscription screen and
@@ -2661,6 +2667,11 @@ const TR = {
     "Emerald":"زُمرّدي","Ember":"جمر ذهبي","Aegean":"أزرق بحري","Porcelain":"خزفي فاتح",
     "Emerald is the signature deep green · Ember is warm ink & gold · Aegean is sea-navy & teal · Porcelain is a bright daytime light.":"زُمرّدي هو الأخضر العميق المميّز · جمر ذهبي حبر دافئ وذهب · أزرق بحري كحلي وفيروزي · خزفي فاتح إضاءة نهارية ساطعة.",
     "Daily targets":"الأهداف اليومية","Calories kcal":"السعرات كيلوكالوري","Carbs g (optional)":"كربوهيدرات غ (اختياري)","Fat g (optional)":"دهون غ (اختياري)",
+    "Maintenance calories (daily upkeep)":"سعرات الصيانة (الاستهلاك اليومي)",
+    "The calories your body burns in a day. Each logged day then shows how far under (a deficit) or over you ate. Leave blank and MIRA estimates it from your body stats or your own weight trend.":"السعرات التي يحرقها جسمك في اليوم. عندها يُظهر كل يوم مُسجّل كم أكلتَ أقل (عجز) أو أكثر منها. اتركه فارغًا وتُقدّره ميرا من بيانات جسمك أو من اتجاه وزنك.",
+    "deficit today":"عجز اليوم","surplus today":"فائض اليوم","deficit":"عجز","surplus":"فائض","ate":"أكلتَ",
+    "maintenance":"الصيانة","estimated from your data":"مُقدّرة من بياناتك","from the calculator above":"من الحاسبة أعلاه",
+    "Set your maintenance calories to track your daily deficit":"حدّد سعرات الصيانة لتتبّع عجزك اليومي",
     "fiber":"ألياف","sugar":"سكر","sodium":"صوديوم","Fiber, sugar & sodium":"الألياف والسكر والصوديوم","Fiber g":"ألياف غ","Sugar g":"سكر غ","Sodium mg":"صوديوم ملغ","Fiber goal g (optional)":"هدف الألياف غ (اختياري)","e.g. 30":"مثال: 30","Sodium limit mg (optional)":"حد الصوديوم ملغ (اختياري)","e.g. 2300":"مثال: 2300",
     "Water goal ml":"هدف الماء مل","Goal weight kg":"الوزن المستهدف كغ","Saved foods":"الأطعمة المحفوظة","Forget":"نسيان",
     "Your domains":"مجالاتك","Domains":"المجالات","Remove":"إزالة","New domain (any subject)":"مجال جديد (أي موضوع)","Add":"إضافة",
@@ -5936,6 +5947,26 @@ function dayTotals(date){
     fiber: a.fiber + (+f.fiber || 0), sugar: a.sugar + (+f.sugar || 0), sodium: a.sodium + (+f.sodium || 0)}),
     {kcal: 0, p: 0, c: 0, f: 0, fiber: 0, sugar: 0, sodium: 0});
 }
+// Maintenance calories (daily upkeep / TDEE). Prefers a number you set yourself,
+// then the adaptive estimate from your own weight+intake trend, then the day-one
+// Mifflin calculator. Returns null until at least one source is available.
+function maintenanceKcal(){
+  const manual = num((S.settings || {}).maintenanceKcal);
+  if (manual > 0) return {val: Math.round(manual), source: "set"};
+  const e = (typeof expenditureEstimate === "function") ? expenditureEstimate() : null;
+  if (e && e.tdee > 0) return {val: e.tdee, source: "data"};
+  const c = (typeof targetCalc === "function") ? targetCalc() : null;
+  if (c && c.tdee > 0) return {val: c.tdee, source: "calc"};
+  return null;
+}
+// A day's energy balance vs maintenance. diff > 0 ⇒ deficit (ate under upkeep),
+// diff < 0 ⇒ surplus. Null when maintenance is unknown or nothing was logged.
+function dayDeficit(date){
+  const m = maintenanceKcal(); if (!m) return null;
+  const eaten = Math.round(dayTotals(date).kcal);
+  if (!(eaten > 0)) return null;
+  return {maint: m.val, eaten, diff: m.val - eaten, source: m.source};
+}
 function liveContext(){
   const t = todayStr();
   const tot = dayTotals(t);
@@ -7314,8 +7345,28 @@ function foodSummaryCardHTML(){
     </div>
     <div class="muted" style="margin-top:9px">${t("Remaining")}: <b>${n0(Math.max(0, adjKcal - tot.kcal))} kcal</b> · <b>${n1(Math.max(0, tg.protein - tot.p))} ${tr("g protein")}</b>${tg.carbs ? ` · ${n1(Math.max(0, tg.carbs - tot.c))} ${tr("g carbs")}` : ""}${tg.fat ? ` · ${n1(Math.max(0, tg.fat - tot.f))} ${tr("g fat")}` : ""}</div>
     ${added > 0 ? `<div class="tiny" style="margin-top:5px;color:var(--txt2)">${ic("flame", 11)} ${tr("Includes")} +${n0(added)} ${tr("kcal from exercise")}</div>` : ""}
+    ${deficitLineHTML(today)}
     ${microStripHTML(tot)}
   </div>`;
+}
+// A friendly "how much deficit today" readout: maintenance − eaten. Green when
+// under maintenance (a deficit), amber when over. Hidden until maintenance is
+// known and some food is logged; nudges to set maintenance when it's missing.
+function deficitLineHTML(date){
+  const eaten = Math.round(dayTotals(date).kcal);
+  const def = dayDeficit(date);
+  if (!def){
+    if (eaten > 0 && !maintenanceKcal())
+      return `<div class="def-line def-set" onclick="M.setJump('setNutrition')">${ic("flame", 13)} <span>${tr("Set your maintenance calories to track your daily deficit")} →</span></div>`;
+    return "";
+  }
+  const under = def.diff >= 0;
+  const cls = under ? "d-def" : "d-sur";
+  const head = under
+    ? `<b>${n0(def.diff)} kcal</b> ${tr("deficit today")}`
+    : `<b>${n0(-def.diff)} kcal</b> ${tr("surplus today")}`;
+  return `<div class="def-line ${cls}">${ic("flame", 13)} <span>${head}</span>
+    <span class="def-sub">${tr("ate")} ${n0(def.eaten)} ${tr("of")} ${n0(def.maint)} ${tr("maintenance")}</span></div>`;
 }
 function hydrationCardHTML(){
   const today = todayStr();
@@ -7336,10 +7387,12 @@ function dayGroupHTML(d, forceOpen){
   const items = dayFoods(d);
   const dt = dayTotals(d);
   const open = forceOpen || R.openDays.has(d);
+  const def = dayDeficit(d);
+  const defChip = def ? `<b class="day-def ${def.diff >= 0 ? "d-def" : "d-sur"}">${def.diff >= 0 ? `${n0(def.diff)} ${tr("deficit")}` : `${n0(-def.diff)} ${tr("surplus")}`}</b>` : "";
   return `<div class="day-group ${open ? "openday" : ""}">
       <button class="day-head" onclick="M.dayToggle('${d}')">
         <span class="chev">▶</span><span class="dt">${fmtDate(d)}</span>
-        <span class="sum">${n0(dt.kcal)} kcal · ${n1(dt.p)}P · ${n1(dt.c)}C · ${n1(dt.f)}F</span>
+        <span class="sum">${n0(dt.kcal)} kcal · ${n1(dt.p)}P · ${n1(dt.c)}C · ${n1(dt.f)}F${defChip}</span>
       </button>
       ${open ? `<div class="day-items">${d !== todayStr() && items.length ? `<button class="day-copy" onclick="M.copyDayToToday('${d}')">${ic("copy", 14)} ${t("Copy this day to today")}</button>` : ""}${items.length ? FOOD_MEALS.map(([mk, ml]) => {
         const mi = items.filter(f => entryMeal(f) === mk).sort((a, b) => { const ta = entryTime(a), tb = entryTime(b); return ta < tb ? -1 : ta > tb ? 1 : (a.ts || 0) - (b.ts || 0); });
@@ -13389,6 +13442,14 @@ function settingsHTML(){
       <div class="field"><label>${tr("Calories kcal")}</label><input type="number" inputmode="numeric" value="${st.targets.kcal || ""}" oninput="S.settings.targets.kcal=num(this.value);save()"></div>
       <div class="field"><label>${tr("Protein g")}</label><input type="number" inputmode="numeric" value="${st.targets.protein || ""}" oninput="S.settings.targets.protein=num(this.value);save()"></div>
     </div>
+    ${(() => {
+      const auto = maintenanceKcal();
+      const autoTxt = auto ? (auto.source === "data" ? tr("estimated from your data") : auto.source === "calc" ? tr("from the calculator above") : "") : "";
+      const ph = auto && auto.source !== "set" ? `${n0(auto.val)}${autoTxt ? " · " + autoTxt : ""}` : tr("e.g. 2151");
+      return `<div class="field" style="margin-bottom:10px"><label>${tr("Maintenance calories (daily upkeep)")}</label>
+      <input type="number" inputmode="numeric" value="${st.maintenanceKcal || ""}" placeholder="${esc(ph)}" oninput="S.settings.maintenanceKcal=num(this.value);save()">
+      <div class="tiny" style="margin-top:6px;color:var(--txt2)">${tr("The calories your body burns in a day. Each logged day then shows how far under (a deficit) or over you ate. Leave blank and MIRA estimates it from your body stats or your own weight trend.")}</div></div>`;
+    })()}
     <div class="grid2" style="margin-bottom:10px">
       <div class="field"><label>${tr("Carbs g (optional)")}</label><input type="number" inputmode="numeric" value="${st.targets.carbs || ""}" oninput="S.settings.targets.carbs=num(this.value);save()"></div>
       <div class="field"><label>${tr("Fat g (optional)")}</label><input type="number" inputmode="numeric" value="${st.targets.fat || ""}" oninput="S.settings.targets.fat=num(this.value);save()"></div>
