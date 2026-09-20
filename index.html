@@ -1628,6 +1628,15 @@ html[data-setpage="legal"] .set-page[data-page="legal"]{display:block}
 }
 .sheet.show{transform:translateY(0)}
 .sheet .grab{width:38px;height:4px;border-radius:3px;background:var(--line2);margin:0 auto 14px}
+/* servings stepper (Save to meal prep) */
+.prep-stp{display:flex;align-items:stretch;justify-content:center;gap:12px;margin:2px 0 4px}
+.prep-stp .stp-b{width:56px;height:56px;flex:0 0 auto;border-radius:16px;border:1px solid var(--line2);
+  background:var(--card2,var(--card));color:var(--txt);font-size:26px;font-weight:600;line-height:1;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent}
+.prep-stp .stp-b:active{transform:scale(.94)}
+.prep-stp .stp-in{width:110px;height:56px;text-align:center;font-size:28px;font-weight:700;color:var(--txt);
+  background:var(--card2,var(--card));border:1px solid var(--line2);border-radius:16px;padding:0 6px}
+.prep-stp .stp-in::-webkit-outer-spin-button,.prep-stp .stp-in::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 @media(min-width:700px){
   .content{max-width:720px;margin:0 auto;width:100%}
   .chatbar .inner{max-width:696px;margin:0 auto}
@@ -1863,7 +1872,7 @@ html[data-setpage="legal"] .set-page[data-page="legal"]{display:block}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.248";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.249";   // bump on every deploy — shown in Settings
 
 /* ---------------- optional cloud backend (Supabase + Stripe) ----------------
    MIRA is fully on-device by default. To turn the Subscription screen and
@@ -3025,6 +3034,10 @@ const TR = {
     "History": "السجل",
     "Save to meal prep": "احفظ في تحضير الوجبات",
     "Saved to meal prep": "حُفظ في تحضير الوجبات",
+    "How many servings did you actually make? Each one logs in a tap later and ticks down as you eat it.": "كم حصة حضّرت فعلاً؟ كل واحدة تُسجَّل بضغطة لاحقًا وتنقص كلما تناولتها.",
+    "recipe makes": "الوصفة تكفي",
+    "Fewer": "أقل",
+    "More": "أكثر",
     "serving": "حصة",
     "servings": "حصص",
     "MIRA's read on your data": "قراءة ميرا لبياناتك",
@@ -4042,6 +4055,7 @@ const R = {
   recipeForm: null,   // {name, image, servings, kcal, p, c, f, ingredients, steps, cuisine, tags, source} when adding manually
   recipeImportOpen: false, // import/discover panel open
   recipeBusy: false,  // AI import/discover in progress
+  prepAsk: null,      // {id, q} while the "how many servings did you make?" sheet is open
   ciDraft: null,      // today's wellness check-in editing buffer {mood, factors:[], gratitude, journal}
   ciQuote: null,      // supportive quote shown when mood is below "Good"
   widgetsOpen: false, // Home "Today" widget customization sheet
@@ -11211,7 +11225,7 @@ function recipeDetailHTML(){
       <button class="btn" style="flex:1" onclick="M.recipeLog('${r.id}')">${ic("plus", 16)} ${tr("Log a serving")}</button>
       <button class="btn sec" style="flex:1" onclick="M.planAddRecipe('${r.id}')">${ic("calendar", 15)} ${tr("Add to plan")}</button>
     </div>
-    <button class="btn sec" style="width:100%;margin:0 0 4px" onclick="M.recipeToPrep('${r.id}')">${ic("bookmark", 15)} ${tr("Save to meal prep")}${(r.servings || 1) > 1 ? ` · ${r.servings} ${tr("servings")}` : ""}</button>
+    <button class="btn sec" style="width:100%;margin:0 0 4px" onclick="M.recipeToPrepAsk('${r.id}')">${ic("bookmark", 15)} ${tr("Save to meal prep")}</button>
     ${recipeGramCardHTML(r)}
     <div class="card"><h3>${ic("list", 16)} ${tr("Ingredients")}</h3>
       <ul class="rc-list">${(r.ingredients || []).length ? r.ingredients.map(i => `<li dir="auto">${esc(i)}</li>`).join("") : `<li class="muted">Not listed.</li>`}</ul>
@@ -11222,6 +11236,25 @@ function recipeDetailHTML(){
     <div class="row" style="gap:8px">
       <button class="btn sec" style="flex:1" onclick="M.recipeEdit('${r.id}')">${ic("edit", 14)} ${tr("Edit recipe")}</button>
       <button class="btn sec danger" style="flex:1" onclick="M.recipeDel('${r.id}')">${ic("trash", 14)} ${tr("Delete recipe")}</button>
+    </div>
+    ${R.prepAsk && R.prepAsk.id === r.id ? prepAskSheetHTML(r) : ""}`;
+}
+function prepAskSheetHTML(r){
+  const q = Math.max(1, Math.round(num(R.prepAsk.q)) || 1);
+  const per = r.per || {};
+  return `<div class="sheet-mask show" onclick="M.prepAskClose()"></div>
+    <div class="sheet show" onclick="event.stopPropagation()">
+      <div class="grab"></div>
+      <h3 style="margin:0 0 4px">${ic("bookmark", 16)} ${tr("Save to meal prep")}</h3>
+      <p class="tiny" style="color:var(--txt2);margin:0 0 16px">${tr("How many servings did you actually make? Each one logs in a tap later and ticks down as you eat it.")}</p>
+      <div class="prep-stp">
+        <button class="stp-b" aria-label="${tr("Fewer")}" onclick="M.prepAskStep(-1)">−</button>
+        <input class="stp-in" type="number" inputmode="numeric" min="1" value="${q}" oninput="R.prepAsk.q=this.value" onchange="M.prepAskStep(0)">
+        <button class="stp-b" aria-label="${tr("More")}" onclick="M.prepAskStep(1)">+</button>
+      </div>
+      <div class="tiny" style="text-align:center;color:var(--txt3);margin:10px 0 16px">${n0(num(per.kcal))} kcal · ${n1(num(per.p))}g ${tr("protein")} ${tr("per serving")}${(r.servings || 1) > 1 ? ` · ${tr("recipe makes")} ${r.servings}` : ""}</div>
+      <button class="btn" style="width:100%" onclick="M.recipeToPrepConfirm()">${tr("Save")} ${q} ${q === 1 ? tr("serving") : tr("servings")}</button>
+      <button class="btn sec" style="width:100%;margin-top:8px" onclick="M.prepAskClose()">${tr("Cancel")}</button>
     </div>`;
 }
 function recipeFormHTML(){
@@ -15681,13 +15714,37 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
     const r = S.recipes.find(x => x.id === id); if (!r) return;
     logFood({name: r.name, amount: "1 serving", kcal: r.per.kcal, p: r.per.p, c: r.per.c, f: r.per.f, conf: "estimate"});
   },
-  // Save a cooked recipe to the meal-prep shelf as a batch of its servings —
-  // each ticks down and logs in one tap later, like any prepped portion.
-  recipeToPrep(id){
+  // Ask how many servings were actually cooked before saving to prep, so the
+  // shelf reflects what you made — not a fixed recipe count. Pre-fills with the
+  // recipe's own serving count as a sensible default.
+  recipeToPrepAsk(id){
     const r = S.recipes.find(x => x.id === id); if (!r) return;
     const per = r.per || {};
     if (!num(per.kcal) && !num(per.p) && !num(per.c) && !num(per.f)){ toast("Set this recipe's macros first (Recalculate), then save it to prep."); return; }
-    const q = Math.max(1, num(r.servings) || 1);
+    R.prepAsk = {id, q: Math.max(1, num(r.servings) || 1)};
+    render();
+  },
+  prepAskStep(d){
+    if (!R.prepAsk) return;
+    R.prepAsk.q = Math.max(1, (Math.round(num(R.prepAsk.q)) || 1) + d);
+    render();
+  },
+  prepAskClose(){ R.prepAsk = null; render(); },
+  recipeToPrepConfirm(){
+    if (!R.prepAsk) return;
+    const q = Math.max(1, Math.round(num(R.prepAsk.q)) || 1);
+    const id = R.prepAsk.id;
+    R.prepAsk = null;
+    M.recipeToPrep(id, q);
+  },
+  // Save a cooked recipe to the meal-prep shelf as a batch of `q` servings —
+  // each ticks down and logs in one tap later, like any prepped portion.
+  // `q` omitted ⇒ default to the recipe's own serving count.
+  recipeToPrep(id, q){
+    const r = S.recipes.find(x => x.id === id); if (!r) return;
+    const per = r.per || {};
+    if (!num(per.kcal) && !num(per.p) && !num(per.c) && !num(per.f)){ toast("Set this recipe's macros first (Recalculate), then save it to prep."); return; }
+    q = Math.max(1, Math.round(num(q)) || num(r.servings) || 1);
     const meal = FOOD_MEALS.some(([k]) => k === r.meal) ? r.meal : "";
     S.prep = S.prep || [];
     S.prep.unshift({id: uid(), name: r.name, amount: "1 serving", meal,
