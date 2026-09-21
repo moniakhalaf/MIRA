@@ -1878,7 +1878,7 @@ html[data-setpage="legal"] .set-page[data-page="legal"]{display:block}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.252";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.253";   // bump on every deploy — shown in Settings
 
 /* ---------------- optional cloud backend (Supabase + Stripe) ----------------
    MIRA is fully on-device by default. To turn the Subscription screen and
@@ -7633,22 +7633,22 @@ function foodHTML(){
         <div class="tiny" style="margin-bottom:10px">${t("Weigh food in whichever state is convenient — this bridges it to your macro data using cooking-yield factors, so the numbers stay accurate.")}</div>
         <div class="field" style="margin-bottom:8px"><label>${t("Food type")}</label>
           <select onchange="M.rcFood(this.value)">${YIELD_FACTORS.map(([v, l, f]) => `<option value="${v}" ${foodForm.rcFood === v ? "selected" : ""}>${tr(l)}${f ? ` · ${f > 1 ? "×" + f : f}` : ""}</option>`).join("")}</select></div>
-        ${foodForm.rcFood === "custom" ? `<div class="field" style="margin-bottom:8px"><label>${t("Cooked ÷ raw ratio")}</label><input type="number" inputmode="decimal" value="${esc(foodForm.rcRatio)}" placeholder="${t("e.g. 0.75 meat · 2.5 rice")}" oninput="foodForm.rcRatio=this.value;render()"></div>` : ""}
+        ${foodForm.rcFood === "custom" ? `<div class="field" style="margin-bottom:8px"><label>${t("Cooked ÷ raw ratio")}</label><input type="number" inputmode="decimal" value="${esc(foodForm.rcRatio)}" placeholder="${t("e.g. 0.75 meat · 2.5 rice")}" oninput="foodForm.rcRatio=this.value;M.rcLive()"></div>` : ""}
         <div class="field" style="margin-bottom:8px"><label>${t("Macros are given per")}</label>
           <div class="seg">${[["raw", "Raw"], ["cooked", "Cooked"]].map(([v, l]) => `<button class="${foodForm.rcBaseState === v ? "on" : ""}" onclick="M.rcState('base','${v}')">${t(l)}</button>`).join("")}</div></div>
         <div class="grid2" style="margin-bottom:8px">
-          <div class="field"><label>${t("Base amount (g)")}</label><input value="${esc(foodForm.rcBase)}" type="number" inputmode="decimal" oninput="foodForm.rcBase=this.value;render()"></div>
-          <div class="field"><label>kcal</label><input value="${esc(foodForm.rcK)}" type="number" inputmode="decimal" oninput="foodForm.rcK=this.value;render()"></div>
+          <div class="field"><label>${t("Base amount (g)")}</label><input value="${esc(foodForm.rcBase)}" type="number" inputmode="decimal" oninput="foodForm.rcBase=this.value;M.rcLive()"></div>
+          <div class="field"><label>kcal</label><input value="${esc(foodForm.rcK)}" type="number" inputmode="decimal" oninput="foodForm.rcK=this.value;M.rcLive()"></div>
         </div>
         <div class="grid3m" style="margin-bottom:10px">
-          <div class="field"><label>P g</label><input value="${esc(foodForm.rcP)}" type="number" inputmode="decimal" oninput="foodForm.rcP=this.value;render()"></div>
-          <div class="field"><label>C g</label><input value="${esc(foodForm.rcC)}" type="number" inputmode="decimal" oninput="foodForm.rcC=this.value;render()"></div>
-          <div class="field"><label>F g</label><input value="${esc(foodForm.rcF)}" type="number" inputmode="decimal" oninput="foodForm.rcF=this.value;render()"></div>
+          <div class="field"><label>P g</label><input value="${esc(foodForm.rcP)}" type="number" inputmode="decimal" oninput="foodForm.rcP=this.value;M.rcLive()"></div>
+          <div class="field"><label>C g</label><input value="${esc(foodForm.rcC)}" type="number" inputmode="decimal" oninput="foodForm.rcC=this.value;M.rcLive()"></div>
+          <div class="field"><label>F g</label><input value="${esc(foodForm.rcF)}" type="number" inputmode="decimal" oninput="foodForm.rcF=this.value;M.rcLive()"></div>
         </div>
         <div class="field" style="margin-bottom:8px"><label>${t("I weighed my portion")}</label>
           <div class="seg">${[["raw", "Raw"], ["cooked", "Cooked"]].map(([v, l]) => `<button class="${foodForm.rcEatState === v ? "on" : ""}" onclick="M.rcState('eat','${v}')">${t(l)}</button>`).join("")}</div></div>
-        <div class="field" style="margin-bottom:10px"><label>${t("Weight I ate (g)")}</label><input value="${esc(foodForm.rcEat)}" type="number" inputmode="decimal" oninput="foodForm.rcEat=this.value;render()" placeholder="e.g. 150"></div>
-        ${rcPreviewHTML()}
+        <div class="field" style="margin-bottom:10px"><label>${t("Weight I ate (g)")}</label><input value="${esc(foodForm.rcEat)}" type="number" inputmode="decimal" oninput="foodForm.rcEat=this.value;M.rcLive()" placeholder="e.g. 150"></div>
+        <div id="rcPreview">${rcPreviewHTML()}</div>
         <button class="btn sm" style="width:100%" onclick="M.rcApply()">${t("Use these macros")}</button>
       </div>` : ""}
       ${dishForm.open ? dishHTML() : ""}
@@ -15373,6 +15373,9 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
   },
   rcFood(v){ foodForm.rcFood = v; render(); },
   rcState(which, s){ if (which === "base") foodForm.rcBaseState = s; else foodForm.rcEatState = s; render(); },
+  // Update ONLY the live preview line while typing — never re-render the whole
+  // screen, or the focused input is destroyed and the keyboard closes.
+  rcLive(){ const el = document.getElementById("rcPreview"); if (el) el.innerHTML = rcPreviewHTML(); },
   rcApply(){
     const res = rcResult();
     if (!res){ toast(tr("Pick a food, enter its macros, and the weight you ate.")); return; }
