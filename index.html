@@ -1878,7 +1878,7 @@ html[data-setpage="legal"] .set-page[data-page="legal"]{display:block}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.251";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.252";   // bump on every deploy — shown in Settings
 
 /* ---------------- optional cloud backend (Supabase + Stripe) ----------------
    MIRA is fully on-device by default. To turn the Subscription screen and
@@ -2198,6 +2198,12 @@ const TR = {
     "I cooked this — build the dish from ingredients":"طبختُ هذا — احسب الطبق من المكوّنات",
     "Scan a package":"امسح عبوة","Photo → macros":"صورة ← ماكروز","Scale to your amount":"عدّل حسب كميتك",
     "Build from ingredients":"احسب من المكوّنات","Looking up…":"جارٍ البحث…","Reading…":"جارٍ القراءة…",
+    "Raw ⇄ Cooked":"نيء ⇄ مطبوخ","Convert by weight":"حوِّل حسب الوزن","Raw ⇄ Cooked converter":"مُحوّل النيء ⇄ المطبوخ",
+    "Weigh food in whichever state is convenient — this bridges it to your macro data using cooking-yield factors, so the numbers stay accurate.":"زِن الطعام بالحالة الأنسب لك — يربطها هذا ببيانات الماكروز باستخدام معاملات نواتج الطهي، لتبقى الأرقام دقيقة.",
+    "Food type":"نوع الطعام","Cooked ÷ raw ratio":"نسبة المطبوخ ÷ النيء","e.g. 0.75 meat · 2.5 rice":"مثلاً 0.75 لحم · 2.5 أرز",
+    "Macros are given per":"الماكروز مُعطاة لكل","Raw":"نيء","Cooked":"مطبوخ","raw":"نيء","cooked":"مطبوخ",
+    "Base amount (g)":"الكمية الأساسية (غ)","I weighed my portion":"وزنتُ حصّتي","Weight I ate (g)":"الوزن الذي أكلته (غ)",
+    "Use these macros":"استخدم هذه الماكروز","Converted":"تم التحويل","Pick a food, enter its macros, and the weight you ate.":"اختر طعامًا، وأدخِل ماكروزه، والوزن الذي أكلته.",
     "Breakfast":"فطور","Lunch":"غداء","Dinner":"عشاء","Snack":"وجبة خفيفة",
     "Meals & shortcuts":"الوجبات والاختصارات","Copy yesterday":"نسخ الأمس","Save today as meal":"حفظ اليوم كوجبة",
     "I cooked this":"طبختُ هذا","Dish name":"اسم الطبق","Servings it makes":"عدد الحصص الناتجة",
@@ -6700,8 +6706,57 @@ function sanity(m){
 }
 
 /* ---------------- nutrition tab ---------------- */
+// Raw → cooked yield factors = cooked weight ÷ raw weight (USDA cooking-yield
+// data). Meats shed water so cook down (< 1); grains & legumes drink it up (> 1).
+// A "custom" row lets you type your own ratio (or derive it from two weighings).
+const YIELD_FACTORS = [
+  ["chicken", "Chicken breast", 0.75],
+  ["chickenDark", "Chicken (thigh / leg)", 0.73],
+  ["beef", "Beef / steak", 0.73],
+  ["mince", "Ground beef / lamb", 0.72],
+  ["pork", "Pork", 0.72],
+  ["fish", "Fish fillet", 0.80],
+  ["salmon", "Salmon", 0.80],
+  ["shrimp", "Shrimp", 0.83],
+  ["turkey", "Turkey", 0.74],
+  ["rice", "Rice (white, dry)", 2.7],
+  ["riceBrown", "Rice (brown, dry)", 2.6],
+  ["pasta", "Pasta (dry)", 2.3],
+  ["oats", "Oats (dry)", 2.5],
+  ["quinoa", "Quinoa (dry)", 2.7],
+  ["lentils", "Lentils / beans (dry)", 2.4],
+  ["potato", "Potato (boiled)", 0.90],
+  ["veg", "Vegetables", 0.88],
+  ["custom", "Custom ratio…", 0],
+];
+const yieldFactor = id => (YIELD_FACTORS.find(y => y[0] === id) || [, , 0])[2];
+// Convert an eaten weight (in whichever state you weighed) into the state the
+// macros are given in, then scale the per-base macros to that weight.
+function rcResult(){
+  const ratio = foodForm.rcFood === "custom" ? num(foodForm.rcRatio) : yieldFactor(foodForm.rcFood);
+  const base = num(foodForm.rcBase), eat = num(foodForm.rcEat);
+  if (!(ratio > 0) || !(base > 0) || !(eat > 0)) return null;
+  let eatInBase = eat;                                   // ratio = cooked ÷ raw
+  if (foodForm.rcEatState !== foodForm.rcBaseState){
+    eatInBase = foodForm.rcBaseState === "raw" ? eat / ratio   // weighed cooked → raw grams
+                                               : eat * ratio;  // weighed raw → cooked grams
+  }
+  const r = eatInBase / base;
+  return {ratio, eatInBase,
+    kcal: Math.round(num(foodForm.rcK) * r),
+    p: Math.round(num(foodForm.rcP) * r * 10) / 10,
+    c: Math.round(num(foodForm.rcC) * r * 10) / 10,
+    f: Math.round(num(foodForm.rcF) * r * 10) / 10};
+}
+function rcPreviewHTML(){
+  const res = rcResult();
+  if (!res) return `<div class="tiny" style="color:var(--txt3);margin-bottom:10px">${t("Pick a food, enter its macros, and the weight you ate.")}</div>`;
+  const eq = foodForm.rcEatState !== foodForm.rcBaseState ? ` · ≈ ${n0(res.eatInBase)} g ${t(foodForm.rcBaseState)}` : "";
+  return `<div class="csp-note" style="margin-bottom:10px">${ic("scale", 13)}<span><b>${n0(res.kcal)} kcal</b> · ${n1(res.p)}P · ${n1(res.c)}C · ${n1(res.f)}F${eq}</span></div>`;
+}
 const foodForm = {name: "", amount: "", time: "", meal: "", kcal: "", p: "", c: "", f: "", fiber: "", sugar: "", sodium: "", conf: "user",
   scOpen: false, scBase: "100", scBaseUnit: "g", scK: "", scP: "", scC: "", scF: "", scEat: "",
+  rcOpen: false, rcFood: "chicken", rcRatio: "", rcBase: "100", rcBaseState: "raw", rcK: "", rcP: "", rcC: "", rcF: "", rcEat: "", rcEatState: "cooked",
   micrOpen: false, portion: null, portG: "", prepQty: ""};
 // Pull a scalable quantity out of a saved amount string ("72 g", "250 ml",
 // "3 pieces") — prefers an explicit weight/volume so gram-logged foods rescale
@@ -7529,7 +7584,7 @@ function foodHTML(){
       <div class="tiny" style="margin:0 2px 12px;color:var(--txt3)">${t("Prefer a photo? Use “Snap a meal” at the top, then tap the bookmark on the result to save it here.")}</div>`}
       `}
       <button class="btn sm sec" style="width:100%;margin-bottom:8px" onclick="M.findMacros()" ${findBusy ? "disabled" : ""}>${findBusy ? t("Working…") : ic("search", 15) + " " + (looksMultiItem(foodForm.name.trim() || foodForm.amount.trim()) ? t("Itemise this meal") : t("Find macros"))}</button>
-      <div class="food-tools-wrap ${(R.foodToolsOpen || foodForm.scOpen || dishForm.open || extractBusy || barcodeBusy) ? "open" : ""}">
+      <div class="food-tools-wrap ${(R.foodToolsOpen || foodForm.scOpen || foodForm.rcOpen || dishForm.open || extractBusy || barcodeBusy) ? "open" : ""}">
         <button class="btn sm sec ft-toggle" style="width:100%" aria-expanded="${R.foodToolsOpen ? "true" : "false"}" onclick="M.foodTools(this)">${ic("plus", 16)} ${t("More ways to add this")} <span class="chev">▶</span></button>
         <div class="ft-body">
           <div class="ft-tools">
@@ -7544,6 +7599,10 @@ function foodHTML(){
             <button class="ft-tile" onclick="M.scToggle()">
               <span class="ft-ic">${ic("sliders", 18)}</span>
               <span class="ft-tx"><b>${t("Portion scaler")}</b><small>${t("Scale to your amount")}</small></span>
+            </button>
+            <button class="ft-tile" aria-expanded="${foodForm.rcOpen}" onclick="M.rcToggle()">
+              <span class="ft-ic">${ic("scale", 18)}</span>
+              <span class="ft-tx"><b>${t("Raw ⇄ Cooked")}</b><small>${t("Convert by weight")}</small></span>
             </button>
             <button class="ft-tile" aria-expanded="${dishForm.open}" onclick="M.dishToggle()">
               <span class="ft-ic">${ic("flame", 18)}</span>
@@ -7567,6 +7626,30 @@ function foodHTML(){
           <div class="field"><label>Eaten</label><input value="${esc(foodForm.scEat)}" type="number" inputmode="decimal" oninput="foodForm.scEat=this.value" placeholder="70"></div>
         </div>
         <button class="btn sm" onclick="M.scApply()">Apply to form</button>
+      </div>` : ""}
+      ${foodForm.rcOpen ? `
+      <div class="review-item" style="margin-top:12px">
+        <b style="font-size:14px">${t("Raw ⇄ Cooked converter")}</b>
+        <div class="tiny" style="margin-bottom:10px">${t("Weigh food in whichever state is convenient — this bridges it to your macro data using cooking-yield factors, so the numbers stay accurate.")}</div>
+        <div class="field" style="margin-bottom:8px"><label>${t("Food type")}</label>
+          <select onchange="M.rcFood(this.value)">${YIELD_FACTORS.map(([v, l, f]) => `<option value="${v}" ${foodForm.rcFood === v ? "selected" : ""}>${tr(l)}${f ? ` · ${f > 1 ? "×" + f : f}` : ""}</option>`).join("")}</select></div>
+        ${foodForm.rcFood === "custom" ? `<div class="field" style="margin-bottom:8px"><label>${t("Cooked ÷ raw ratio")}</label><input type="number" inputmode="decimal" value="${esc(foodForm.rcRatio)}" placeholder="${t("e.g. 0.75 meat · 2.5 rice")}" oninput="foodForm.rcRatio=this.value;render()"></div>` : ""}
+        <div class="field" style="margin-bottom:8px"><label>${t("Macros are given per")}</label>
+          <div class="seg">${[["raw", "Raw"], ["cooked", "Cooked"]].map(([v, l]) => `<button class="${foodForm.rcBaseState === v ? "on" : ""}" onclick="M.rcState('base','${v}')">${t(l)}</button>`).join("")}</div></div>
+        <div class="grid2" style="margin-bottom:8px">
+          <div class="field"><label>${t("Base amount (g)")}</label><input value="${esc(foodForm.rcBase)}" type="number" inputmode="decimal" oninput="foodForm.rcBase=this.value;render()"></div>
+          <div class="field"><label>kcal</label><input value="${esc(foodForm.rcK)}" type="number" inputmode="decimal" oninput="foodForm.rcK=this.value;render()"></div>
+        </div>
+        <div class="grid3m" style="margin-bottom:10px">
+          <div class="field"><label>P g</label><input value="${esc(foodForm.rcP)}" type="number" inputmode="decimal" oninput="foodForm.rcP=this.value;render()"></div>
+          <div class="field"><label>C g</label><input value="${esc(foodForm.rcC)}" type="number" inputmode="decimal" oninput="foodForm.rcC=this.value;render()"></div>
+          <div class="field"><label>F g</label><input value="${esc(foodForm.rcF)}" type="number" inputmode="decimal" oninput="foodForm.rcF=this.value;render()"></div>
+        </div>
+        <div class="field" style="margin-bottom:8px"><label>${t("I weighed my portion")}</label>
+          <div class="seg">${[["raw", "Raw"], ["cooked", "Cooked"]].map(([v, l]) => `<button class="${foodForm.rcEatState === v ? "on" : ""}" onclick="M.rcState('eat','${v}')">${t(l)}</button>`).join("")}</div></div>
+        <div class="field" style="margin-bottom:10px"><label>${t("Weight I ate (g)")}</label><input value="${esc(foodForm.rcEat)}" type="number" inputmode="decimal" oninput="foodForm.rcEat=this.value;render()" placeholder="e.g. 150"></div>
+        ${rcPreviewHTML()}
+        <button class="btn sm" style="width:100%" onclick="M.rcApply()">${t("Use these macros")}</button>
       </div>` : ""}
       ${dishForm.open ? dishHTML() : ""}
       <div id="reviewZone">${reviewItems ? reviewHTML() : ""}</div>
@@ -15274,6 +15357,33 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
   },
   micrToggle(){ foodForm.micrOpen = !foodForm.micrOpen; render(); },
   scToggle(){ foodForm.scOpen = !foodForm.scOpen; render(); },
+  /* ---- Raw ⇄ Cooked converter ---- */
+  rcToggle(){
+    foodForm.rcOpen = !foodForm.rcOpen;
+    if (foodForm.rcOpen){
+      foodForm.scOpen = false;
+      // Prefill the macros/base from what's already in the form (e.g. after Find macros),
+      // so a raw lookup can be converted to a cooked weighing in a couple of taps.
+      if (!num(foodForm.rcK) && (num(foodForm.kcal) || num(foodForm.p))){
+        foodForm.rcK = foodForm.kcal; foodForm.rcP = foodForm.p; foodForm.rcC = foodForm.c; foodForm.rcF = foodForm.f;
+        if (foodForm.portion && num(foodForm.portion.base)) foodForm.rcBase = String(num(foodForm.portion.base));
+      }
+    }
+    render();
+  },
+  rcFood(v){ foodForm.rcFood = v; render(); },
+  rcState(which, s){ if (which === "base") foodForm.rcBaseState = s; else foodForm.rcEatState = s; render(); },
+  rcApply(){
+    const res = rcResult();
+    if (!res){ toast(tr("Pick a food, enter its macros, and the weight you ate.")); return; }
+    foodForm.kcal = res.kcal; foodForm.p = res.p; foodForm.c = res.c; foodForm.f = res.f;
+    foodForm.amount = `${n0(num(foodForm.rcEat))} g ${tr(foodForm.rcEatState)}`;
+    foodForm.conf = "estimate";
+    foodForm.portion = null;   // macros are now an absolute total, not a rescalable reference
+    foodForm.rcOpen = false;
+    buzz(); render();
+    toast(`${tr("Converted")} ✓`);
+  },
   scApply(){
     const base = num(foodForm.scBase), eat = num(foodForm.scEat);
     if (base <= 0 || eat <= 0){ toast("Enter the base amount and the amount eaten."); return; }
