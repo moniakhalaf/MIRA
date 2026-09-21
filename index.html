@@ -1656,10 +1656,13 @@ html[data-setpage="legal"] .set-page[data-page="legal"]{display:block}
   position:fixed;left:0;right:0;bottom:0;z-index:61;background:var(--sheet-bg,#161B29);
   backdrop-filter:blur(30px) saturate(1.5);-webkit-backdrop-filter:blur(30px) saturate(1.5);
   border-radius:20px 20px 0 0;border:1px solid var(--line2);border-bottom:none;box-shadow:0 -14px 44px rgba(0,0,0,.5);
-  padding:16px 16px calc(var(--safe-bot) + 18px);max-height:86vh;overflow-y:auto;
+  padding:16px 16px calc(var(--safe-bot) + 18px);max-height:88vh;overflow-y:auto;
+  -webkit-overflow-scrolling:touch;overscroll-behavior:contain;
   transform:translateY(105%);transition:transform .3s cubic-bezier(.32,.72,.35,1);
 }
 .sheet.show{transform:translateY(0)}
+/* freeze the page behind an open sheet so touch-scrolling moves the sheet, not it */
+body.sheet-lock .content{overflow:hidden !important}
 .sheet .grab{width:38px;height:4px;border-radius:3px;background:var(--line2);margin:0 auto 14px}
 /* servings stepper (Save to meal prep) */
 .prep-stp{display:flex;align-items:stretch;justify-content:center;gap:12px;margin:2px 0 4px}
@@ -1905,7 +1908,7 @@ html[data-setpage="legal"] .set-page[data-page="legal"]{display:block}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.255";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.256";   // bump on every deploy — shown in Settings
 
 /* ---------------- optional cloud backend (Supabase + Stripe) ----------------
    MIRA is fully on-device by default. To turn the Subscription screen and
@@ -2239,7 +2242,7 @@ const TR = {
     "See how a raw weight and a cooked weight line up. A quick reference — it doesn't change your log.":"شاهد كيف يتوافق الوزن النيء مع الوزن المطبوخ. مرجع سريع — لا يغيّر سجلك.",
     "See how raw & cooked weights line up":"شاهد توافق الأوزان النيئة والمطبوخة","Weight I weighed":"الوزن الذي وزنته","yield":"الناتج","about":"نحو","for this portion":"لهذه الحصة",
     "Pick a food and enter a weight to see the conversion.":"اختر طعامًا وأدخِل وزنًا لرؤية التحويل.","Show calories too (optional)":"أظهر السعرات أيضًا (اختياري)",
-    "kcal per 100 g (raw / dry)":"سعرة لكل 100 غ (نيء / جاف)","e.g. 165 chicken · 360 rice":"مثلاً 165 دجاج · 360 أرز","Done":"تم",
+    "kcal per 100 g (raw / dry)":"سعرة لكل 100 غ (نيء / جاف)","e.g. 165 chicken · 360 rice":"مثلاً 165 دجاج · 360 أرز","Done":"تم","e.g. 150":"مثلاً 150",
     "Breakfast":"فطور","Lunch":"غداء","Dinner":"عشاء","Snack":"وجبة خفيفة",
     "Meals & shortcuts":"الوجبات والاختصارات","Copy yesterday":"نسخ الأمس","Save today as meal":"حفظ اليوم كوجبة",
     "I cooked this":"طبختُ هذا","Dish name":"اسم الطبق","Servings it makes":"عدد الحصص الناتجة",
@@ -4212,8 +4215,15 @@ const R = {
 // Crash guard: a bug in one screen must never white-screen the whole app.
 // All data is safe in localStorage, so we show a recovery screen instead.
 function render(){
-  try { renderMain(); localizeAttrs(); localizeText(); }
+  try { renderMain(); localizeAttrs(); localizeText(); sheetScrollLock(); }
   catch (e){ renderCrash(e); }
+}
+// While a bottom sheet is open, stop the page behind it from scrolling — the
+// sheet has its own scroll. Auto-clears when no sheet is in the DOM (e.g. after
+// navigating away), so it can never get stuck locked.
+function sheetScrollLock(){
+  const open = !!document.querySelector(".sheet.show, .qa-sheet");
+  document.body.classList.toggle("sheet-lock", open);
 }
 // Translate any UI text node whose exact text matches a dictionary entry, so
 // inline labels/headings/buttons show in the chosen language without wrapping
@@ -4342,6 +4352,7 @@ function renderMain(){
     ${R.sheet === "chats" ? chatSheetHTML() : ""}
     ${R.followerId ? followerSheetHTML() : ""}
     ${R.searchOpen ? searchHTML() : ""}
+    ${foodForm.rcOpen && R.tab === "food" ? rcSheetHTML() : ""}
     <div class="tabbar">
       ${tabBtn("home", "home", t("Home"))}${tabBtn("chat", "chat", t("Chat"))}${tabBtn("insights", "trend", t("Insights"))}${tabBtn("set", "gear", t("Settings"))}
     </div>`;
@@ -6802,7 +6813,7 @@ function rcSheetHTML(){
      <div class="field"><label>${t("I weighed my portion")}</label>
        <div class="seg">${[["raw", "Raw"], ["cooked", "Cooked"]].map(([v, l]) => `<button class="${foodForm.rcEatState === v ? "on" : ""}" onclick="M.rcState('eat','${v}')">${t(l)}</button>`).join("")}</div></div>
      <div class="field"><label>${t("Weight I weighed")}</label>
-       <div class="rc-weigh"><input type="number" inputmode="decimal" value="${esc(foodForm.rcEat)}" oninput="foodForm.rcEat=this.value;M.rcLive()" placeholder="150"><span class="unit">${t("grams")}</span></div></div>
+       <div class="rc-weigh"><input type="number" inputmode="decimal" value="${esc(foodForm.rcEat)}" oninput="foodForm.rcEat=this.value;M.rcLive()" placeholder="${t("e.g. 150")}"><span class="unit">${t("grams")}</span></div></div>
      <div id="rcPreview">${rcPreviewHTML()}</div>
      <details class="rc-more" ${num(foodForm.rcK100) > 0 ? "open" : ""}><summary>${t("Show calories too (optional)")}</summary>
        <div class="field" style="margin-top:10px"><label>${t("kcal per 100 g (raw / dry)")}</label><input type="number" inputmode="decimal" value="${esc(foodForm.rcK100)}" placeholder="${t("e.g. 165 chicken · 360 rice")}" oninput="foodForm.rcK100=this.value;M.rcLive()"></div>
@@ -7732,7 +7743,6 @@ function foodHTML(){
   ${insightsHTML()}
   ${foodReportCardHTML()}
   ` : ""}
-  ${foodForm.rcOpen ? rcSheetHTML() : ""}
   `;
 }
 
