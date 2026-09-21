@@ -1878,7 +1878,7 @@ html[data-setpage="legal"] .set-page[data-page="legal"]{display:block}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.250";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.251";   // bump on every deploy — shown in Settings
 
 /* ---------------- optional cloud backend (Supabase + Stripe) ----------------
    MIRA is fully on-device by default. To turn the Subscription screen and
@@ -2672,6 +2672,11 @@ const TR = {
     "deficit today":"عجز اليوم","surplus today":"فائض اليوم","deficit":"عجز","surplus":"فائض","ate":"أكلتَ",
     "maintenance":"الصيانة","estimated from your data":"مُقدّرة من بياناتك","from the calculator above":"من الحاسبة أعلاه",
     "Set your maintenance calories to track your daily deficit":"حدّد سعرات الصيانة لتتبّع عجزك اليومي",
+    "Calculate maintenance (TDEE)":"احسب سعرات الصيانة (TDEE)",
+    "Maintenance = BMR (Mifflin-St Jeor) × an activity multiplier — the standard TDEE method. Uses the same body stats as the target calculator.":"الصيانة = معدل الأيض الأساسي (مِفلِن-سانت جيور) × مُعامل النشاط — طريقة TDEE المعتمدة. تستخدم نفس بيانات جسمك المستخدمة في حاسبة الأهداف.",
+    "Activity":"النشاط","You burn about":"تحرق نحو","at this activity level":"عند مستوى النشاط هذا","Eat under it for a deficit, over it for a surplus.":"كُل أقل منها لعجز، وأكثر منها لفائض.",
+    "Use as my maintenance":"اعتمِدها كسعرات صيانتي","Fill in age, height and weight to see your maintenance.":"أدخِل العمر والطول والوزن لرؤية سعرات صيانتك.",
+    "Add your age, height and weight first.":"أضِف عمرك وطولك ووزنك أولاً.","Maintenance set":"تم ضبط الصيانة","The calories your body burns in a day. Each logged day then shows how far under (a deficit) or over you ate. Enter it yourself, or use the TDEE calculator above.":"السعرات التي يحرقها جسمك في اليوم. عندها يُظهر كل يوم مُسجّل كم أكلتَ أقل (عجز) أو أكثر منها. أدخِلها بنفسك أو استخدم حاسبة TDEE أعلاه.",
     "fiber":"ألياف","sugar":"سكر","sodium":"صوديوم","Fiber, sugar & sodium":"الألياف والسكر والصوديوم","Fiber g":"ألياف غ","Sugar g":"سكر غ","Sodium mg":"صوديوم ملغ","Fiber goal g (optional)":"هدف الألياف غ (اختياري)","e.g. 30":"مثال: 30","Sodium limit mg (optional)":"حد الصوديوم ملغ (اختياري)","e.g. 2300":"مثال: 2300",
     "Water goal ml":"هدف الماء مل","Goal weight kg":"الوزن المستهدف كغ","Saved foods":"الأطعمة المحفوظة","Forget":"نسيان",
     "Your domains":"مجالاتك","Domains":"المجالات","Remove":"إزالة","New domain (any subject)":"مجال جديد (أي موضوع)","Add":"إضافة",
@@ -4067,6 +4072,7 @@ const R = {
   recipeImportOpen: false, // import/discover panel open
   recipeBusy: false,  // AI import/discover in progress
   prepAsk: null,      // {id, q} while the "how many servings did you make?" sheet is open
+  maintCalcOpen: false, // maintenance (TDEE) calculator fold open in Nutrition settings
   ciDraft: null,      // today's wellness check-in editing buffer {mood, factors:[], gratitude, journal}
   ciQuote: null,      // supportive quote shown when mood is below "Good"
   widgetsOpen: false, // Home "Today" widget customization sheet
@@ -5478,6 +5484,45 @@ function targetCalcHTML(){
       <div class="csp-note" style="margin-top:12px">${ic("trend", 13)}<span>${tr("Target")} <b>${n0(c.kcal)} kcal</b> · <b>${c.protein}g</b> ${tr("protein")} · <b>${c.carbs}g</b> ${tr("carbs")} · <b>${c.fat}g</b> ${tr("fat")}. ${c.override ? tr("Set by you.") : c.goal === "maintain" ? tr("Set to hold your weight.") : `${tr("Set to")} ${c.goal === "lose" ? tr("lose") : tr("gain")} ~${c.pace} ${tr("kg/week")}.`}${c.floored && !c.override ? ` ${tr("(kept at a safe minimum)")}` : ""}</span></div>
       <button class="btn ${applied ? "sec" : ""}" style="width:100%;margin-top:12px" onclick="M.calcApply()">${applied ? tr("Applied ✓") : tr("Use these targets")}</button>
       ` : `<div class="tiny" style="margin-top:6px;color:var(--txt3)">${tr("Fill in age, height and weight to see your numbers.")}</div>`}
+    </div>
+  </div>`;
+}
+// Standalone TDEE / maintenance calculator: BMR (Mifflin-St Jeor) × activity
+// multiplier. Shares the same body stats as the target calculator so the two
+// never disagree; its result feeds the Maintenance calories field directly.
+function maintenanceCalc(){
+  const st = S.settings, sex = st.sex || "female", age = num(st.age), cm = num(st.heightCm), kg = calcWeightNow();
+  if (!(age > 0 && cm > 0 && kg > 0)) return null;
+  const bmr = calcBMR(sex, kg, cm, age);
+  const af = ACT_FACTORS.find(a => a[0] === (st.activity || "light")) || ACT_FACTORS[1];
+  const tdee = Math.round(bmr * af[2] / 5) * 5;   // nearest 5 kcal
+  return {bmr: Math.round(bmr), factor: af[2], tdee, kg, actLabel: af[1]};
+}
+function maintenanceCalcHTML(){
+  const st = S.settings, c = maintenanceCalc();
+  const seg = (k, opts, cur) => `<div class="seg">${opts.map(([v, l]) => `<button class="${cur === v ? "on" : ""}" onclick="M.set('${k}','${v}')">${tr(l)}</button>`).join("")}</div>`;
+  const applied = c && num(st.maintenanceKcal) === c.tdee;
+  return `<div class="card fold ${R.maintCalcOpen ? "open" : ""}" style="margin-top:10px">
+    <h3 onclick="M.fold('maintCalcOpen',this)"><span class="set-ic">${ic("flame", 16)}</span> ${tr("Calculate maintenance (TDEE)")} <span class="chev">▶</span></h3>
+    <div class="fold-body">
+      <div class="tiny" style="margin:2px 2px 12px;color:var(--txt2)">${tr("Maintenance = BMR (Mifflin-St Jeor) × an activity multiplier — the standard TDEE method. Uses the same body stats as the target calculator.")}</div>
+      <div class="field"><label>${tr("Sex")}</label>${seg("sex", [["female", "Female"], ["male", "Male"]], st.sex || "female")}</div>
+      <div class="grid2">
+        <div class="field"><label>${tr("Age")}</label><input type="number" inputmode="numeric" value="${st.age || ""}" oninput="M.set('age',num(this.value))"></div>
+        <div class="field"><label>${tr("Height (cm)")}</label><input type="number" inputmode="numeric" value="${st.heightCm || ""}" oninput="M.set('heightCm',num(this.value))"></div>
+      </div>
+      <div class="field"><label>${tr("Current weight (kg)")}</label><input type="number" inputmode="decimal" value="${calcWeightNow() || ""}" placeholder="${latestWeightKg() || tr("e.g. 72")}" oninput="M.calcWeight(this.value)"></div>
+      <div class="field"><label>${tr("Activity level")}</label>
+        <select onchange="M.set('activity',this.value)">${ACT_FACTORS.map(([v, l]) => `<option value="${v}" ${(st.activity || "light") === v ? "selected" : ""}>${tr(l)}</option>`).join("")}</select></div>
+      ${c ? `
+      <div class="rev-grid" style="margin-top:6px">
+        <div class="rev-stat"><div class="rv">${n0(c.bmr)}</div><div class="rl">${tr("BMR")}</div></div>
+        <div class="rev-stat"><div class="rv">×${c.factor}</div><div class="rl">${tr("Activity")}</div></div>
+        <div class="rev-stat"><div class="rv" style="color:var(--acc)">${n0(c.tdee)}</div><div class="rl">${tr("Maintenance")}</div></div>
+      </div>
+      <div class="csp-note" style="margin-top:12px">${ic("flame", 13)}<span>${tr("You burn about")} <b>${n0(c.tdee)} ${tr("kcal/day")}</b> ${tr("at this activity level")}. ${tr("Eat under it for a deficit, over it for a surplus.")}</span></div>
+      <button class="btn ${applied ? "sec" : ""}" style="width:100%;margin-top:12px" onclick="M.maintCalcApply()">${applied ? tr("Applied ✓") : tr("Use as my maintenance")}</button>
+      ` : `<div class="tiny" style="margin-top:6px;color:var(--txt3)">${tr("Fill in age, height and weight to see your maintenance.")}</div>`}
     </div>
   </div>`;
 }
@@ -13435,6 +13480,7 @@ function settingsHTML(){
   </div>
   <div class="set-page" data-page="nutrition">
   ${targetCalcHTML()}
+  ${maintenanceCalcHTML()}
   ${macroSplitHTML()}
   <div class="card" id="setNutrition">
     <h3><span class="set-ic">${ic("target", 16)}</span> ${tr("Daily targets")}</h3>
@@ -13448,7 +13494,7 @@ function settingsHTML(){
       const ph = auto && auto.source !== "set" ? `${n0(auto.val)}${autoTxt ? " · " + autoTxt : ""}` : tr("e.g. 2151");
       return `<div class="field" style="margin-bottom:10px"><label>${tr("Maintenance calories (daily upkeep)")}</label>
       <input type="number" inputmode="numeric" value="${st.maintenanceKcal || ""}" placeholder="${esc(ph)}" oninput="S.settings.maintenanceKcal=num(this.value);save()">
-      <div class="tiny" style="margin-top:6px;color:var(--txt2)">${tr("The calories your body burns in a day. Each logged day then shows how far under (a deficit) or over you ate. Leave blank and MIRA estimates it from your body stats or your own weight trend.")}</div></div>`;
+      <div class="tiny" style="margin-top:6px;color:var(--txt2)">${tr("The calories your body burns in a day. Each logged day then shows how far under (a deficit) or over you ate. Enter it yourself, or use the TDEE calculator above.")}</div></div>`;
     })()}
     <div class="grid2" style="margin-bottom:10px">
       <div class="field"><label>${tr("Carbs g (optional)")}</label><input type="number" inputmode="numeric" value="${st.targets.carbs || ""}" oninput="S.settings.targets.carbs=num(this.value);save()"></div>
@@ -16175,6 +16221,7 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
 
   set(k, v){ S.settings[k] = v; save(); render(); },
   calcWeight(v){ R.calcW = v; render(); },
+  maintCalcApply(){ const c = maintenanceCalc(); if (!c){ toast(tr("Add your age, height and weight first.")); return; } S.settings.maintenanceKcal = c.tdee; buzz(); save(); render(); toast(`${tr("Maintenance set")}: ${n0(c.tdee)} kcal ✓`); },
   splitKcal(v){ R.splitKcal = v; render(); },
   splitPct(k, v){ macroSplitObj()[k] = Math.max(0, Math.min(100, num(v))); save(); render(); },
   splitPreset(p, c, f){ const s = macroSplitObj(); s.p = p; s.c = c; s.f = f; save(); render(); },
