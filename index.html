@@ -1298,6 +1298,16 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
 .rc-res .eqv{margin-top:7px;font-size:12px;color:var(--txt2);display:flex;align-items:center;gap:6px}
 .rc-res .eqv b{color:var(--txt)}
 .rc-src{margin-top:12px;font-size:11px;color:var(--txt3);display:flex;align-items:center;gap:6px;justify-content:center;text-align:center}
+.rc-more{margin:2px 0 4px}
+.rc-more summary{font-size:13px;color:var(--acc);font-weight:600;cursor:pointer;list-style:none;padding:4px 2px}
+.rc-more summary::-webkit-details-marker{display:none}
+.rc-entry{display:flex;align-items:center;gap:12px;width:100%;text-align:start;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:13px 14px;margin-bottom:12px;color:var(--txt);cursor:pointer}
+.rc-entry:active{transform:scale(.995)}
+.rc-entry .rc-entry-ic{width:38px;height:38px;flex:0 0 auto;border-radius:11px;background:var(--acc-soft);color:var(--acc);display:flex;align-items:center;justify-content:center}
+.rc-entry .rc-entry-tx{flex:1;min-width:0}
+.rc-entry .rc-entry-tx b{font-size:14.5px;display:block}
+.rc-entry .rc-entry-tx small{color:var(--txt2);font-size:12px}
+.rc-entry .rc-entry-chev{color:var(--acc);font-size:18px;font-weight:700}
 .day-head .chev{color:var(--txt3);transition:transform .2s;font-size:12px}
 .day-group.openday .day-head{border-bottom-left-radius:0;border-bottom-right-radius:0}
 .day-group.openday .chev{transform:rotate(90deg)}
@@ -1895,7 +1905,7 @@ html[data-setpage="legal"] .set-page[data-page="legal"]{display:block}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.254";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.255";   // bump on every deploy — shown in Settings
 
 /* ---------------- optional cloud backend (Supabase + Stripe) ----------------
    MIRA is fully on-device by default. To turn the Subscription screen and
@@ -2226,6 +2236,10 @@ const TR = {
     "I weighed my portion":"وزنتُ حصّتي","Weight I ate":"الوزن الذي أكلته","grams":"غرام","Add to log":"أضِف إلى السجل",
     "Pick a food, set its macros, and the weight you ate.":"اختر طعامًا، واضبط ماكروزه، والوزن الذي أكلته.",
     "Weights use USDA cooking-yield data. Estimate — not medical advice.":"تعتمد الأوزان على بيانات نواتج الطهي من USDA. تقدير — ليست نصيحة طبية.",
+    "See how a raw weight and a cooked weight line up. A quick reference — it doesn't change your log.":"شاهد كيف يتوافق الوزن النيء مع الوزن المطبوخ. مرجع سريع — لا يغيّر سجلك.",
+    "See how raw & cooked weights line up":"شاهد توافق الأوزان النيئة والمطبوخة","Weight I weighed":"الوزن الذي وزنته","yield":"الناتج","about":"نحو","for this portion":"لهذه الحصة",
+    "Pick a food and enter a weight to see the conversion.":"اختر طعامًا وأدخِل وزنًا لرؤية التحويل.","Show calories too (optional)":"أظهر السعرات أيضًا (اختياري)",
+    "kcal per 100 g (raw / dry)":"سعرة لكل 100 غ (نيء / جاف)","e.g. 165 chicken · 360 rice":"مثلاً 165 دجاج · 360 أرز","Done":"تم",
     "Breakfast":"فطور","Lunch":"غداء","Dinner":"عشاء","Snack":"وجبة خفيفة",
     "Meals & shortcuts":"الوجبات والاختصارات","Copy yesterday":"نسخ الأمس","Save today as meal":"حفظ اليوم كوجبة",
     "I cooked this":"طبختُ هذا","Dish name":"اسم الطبق","Servings it makes":"عدد الحصص الناتجة",
@@ -6752,80 +6766,54 @@ const YIELD_FACTORS = [
   ["custom", "Custom ratio…", 0],
 ];
 const yieldFactor = id => (YIELD_FACTORS.find(y => y[0] === id) || [, , 0])[2];
-// Convert an eaten weight (in whichever state you weighed) into the state the
-// macros are given in, then scale the per-base macros to that weight.
+// Standalone weight reference: turn a weight you measured in one state into the
+// other state (raw ↔ cooked), and — only if you choose to add a kcal/100 g —
+// the calories for that portion. Never touches the food log.
 function rcResult(){
   const ratio = foodForm.rcFood === "custom" ? num(foodForm.rcRatio) : yieldFactor(foodForm.rcFood);
-  const base = num(foodForm.rcBase), eat = num(foodForm.rcEat);
-  if (!(ratio > 0) || !(base > 0) || !(eat > 0)) return null;
-  let eatInBase = eat;                                   // ratio = cooked ÷ raw
-  if (foodForm.rcEatState !== foodForm.rcBaseState){
-    eatInBase = foodForm.rcBaseState === "raw" ? eat / ratio   // weighed cooked → raw grams
-                                               : eat * ratio;  // weighed raw → cooked grams
-  }
-  const r = eatInBase / base;
-  return {ratio, eatInBase,
-    kcal: Math.round(num(foodForm.rcK) * r),
-    p: Math.round(num(foodForm.rcP) * r * 10) / 10,
-    c: Math.round(num(foodForm.rcC) * r * 10) / 10,
-    f: Math.round(num(foodForm.rcF) * r * 10) / 10};
+  const eat = num(foodForm.rcEat);
+  if (!(ratio > 0) || !(eat > 0)) return null;            // ratio = cooked ÷ raw
+  const other = foodForm.rcEatState === "raw" ? "cooked" : "raw";
+  const otherW = foodForm.rcEatState === "raw" ? eat * ratio : eat / ratio;
+  const rawG = foodForm.rcEatState === "raw" ? eat : eat / ratio;   // raw-basis grams for kcal
+  const k100 = num(foodForm.rcK100);
+  return {ratio, other, otherW, kcal: k100 > 0 ? Math.round(k100 * rawG / 100) : null};
 }
 function rcPreviewHTML(){
   const res = rcResult();
-  if (!res) return `<div class="rc-res empty">${t("Pick a food, set its macros, and the weight you ate.")}</div>`;
-  const eq = foodForm.rcEatState !== foodForm.rcBaseState
-    ? `${n0(num(foodForm.rcEat))} g ${t(foodForm.rcEatState)} ≈ <b>${n0(res.eatInBase)} g ${t(foodForm.rcBaseState)}</b>`
-    : `${n0(num(foodForm.rcEat))} g ${t(foodForm.rcEatState)}`;
+  if (!res) return `<div class="rc-res empty">${t("Pick a food and enter a weight to see the conversion.")}</div>`;
   return `<div class="rc-res">
-    <div class="big">${n0(res.kcal)} kcal</div>
-    <div class="macros">${n1(res.p)} g <span>${t("protein")}</span> · ${n1(res.c)} g <span>${t("carbs")}</span> · ${n1(res.f)} g <span>${t("fat")}</span></div>
-    <div class="eqv">${ic("scale", 12)} ${eq}</div>
+    <div class="big">= ${n0(res.otherW)} g ${t(res.other)}</div>
+    <div class="eqv">${ic("scale", 12)} ${n0(num(foodForm.rcEat))} g ${t(foodForm.rcEatState)} · ${t("yield")} ×${res.ratio}</div>
+    ${res.kcal != null ? `<div class="macros" style="margin-top:7px">${ic("flame", 12)} ${t("about")} <b>${n0(res.kcal)} kcal</b> ${t("for this portion")}</div>` : ""}
   </div>`;
 }
-// The Raw ⇄ Cooked converter as a focused bottom sheet. Prefills the macros
-// from whatever's already in the log form (e.g. a Find-macros lookup), so the
-// common flow is pick food → tap Cooked → type weight → Add to log.
+// A simple standalone converter sheet — no macro entry, no logging. You look up
+// the raw/cooked weight relationship, then log your food however you normally do.
 function rcSheetHTML(){
-  const has = num(foodForm.rcK) > 0;
-  const manual = foodForm.rcManual || !has;
-  const foodLabel = (YIELD_FACTORS.find(y => y[0] === foodForm.rcFood) || [, "Custom"])[1];
-  const segState = (which, cur) => `<div class="seg">${[["raw", "Raw"], ["cooked", "Cooked"]].map(([v, l]) => `<button class="${cur === v ? "on" : ""}" onclick="M.rcState('${which}','${v}')">${t(l)}</button>`).join("")}</div>`;
-  return `<div class="sheet-mask show" onclick="M.rcToggle()"></div>
+  return `<div class="sheet-mask show" onclick="M.rcClose()"></div>
    <div class="sheet show" onclick="event.stopPropagation()">
      <div class="grab"></div>
-     <h3 style="margin:0 0 4px;display:flex;align-items:center;gap:8px"><span style="color:var(--acc)">⇄</span> ${t("Raw ⇄ Cooked")}</h3>
-     <div class="tiny" style="color:var(--txt2);margin:0 0 14px">${t("Weigh food in whichever state is easy — MIRA bridges it to your macros so the numbers stay accurate.")}</div>
-     ${has && !manual ? `<div class="rc-pre">
-        <span class="dot">${ic("flame", 15)}</span>
-        <div class="rc-pre-tx"><b dir="auto">${esc(foodForm.name || tr(foodLabel))}</b><small>${t("Using your macros")} · ${n0(num(foodForm.rcK))} kcal · ${n1(num(foodForm.rcP))}P ${t("per")} ${n0(num(foodForm.rcBase))} g ${t(foodForm.rcBaseState)}</small></div>
-        <button class="rc-edit" onclick="M.rcManual(true)">${t("Edit")}</button>
-      </div>` : ""}
+     <h3 style="margin:0 0 4px;display:flex;align-items:center;gap:8px"><span style="color:var(--acc)">⇄</span> ${t("Raw ⇄ Cooked converter")}</h3>
+     <div class="tiny" style="color:var(--txt2);margin:0 0 16px">${t("See how a raw weight and a cooked weight line up. A quick reference — it doesn't change your log.")}</div>
      <div class="field"><label>${t("Food type & yield")}</label>
        <select onchange="M.rcFood(this.value)">${YIELD_FACTORS.map(([v, l, f]) => `<option value="${v}" ${foodForm.rcFood === v ? "selected" : ""}>${tr(l)}${f ? ` · ×${f}` : ""}</option>`).join("")}</select></div>
      ${foodForm.rcFood === "custom" ? `<div class="field"><label>${t("Cooked ÷ raw ratio")}</label><input type="number" inputmode="decimal" value="${esc(foodForm.rcRatio)}" placeholder="${t("e.g. 0.75 meat · 2.5 rice")}" oninput="foodForm.rcRatio=this.value;M.rcLive()"></div>` : ""}
-     ${manual ? `
-     <div class="field"><label>${t("Macros are given per")}</label>${segState("base", foodForm.rcBaseState)}</div>
-     <div class="grid2" style="margin-bottom:8px">
-       <div class="field" style="margin:0"><label>${t("Base amount (g)")}</label><input value="${esc(foodForm.rcBase)}" type="number" inputmode="decimal" oninput="foodForm.rcBase=this.value;M.rcLive()"></div>
-       <div class="field" style="margin:0"><label>kcal</label><input value="${esc(foodForm.rcK)}" type="number" inputmode="decimal" oninput="foodForm.rcK=this.value;M.rcLive()"></div>
-     </div>
-     <div class="grid3m" style="margin-bottom:14px">
-       <div class="field" style="margin:0"><label>P g</label><input value="${esc(foodForm.rcP)}" type="number" inputmode="decimal" oninput="foodForm.rcP=this.value;M.rcLive()"></div>
-       <div class="field" style="margin:0"><label>C g</label><input value="${esc(foodForm.rcC)}" type="number" inputmode="decimal" oninput="foodForm.rcC=this.value;M.rcLive()"></div>
-       <div class="field" style="margin:0"><label>F g</label><input value="${esc(foodForm.rcF)}" type="number" inputmode="decimal" oninput="foodForm.rcF=this.value;M.rcLive()"></div>
-     </div>` : ""}
-     <div class="field"><label>${t("I weighed my portion")}</label>${segState("eat", foodForm.rcEatState)}</div>
-     <div class="field"><label>${t("Weight I ate")}</label>
+     <div class="field"><label>${t("I weighed my portion")}</label>
+       <div class="seg">${[["raw", "Raw"], ["cooked", "Cooked"]].map(([v, l]) => `<button class="${foodForm.rcEatState === v ? "on" : ""}" onclick="M.rcState('eat','${v}')">${t(l)}</button>`).join("")}</div></div>
+     <div class="field"><label>${t("Weight I weighed")}</label>
        <div class="rc-weigh"><input type="number" inputmode="decimal" value="${esc(foodForm.rcEat)}" oninput="foodForm.rcEat=this.value;M.rcLive()" placeholder="150"><span class="unit">${t("grams")}</span></div></div>
      <div id="rcPreview">${rcPreviewHTML()}</div>
-     <button class="btn" style="width:100%" onclick="M.rcApply()">${ic("plus", 16)} ${t("Add to log")}</button>
-     ${has && manual ? `<button class="btn sec" style="width:100%;margin-top:8px" onclick="M.rcManual(false)">${t("Done editing")}</button>` : ""}
+     <details class="rc-more" ${num(foodForm.rcK100) > 0 ? "open" : ""}><summary>${t("Show calories too (optional)")}</summary>
+       <div class="field" style="margin-top:10px"><label>${t("kcal per 100 g (raw / dry)")}</label><input type="number" inputmode="decimal" value="${esc(foodForm.rcK100)}" placeholder="${t("e.g. 165 chicken · 360 rice")}" oninput="foodForm.rcK100=this.value;M.rcLive()"></div>
+     </details>
+     <button class="btn" style="width:100%;margin-top:6px" onclick="M.rcClose()">${t("Done")}</button>
      <div class="rc-src">${ic("check", 12)} ${t("Weights use USDA cooking-yield data. Estimate — not medical advice.")}</div>
    </div>`;
 }
 const foodForm = {name: "", amount: "", time: "", meal: "", kcal: "", p: "", c: "", f: "", fiber: "", sugar: "", sodium: "", conf: "user",
   scOpen: false, scBase: "100", scBaseUnit: "g", scK: "", scP: "", scC: "", scF: "", scEat: "",
-  rcOpen: false, rcManual: false, rcFood: "chicken", rcRatio: "", rcBase: "100", rcBaseState: "raw", rcK: "", rcP: "", rcC: "", rcF: "", rcEat: "", rcEatState: "cooked",
+  rcOpen: false, rcFood: "chicken", rcRatio: "", rcEat: "", rcEatState: "cooked", rcK100: "",
   micrOpen: false, portion: null, portG: "", prepQty: ""};
 // Pull a scalable quantity out of a saved amount string ("72 g", "250 ml",
 // "3 pieces") — prefers an explicit weight/volume so gram-logged foods rescale
@@ -7669,10 +7657,6 @@ function foodHTML(){
               <span class="ft-ic">${ic("sliders", 18)}</span>
               <span class="ft-tx"><b>${t("Portion scaler")}</b><small>${t("Scale to your amount")}</small></span>
             </button>
-            <button class="ft-tile" aria-expanded="${foodForm.rcOpen}" onclick="M.rcToggle()">
-              <span class="ft-ic">${ic("scale", 18)}</span>
-              <span class="ft-tx"><b>${t("Raw ⇄ Cooked")}</b><small>${t("Convert by weight")}</small></span>
-            </button>
             <button class="ft-tile" aria-expanded="${dishForm.open}" onclick="M.dishToggle()">
               <span class="ft-ic">${ic("flame", 18)}</span>
               <span class="ft-tx"><b>${t("I cooked this")}</b><small>${t("Build from ingredients")}</small></span>
@@ -7696,11 +7680,16 @@ function foodHTML(){
         </div>
         <button class="btn sm" onclick="M.scApply()">Apply to form</button>
       </div>` : ""}
-      ${foodForm.rcOpen ? rcSheetHTML() : ""}
       ${dishForm.open ? dishHTML() : ""}
       <div id="reviewZone">${reviewItems ? reviewHTML() : ""}</div>
     </div>
   </div>
+
+  <button class="rc-entry" onclick="M.rcOpen()">
+    <span class="rc-entry-ic">${ic("scale", 18)}</span>
+    <span class="rc-entry-tx"><b>${t("Raw ⇄ Cooked converter")}</b><small>${t("See how raw & cooked weights line up")}</small></span>
+    <span class="rc-entry-chev">⇄</span>
+  </button>
 
   ${prepHTML()}
 
@@ -7743,6 +7732,7 @@ function foodHTML(){
   ${insightsHTML()}
   ${foodReportCardHTML()}
   ` : ""}
+  ${foodForm.rcOpen ? rcSheetHTML() : ""}
   `;
 }
 
@@ -15403,37 +15393,14 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
   },
   micrToggle(){ foodForm.micrOpen = !foodForm.micrOpen; render(); },
   scToggle(){ foodForm.scOpen = !foodForm.scOpen; render(); },
-  /* ---- Raw ⇄ Cooked converter ---- */
-  rcToggle(){
-    foodForm.rcOpen = !foodForm.rcOpen;
-    if (foodForm.rcOpen){
-      foodForm.scOpen = false; foodForm.rcManual = false;
-      // Prefill the macros/base from what's already in the form (e.g. after Find macros),
-      // so a raw lookup can be converted to a cooked weighing in a couple of taps.
-      if (!num(foodForm.rcK) && (num(foodForm.kcal) || num(foodForm.p))){
-        foodForm.rcK = foodForm.kcal; foodForm.rcP = foodForm.p; foodForm.rcC = foodForm.c; foodForm.rcF = foodForm.f;
-        if (foodForm.portion && num(foodForm.portion.base)) foodForm.rcBase = String(num(foodForm.portion.base));
-      }
-    }
-    render();
-  },
-  rcManual(v){ foodForm.rcManual = v; render(); },
+  /* ---- Raw ⇄ Cooked converter (standalone reference — never touches the log) ---- */
+  rcOpen(){ foodForm.rcOpen = true; render(); },
+  rcClose(){ foodForm.rcOpen = false; render(); },
   rcFood(v){ foodForm.rcFood = v; render(); },
-  rcState(which, s){ if (which === "base") foodForm.rcBaseState = s; else foodForm.rcEatState = s; render(); },
+  rcState(which, s){ foodForm.rcEatState = s; render(); },
   // Update ONLY the live preview line while typing — never re-render the whole
   // screen, or the focused input is destroyed and the keyboard closes.
   rcLive(){ const el = document.getElementById("rcPreview"); if (el) el.innerHTML = rcPreviewHTML(); },
-  rcApply(){
-    const res = rcResult();
-    if (!res){ toast(tr("Pick a food, enter its macros, and the weight you ate.")); return; }
-    foodForm.kcal = res.kcal; foodForm.p = res.p; foodForm.c = res.c; foodForm.f = res.f;
-    foodForm.amount = `${n0(num(foodForm.rcEat))} g ${tr(foodForm.rcEatState)}`;
-    foodForm.conf = "estimate";
-    foodForm.portion = null;   // macros are now an absolute total, not a rescalable reference
-    foodForm.rcOpen = false;
-    buzz(); render();
-    toast(`${tr("Converted")} ✓`);
-  },
   scApply(){
     const base = num(foodForm.scBase), eat = num(foodForm.scEat);
     if (base <= 0 || eat <= 0){ toast("Enter the base amount and the amount eaten."); return; }
