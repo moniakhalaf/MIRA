@@ -1908,7 +1908,7 @@ body.sheet-lock .content{overflow:hidden !important}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.257";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.258";   // bump on every deploy — shown in Settings
 
 /* ---------------- optional cloud backend (Supabase + Stripe) ----------------
    MIRA is fully on-device by default. To turn the Subscription screen and
@@ -1918,8 +1918,8 @@ const BUILD = "2026-07-13.257";   // bump on every deploy — shown in Settings
    live only in the Edge Functions, never here. Leave these empty to stay 100%
    on-device (nothing loads, nothing changes). */
 const CLOUD = {
-  url:  "",   // e.g. "https://xxxx.supabase.co"
-  anon: "",   // Supabase anon (public) key
+  url:  "https://rjkgcwswkuhiwavopolb.supabase.co",   // Supabase project URL
+  anon: "sb_publishable_3CdCo3qnkf65u51DCpXHJw_Ryey9e3S",   // Supabase publishable (public) key — safe in the browser; RLS protects data
 };
 const cloudEnabled = () => !!(CLOUD.url && CLOUD.anon);
 const cloudActive  = () => cloudEnabled() && !!(R.cloud && R.cloud.ready && R.cloud.user);
