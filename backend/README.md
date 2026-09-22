@@ -32,6 +32,13 @@ subscription on signup, adds an `is_admin()` helper, enables **RLS**
 (users see only their own rows; admins/owners see everyone), and a
 `members_admin` view for the console.
 
+Then run **`supabase/backups.sql`** to add end-to-end-encrypted cloud backup.
+It creates a `backups` table (one row per user) with RLS so each user can only
+touch their own row. The MIRA app encrypts the whole account state with the
+user's **backup passphrase** before upload, so Supabase stores only ciphertext —
+it can never read anyone's logs. Enable it in the app under Settings →
+Privacy & data → Cloud backup once you're signed in.
+
 Make yourself the owner (run once, with your signup email):
 ```sql
 update public.profiles set role = 'owner'

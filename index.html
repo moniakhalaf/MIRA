@@ -1908,7 +1908,7 @@ body.sheet-lock .content{overflow:hidden !important}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.256";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.257";   // bump on every deploy — shown in Settings
 
 /* ---------------- optional cloud backend (Supabase + Stripe) ----------------
    MIRA is fully on-device by default. To turn the Subscription screen and
@@ -2006,6 +2006,100 @@ const Cloud = {
       throw new Error((out && out.error) || "no url");
     } catch (e){ toast(tr("Could not start checkout. Please try again.")); }
     R.cloud.busy = false; render();
+  },
+};
+
+/* ---------------- end-to-end-encrypted cloud backup ----------------
+   Encrypts the whole app state with a passphrase-derived key BEFORE upload, so
+   Supabase only ever stores ciphertext. The derived key is kept non-extractable
+   in IndexedDB so backups keep working across reloads without re-entering the
+   passphrase; it never leaves the device. Dormant until CLOUD is configured. */
+function idbKV(){
+  return new Promise((res, rej) => {
+    const r = indexedDB.open("mira-sec", 1);
+    r.onupgradeneeded = () => r.result.createObjectStore("kv");
+    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+  });
+}
+async function idbPut(k, v){ const db = await idbKV(); return new Promise((res, rej) => { const tx = db.transaction("kv", "readwrite"); tx.objectStore("kv").put(v, k); tx.oncomplete = () => res(); tx.onerror = () => rej(tx.error); }); }
+async function idbGet(k){ const db = await idbKV(); return new Promise((res, rej) => { const tx = db.transaction("kv", "readonly"); const rq = tx.objectStore("kv").get(k); rq.onsuccess = () => res(rq.result); rq.onerror = () => rej(rq.error); }); }
+async function idbDel(k){ const db = await idbKV(); return new Promise((res, rej) => { const tx = db.transaction("kv", "readwrite"); tx.objectStore("kv").delete(k); tx.oncomplete = () => res(); tx.onerror = () => rej(tx.error); }); }
+// AES-GCM encrypt/decrypt key from a passphrase (non-extractable).
+async function bkKeyFromPass(pass, salt){
+  const base = await crypto.subtle.importKey("raw", SEC.te.encode(pass), "PBKDF2", false, ["deriveKey"]);
+  return crypto.subtle.deriveKey({name: "PBKDF2", salt, iterations: SEC.ITER, hash: "SHA-256"}, base, {name: "AES-GCM", length: 256}, false, ["encrypt", "decrypt"]);
+}
+const Backup = {
+  _timer: null,
+  enabled(){ return cloudEnabled() && !!(S.settings && S.settings.cloudBackup); },
+  ready(){ return this.enabled() && cloudActive() && !!R._bkKey; },
+  status(){ return { on: this.enabled(), ready: this.ready(), last: (S.settings && S.settings.bkLastPush) || 0, busy: !!R._bkBusy }; },
+  async init(){
+    // Restore the device key so auto-backup resumes seamlessly after a reload.
+    if (!cloudEnabled() || !(S.settings && S.settings.cloudBackup)) return;
+    try { const k = await idbGet("bkKey"); if (k) R._bkKey = k; } catch (e){}
+  },
+  schedule(){
+    if (!this.ready()) return;
+    clearTimeout(this._timer);
+    this._timer = setTimeout(() => this.push(false), 2500);
+  },
+  async setup(pass){
+    if (!cloudActive()){ toast(tr("Sign in first to turn on cloud backup.")); return; }
+    if (!pass || pass.length < 6){ toast(tr("Choose a backup passphrase (6+ characters).")); return; }
+    let salt = S.settings.bkSalt;
+    if (!salt){ salt = SEC.b64(SEC.rand(16)); S.settings.bkSalt = salt; }
+    R._bkKey = await bkKeyFromPass(pass, SEC.ub64(salt));
+    try { await idbPut("bkKey", R._bkKey); } catch (e){}
+    S.settings.cloudBackup = true; save();
+    await this.push(true); render();
+  },
+  async push(manual){
+    if (!this.ready()){ if (manual) toast(tr("Turn on cloud backup first.")); return; }
+    R._bkBusy = true; if (manual) render();
+    try {
+      const enc = await SEC.encData(R._bkKey, JSON.stringify(S));
+      const blob = JSON.stringify({ v: 1, iv: enc.iv, ct: enc.ct });
+      const sb = await Cloud.client();
+      const { error } = await sb.from("backups").upsert({
+        user_id: R.cloud.user.id, blob, salt: S.settings.bkSalt,
+        device: (navigator.platform || "").slice(0, 40), app_build: BUILD,
+        updated_at: new Date().toISOString()
+      });
+      if (error) throw error;
+      S.settings.bkLastPush = Date.now(); save();
+      if (manual) toast(tr("Backed up to cloud ✓"));
+    } catch (e){ console.warn("backup push failed", e); if (manual) toast(tr("Backup failed — try again.")); }
+    R._bkBusy = false; if (manual) render();
+  },
+  async restore(pass){
+    if (!cloudActive()){ toast(tr("Sign in first to restore.")); return; }
+    R._bkBusy = true; render();
+    try {
+      const sb = await Cloud.client();
+      const { data, error } = await sb.from("backups").select("blob,salt,updated_at").eq("user_id", R.cloud.user.id).maybeSingle();
+      if (error) throw error;
+      if (!data){ toast(tr("No cloud backup found yet.")); R._bkBusy = false; render(); return; }
+      const salt = data.salt || S.settings.bkSalt;
+      const key = pass ? await bkKeyFromPass(pass, SEC.ub64(salt)) : R._bkKey;
+      if (!key){ toast(tr("Enter your backup passphrase.")); R._bkBusy = false; render(); return; }
+      const parsed = JSON.parse(data.blob);
+      const plain = await SEC.decData(key, { iv: parsed.iv, ct: parsed.ct });   // throws on wrong passphrase
+      const obj = JSON.parse(plain);
+      if (!obj || !obj.settings) throw new Error("bad backup");
+      S = Object.assign(BLANK(), obj); window.S = S;
+      R._bkKey = key; try { await idbPut("bkKey", key); } catch (e){}
+      S.settings.bkSalt = salt; S.settings.cloudBackup = true;
+      S.settings.bkLastPush = Date.parse(data.updated_at) || Date.now();
+      applyTheme(); save(); render();
+      toast(tr("Restored from cloud ✓"));
+    } catch (e){ console.warn("restore failed", e); toast(tr("Restore failed — check your backup passphrase.")); }
+    R._bkBusy = false; render();
+  },
+  async turnOff(){
+    S.settings.cloudBackup = false; R._bkKey = null;
+    try { await idbDel("bkKey"); } catch (e){}
+    save(); render(); toast(tr("Cloud backup turned off on this device."));
   },
 };
 
@@ -2737,6 +2831,17 @@ const TR = {
     "Security":"الأمان","PIN on":"الرمز مفعّل","No PIN":"لا يوجد رمز","Change PIN":"تغيير الرمز","Set PIN":"تعيين رمز","Remove PIN":"إزالة الرمز",
     "Encryption":"التشفير","Encrypted":"مشفّر","Encrypt my data":"تشفير بياناتي","Cancel":"إلغاء","Backup & data":"النسخ الاحتياطي والبيانات",
     "Export backup":"تصدير نسخة احتياطية","Restore backup":"استعادة نسخة احتياطية","Erase everything on this device":"محو كل شيء على هذا الجهاز",
+    "Cloud backup":"النسخ الاحتياطي السحابي","Not connected":"غير متصل","Connect a Supabase backend to enable end-to-end-encrypted cloud backup, so your data survives losing this device.":"اربط خادم Supabase لتفعيل النسخ الاحتياطي السحابي المُشفّر طرفًا لطرف، لتبقى بياناتك حتى لو فقدت هذا الجهاز.",
+    "Sign in to your MIRA account to back up your encrypted data to the cloud.":"سجّل الدخول إلى حساب ميرا لنسخ بياناتك المُشفّرة إلى السحابة.","Sign in":"تسجيل الدخول",
+    "Write your backup passphrase down.":"دوّن عبارة مرور النسخ الاحتياطي.","Your data is encrypted with it before upload — if you forget it, the backup can't be recovered.":"تُشفَّر بياناتك بها قبل الرفع — إذا نسيتها، لا يمكن استعادة النسخة.",
+    "Backup passphrase":"عبارة مرور النسخ الاحتياطي","6+ characters":"6 أحرف فأكثر","Turn on cloud backup":"شغّل النسخ السحابي","Working…":"جارٍ العمل…",
+    "Enter your backup passphrase to unlock cloud backup on this device.":"أدخِل عبارة مرور النسخ لفتح النسخ السحابي على هذا الجهاز.","Restore from cloud":"استعادة من السحابة","Back up this device":"انسخ هذا الجهاز",
+    "On — your data is encrypted and backed up automatically.":"مُفعّل — بياناتك مُشفّرة وتُنسخ تلقائيًا.","Last backup":"آخر نسخة","Back up now":"انسخ الآن","Restore":"استعادة","Backing up…":"جارٍ النسخ…","Turn off on this device":"أوقفه على هذا الجهاز",
+    "End-to-end encrypted — Supabase stores only ciphertext.":"مُشفّر طرفًا لطرف — يخزّن Supabase النص المُشفّر فقط.","On":"مُفعّل","Off":"مُعطّل","Locked":"مقفل",
+    "not yet":"ليس بعد","just now":"الآن","min ago":"دقيقة مضت","h ago":"ساعة مضت","d ago":"يوم مضى",
+    "Backed up to cloud ✓":"تم النسخ إلى السحابة ✓","Backup failed — try again.":"فشل النسخ — حاول مجددًا.","Restored from cloud ✓":"تمت الاستعادة من السحابة ✓","Restore failed — check your backup passphrase.":"فشلت الاستعادة — تحقّق من عبارة المرور.",
+    "No cloud backup found yet.":"لا توجد نسخة سحابية بعد.","Sign in first to turn on cloud backup.":"سجّل الدخول أولًا لتشغيل النسخ السحابي.","Sign in first to restore.":"سجّل الدخول أولًا للاستعادة.","Choose a backup passphrase (6+ characters).":"اختر عبارة مرور (6 أحرف فأكثر).",
+    "Turn on cloud backup first.":"شغّل النسخ السحابي أولًا.","Cloud backup turned off on this device.":"تم إيقاف النسخ السحابي على هذا الجهاز.","Turn off cloud backup on this device? Your cloud copy is kept; this device just stops syncing.":"إيقاف النسخ السحابي على هذا الجهاز؟ تبقى نسختك السحابية؛ يتوقّف هذا الجهاز عن المزامنة فقط.",
     "Weight":"الوزن","Sleep":"النوم","Wellness":"العافية","Training volume":"حجم التدريب","weeks":"أسابيع","Time range":"النطاق الزمني",
     "Now":"الآن","Goal":"الهدف","To go (kg)":"المتبقّي (كغ)","Weeks":"أسابيع",
     "Customize":"تخصيص","Customize Today":"تخصيص اليوم","Done":"تم","Pick up where you left off":"تابِع من حيث توقفت","Open":"فتح","Ask":"اسأل",
@@ -4011,6 +4116,7 @@ async function persist(){
     } else {
       localStorage.setItem("mira.data", JSON.stringify(S));
     }
+    if (typeof Backup !== "undefined" && Backup.ready()) Backup.schedule();
   } catch (e) { toast("Storage error — export a backup and clear old chats."); }
 }
 /* Turn on encryption: wrap a fresh data key with the passphrase, verify the
@@ -4179,6 +4285,7 @@ const R = {
   groceryOpen: false,  // grocery-list view open
   groceryChecked: new Set(), // ephemeral ticked grocery items
   _dek: null, _enc: null, _encBusy: false, _encErr: "", _faceTried: false, encSetup: null,  // encryption runtime
+  _bkKey: null, _bkBusy: false, bkPass: "",   // cloud-backup device key (in memory), busy flag, passphrase buffer
   moodForm: {mood: 0, energy: 0, note: ""},
   bodyOpen: {meas: false, photo: false, lab: false},
   measForm: {date: "", waist: "", chest: "", arms: "", thigh: "", hips: "", neck: ""},
@@ -13522,6 +13629,46 @@ function adminEditSheetHTML(){
       <button class="btn sec" style="width:100%;margin-top:8px" onclick="M.adminEditClose()">${tr("Cancel")}</button>
     </div>`;
 }
+function cloudBackupCardHTML(){
+  const ago = ms => { if (!ms) return tr("not yet"); const s = Math.round((Date.now() - ms) / 1000);
+    if (s < 60) return tr("just now"); const m = Math.round(s / 60); if (m < 60) return `${m} ${tr("min ago")}`;
+    const h = Math.round(m / 60); if (h < 24) return `${h} ${tr("h ago")}`; const d = Math.round(h / 24); return `${d} ${tr("d ago")}`; };
+  if (!cloudEnabled()){
+    return `<div class="card" id="setCloudBackup">
+      <div class="card-h-row"><h3><span class="set-ic">${ic("database", 16)}</span> ${tr("Cloud backup")}</h3>
+        <span class="set-status"><span class="dot"></span>${tr("Not connected")}</span></div>
+      <div class="muted" style="margin-top:12px">${tr("Connect a Supabase backend to enable end-to-end-encrypted cloud backup, so your data survives losing this device.")}</div>
+    </div>`;
+  }
+  const bs = Backup.status(), busy = bs.busy, signedIn = cloudActive();
+  let body;
+  if (!signedIn){
+    body = `<div class="muted" style="margin:12px 0 10px">${tr("Sign in to your MIRA account to back up your encrypted data to the cloud.")}</div>
+      <button class="btn sm" onclick="M.setOpen('subscription')">${ic("user", 15)} ${tr("Sign in")}</button>`;
+  } else if (!bs.on){
+    body = `<div class="enc-warn" style="margin:10px 0">${ic("key", 13)} <b>${tr("Write your backup passphrase down.")}</b> ${tr("Your data is encrypted with it before upload — if you forget it, the backup can't be recovered.")}</div>
+      <div class="field"><label>${tr("Backup passphrase")}</label><input type="password" autocomplete="new-password" value="${esc(R.bkPass || "")}" oninput="R.bkPass=this.value" placeholder="${tr("6+ characters")}"></div>
+      <button class="btn sm" style="width:100%" ${busy ? "disabled" : ""} onclick="M.bkSetup()">${busy ? tr("Working…") : ic("lock", 15) + " " + tr("Turn on cloud backup")}</button>`;
+  } else if (!bs.ready){
+    body = `<div class="muted" style="margin:12px 0 10px">${tr("Enter your backup passphrase to unlock cloud backup on this device.")}</div>
+      <div class="field"><label>${tr("Backup passphrase")}</label><input type="password" autocomplete="current-password" value="${esc(R.bkPass || "")}" oninput="R.bkPass=this.value"></div>
+      <div class="row"><button class="btn sm" style="flex:1" ${busy ? "disabled" : ""} onclick="M.bkRestore()">${ic("upload", 15)} ${tr("Restore from cloud")}</button>
+        <button class="btn sm sec" ${busy ? "disabled" : ""} onclick="M.bkSetup()">${tr("Back up this device")}</button></div>`;
+  } else {
+    body = `<div class="muted" style="margin:12px 0 10px">${tr("On — your data is encrypted and backed up automatically.")} ${tr("Last backup")}: <b>${ago(bs.last)}</b>.</div>
+      <div class="row" style="margin-bottom:10px">
+        <button class="btn sm" ${busy ? "disabled" : ""} onclick="M.bkPush()">${busy ? tr("Backing up…") : ic("database", 15) + " " + tr("Back up now")}</button>
+        <button class="btn sm sec" ${busy ? "disabled" : ""} onclick="M.bkRestore()">${ic("upload", 15)} ${tr("Restore")}</button>
+      </div>
+      <button class="btn sm danger" onclick="M.bkOff()">${tr("Turn off on this device")}</button>`;
+  }
+  return `<div class="card" id="setCloudBackup">
+    <div class="card-h-row"><h3><span class="set-ic">${ic("database", 16)}</span> ${tr("Cloud backup")}</h3>
+      <span class="set-status ${bs.on && bs.ready ? "on" : ""}"><span class="dot"></span>${bs.on ? (bs.ready ? tr("On") : tr("Locked")) : tr("Off")}</span></div>
+    <div class="tiny" style="margin-top:8px;color:var(--txt3)">${ic("lock", 12)} ${tr("End-to-end encrypted — Supabase stores only ciphertext.")}</div>
+    ${body}
+  </div>`;
+}
 function settingsHTML(){
   const st = S.settings;
   const initial = (st.name || "M").trim().charAt(0).toUpperCase() || "M";
@@ -13757,6 +13904,7 @@ function settingsHTML(){
     <button class="btn sm danger" onclick="M.wipe()">${tr("Erase everything on this device")}</button>
   </div>`;
   })()}
+  ${cloudBackupCardHTML()}
   </div>
 
   <div class="set-page" data-page="subscription">
@@ -13904,6 +14052,11 @@ window.M = {
   cloudSignIn(){ const el = $("#cloudEmail"); const email = el ? el.value.trim() : ""; if (email && S.settings){ S.settings.email = email; save(); } Cloud.signIn(email); },
   cloudSignOut(){ Cloud.signOut(); },
   cloudCheckout(id){ Cloud.checkout(id); },
+  /* ---- encrypted cloud backup ---- */
+  async bkSetup(){ const p = R.bkPass || ""; await Backup.setup(p); R.bkPass = ""; },
+  async bkRestore(){ const p = R.bkPass || ""; await Backup.restore(p || undefined); R.bkPass = ""; },
+  bkPush(){ Backup.push(true); },
+  bkOff(){ if (confirm(tr("Turn off cloud backup on this device? Your cloud copy is kept; this device just stops syncing."))) Backup.turnOff(); },
   /* ---- admin console (prototype) ---- */
   goAdmin(){ R.tab = "admin"; R.adminTab = "dashboard"; R.setPage = null; R.homeCat = null; R.admEdit = null; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
   adminTab(t){ R.adminTab = t; R.admEdit = null; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
@@ -16504,7 +16657,7 @@ R.convId = null;
 render();
 /* If a Supabase backend is configured, restore the session and sync plan/members.
    No-op (nothing loads) when CLOUD.url/anon are empty — the app stays on-device. */
-if (cloudEnabled()) Cloud.init();
+if (cloudEnabled()){ Cloud.init(); Backup.init(); }
 /* Strava OAuth return: exchange the code, clean the URL, run the first sync. */
 (function(){
   const q = new URLSearchParams(location.search);
