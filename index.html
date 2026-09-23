@@ -1663,6 +1663,15 @@ html[data-setpage="legal"] .set-page[data-page="legal"]{display:block}
 .sheet.show{transform:translateY(0)}
 /* freeze the page behind an open sheet so touch-scrolling moves the sheet, not it */
 body.sheet-lock .content{overflow:hidden !important}
+/* OAuth sign-in + recovery key */
+.auth-or{display:flex;align-items:center;gap:10px;margin:14px 0 10px;color:var(--txt3);font-size:12px}
+.auth-or::before,.auth-or::after{content:"";flex:1;height:1px;background:var(--line2)}
+.auth-oauth{display:flex;align-items:center;justify-content:center;gap:9px;font-weight:600}
+.rec-key{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:18px;font-weight:700;letter-spacing:1px;
+  text-align:center;background:var(--acc-soft);border:1px solid color-mix(in srgb,var(--acc) 26%,transparent);
+  border-radius:12px;padding:14px 10px;margin:2px 0 12px;color:var(--acc-ink,var(--acc));word-break:break-all}
+.rec-ack{display:flex;align-items:center;gap:9px;font-size:13px;color:var(--txt2);margin-top:4px}
+.rec-ack input{width:18px;height:18px;flex:0 0 auto}
 .sheet .grab{width:38px;height:4px;border-radius:3px;background:var(--line2);margin:0 auto 14px}
 /* servings stepper (Save to meal prep) */
 .prep-stp{display:flex;align-items:stretch;justify-content:center;gap:12px;margin:2px 0 4px}
@@ -1908,7 +1917,7 @@ body.sheet-lock .content{overflow:hidden !important}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.265";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.266";   // bump on every deploy — shown in Settings
 
 /* ---------------- optional cloud backend (Supabase + Stripe) ----------------
    MIRA is fully on-device by default. To turn the Subscription screen and
@@ -1944,14 +1953,30 @@ const Cloud = {
       const { data } = await sb.auth.getSession();
       R.cloud.user = data && data.session ? data.session.user : null;
       sb.auth.onAuthStateChange((_e, session) => {
+        const had = !!R.cloud.user;
         R.cloud.user = session ? session.user : null;
-        if (R.cloud.user){ this.refresh(); }
+        if (R.cloud.user){ this.refresh().then(() => Backup.init()).then(() => Backup.reconcile()); }
         else { R.cloud.plan = "free"; R.cloud.role = "member"; R.cloud.members = []; }
         R.cloud.ready = true; render();
       });
-      if (R.cloud.user) await this.refresh();
+      if (R.cloud.user){ await this.refresh(); await Backup.init(); await Backup.reconcile(); }
     } catch (e){ console.warn("cloud init failed", e); }
     R.cloud.ready = true; render();
+  },
+  // Start an OAuth sign-in (Google / Apple / …). Redirects the page to the
+  // provider and back; supabase-js completes the session on return. Because the
+  // flow starts and ends inside this same app, the session lands here (unlike an
+  // emailed link tapped from another app).
+  async oauth(provider){
+    if (!cloudEnabled()){ toast(tr("Cloud isn't configured.")); return; }
+    R.cloud = R.cloud || { ready:true, user:null, role:"member", plan:"free", members:[], busy:false };
+    R.cloud.busy = true; render();
+    try {
+      const sb = await this.client();
+      const { error } = await sb.auth.signInWithOAuth({ provider, options: { redirectTo: location.href.split("#")[0].split("?")[0] } });
+      if (error) throw error;
+      // page navigates away to the provider now
+    } catch (e){ console.warn("oauth", e); toast(tr("Couldn't start sign-in.") + " " + ((e && e.message) || "")); R.cloud.busy = false; render(); }
   },
   async refresh(){
     try {
@@ -2125,6 +2150,15 @@ function idbKV(){
 async function idbPut(k, v){ const db = await idbKV(); return new Promise((res, rej) => { const tx = db.transaction("kv", "readwrite"); tx.objectStore("kv").put(v, k); tx.oncomplete = () => res(); tx.onerror = () => rej(tx.error); }); }
 async function idbGet(k){ const db = await idbKV(); return new Promise((res, rej) => { const tx = db.transaction("kv", "readonly"); const rq = tx.objectStore("kv").get(k); rq.onsuccess = () => res(rq.result); rq.onerror = () => rej(rq.error); }); }
 async function idbDel(k){ const db = await idbKV(); return new Promise((res, rej) => { const tx = db.transaction("kv", "readwrite"); tx.objectStore("kv").delete(k); tx.oncomplete = () => res(); tx.onerror = () => rej(tx.error); }); }
+// A readable random recovery key for password-less (social) accounts — it is
+// their encryption secret, shown once and saved by the user. Uses an unambiguous
+// alphabet (no 0/O/1/I) grouped for legibility.
+function genRecoveryKey(){
+  const A = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+  const bytes = SEC.rand(20); let s = "";
+  for (let i = 0; i < 20; i++){ s += A[bytes[i] % A.length]; if (i % 5 === 4 && i < 19) s += "-"; }
+  return s;
+}
 // AES-GCM encrypt/decrypt key from a passphrase (non-extractable).
 async function bkKeyFromPass(pass, salt){
   const base = await crypto.subtle.importKey("raw", SEC.te.encode(pass), "PBKDF2", false, ["deriveKey"]);
@@ -2225,6 +2259,55 @@ const Backup = {
       applyTheme(); save(); render();
       toast(tr("Restored from cloud ✓"));
     } catch (e){ console.warn("restore failed", e); toast(tr("Restore failed — check your backup passphrase.")); }
+    R._bkBusy = false; render();
+  },
+  // For sessions that arrive WITHOUT a captured password (OAuth return, or a
+  // restored session with no device key): set up or unlock the encrypted backup
+  // using a recovery key. Password sign-ins never reach here (afterAuth already
+  // set their key).
+  async reconcile(){
+    if (!cloudActive() || R._bkKey) return;
+    try {
+      const uid = R.cloud.user.id;
+      const prevUid = S.settings && S.settings.ownerUid;
+      if (prevUid && prevUid !== uid){ S = Object.assign(BLANK(), {}); window.S = S; applyTheme(); }
+      const sb = await Cloud.client();
+      const { data } = await sb.from("backups").select("salt").eq("user_id", uid).maybeSingle();
+      if (data && data.salt){
+        R.cloud.needUnlock = true; render();          // returning account → ask for the secret
+      } else {
+        const rk = genRecoveryKey();                   // new social account → make a recovery key
+        await this.deriveAndStore(rk, null);
+        S.settings.ownerUid = uid; save();
+        R.cloud.showRecovery = rk; render();
+      }
+    } catch (e){ console.warn("reconcile failed", e); }
+  },
+  // Unlock/restore with a secret (password OR recovery key). Used by the unlock
+  // screen for accounts that already have a cloud backup on a new device.
+  async unlock(secret){
+    secret = (secret || "").trim();
+    if (!secret){ toast(tr("Enter your password or recovery key.")); return; }
+    R._bkBusy = true; render();
+    try {
+      const sb = await Cloud.client();
+      const { data, error } = await sb.from("backups").select("blob,salt,updated_at").eq("user_id", R.cloud.user.id).maybeSingle();
+      if (error) throw error;
+      if (!data){ R.cloud.needUnlock = false; R._bkBusy = false; render(); return; }
+      const key = await bkKeyFromPass(secret, SEC.ub64(data.salt));
+      const parsed = JSON.parse(data.blob);
+      const plain = await SEC.decData(key, { iv: parsed.iv, ct: parsed.ct });   // throws on wrong secret
+      const obj = JSON.parse(plain);
+      if (!obj || !obj.settings) throw new Error("bad backup");
+      S = Object.assign(BLANK(), obj); window.S = S;
+      R._bkKey = key; try { await idbPut("bkKey", key); } catch (e){}
+      S.settings.bkSalt = data.salt; S.settings.cloudBackup = true;
+      S.settings.bkLastPush = Date.parse(data.updated_at) || Date.now();
+      S.settings.ownerUid = R.cloud.user.id;
+      R.cloud.needUnlock = false;
+      applyTheme(); save(); render();
+      toast(tr("Unlocked ✓"));
+    } catch (e){ console.warn("unlock failed", e); toast(tr("Wrong password or recovery key.")); }
     R._bkBusy = false; render();
   },
   async turnOff(){
@@ -2972,6 +3055,11 @@ const TR = {
     "Signing in restores your encrypted data to this device.":"تسجيل الدخول يستعيد بياناتك المُشفّرة إلى هذا الجهاز.",
     "Signed out. Your data is safe in the cloud — sign in to restore it.":"تم تسجيل الخروج. بياناتك آمنة في السحابة — سجّل الدخول لاستعادتها.",
     "Admins only.":"للمشرفين فقط.",
+    "or":"أو","Continue with Google":"المتابعة عبر Google","Continue with Apple":"المتابعة عبر Apple","Cloud isn't configured.":"السحابة غير مُهيّأة.","Couldn't start sign-in.":"تعذّر بدء تسجيل الدخول.",
+    "Save your recovery key":"احفظ مفتاح الاسترداد","You signed in without a password, so this key is what encrypts your data. It's the only way to restore your backup on a new device. Save it somewhere safe — we can't recover it for you.":"سجّلت الدخول دون كلمة مرور، لذا هذا المفتاح هو ما يُشفّر بياناتك. إنه الطريقة الوحيدة لاستعادة نسختك على جهاز جديد. احفظه في مكان آمن — لا يمكننا استرجاعه لك.",
+    "Copy key":"نسخ المفتاح","Copied ✓":"تم النسخ ✓","I've saved my recovery key somewhere safe":"لقد حفظت مفتاح الاسترداد في مكان آمن","Continue":"متابعة",
+    "Unlock your data":"افتح بياناتك","Enter your password (or recovery key if you use Google/Apple sign-in) to decrypt and restore your backup on this device.":"أدخِل كلمة المرور (أو مفتاح الاسترداد إن كنت تستخدم تسجيل الدخول عبر Google/Apple) لفك التشفير واستعادة نسختك على هذا الجهاز.",
+    "Password or recovery key":"كلمة المرور أو مفتاح الاسترداد","Unlock":"فتح","Checking…":"جارٍ التحقّق…","Sign in with a different account":"سجّل الدخول بحساب آخر","Enter your password or recovery key.":"أدخِل كلمة المرور أو مفتاح الاسترداد.","Wrong password or recovery key.":"كلمة مرور أو مفتاح استرداد خاطئ.","Unlocked ✓":"تم الفتح ✓",
     "An account with this email already exists — tap Sign in.":"يوجد حساب بهذا البريد بالفعل — اضغط تسجيل الدخول.","Wrong email or password. New here? Tap Create account.":"بريد أو كلمة مرور خاطئة. جديد هنا؟ اضغط إنشاء حساب.",
     "Password":"كلمة المرور","Sign in / Create account":"تسجيل الدخول / إنشاء حساب","Use an email link instead":"استخدم رابط البريد بدلًا من ذلك","Use email + password instead":"استخدم البريد وكلمة المرور بدلًا من ذلك",
     "Sign in with an email link":"سجّل الدخول برابط البريد","We'll email a one-time link. Note: some email apps (like Gmail) can invalidate the link before you use it — password sign-in is more reliable.":"سنرسل رابطًا لمرة واحدة. ملاحظة: بعض تطبيقات البريد (مثل Gmail) قد تُبطل الرابط قبل استخدامه — تسجيل الدخول بكلمة المرور أكثر موثوقية.",
@@ -4563,6 +4651,9 @@ function renderMain(){
   // New users create an account first (required) when a cloud backend is configured,
   // so their data is backed up from day one. Existing on-device users are grandfathered.
   if (!S.onboarded && cloudEnabled() && !cloudActive()){ app.innerHTML = authGateHTML(); return; }
+  // Password-less (social) accounts: show/collect the recovery key that encrypts their data.
+  if (cloudActive() && R.cloud && R.cloud.showRecovery){ app.innerHTML = recoveryScreenHTML(); return; }
+  if (cloudActive() && R.cloud && R.cloud.needUnlock){ app.innerHTML = unlockScreenHTML(); return; }
   if (!S.onboarded){ app.innerHTML = onbHTML(); return; }
   const dom = curDomain();
   const catDom = (R.tab === "home" && R.homeCat) ? S.domains.find(d => d.id === R.homeCat) : null;
@@ -6219,6 +6310,45 @@ function authGateHTML(){
       ${mode === "signup"
         ? `<div class="onb-note" style="margin-top:10px">${ic("key", 13)} <span>${tr("Pick one password you'll remember — it also encrypts your data, so if it's lost the backup can't be recovered. Write it down.")}</span></div>`
         : `<div class="onb-note" style="margin-top:10px">${ic("database", 13)} <span>${tr("Signing in restores your encrypted data to this device.")}</span></div>`}
+      <div class="auth-or"><span>${tr("or")}</span></div>
+      <button class="btn sec auth-oauth" style="width:100%" ${busy ? "disabled" : ""} onclick="M.oauth('google')">${oauthIcon("google")} ${tr("Continue with Google")}</button>
+      <button class="btn sec auth-oauth" style="width:100%;margin-top:8px" ${busy ? "disabled" : ""} onclick="M.oauth('apple')">${oauthIcon("apple")} ${tr("Continue with Apple")}</button>
+    </div>
+  </div></div>`;
+}
+// Small brand glyphs for the OAuth buttons (inline SVG, currentColor where sensible).
+function oauthIcon(p){
+  if (p === "google") return `<svg width="16" height="16" viewBox="0 0 48 48" style="vertical-align:-3px"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.7-6.7C35.6 2.4 30.2 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.8 6.1C12.3 13.3 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.5 3-2.2 5.5-4.7 7.2l7.3 5.7c4.3-4 6.9-9.9 6.9-17.4z"/><path fill="#FBBC05" d="M10.4 28.3c-.5-1.4-.7-2.9-.7-4.3s.3-2.9.7-4.3l-7.8-6.1C1 16.8 0 20.3 0 24s1 7.2 2.6 10.4l7.8-6.1z"/><path fill="#34A853" d="M24 48c6.2 0 11.5-2 15.3-5.5l-7.3-5.7c-2 1.4-4.7 2.3-8 2.3-6.3 0-11.7-3.8-13.6-9.3l-7.8 6.1C6.5 42.6 14.6 48 24 48z"/></svg>`;
+  if (p === "apple") return `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-3px"><path d="M16.4 12.9c0-2.3 1.9-3.4 2-3.5-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.1-2.8.9-3.5.9s-1.8-.8-3-.8c-1.5 0-2.9.9-3.7 2.3-1.6 2.7-.4 6.8 1.1 9 .7 1.1 1.6 2.3 2.8 2.3 1.1 0 1.5-.7 2.9-.7s1.7.7 2.9.7 2-1.1 2.7-2.1c.9-1.3 1.2-2.5 1.2-2.6 0 0-2.4-.9-2.4-3.6zM14.2 5.5c.6-.8 1-1.8.9-2.9-.9 0-2 .6-2.6 1.3-.6.7-1.1 1.7-.9 2.7 1 .1 2-.5 2.6-1.1z"/></svg>`;
+  return "";
+}
+// Shown once to a new social (password-less) user: their recovery key, which is
+// the only thing that can decrypt their backup later. They must save it.
+function recoveryScreenHTML(){
+  const rk = (R.cloud && R.cloud.showRecovery) || "";
+  return `<div class="content"><div class="onb">
+    <div class="logo">MIRA</div>
+    <div class="card">
+      <h3>${ic("key", 16)} ${tr("Save your recovery key")}</h3>
+      <p class="tiny" style="color:var(--txt2);margin:4px 0 12px">${tr("You signed in without a password, so this key is what encrypts your data. It's the only way to restore your backup on a new device. Save it somewhere safe — we can't recover it for you.")}</p>
+      <div class="rec-key">${esc(rk)}</div>
+      <button class="btn sec" style="width:100%;margin-bottom:8px" onclick="M.copyRecovery()">${ic("copy", 15)} ${tr("Copy key")}</button>
+      <label class="rec-ack"><input type="checkbox" id="recAck" onchange="M.recAck(this.checked)"> ${tr("I've saved my recovery key somewhere safe")}</label>
+      <button class="btn" style="width:100%;margin-top:10px" ${R.cloud && R.cloud.recAck ? "" : "disabled"} onclick="M.recoveryDone()">${tr("Continue")}</button>
+    </div>
+  </div></div>`;
+}
+// Shown to a returning social/no-key account on a new device: enter the secret.
+function unlockScreenHTML(){
+  const busy = !!R._bkBusy;
+  return `<div class="content"><div class="onb">
+    <div class="logo">MIRA</div>
+    <div class="card">
+      <h3>${ic("lock", 16)} ${tr("Unlock your data")}</h3>
+      <p class="tiny" style="color:var(--txt2);margin:4px 0 12px">${tr("Enter your password (or recovery key if you use Google/Apple sign-in) to decrypt and restore your backup on this device.")}</p>
+      <div class="field"><input id="unlockSecret" type="password" autocomplete="current-password" placeholder="${tr("Password or recovery key")}" onkeydown="if(event.key==='Enter')M.unlockSubmit()"></div>
+      <button class="btn" style="width:100%" ${busy ? "disabled" : ""} onclick="M.unlockSubmit()">${busy ? tr("Checking…") : tr("Unlock")}</button>
+      <button class="lnk" style="display:block;margin:10px auto 0" onclick="M.cloudSignOut()">${tr("Sign in with a different account")}</button>
     </div>
   </div></div>`;
 }
@@ -14267,6 +14397,12 @@ window.M = {
   /* ---- first-run account gate ---- */
   authMode(m){ R.authMode = m; render(); },
   gateAuth(){ const e = $("#gateEmail"), p = $("#gatePw"); Cloud.passwordAuth(e ? e.value : "", p ? p.value : "", R.authMode || "signup"); },
+  oauth(p){ Cloud.oauth(p); },
+  /* ---- recovery key (social accounts) ---- */
+  copyRecovery(){ const rk = R.cloud && R.cloud.showRecovery; if (rk && navigator.clipboard){ navigator.clipboard.writeText(rk).then(() => toast(tr("Copied ✓"))).catch(() => {}); } },
+  recAck(v){ if (R.cloud) R.cloud.recAck = v; render(); },
+  recoveryDone(){ if (R.cloud){ R.cloud.showRecovery = null; R.cloud.recAck = false; } render(); },
+  unlockSubmit(){ const el = $("#unlockSecret"); Backup.unlock(el ? el.value : ""); },
   cloudOtpCancel(){ Cloud.otpCancel(); },
   cloudSignOut(){ Cloud.signOut(); },
   cloudCheckout(id){ Cloud.checkout(id); },
