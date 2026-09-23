@@ -1908,7 +1908,7 @@ body.sheet-lock .content{overflow:hidden !important}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.264";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.265";   // bump on every deploy — shown in Settings
 
 /* ---------------- optional cloud backend (Supabase + Stripe) ----------------
    MIRA is fully on-device by default. To turn the Subscription screen and
@@ -2971,6 +2971,7 @@ const TR = {
     "Create account":"إنشاء حساب","Create account & continue":"أنشئ حسابًا وتابِع","Pick one password you'll remember — it also encrypts your data, so if it's lost the backup can't be recovered. Write it down.":"اختر كلمة مرور واحدة تتذكرها — فهي أيضًا تُشفّر بياناتك، وإن فُقدت لا يمكن استعادة النسخة. دوّنها.",
     "Signing in restores your encrypted data to this device.":"تسجيل الدخول يستعيد بياناتك المُشفّرة إلى هذا الجهاز.",
     "Signed out. Your data is safe in the cloud — sign in to restore it.":"تم تسجيل الخروج. بياناتك آمنة في السحابة — سجّل الدخول لاستعادتها.",
+    "Admins only.":"للمشرفين فقط.",
     "An account with this email already exists — tap Sign in.":"يوجد حساب بهذا البريد بالفعل — اضغط تسجيل الدخول.","Wrong email or password. New here? Tap Create account.":"بريد أو كلمة مرور خاطئة. جديد هنا؟ اضغط إنشاء حساب.",
     "Password":"كلمة المرور","Sign in / Create account":"تسجيل الدخول / إنشاء حساب","Use an email link instead":"استخدم رابط البريد بدلًا من ذلك","Use email + password instead":"استخدم البريد وكلمة المرور بدلًا من ذلك",
     "Sign in with an email link":"سجّل الدخول برابط البريد","We'll email a one-time link. Note: some email apps (like Gmail) can invalidate the link before you use it — password sign-in is more reliable.":"سنرسل رابطًا لمرة واحدة. ملاحظة: بعض تطبيقات البريد (مثل Gmail) قد تُبطل الرابط قبل استخدامه — تسجيل الدخول بكلمة المرور أكثر موثوقية.",
@@ -13772,6 +13773,7 @@ function adminStats(){
   return {total: m.length, paying: paying.length, mrr, byPlan};
 }
 function adminHTML(){
+  if (!cloudAdmin()){ R.tab = "set"; return settingsHTML(); }   // owners/admins only
   adminSeed();
   const tab = R.adminTab || "dashboard";
   const st = adminStats();
@@ -13894,7 +13896,8 @@ function settingsHTML(){
     ["domains", "grid", tr("Domains"), `${S.domains.length} ${tr("active")}`],
     ["assistant", "key", tr("Assistant"), st.apiKey ? tr("Connected") : tr("Add your API key")],
     ["privacy", "lock", tr("Privacy & data"), st.encOn ? tr("Encrypted") : (st.pinHash ? tr("PIN on") : tr("Lock, encryption, backup"))],
-    ["admin", "database", tr("Admin console"), tr("Members & subscriptions")],
+    // Admin console is shown ONLY to owners/admins (role from the cloud account).
+    ...(cloudAdmin() ? [["admin", "database", tr("Admin console"), tr("Members & subscriptions")]] : []),
     ["legal", "fileText", tr("Terms & privacy"), tr("How MIRA handles your data")],
   ];
   const titleOf = id => (HUB.find(h => h[0] === id) || [, , tr("Settings")])[2];
@@ -14273,7 +14276,7 @@ window.M = {
   bkPush(){ Backup.push(true); },
   bkOff(){ if (confirm(tr("Turn off cloud backup on this device? Your cloud copy is kept; this device just stops syncing."))) Backup.turnOff(); },
   /* ---- admin console (prototype) ---- */
-  goAdmin(){ R.tab = "admin"; R.adminTab = "dashboard"; R.setPage = null; R.homeCat = null; R.admEdit = null; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
+  goAdmin(){ if (!cloudAdmin()){ toast(tr("Admins only.")); return; } R.tab = "admin"; R.adminTab = "dashboard"; R.setPage = null; R.homeCat = null; R.admEdit = null; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
   adminTab(t){ R.adminTab = t; R.admEdit = null; render(); const c = $("#content"); if (c) c.scrollTop = 0; },
   adminMemberEdit(id){ R.admEdit = id; render(); },
   adminEditClose(){ R.admEdit = null; render(); },
