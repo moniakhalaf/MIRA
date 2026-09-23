@@ -1908,7 +1908,7 @@ body.sheet-lock .content{overflow:hidden !important}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.263";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.264";   // bump on every deploy — shown in Settings
 
 /* ---------------- optional cloud backend (Supabase + Stripe) ----------------
    MIRA is fully on-device by default. To turn the Subscription screen and
@@ -2080,9 +2080,15 @@ const Cloud = {
   },
   useLink(v){ if (R.cloud){ R.cloud.useLink = v; R.cloud.otpSent = false; } render(); },
   async signOut(){
+    // Push any last changes so nothing is lost, then leave this device clean so
+    // the next person can't see this account's data.
+    try { if (Backup.ready()) await Backup.push(false); } catch (e){}
     try { const sb = await this.client(); await sb.auth.signOut(); } catch (e){}
     if (R.cloud){ R.cloud.user = null; R.cloud.plan = "free"; R.cloud.role = "member"; R.cloud.members = []; }
-    render();
+    R._bkKey = null; try { await idbDel("bkKey"); } catch (e){}
+    S = Object.assign(BLANK(), {}); window.S = S; applyTheme();
+    save(); render();
+    toast(tr("Signed out. Your data is safe in the cloud — sign in to restore it."));
   },
   async checkout(plan){
     if (plan === "free"){ toast(tr("To cancel, manage your plan from the Stripe billing portal.")); return; }
@@ -2161,15 +2167,22 @@ const Backup = {
   // enables syncing without overwriting anything.
   async afterAuth(pass){
     if (!cloudEnabled() || !cloudActive() || !pass) return;
+    const uid = R.cloud.user.id;
     try {
+      // Account isolation: if this device's local data belongs to a DIFFERENT
+      // account, wipe it first so no one ever sees or uploads someone else's data
+      // (matters on a shared browser/device where people switch accounts).
+      const prevUid = S.settings && S.settings.ownerUid;
+      if (prevUid && prevUid !== uid){ S = Object.assign(BLANK(), {}); window.S = S; R._bkKey = null; applyTheme(); }
       const sb = await Cloud.client();
-      const { data } = await sb.from("backups").select("salt,updated_at").eq("user_id", R.cloud.user.id).maybeSingle();
+      const { data } = await sb.from("backups").select("salt,updated_at").eq("user_id", uid).maybeSingle();
       if (data && data.salt){
         await this.deriveAndStore(pass, data.salt);
-        if (!S.onboarded){ await this.restore(); }   // fresh device → pull their data back
+        if (!S.onboarded){ await this.restore(); }   // fresh device / switched account → pull their data back
       } else {
         await this.deriveAndStore(pass, null);        // brand-new account → set up a key; first push follows onboarding
       }
+      S.settings.ownerUid = uid; save();              // tag local data with its owner
     } catch (e){ console.warn("afterAuth failed", e); }
   },
   async push(manual){
@@ -2957,6 +2970,7 @@ const TR = {
     "Never lose your data":"لا تفقد بياناتك أبدًا","Backed up to your account so you can pick up on any device.":"محفوظة في حسابك لتتابع من أي جهاز.",
     "Create account":"إنشاء حساب","Create account & continue":"أنشئ حسابًا وتابِع","Pick one password you'll remember — it also encrypts your data, so if it's lost the backup can't be recovered. Write it down.":"اختر كلمة مرور واحدة تتذكرها — فهي أيضًا تُشفّر بياناتك، وإن فُقدت لا يمكن استعادة النسخة. دوّنها.",
     "Signing in restores your encrypted data to this device.":"تسجيل الدخول يستعيد بياناتك المُشفّرة إلى هذا الجهاز.",
+    "Signed out. Your data is safe in the cloud — sign in to restore it.":"تم تسجيل الخروج. بياناتك آمنة في السحابة — سجّل الدخول لاستعادتها.",
     "An account with this email already exists — tap Sign in.":"يوجد حساب بهذا البريد بالفعل — اضغط تسجيل الدخول.","Wrong email or password. New here? Tap Create account.":"بريد أو كلمة مرور خاطئة. جديد هنا؟ اضغط إنشاء حساب.",
     "Password":"كلمة المرور","Sign in / Create account":"تسجيل الدخول / إنشاء حساب","Use an email link instead":"استخدم رابط البريد بدلًا من ذلك","Use email + password instead":"استخدم البريد وكلمة المرور بدلًا من ذلك",
     "Sign in with an email link":"سجّل الدخول برابط البريد","We'll email a one-time link. Note: some email apps (like Gmail) can invalidate the link before you use it — password sign-in is more reliable.":"سنرسل رابطًا لمرة واحدة. ملاحظة: بعض تطبيقات البريد (مثل Gmail) قد تُبطل الرابط قبل استخدامه — تسجيل الدخول بكلمة المرور أكثر موثوقية.",
