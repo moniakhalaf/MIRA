@@ -1908,7 +1908,7 @@ body.sheet-lock .content{overflow:hidden !important}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.260";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.261";   // bump on every deploy — shown in Settings
 
 /* ---------------- optional cloud backend (Supabase + Stripe) ----------------
    MIRA is fully on-device by default. To turn the Subscription screen and
@@ -1984,7 +1984,7 @@ const Cloud = {
       // which is what home-screen / installed apps need.
       R.cloud.otpEmail = email; R.cloud.otpSent = true;
       toast(tr("Check your email, then copy the sign-in link into the app."), 4600);
-    } catch (e){ toast(tr("Sign-in failed. Check the email and try again.")); }
+    } catch (e){ console.warn("signIn failed", e); toast((tr("Sign-in failed") + ": " + ((e && (e.message || e.error_description || e.msg)) || "unknown")), 6000); }
     R.cloud.busy = false; render();
   },
   async verifyCode(code){
@@ -2002,7 +2002,7 @@ const Cloud = {
       R.cloud.otpSent = false; R.cloud.otpEmail = "";
       if (R.cloud.user) await this.refresh();
       toast(tr("Signed in ✓"));
-    } catch (e){ toast(tr("That code didn't work — check it or resend.")); }
+    } catch (e){ console.warn("verifyCode failed", e); toast((tr("Code didn't work") + ": " + ((e && (e.message || e.msg)) || "unknown")), 6000); }
     R.cloud.busy = false; render();
   },
   // Verify by the pasted sign-in link (works on installed/home-screen apps where
@@ -2023,7 +2023,7 @@ const Cloud = {
       R.cloud.otpSent = false; R.cloud.otpEmail = "";
       if (R.cloud.user) await this.refresh();
       toast(tr("Signed in ✓"));
-    } catch (e){ toast(tr("That link didn't work — copy a fresh one and try again.")); }
+    } catch (e){ console.warn("verifyLink failed", e); toast((tr("Link didn't work") + ": " + ((e && (e.message || e.msg)) || "unknown")), 6000); }
     R.cloud.busy = false; render();
   },
   // Smart: a pasted URL → verify the link; otherwise treat it as a 6-digit code.
