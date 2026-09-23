@@ -1917,7 +1917,7 @@ body.sheet-lock .content{overflow:hidden !important}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.266";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.267";   // bump on every deploy — shown in Settings
 
 /* ---------------- optional cloud backend (Supabase + Stripe) ----------------
    MIRA is fully on-device by default. To turn the Subscription screen and
@@ -1929,7 +1929,12 @@ const BUILD = "2026-07-13.266";   // bump on every deploy — shown in Settings
 const CLOUD = {
   url:  "https://rjkgcwswkuhiwavopolb.supabase.co",   // Supabase project URL
   anon: "sb_publishable_3CdCo3qnkf65u51DCpXHJw_Ryey9e3S",   // Supabase publishable (public) key — safe in the browser; RLS protects data
+  // Social sign-in buttons to SHOW. Empty = hidden (email + password only).
+  // Enable a provider ONLY after configuring it in Supabase → Authentication →
+  // Providers, e.g. oauth: ["google"] then ["google","apple"].
+  oauth: [],
 };
+const oauthProviders = () => (Array.isArray(CLOUD.oauth) ? CLOUD.oauth : []);
 const cloudEnabled = () => !!(CLOUD.url && CLOUD.anon);
 const cloudActive  = () => cloudEnabled() && !!(R.cloud && R.cloud.ready && R.cloud.user);
 const cloudAdmin   = () => cloudActive() && (R.cloud.role === "admin" || R.cloud.role === "owner");
@@ -6310,9 +6315,9 @@ function authGateHTML(){
       ${mode === "signup"
         ? `<div class="onb-note" style="margin-top:10px">${ic("key", 13)} <span>${tr("Pick one password you'll remember — it also encrypts your data, so if it's lost the backup can't be recovered. Write it down.")}</span></div>`
         : `<div class="onb-note" style="margin-top:10px">${ic("database", 13)} <span>${tr("Signing in restores your encrypted data to this device.")}</span></div>`}
-      <div class="auth-or"><span>${tr("or")}</span></div>
-      <button class="btn sec auth-oauth" style="width:100%" ${busy ? "disabled" : ""} onclick="M.oauth('google')">${oauthIcon("google")} ${tr("Continue with Google")}</button>
-      <button class="btn sec auth-oauth" style="width:100%;margin-top:8px" ${busy ? "disabled" : ""} onclick="M.oauth('apple')">${oauthIcon("apple")} ${tr("Continue with Apple")}</button>
+      ${oauthProviders().length ? `<div class="auth-or"><span>${tr("or")}</span></div>
+      ${oauthProviders().includes("google") ? `<button class="btn sec auth-oauth" style="width:100%" ${busy ? "disabled" : ""} onclick="M.oauth('google')">${oauthIcon("google")} ${tr("Continue with Google")}</button>` : ""}
+      ${oauthProviders().includes("apple") ? `<button class="btn sec auth-oauth" style="width:100%;margin-top:8px" ${busy ? "disabled" : ""} onclick="M.oauth('apple')">${oauthIcon("apple")} ${tr("Continue with Apple")}</button>` : ""}` : ""}
     </div>
   </div></div>`;
 }
