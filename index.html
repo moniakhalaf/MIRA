@@ -1908,7 +1908,7 @@ body.sheet-lock .content{overflow:hidden !important}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.262";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.263";   // bump on every deploy — shown in Settings
 
 /* ---------------- optional cloud backend (Supabase + Stripe) ----------------
    MIRA is fully on-device by default. To turn the Subscription screen and
@@ -2038,28 +2038,42 @@ const Cloud = {
   // email link (so nothing for Gmail's link-scanner to consume), no rate limit.
   // First use creates the account; later uses sign in. Requires "Confirm email"
   // to be OFF in Supabase so signup returns a session with no email step.
-  async passwordAuth(email, password){
+  // mode: "signin" | "signup" | undefined(smart). Explicit modes give clearer
+  // errors; smart tries sign-in then falls back to creating the account.
+  async passwordAuth(email, password, mode){
     email = (email || "").trim();
     if (!email || !password || password.length < 6){ toast(tr("Enter your email and a password (6+ characters).")); return; }
     if (S.settings){ S.settings.email = email; save(); }
     R.cloud.busy = true; render();
     try {
       const sb = await this.client();
-      let { data, error } = await sb.auth.signInWithPassword({ email, password });
-      if (error){
+      if (mode === "signup"){
         const up = await sb.auth.signUp({ email, password });
         if (up.error){
-          if (/already registered|already exists/i.test(up.error.message || "")) throw new Error(tr("Wrong password for this account."));
+          if (/already registered|already exists/i.test(up.error.message || "")) throw new Error(tr("An account with this email already exists — tap Sign in."));
           throw up.error;
         }
-        data = up.data;
-        if (!data || !data.session) throw new Error(tr("Account created. Now turn OFF “Confirm email” in Supabase, then sign in."));
+        if (!up.data || !up.data.session) throw new Error(tr("Account created. Now turn OFF “Confirm email” in Supabase, then sign in."));
+      } else if (mode === "signin"){
+        const si = await sb.auth.signInWithPassword({ email, password });
+        if (si.error) throw new Error(tr("Wrong email or password. New here? Tap Create account."));
+      } else {
+        let { error } = await sb.auth.signInWithPassword({ email, password });
+        if (error){
+          const up = await sb.auth.signUp({ email, password });
+          if (up.error){
+            if (/already registered|already exists/i.test(up.error.message || "")) throw new Error(tr("Wrong password for this account."));
+            throw up.error;
+          }
+          if (!up.data || !up.data.session) throw new Error(tr("Account created. Now turn OFF “Confirm email” in Supabase, then sign in."));
+        }
       }
       const { data: s } = await sb.auth.getSession();
       R.cloud.user = s && s.session ? s.session.user : null;
       if (!R.cloud.user) throw new Error(tr("No session — check Supabase email settings."));
       R.cloud.otpSent = false;
       await this.refresh();
+      await Backup.afterAuth(password);   // one-password: set up / restore encrypted backup automatically
       toast(tr("Signed in ✓"));
     } catch (e){ console.warn("passwordAuth", e); toast((e && e.message) ? e.message : tr("Sign-in failed."), 6000); }
     R.cloud.busy = false; render();
@@ -2125,15 +2139,38 @@ const Backup = {
     clearTimeout(this._timer);
     this._timer = setTimeout(() => this.push(false), 2500);
   },
-  async setup(pass){
-    if (!cloudActive()){ toast(tr("Sign in first to turn on cloud backup.")); return; }
-    if (!pass || pass.length < 6){ toast(tr("Choose a backup passphrase (6+ characters).")); return; }
-    let salt = S.settings.bkSalt;
-    if (!salt){ salt = SEC.b64(SEC.rand(16)); S.settings.bkSalt = salt; }
+  // Derive the encryption key from the account password and remember it on this
+  // device. Does NOT push — the caller decides. `salt` reuses the account's
+  // existing salt (so any device derives the same key from the password).
+  async deriveAndStore(pass, salt){
+    if (!salt){ salt = S.settings.bkSalt || SEC.b64(SEC.rand(16)); }
+    S.settings.bkSalt = salt;
     R._bkKey = await bkKeyFromPass(pass, SEC.ub64(salt));
     try { await idbPut("bkKey", R._bkKey); } catch (e){}
     S.settings.cloudBackup = true; save();
+  },
+  async setup(pass){
+    if (!cloudActive()){ toast(tr("Sign in first to turn on cloud backup.")); return; }
+    if (!pass || pass.length < 6){ toast(tr("Choose a backup passphrase (6+ characters).")); return; }
+    await this.deriveAndStore(pass, S.settings.bkSalt);
     await this.push(true); render();
+  },
+  // Called right after sign-in / account creation (one-password flow): sets up
+  // the key from the account password, and — on a fresh device — restores the
+  // cloud backup automatically. On a device that already has data, it just
+  // enables syncing without overwriting anything.
+  async afterAuth(pass){
+    if (!cloudEnabled() || !cloudActive() || !pass) return;
+    try {
+      const sb = await Cloud.client();
+      const { data } = await sb.from("backups").select("salt,updated_at").eq("user_id", R.cloud.user.id).maybeSingle();
+      if (data && data.salt){
+        await this.deriveAndStore(pass, data.salt);
+        if (!S.onboarded){ await this.restore(); }   // fresh device → pull their data back
+      } else {
+        await this.deriveAndStore(pass, null);        // brand-new account → set up a key; first push follows onboarding
+      }
+    } catch (e){ console.warn("afterAuth failed", e); }
   },
   async push(manual){
     if (!this.ready()){ if (manual) toast(tr("Turn on cloud backup first.")); return; }
@@ -2916,6 +2953,11 @@ const TR = {
     "Email me a code":"أرسل لي رمزًا","Email me a sign-in link":"أرسل لي رابط الدخول","Enter your code":"أدخِل رمزك","We emailed a 6-digit code to":"أرسلنا رمزًا من 6 أرقام إلى","Type it here to sign in — no browser needed.":"اكتبه هنا لتسجيل الدخول — دون متصفح.",
     "6-digit code":"رمز من 6 أرقام","Verify & sign in":"تحقّق وسجّل الدخول","Checking…":"جارٍ التحقّق…","Resend code":"إعادة إرسال الرمز","Resend email":"إعادة إرسال البريد","Use a different email":"استخدم بريدًا آخر",
     "Use an email and a password — no email link needed. First time here creates your account. Your data stays on this device until you turn on backup.":"استخدم بريدًا وكلمة مرور — دون رابط. أول مرة هنا تُنشئ حسابك. تبقى بياناتك على هذا الجهاز حتى تُفعّل النسخ.",
+    "My Integrated Reasoning Assistant":"مساعدك المتكامل للتفكير","Private & encrypted":"خاص ومُشفّر","Your data is end-to-end encrypted — only you can read it, not even us.":"بياناتك مُشفّرة طرفًا لطرف — أنت وحدك من يقرؤها، ولا حتى نحن.",
+    "Never lose your data":"لا تفقد بياناتك أبدًا","Backed up to your account so you can pick up on any device.":"محفوظة في حسابك لتتابع من أي جهاز.",
+    "Create account":"إنشاء حساب","Create account & continue":"أنشئ حسابًا وتابِع","Pick one password you'll remember — it also encrypts your data, so if it's lost the backup can't be recovered. Write it down.":"اختر كلمة مرور واحدة تتذكرها — فهي أيضًا تُشفّر بياناتك، وإن فُقدت لا يمكن استعادة النسخة. دوّنها.",
+    "Signing in restores your encrypted data to this device.":"تسجيل الدخول يستعيد بياناتك المُشفّرة إلى هذا الجهاز.",
+    "An account with this email already exists — tap Sign in.":"يوجد حساب بهذا البريد بالفعل — اضغط تسجيل الدخول.","Wrong email or password. New here? Tap Create account.":"بريد أو كلمة مرور خاطئة. جديد هنا؟ اضغط إنشاء حساب.",
     "Password":"كلمة المرور","Sign in / Create account":"تسجيل الدخول / إنشاء حساب","Use an email link instead":"استخدم رابط البريد بدلًا من ذلك","Use email + password instead":"استخدم البريد وكلمة المرور بدلًا من ذلك",
     "Sign in with an email link":"سجّل الدخول برابط البريد","We'll email a one-time link. Note: some email apps (like Gmail) can invalidate the link before you use it — password sign-in is more reliable.":"سنرسل رابطًا لمرة واحدة. ملاحظة: بعض تطبيقات البريد (مثل Gmail) قد تُبطل الرابط قبل استخدامه — تسجيل الدخول بكلمة المرور أكثر موثوقية.",
     "Enter your email and a password (6+ characters).":"أدخِل بريدك وكلمة مرور (6 أحرف فأكثر).","Wrong password for this account.":"كلمة مرور خاطئة لهذا الحساب.","Account created. Now turn OFF “Confirm email” in Supabase, then sign in.":"تم إنشاء الحساب. الآن أوقِف «تأكيد البريد» في Supabase، ثم سجّل الدخول.","No session — check Supabase email settings.":"لا توجد جلسة — تحقّق من إعدادات بريد Supabase.","Sign-in failed.":"فشل تسجيل الدخول.","Working…":"جارٍ العمل…",
@@ -4377,6 +4419,7 @@ const R = {
   groceryChecked: new Set(), // ephemeral ticked grocery items
   _dek: null, _enc: null, _encBusy: false, _encErr: "", _faceTried: false, encSetup: null,  // encryption runtime
   _bkKey: null, _bkBusy: false, bkPass: "",   // cloud-backup device key (in memory), busy flag, passphrase buffer
+  authMode: "signup",   // new-user auth gate: "signup" | "signin"
   moodForm: {mood: 0, energy: 0, note: ""},
   bodyOpen: {meas: false, photo: false, lab: false},
   measForm: {date: "", waist: "", chest: "", arms: "", thigh: "", hips: "", neck: ""},
@@ -4502,6 +4545,9 @@ function renderMain(){
   if (_encWrapper && !R._dek){ app.innerHTML = encLockHTML(); if (_encWrapper.prf && !R._faceTried && S.settings.faceAuto !== false){ R._faceTried = true; setTimeout(() => M.encFaceUnlock(true), 350); } return; }
   if (S.settings.pinHash && !R.unlocked){ app.innerHTML = lockHTML(); return; }
   if (FEATURES.emailSignup && !S.settings.account && !S.onboarded){ app.innerHTML = signupHTML(); return; }
+  // New users create an account first (required) when a cloud backend is configured,
+  // so their data is backed up from day one. Existing on-device users are grandfathered.
+  if (!S.onboarded && cloudEnabled() && !cloudActive()){ app.innerHTML = authGateHTML(); return; }
   if (!S.onboarded){ app.innerHTML = onbHTML(); return; }
   const dom = curDomain();
   const catDom = (R.tab === "home" && R.homeCat) ? S.domains.find(d => d.id === R.homeCat) : null;
@@ -6132,6 +6178,36 @@ function signupHTML(){
   </div></div>`;
 }
 
+// First-run account gate: create an account (or sign in) before onboarding, so a
+// new user's data is encrypted and cloud-backed-up from the start. One password
+// both signs in and encrypts (see Backup.afterAuth).
+function authGateHTML(){
+  const mode = R.authMode || "signup";
+  const busy = !!(R.cloud && R.cloud.busy);
+  const ready = !!(R.cloud && R.cloud.ready);
+  const prop = (icon, t, s) => `<div class="onb-prop"><span class="op-ic">${ic(icon, 20)}</span><span class="op-tx"><b>${t}</b><span>${s}</span></span></div>`;
+  return `<div class="content"><div class="onb">
+    <div class="logo">MIRA</div>
+    <div class="tag">${tr("My Integrated Reasoning Assistant")}</div>
+    <div class="card onb-welcome">
+      ${prop("lock", tr("Private & encrypted"), tr("Your data is end-to-end encrypted — only you can read it, not even us."))}
+      ${prop("database", tr("Never lose your data"), tr("Backed up to your account so you can pick up on any device."))}
+    </div>
+    <div class="card">
+      <div class="seg" style="margin-bottom:14px">
+        <button class="${mode === "signup" ? "on" : ""}" onclick="M.authMode('signup')">${tr("Create account")}</button>
+        <button class="${mode === "signin" ? "on" : ""}" onclick="M.authMode('signin')">${tr("Sign in")}</button>
+      </div>
+      <div class="field"><label>${tr("Email")}</label><input id="gateEmail" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" value="${esc((S.settings && S.settings.email) || "")}"></div>
+      <div class="field"><label>${tr("Password")}</label><input id="gatePw" type="password" autocomplete="${mode === "signup" ? "new-password" : "current-password"}" placeholder="${tr("6+ characters")}"></div>
+      <button class="btn" style="width:100%" ${busy || !ready ? "disabled" : ""} onclick="M.gateAuth()">${busy ? tr("Working…") : (mode === "signup" ? tr("Create account & continue") : tr("Sign in"))}</button>
+      ${mode === "signup"
+        ? `<div class="onb-note" style="margin-top:10px">${ic("key", 13)} <span>${tr("Pick one password you'll remember — it also encrypts your data, so if it's lost the backup can't be recovered. Write it down.")}</span></div>`
+        : `<div class="onb-note" style="margin-top:10px">${ic("database", 13)} <span>${tr("Signing in restores your encrypted data to this device.")}</span></div>`}
+    </div>
+  </div></div>`;
+}
+
 /* ---------------- onboarding ---------------- */
 const onb = {step: 0, name: "", profession: "", goal: "", style: "balanced", depth: "balanced", lang: "match", key: "", domSel: new Set(["work","health","fitness","life"]), custom: []};
 function onbHTML(){
@@ -6146,7 +6222,7 @@ function onbHTML(){
     const prop = (icon, t, s) => `<div class="onb-prop"><span class="op-ic">${ic(icon, 20)}</span><span class="op-tx"><b>${t}</b><span>${s}</span></span></div>`;
     body = `${head("Meet MIRA", "Your private assistant for nutrition, training, health and life — in one place.")}
       <div class="card onb-welcome">
-        ${prop("lock", "Private by design", "Everything you log stays on this device. No account, no server — your data is never sent to us.")}
+        ${prop("lock", "Private by design", "Your data lives on this device and syncs only as end-to-end-encrypted backup — unreadable to anyone but you.")}
         ${prop("check", "Honest by default", "Every fact is checked against trusted sources, or clearly labelled an estimate. No made-up numbers.")}
         ${prop("target", "Built around you", "Calories, macros, workouts, your cycle, recovery and more — all tuned to your own goals.")}
         <div class="onb-note">${ic("key", 13)} <span>MIRA runs on your own Anthropic API key, billed to you. We'll help you add it in a moment — or you can skip and add it later.</span></div>
@@ -14171,6 +14247,9 @@ window.M = {
   cloudPwAuth(){ const e = $("#cloudEmail"), p = $("#cloudPw"); Cloud.passwordAuth(e ? e.value : "", p ? p.value : ""); },
   cloudUseLink(){ Cloud.useLink(true); },
   cloudUsePassword(){ Cloud.useLink(false); },
+  /* ---- first-run account gate ---- */
+  authMode(m){ R.authMode = m; render(); },
+  gateAuth(){ const e = $("#gateEmail"), p = $("#gatePw"); Cloud.passwordAuth(e ? e.value : "", p ? p.value : "", R.authMode || "signup"); },
   cloudOtpCancel(){ Cloud.otpCancel(); },
   cloudSignOut(){ Cloud.signOut(); },
   cloudCheckout(id){ Cloud.checkout(id); },
