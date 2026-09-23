@@ -1908,7 +1908,7 @@ body.sheet-lock .content{overflow:hidden !important}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.258";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.259";   // bump on every deploy — shown in Settings
 
 /* ---------------- optional cloud backend (Supabase + Stripe) ----------------
    MIRA is fully on-device by default. To turn the Subscription screen and
@@ -1980,10 +1980,32 @@ const Cloud = {
       const sb = await this.client();
       const { error } = await sb.auth.signInWithOtp({ email, options:{ emailRedirectTo: location.href.split("#")[0] } });
       if (error) throw error;
-      toast(tr("Check your email for the sign-in link."), 4200);
+      // Show the code-entry step: works entirely inside the app (no browser/link),
+      // which is what home-screen / installed apps need.
+      R.cloud.otpEmail = email; R.cloud.otpSent = true;
+      toast(tr("Check your email for the 6-digit code."), 4200);
     } catch (e){ toast(tr("Sign-in failed. Check the email and try again.")); }
     R.cloud.busy = false; render();
   },
+  async verifyCode(code){
+    const email = R.cloud && R.cloud.otpEmail;
+    if (!email){ toast(tr("Request a code first.")); return; }
+    code = (code || "").replace(/\s/g, "");
+    if (code.length < 6){ toast(tr("Enter the 6-digit code from the email.")); return; }
+    R.cloud.busy = true; render();
+    try {
+      const sb = await this.client();
+      const { error } = await sb.auth.verifyOtp({ email, token: code, type: "email" });
+      if (error) throw error;
+      const { data } = await sb.auth.getSession();
+      R.cloud.user = data && data.session ? data.session.user : null;
+      R.cloud.otpSent = false; R.cloud.otpEmail = "";
+      if (R.cloud.user) await this.refresh();
+      toast(tr("Signed in ✓"));
+    } catch (e){ toast(tr("That code didn't work — check it or resend.")); }
+    R.cloud.busy = false; render();
+  },
+  otpCancel(){ if (R.cloud){ R.cloud.otpSent = false; R.cloud.otpEmail = ""; } render(); },
   async signOut(){
     try { const sb = await this.client(); await sb.auth.signOut(); } catch (e){}
     if (R.cloud){ R.cloud.user = null; R.cloud.plan = "free"; R.cloud.role = "member"; R.cloud.members = []; }
@@ -2831,6 +2853,10 @@ const TR = {
     "Security":"الأمان","PIN on":"الرمز مفعّل","No PIN":"لا يوجد رمز","Change PIN":"تغيير الرمز","Set PIN":"تعيين رمز","Remove PIN":"إزالة الرمز",
     "Encryption":"التشفير","Encrypted":"مشفّر","Encrypt my data":"تشفير بياناتي","Cancel":"إلغاء","Backup & data":"النسخ الاحتياطي والبيانات",
     "Export backup":"تصدير نسخة احتياطية","Restore backup":"استعادة نسخة احتياطية","Erase everything on this device":"محو كل شيء على هذا الجهاز",
+    "Sign in to back up your data":"سجّل الدخول لنسخ بياناتك","Sign in with a one-time email code — no password. We'll email you a 6-digit code to type in here. Your data stays on this device until you turn on backup.":"سجّل الدخول برمز لمرة واحدة عبر البريد — دون كلمة مرور. سنرسل رمزًا من 6 أرقام لإدخاله هنا. تبقى بياناتك على هذا الجهاز حتى تُفعّل النسخ.",
+    "Email me a code":"أرسل لي رمزًا","Enter your code":"أدخِل رمزك","We emailed a 6-digit code to":"أرسلنا رمزًا من 6 أرقام إلى","Type it here to sign in — no browser needed.":"اكتبه هنا لتسجيل الدخول — دون متصفح.",
+    "6-digit code":"رمز من 6 أرقام","Verify & sign in":"تحقّق وسجّل الدخول","Checking…":"جارٍ التحقّق…","Resend code":"إعادة إرسال الرمز","Use a different email":"استخدم بريدًا آخر",
+    "Check your email for the 6-digit code.":"تحقّق من بريدك للحصول على الرمز المكوّن من 6 أرقام.","Enter the 6-digit code from the email.":"أدخِل الرمز المكوّن من 6 أرقام من البريد.","Request a code first.":"اطلب رمزًا أولًا.","That code didn't work — check it or resend.":"لم ينجح الرمز — تحقّق منه أو أعِد الإرسال.","Signed in ✓":"تم تسجيل الدخول ✓",
     "Cloud backup":"النسخ الاحتياطي السحابي","Not connected":"غير متصل","Connect a Supabase backend to enable end-to-end-encrypted cloud backup, so your data survives losing this device.":"اربط خادم Supabase لتفعيل النسخ الاحتياطي السحابي المُشفّر طرفًا لطرف، لتبقى بياناتك حتى لو فقدت هذا الجهاز.",
     "Sign in to your MIRA account to back up your encrypted data to the cloud.":"سجّل الدخول إلى حساب ميرا لنسخ بياناتك المُشفّرة إلى السحابة.","Sign in":"تسجيل الدخول",
     "Write your backup passphrase down.":"دوّن عبارة مرور النسخ الاحتياطي.","Your data is encrypted with it before upload — if you forget it, the backup can't be recovered.":"تُشفَّر بياناتك بها قبل الرفع — إذا نسيتها، لا يمكن استعادة النسخة.",
@@ -13520,11 +13546,22 @@ function subscriptionPageHTML(){
   if (cloudEnabled() && !cloudActive()){
     const busy = !!(R.cloud && R.cloud.busy);
     const ready = !!(R.cloud && R.cloud.ready);
+    const otp = !!(R.cloud && R.cloud.otpSent);
+    if (otp){
+      return `<div class="card">
+        <h3>${ic("creditCard", 15)} ${tr("Enter your code")}</h3>
+        <p class="tiny" style="color:var(--txt2);margin:2px 0 12px">${tr("We emailed a 6-digit code to")} <b dir="ltr">${esc(R.cloud.otpEmail || "")}</b>. ${tr("Type it here to sign in — no browser needed.")}</p>
+        <div class="field"><label>${tr("6-digit code")}</label><input id="otpCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="123456" style="font-size:22px;letter-spacing:6px;text-align:center"></div>
+        <button class="btn" style="width:100%" ${busy ? "disabled" : ""} onclick="M.cloudVerify()">${busy ? tr("Checking…") : tr("Verify & sign in")}</button>
+        <button class="btn sec" style="width:100%;margin-top:8px" ${busy ? "disabled" : ""} onclick="M.cloudSignIn()">${tr("Resend code")}</button>
+        <button class="lnk" style="display:block;margin:10px auto 0" onclick="M.cloudOtpCancel()">${tr("Use a different email")}</button>
+      </div>`;
+    }
     return `<div class="card">
-        <h3>${ic("creditCard", 15)} ${tr("Sign in to manage billing")}</h3>
-        <p class="tiny" style="color:var(--txt2);margin:2px 0 12px">${tr("Your plan and billing live in your MIRA account. Sign in with a one-time email link — no password needed. Your health data stays on this device.")}</p>
+        <h3>${ic("creditCard", 15)} ${tr("Sign in to back up your data")}</h3>
+        <p class="tiny" style="color:var(--txt2);margin:2px 0 12px">${tr("Sign in with a one-time email code — no password. We'll email you a 6-digit code to type in here. Your data stays on this device until you turn on backup.")}</p>
         <div class="field"><label>${tr("Email")}</label><input id="cloudEmail" inputmode="email" placeholder="you@example.com" value="${esc((S.settings && S.settings.email) || "")}"></div>
-        <button class="btn" style="width:100%" ${busy || !ready ? "disabled" : ""} onclick="M.cloudSignIn()">${busy ? tr("Sending…") : tr("Email me a sign-in link")}</button>
+        <button class="btn" style="width:100%" ${busy || !ready ? "disabled" : ""} onclick="M.cloudSignIn()">${busy ? tr("Sending…") : tr("Email me a code")}</button>
       </div>`;
   }
   const cur = myPlan();
@@ -14049,7 +14086,9 @@ window.M = {
     S.settings.plan = id; buzz(); save(); render(); toast(id === "free" ? tr("Switched to Free") : `${tr("Now on")} ${tr(planById(id).name)} ✓`);
   },
   /* ---- cloud account (only when a Supabase backend is configured) ---- */
-  cloudSignIn(){ const el = $("#cloudEmail"); const email = el ? el.value.trim() : ""; if (email && S.settings){ S.settings.email = email; save(); } Cloud.signIn(email); },
+  cloudSignIn(){ const el = $("#cloudEmail"); const email = el ? el.value.trim() : ((R.cloud && R.cloud.otpEmail) || ""); if (email && S.settings){ S.settings.email = email; save(); } Cloud.signIn(email); },
+  cloudVerify(){ const el = $("#otpCode"); const code = el ? el.value : ""; Cloud.verifyCode(code); },
+  cloudOtpCancel(){ Cloud.otpCancel(); },
   cloudSignOut(){ Cloud.signOut(); },
   cloudCheckout(id){ Cloud.checkout(id); },
   /* ---- encrypted cloud backup ---- */
