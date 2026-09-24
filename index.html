@@ -1936,7 +1936,7 @@ body.sheet-lock .content{overflow:hidden !important}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.268";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.269";   // bump on every deploy — shown in Settings
 
 /* ---------------- optional cloud backend (Supabase + Stripe) ----------------
    MIRA is fully on-device by default. To turn the Subscription screen and
@@ -2128,6 +2128,25 @@ const Cloud = {
     R.cloud.busy = false; render();
   },
   useLink(v){ if (R.cloud){ R.cloud.useLink = v; R.cloud.otpSent = false; } render(); },
+  // Change the account password (no old password needed — the session authorizes
+  // it). Because the password also derives the E2EE key, re-key and re-upload the
+  // backup so it stays decryptable with the NEW password.
+  async changePassword(newPass){
+    if (!cloudActive()){ toast(tr("Sign in first.")); return; }
+    if (!newPass || newPass.length < 6){ toast(tr("Choose a password (6+ characters).")); return; }
+    R.cloud.busy = true; render();
+    try {
+      const sb = await this.client();
+      const { error } = await sb.auth.updateUser({ password: newPass });
+      if (error) throw error;
+      if (Backup.enabled() || (S.settings && S.settings.cloudBackup)){
+        await Backup.deriveAndStore(newPass, S.settings.bkSalt);   // new key, same salt
+        await Backup.push(false);                                   // re-encrypt with the new key
+      }
+      toast(tr("Password updated ✓ — write it down."), 5000);
+    } catch (e){ console.warn("changePassword", e); toast(tr("Couldn't update password.") + " " + ((e && e.message) || "")); }
+    R.cloud.busy = false; render();
+  },
   async signOut(){
     // Push any last changes so nothing is lost, then leave this device clean so
     // the next person can't see this account's data.
@@ -3079,6 +3098,7 @@ const TR = {
     "Signing in restores your encrypted data to this device.":"تسجيل الدخول يستعيد بياناتك المُشفّرة إلى هذا الجهاز.",
     "Signed out. Your data is safe in the cloud — sign in to restore it.":"تم تسجيل الخروج. بياناتك آمنة في السحابة — سجّل الدخول لاستعادتها.",
     "Admins only.":"للمشرفين فقط.",
+    "Change password":"تغيير كلمة المرور","Signed in as":"مُسجّل الدخول بـ","Set a password you'll remember — it also unlocks your encrypted backup, so write it down.":"اختر كلمة مرور تتذكرها — فهي أيضًا تفتح نسختك المُشفّرة، فدوّنها.","New password (6+ characters)":"كلمة مرور جديدة (6 أحرف فأكثر)","Update password":"تحديث كلمة المرور","Password updated ✓ — write it down.":"تم تحديث كلمة المرور ✓ — دوّنها.","Couldn't update password.":"تعذّر تحديث كلمة المرور.","Choose a password (6+ characters).":"اختر كلمة مرور (6 أحرف فأكثر).",
     "Install MIRA":"ثبّت ميرا","Install":"تثبيت","Add it to your home screen":"أضِفها إلى شاشتك الرئيسية","Tap Share, then “Add to Home Screen”":"اضغط مشاركة، ثم «أضِف إلى الشاشة الرئيسية»","MIRA installed ✓":"تم تثبيت ميرا ✓",
     "or":"أو","Continue with Google":"المتابعة عبر Google","Continue with Apple":"المتابعة عبر Apple","Cloud isn't configured.":"السحابة غير مُهيّأة.","Couldn't start sign-in.":"تعذّر بدء تسجيل الدخول.",
     "Save your recovery key":"احفظ مفتاح الاسترداد","You signed in without a password, so this key is what encrypts your data. It's the only way to restore your backup on a new device. Save it somewhere safe — we can't recover it for you.":"سجّلت الدخول دون كلمة مرور، لذا هذا المفتاح هو ما يُشفّر بياناتك. إنه الطريقة الوحيدة لاستعادة نسختك على جهاز جديد. احفظه في مكان آمن — لا يمكننا استرجاعه لك.",
@@ -13910,7 +13930,13 @@ function subscriptionPageHTML(){
         <button class="btn ${isCur || isDown ? "sec" : ""}" style="width:100%" ${isCur ? "disabled" : ""} onclick="M.setPlan('${p.id}')">${isCur ? tr("Current plan") : isDown ? tr("Downgrade") : `${tr("Upgrade to")} ${tr(p.name)}`}</button>
       </div>`;
     }).join("")}
-    ${cloud ? `<button class="btn sec" style="width:100%;margin-top:4px" onclick="M.cloudSignOut()">${ic("lock", 14)} ${tr("Sign out")}</button>` : ""}
+    ${cloud ? `<div class="card" style="margin-top:12px">
+        <h3 style="margin:0 0 8px">${ic("key", 15)} ${tr("Change password")}</h3>
+        <div class="tiny" style="color:var(--txt2);margin-bottom:10px">${tr("Signed in as")} <b dir="ltr">${esc((R.cloud && R.cloud.user && R.cloud.user.email) || (S.settings && S.settings.email) || "")}</b>. ${tr("Set a password you'll remember — it also unlocks your encrypted backup, so write it down.")}</div>
+        <div class="field"><input id="newPw" type="password" autocomplete="new-password" placeholder="${tr("New password (6+ characters)")}"></div>
+        <button class="btn sec" style="width:100%" ${R.cloud && R.cloud.busy ? "disabled" : ""} onclick="M.cloudChangePw()">${R.cloud && R.cloud.busy ? tr("Working…") : tr("Update password")}</button>
+      </div>
+      <button class="btn sec" style="width:100%;margin-top:10px" onclick="M.cloudSignOut()">${ic("lock", 14)} ${tr("Sign out")}</button>` : ""}
     <div class="tiny" style="color:var(--txt2);text-align:center;margin-top:6px">${cloud ? tr("Billing is powered by Stripe — upgrade, downgrade or cancel anytime.") : tr("Prototype — plans switch on this device only. Real billing arrives with the hosted backend.")}</div>`;
 }
 function adminSeed(){
@@ -14419,6 +14445,7 @@ window.M = {
   cloudPwAuth(){ const e = $("#cloudEmail"), p = $("#cloudPw"); Cloud.passwordAuth(e ? e.value : "", p ? p.value : ""); },
   cloudUseLink(){ Cloud.useLink(true); },
   cloudUsePassword(){ Cloud.useLink(false); },
+  cloudChangePw(){ const el = $("#newPw"); Cloud.changePassword(el ? el.value : ""); },
   /* ---- first-run account gate ---- */
   authMode(m){ R.authMode = m; render(); },
   gateAuth(){ const e = $("#gateEmail"), p = $("#gatePw"); Cloud.passwordAuth(e ? e.value : "", p ? p.value : "", R.authMode || "signup"); },
