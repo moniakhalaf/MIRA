@@ -1,0 +1,9 @@
+# Generated / installed — not committed. Recreated by the npm scripts.
+node_modules/
+www/
+android/
+ios/
+package-lock.json
+
+# The repo-root .gitignore ignores package.json globally; keep THIS one tracked.
+!package.json
