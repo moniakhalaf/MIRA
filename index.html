@@ -1470,6 +1470,22 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
 .upd-bar .ub{flex:0 0 auto;font-size:13px;font-weight:700;color:var(--gold);background:var(--gold-soft);padding:7px 13px;border-radius:8px}
 .upd-bar .ub:active{transform:scale(.96)}
 .upd-bar .ux{flex:0 0 auto;color:var(--txt3);background:none;padding:6px 8px;font-size:15px;line-height:1}
+/* branded launch splash (shown until the app's first render replaces it) */
+.boot-splash{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;background:var(--bg);z-index:5}
+.boot-splash .bs-logo{font-family:Georgia,"Times New Roman",serif;letter-spacing:9px;font-size:34px;font-weight:600;color:var(--gold);padding-inline-start:9px}
+.boot-splash .bs-spin{width:26px;height:26px;border-radius:50%;border:2.5px solid var(--line2);border-top-color:var(--gold);animation:bsSpin .8s linear infinite}
+@keyframes bsSpin{to{transform:rotate(360deg)}}
+/* install-app banner (reuses the update-bar layout, docked to the bottom) */
+.inst-bar{position:fixed;left:50%;transform:translateX(-50%) translateY(16px);bottom:calc(var(--safe-bot) + 12px);z-index:80;
+  display:flex;align-items:center;gap:12px;padding:11px 12px 11px 15px;border-radius:14px;background:var(--card2);border:1px solid var(--gold);
+  box-shadow:0 12px 34px rgba(0,0,0,.45);opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;max-width:calc(100% - 24px)}
+.inst-bar.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
+.inst-bar .im-ic{flex:0 0 auto;width:34px;height:34px;border-radius:9px;background:var(--gold-soft);color:var(--gold);display:flex;align-items:center;justify-content:center}
+.inst-bar .im{font-size:13px;color:var(--txt);font-weight:600;line-height:1.35}
+.inst-bar .im small{display:block;color:var(--txt2);font-weight:400;font-size:11.5px}
+.inst-bar .ib{flex:0 0 auto;font-size:13px;font-weight:700;color:var(--btn-ink,#06231A);background:var(--gold);padding:8px 14px;border-radius:9px}
+.inst-bar .ib:active{transform:scale(.96)}
+.inst-bar .ix{flex:0 0 auto;color:var(--txt3);background:none;padding:6px 8px;font-size:15px;line-height:1}
 /* food entry edit button */
 .food-it .edit,.food-it .mmove,.food-it .fi-copy{flex:0 0 auto;color:var(--txt3);min-width:34px;min-height:36px;display:flex;align-items:center;justify-content:center;border-radius:9px;background:none}
 .food-it .edit:active,.food-it .mmove:active,.food-it .fi-copy:active{background:var(--key);color:var(--acc)}
@@ -1896,7 +1912,10 @@ body.sheet-lock .content{overflow:hidden !important}
 </style>
 </head>
 <body>
-<div id="app"></div>
+<div id="app"><div class="boot-splash" aria-hidden="true">
+  <div class="bs-logo">MIRA</div>
+  <div class="bs-spin"></div>
+</div></div>
 <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 <div id="snackbar" class="snackbar" role="status"><span id="snackMsg"></span><button id="snackBtn" onclick="undoDo()">Undo</button></div>
 <input type="file" id="fileImg" accept="image/*,application/pdf" class="hidden">
@@ -1917,7 +1936,7 @@ body.sheet-lock .content{overflow:hidden !important}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.267";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.268";   // bump on every deploy — shown in Settings
 
 /* ---------------- optional cloud backend (Supabase + Stripe) ----------------
    MIRA is fully on-device by default. To turn the Subscription screen and
@@ -3060,6 +3079,7 @@ const TR = {
     "Signing in restores your encrypted data to this device.":"تسجيل الدخول يستعيد بياناتك المُشفّرة إلى هذا الجهاز.",
     "Signed out. Your data is safe in the cloud — sign in to restore it.":"تم تسجيل الخروج. بياناتك آمنة في السحابة — سجّل الدخول لاستعادتها.",
     "Admins only.":"للمشرفين فقط.",
+    "Install MIRA":"ثبّت ميرا","Install":"تثبيت","Add it to your home screen":"أضِفها إلى شاشتك الرئيسية","Tap Share, then “Add to Home Screen”":"اضغط مشاركة، ثم «أضِف إلى الشاشة الرئيسية»","MIRA installed ✓":"تم تثبيت ميرا ✓",
     "or":"أو","Continue with Google":"المتابعة عبر Google","Continue with Apple":"المتابعة عبر Apple","Cloud isn't configured.":"السحابة غير مُهيّأة.","Couldn't start sign-in.":"تعذّر بدء تسجيل الدخول.",
     "Save your recovery key":"احفظ مفتاح الاسترداد","You signed in without a password, so this key is what encrypts your data. It's the only way to restore your backup on a new device. Save it somewhere safe — we can't recover it for you.":"سجّلت الدخول دون كلمة مرور، لذا هذا المفتاح هو ما يُشفّر بياناتك. إنه الطريقة الوحيدة لاستعادة نسختك على جهاز جديد. احفظه في مكان آمن — لا يمكننا استرجاعه لك.",
     "Copy key":"نسخ المفتاح","Copied ✓":"تم النسخ ✓","I've saved my recovery key somewhere safe":"لقد حفظت مفتاح الاسترداد في مكان آمن","Continue":"متابعة",
@@ -16992,6 +17012,49 @@ function showUpdateBanner(){
   requestAnimationFrame(() => bar.classList.add("show"));
 }
 
+/* ---------------- install as an app (PWA) ---------------- */
+let _deferredInstall = null;
+const isStandalone = () => window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+// Android/desktop Chrome fires this when the app is installable — stash it so we
+// can show our own button instead of the browser's mini-infobar.
+window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); _deferredInstall = e; if (!isStandalone()) setTimeout(showInstallBar, 3500); });
+window.addEventListener("appinstalled", () => { _deferredInstall = null; dismissInstallBar(); try { toast(t("MIRA installed ✓")); } catch (_){} });
+function installDismissed(){ try { return localStorage.getItem("mira.installDismissed") === "1"; } catch (_){ return false; } }
+function showInstallBar(){
+  if (isStandalone() || installDismissed()) return;
+  // Show only when installable: Android/desktop have the deferred prompt; iOS
+  // Safari can't prompt programmatically, so we show a short how-to instead.
+  const iosHint = isIOS() && !_deferredInstall;
+  if (!_deferredInstall && !iosHint) return;
+  let bar = document.getElementById("instBar");
+  if (!bar){
+    bar = document.createElement("div");
+    bar.id = "instBar"; bar.className = "inst-bar";
+    document.body.appendChild(bar);
+  }
+  bar.innerHTML = iosHint
+    ? `<span class="im-ic">${ic("plus", 18)}</span>
+       <span class="im">${t("Install MIRA")}<small>${t("Tap Share, then “Add to Home Screen”")}</small></span>
+       <button class="ix" aria-label="${t("Dismiss")}" onclick="dismissInstallBar(true)">✕</button>`
+    : `<span class="im-ic">${ic("plus", 18)}</span>
+       <span class="im">${t("Install MIRA")}<small>${t("Add it to your home screen")}</small></span>
+       <button class="ib" onclick="doInstall()">${t("Install")}</button>
+       <button class="ix" aria-label="${t("Dismiss")}" onclick="dismissInstallBar(true)">✕</button>`;
+  requestAnimationFrame(() => bar.classList.add("show"));
+}
+function dismissInstallBar(remember){
+  const bar = document.getElementById("instBar"); if (bar) bar.classList.remove("show");
+  if (remember){ try { localStorage.setItem("mira.installDismissed", "1"); } catch (_){} }
+}
+async function doInstall(){
+  if (!_deferredInstall) return;
+  dismissInstallBar(false);
+  _deferredInstall.prompt();
+  try { await _deferredInstall.userChoice; } catch (_){}
+  _deferredInstall = null;
+}
+
 /* ---------------- boot ---------------- */
 applyTheme();
 bindViewport();
@@ -17014,6 +17077,9 @@ if (location.protocol.startsWith("http")){
 /* start on a fresh chat each launch — previous conversations stay in the log */
 R.convId = null;
 render();
+/* iOS Safari can't fire beforeinstallprompt, so offer the "Add to Home Screen"
+   hint once (dismissible). Android/desktop use the beforeinstallprompt handler. */
+if (location.protocol.startsWith("http") && isIOS() && !isStandalone()) setTimeout(showInstallBar, 4500);
 /* If a Supabase backend is configured, restore the session and sync plan/members.
    No-op (nothing loads) when CLOUD.url/anon are empty — the app stays on-device. */
 if (cloudEnabled()){ Cloud.init(); Backup.init(); }

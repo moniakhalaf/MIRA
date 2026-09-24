@@ -1,12 +1,20 @@
 {
   "name": "MIRA — My Integrated Reasoning Assistant",
   "short_name": "MIRA",
-  "display": "standalone",
+  "description": "Your private, on-device assistant for nutrition, training, health and life — with end-to-end-encrypted cloud backup.",
+  "id": "/MIRA/",
   "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "lang": "en",
+  "dir": "auto",
   "background_color": "#0B1310",
   "theme_color": "#0B1310",
+  "categories": ["health", "fitness", "lifestyle", "productivity"],
   "icons": [
     {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
-    {"src": "apple-touch-icon.png", "sizes": "180x180", "type": "image/png"}
+    {"src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"},
+    {"src": "apple-touch-icon.png", "sizes": "180x180", "type": "image/png", "purpose": "any"}
   ]
 }
