@@ -1936,7 +1936,7 @@ body.sheet-lock .content{overflow:hidden !important}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.270";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.271";   // bump on every deploy — shown in Settings
 
 /* ---------------- optional cloud backend (Supabase + Stripe) ----------------
    MIRA is fully on-device by default. To turn the Subscription screen and
@@ -8941,6 +8941,15 @@ function amountToGrams(s){
   if (u.startsWith("kg") || u.startsWith("kilo") || u === "l" || u.startsWith("lit")) return v * 1000;  // kg / kilo / litre → grams×1000
   return v;   // g / ml treated 1:1
 }
+// Grams for a dish/recipe ingredient amount: understands units via amountToGrams
+// AND treats a bare number as grams ("50" → 50 g), which is what people mean when
+// they type an ingredient weight. "2 eggs" etc. stay 0 here (handled elsewhere).
+function ingGrams(s){
+  const g = amountToGrams(s); if (g) return g;
+  const m = String(s == null ? "" : s).trim().match(/^([\d.]+)\s*$/);
+  if (m){ const v = parseFloat(m[1]); if (isFinite(v) && v > 0) return v; }
+  return 0;
+}
 
 // Standard reference weights (USDA) for foods people log by the piece, so
 // "3 eggs" becomes 150 g rather than defaulting to 100 g. Per-100 g macros
@@ -9356,7 +9365,20 @@ IMPORTANT — coverage: almost every real, identifiable food HAS a reasonable, u
 
 /* ---------------- "I cooked this": dish built from ingredients ---------------- */
 // grams of this ingredient that went into the dish (editable when it carries a basis)
-function dishItemG(x){ return (x && x.basisG > 0) ? num(x.addedG) : (amountToGrams(x && x.amount) || 0); }
+function dishItemG(x){ return (x && x.basisG > 0) ? num(x.addedG) : (ingGrams(x && x.amount) || 0); }
+// Repair any priced line that ended up with no editable grams basis (e.g. an
+// amount the AI echoed in a form we couldn't parse): derive grams from the
+// ingredient's typed amount and treat its current macros as being for that
+// weight, so the grams box becomes editable and the line rescales correctly.
+function dishFixUnpricedGrams(){
+  const rows = dishForm.ings || [];
+  ((dishForm.res && dishForm.res.items) || []).forEach(x => {
+    if (!x || x.basisG > 0) return;
+    const row = rows.find(g => sameIng(g.n, x.name));
+    const g = ingGrams(row && row.a) || ingGrams(x.amount);
+    if (g > 0){ x.basisG = g; x.base = {kcal: num(x.kcal), p: num(x.p), c: num(x.c), f: num(x.f)}; x.addedG = g; }
+  });
+}
 // macros contributed by this ingredient — scaled from its per-basis figures when
 // it has a basis (a snapped label or a parsed amount), else the fixed figures.
 function dishItemMacros(x){
@@ -9564,7 +9586,12 @@ async function dishMacros(){
   // and only ask the AI to price the ingredients you just added.
   const existing = (dishForm.res && dishForm.res.items) || [];
   const ings = dishPendingIngs();
-  if (!ings.length){ toast(existing.length ? tr("Those are already priced — just set the grams you added.") : "Add at least one ingredient first."); return; }
+  if (!ings.length){
+    dishFixUnpricedGrams();   // still repair any stuck lines from the typed amounts
+    if (existing.length){ render(); toast(tr("Those are already priced — just set the grams you added.")); }
+    else toast("Add at least one ingredient first.");
+    return;
+  }
   if (!S.settings.apiKey){ toast("Add your API key in Settings first."); return; }
   dishBusy = true; render();
   try {
@@ -9574,14 +9601,19 @@ async function dishMacros(){
       Math.min(3000, 500 + ings.length * 140));
     const items = arr.filter(o => o && o.name).map(o => {
       reconcileEstimate(o);   // keep each ingredient's kcal consistent with its own macros
-      const kc = num(o.kcal), p = num(o.p), c = num(o.c), f = num(o.f), basisG = amountToGrams(o.amount) || 0;
-      const it = {name: String(o.name), amount: String(o.amount || ""), kcal: kc, p, c, f, note: String(o.note || "")};
+      const kc = num(o.kcal), p = num(o.p), c = num(o.c), f = num(o.f);
+      // Trust the user's typed amount for grams (we control it) over the AI's echo.
+      const row = ings.find(g => sameIng(g.n, o.name));
+      const userAmt = (row && row.a) || "";
+      const basisG = ingGrams(userAmt) || ingGrams(o.amount) || 0;
+      const it = {name: String(o.name), amount: String(userAmt || o.amount || ""), kcal: kc, p, c, f, note: String(o.note || "")};
       const y = num(o.yield); if (y > 0 && y < 12) it.cookedFactor = y;   // method-aware cooking yield (weight ratio)
       if (basisG > 0){ it.basisG = basisG; it.base = {kcal: kc, p, c, f}; it.addedG = basisG; }   // editable grams that rescale this line
       return it;
     });
     if (!items.length) throw new Error("no items");
     dishForm.res = {items: existing.concat(items)};   // append the newly-priced ingredients to everything already there
+    dishFixUnpricedGrams();   // make sure every line has an editable grams basis (repairs any stragglers)
   } catch (e) {
     toast(e.status ? e.message : "Couldn't work out the ingredient macros — try again, or simplify the amounts.", 4500);
   }
@@ -9615,7 +9647,7 @@ You know worldwide and Arab/Gulf cuisines, Arabic script and transliteration, an
       // turn each read ingredient into a priced line that carries its own basis,
       // so its grams-added stay editable and rescale the macros from the label
       const newItems = read.map(o => {
-        const basisG = amountToGrams(o.amount) || num(o.servingG) || 0;
+        const basisG = ingGrams(o.amount) || num(o.servingG) || 0;
         const it = {name: o.name, amount: o.amount, kcal: o.kcal, p: o.p, c: o.c, f: o.f, note: o.note};
         if (o.has && basisG > 0){ it.basisG = basisG; it.base = {kcal: o.kcal, p: o.p, c: o.c, f: o.f}; it.addedG = basisG; it.src = "label"; }
         return it;
