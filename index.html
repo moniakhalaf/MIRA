@@ -1936,7 +1936,7 @@ body.sheet-lock .content{overflow:hidden !important}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.271";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.272";   // bump on every deploy — shown in Settings
 
 /* ---------------- optional cloud backend (Supabase + Stripe) ----------------
    MIRA is fully on-device by default. To turn the Subscription screen and
@@ -9375,7 +9375,7 @@ function dishFixUnpricedGrams(){
   ((dishForm.res && dishForm.res.items) || []).forEach(x => {
     if (!x || x.basisG > 0) return;
     const row = rows.find(g => sameIng(g.n, x.name));
-    const g = ingGrams(row && row.a) || ingGrams(x.amount);
+    const g = ingGrams(x.amount) || ingGrams(row && row.a);   // the priced amount matches the macros; fall back to the typed row
     if (g > 0){ x.basisG = g; x.base = {kcal: num(x.kcal), p: num(x.p), c: num(x.c), f: num(x.f)}; x.addedG = g; }
   });
 }
@@ -9519,6 +9519,7 @@ function dishDedupeItems(list){
 }
 
 function dishHTML(){
+  dishFixUnpricedGrams();   // self-heal any line missing an editable grams basis, before rendering
   const res = dishForm.res;
   const dt = res ? dishTotals() : null;
   const pend = dishPendingIngs();
@@ -9549,7 +9550,7 @@ function dishHTML(){
     <div class="dish-break">
       ${res.items.map((x, i) => {
         const amtCtl = x.basisG > 0
-          ? `<span class="dl-g"><input type="number" inputmode="decimal" min="0" value="${n0(num(x.addedG))}" aria-label="${t("Grams added")}" oninput="M.dishItemAmt(${i},this.value)"><b>g</b></span>`
+          ? `<span class="dl-g"><input type="number" inputmode="decimal" min="0" value="${Math.round(num(x.addedG) * 10) / 10}" aria-label="${t("Grams added")}" oninput="M.dishItemAmt(${i},this.value)"><b>g</b></span>`
           : (x.amount ? `<i class="dl-amt">${esc(x.amount)}</i>` : "");
         return `<div class="dish-line ing">
           <button class="dl-x" aria-label="${t("Remove")}" onclick="M.dishItemDel(${i})">✕</button>
