@@ -1936,7 +1936,7 @@ body.sheet-lock .content{overflow:hidden !important}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.269";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.270";   // bump on every deploy — shown in Settings
 
 /* ---------------- optional cloud backend (Supabase + Stripe) ----------------
    MIRA is fully on-device by default. To turn the Subscription screen and
@@ -8933,11 +8933,12 @@ function localFinishIdeas(remK, remP){
 // mass/volume unit — a bare number or a count ("2 pieces") is ambiguous, so we
 // return null and let the review scaler default to 100 g for the user to set.
 function amountToGrams(s){
-  const m = String(s || "").toLowerCase().match(/([\d.]+)\s*(kg|kilograms?|g|gr|grams?|ml|milliliters?|l|liters?|litres?)\b/);
+  // Accept common spellings/abbreviations, incl. "kilo"/"kilos" (not just "kg").
+  const m = String(s || "").toLowerCase().match(/([\d.]+)\s*(kgs?|kilograms?|kilos?|grams?|grms?|gr|gm|g|milliliters?|millilitres?|ml|liters?|litres?|l)\b/);
   if (!m) return null;
   const v = parseFloat(m[1]); if (!isFinite(v) || v <= 0) return null;
   const u = m[2];
-  if (u.startsWith("kg") || u.startsWith("kilo") || u === "l" || u.startsWith("lit")) return v * 1000;
+  if (u.startsWith("kg") || u.startsWith("kilo") || u === "l" || u.startsWith("lit")) return v * 1000;  // kg / kilo / litre → grams×1000
   return v;   // g / ml treated 1:1
 }
 
