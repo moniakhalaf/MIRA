@@ -1936,7 +1936,7 @@ body.sheet-lock .content{overflow:hidden !important}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.272";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.273";   // bump on every deploy — shown in Settings
 
 /* ---------------- optional cloud backend (Supabase + Stripe) ----------------
    MIRA is fully on-device by default. To turn the Subscription screen and
@@ -9586,8 +9586,15 @@ async function dishMacros(){
   // added recipes, and ingredients priced earlier — with any grams you edited)
   // and only ask the AI to price the ingredients you just added.
   const existing = (dishForm.res && dishForm.res.items) || [];
-  const ings = dishPendingIngs();
-  if (!ings.length){
+  // Pending ingredients WITH their row index, so after pricing we can rename a
+  // typed row to the AI's corrected spelling (e.g. "Parsely" → "Parsley"); that
+  // stops it being seen as "not yet priced" and unblocks saving.
+  const pend = [];
+  dishForm.ings.forEach((g, idx) => {
+    const n = (g.n || "").trim(), a = (g.a || "").trim();
+    if (n && !existing.some(x => sameIng(x.name, n))) pend.push({idx, n, a});
+  });
+  if (!pend.length){
     dishFixUnpricedGrams();   // still repair any stuck lines from the typed amounts
     if (existing.length){ render(); toast(tr("Those are already priced — just set the grams you added.")); }
     else toast("Add at least one ingredient first.");
@@ -9598,22 +9605,28 @@ async function dishMacros(){
   try {
     const arr = await llmJsonArray(
       `You are MIRA's home-cooking nutrition analyst. The user cooked a dish and lists the ingredients that went into it. For EACH ingredient, give the macros for the STATED amount using standard food-composition data (USDA, McCance & Widdowson, regional Middle-East tables). You know worldwide and Arab/Gulf cuisines and understand Arabic script, transliteration and kitchen units (tbsp, tsp, cup, حبة, ملعقة, كوب). Rules: amounts are raw/as-purchased unless stated cooked; ALL cooking fat added to the pot counts (for deep-frying, count the typically-absorbed amount and say so in the note); water and cooking losses do not change macros; if an amount is missing, assume a typical amount for this dish and put the assumption in "amount". Also return "yield" for each ingredient: the cooked-to-raw WEIGHT ratio for how it is cooked in THIS dish, from standard USDA cooking-yield / retention factors — dry pasta/rice/pulses absorb water (≈2.2–2.8), meats and leafy greens lose water (≈0.5–0.75), oils/sugar/salt/ready sauces ≈1. Reply with ONLY a JSON array, one object per ingredient in the SAME order as given: [{"name":str,"amount":str(amount actually counted),"kcal":num,"p":num,"c":num,"f":num,"yield":num,"note":str(short basis or assumption, may be "")}]. Base each ingredient on a specific standard reference food (USDA FoodData Central / McCance & Widdowson / regional tables), not a guess. Per item, energy MUST be internally consistent: verify kcal ≈ 4·p + 4·c + 9·f and correct the macros if it does not hold within ~10%.${replyLangNote()}`,
-      `Dish: ${dishForm.name.trim() || "(unnamed home-cooked dish)"}\nIngredients as they went into the pot:\n${ings.map(g => `- ${g.n}${g.a ? ` — ${g.a}` : ""}`).join("\n")}`,
-      Math.min(3000, 500 + ings.length * 140));
-    const items = arr.filter(o => o && o.name).map(o => {
+      `Dish: ${dishForm.name.trim() || "(unnamed home-cooked dish)"}\nIngredients as they went into the pot:\n${pend.map(g => `- ${g.n}${g.a ? ` — ${g.a}` : ""}`).join("\n")}`,
+      Math.min(3000, 500 + pend.length * 140));
+    const clean = arr.filter(o => o && o.name);
+    const added = [];
+    clean.forEach((o, k) => {
       reconcileEstimate(o);   // keep each ingredient's kcal consistent with its own macros
       const kc = num(o.kcal), p = num(o.p), c = num(o.c), f = num(o.f);
-      // Trust the user's typed amount for grams (we control it) over the AI's echo.
-      const row = ings.find(g => sameIng(g.n, o.name));
-      const userAmt = (row && row.a) || "";
+      const src = pend[k];   // AI replies in the same order it was given
+      const userAmt = (src && src.a) || "";
+      // rename the typed row to the AI's (possibly spell-corrected) name so it
+      // matches the priced line from now on
+      if (src && dishForm.ings[src.idx]) dishForm.ings[src.idx].n = String(o.name);
+      // never add the same ingredient twice (typo re-pricing / duplicate guard)
+      if (existing.some(x => sameIng(x.name, o.name)) || added.some(x => sameIng(x.name, o.name))) return;
       const basisG = ingGrams(userAmt) || ingGrams(o.amount) || 0;
       const it = {name: String(o.name), amount: String(userAmt || o.amount || ""), kcal: kc, p, c, f, note: String(o.note || "")};
       const y = num(o.yield); if (y > 0 && y < 12) it.cookedFactor = y;   // method-aware cooking yield (weight ratio)
       if (basisG > 0){ it.basisG = basisG; it.base = {kcal: kc, p, c, f}; it.addedG = basisG; }   // editable grams that rescale this line
-      return it;
+      added.push(it);
     });
-    if (!items.length) throw new Error("no items");
-    dishForm.res = {items: existing.concat(items)};   // append the newly-priced ingredients to everything already there
+    if (!clean.length) throw new Error("no items");
+    dishForm.res = {items: existing.concat(added)};   // append the newly-priced ingredients (dups skipped)
     dishFixUnpricedGrams();   // make sure every line has an editable grams basis (repairs any stragglers)
   } catch (e) {
     toast(e.status ? e.message : "Couldn't work out the ingredient macros — try again, or simplify the amounts.", 4500);
