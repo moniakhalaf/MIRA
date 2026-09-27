@@ -1,0 +1,182 @@
+/*
+ * MIRA regression smoke test.
+ *
+ * MIRA ships as a single static index.html with no build step, so this is a
+ * dev-only safety net: run it before every deploy to catch the kinds of bugs
+ * that have slipped through to the phone (recipe save blocked, gram parsing,
+ * broken encrypted backup). It is NOT shipped with the app.
+ *
+ * What it checks
+ *   1. Syntax   — every inline <script> block parses (pure Node, always runs).
+ *   2. Parsing  — amountToGrams / ingGrams handle kg, kilo, litres, ml, bare
+ *                 numbers, big quantities, and "2 eggs" (no unit -> 0).
+ *   3. Dish save — cooking a dish still saves to the recipe box even when the
+ *                 AI corrects an ingredient's spelling (the bug fixed in .273).
+ *   4. Backup   — AES-GCM encrypt -> decrypt round-trips (E2EE cloud backup).
+ *
+ * Run:  node tests/regression.mjs
+ * Needs (dev only):  npm install playwright-core   + a Chromium/headless_shell.
+ * Steps 2-4 auto-skip (not fail) if no browser is found; step 1 always runs.
+ */
+import fs from "node:fs";
+import vm from "node:vm";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const ROOT = path.join(__dirname, "..");
+const INDEX = path.join(ROOT, "index.html");
+const require = createRequire(import.meta.url);
+
+let pass = 0, fail = 0, skip = 0;
+const ok   = (name)      => { pass++; console.log(`  ✓ ${name}`); };
+const bad  = (name, why) => { fail++; console.log(`  ✗ ${name}\n      ${why}`); };
+const eq   = (name, got, want) =>
+  JSON.stringify(got) === JSON.stringify(want)
+    ? ok(name)
+    : bad(name, `expected ${JSON.stringify(want)}, got ${JSON.stringify(got)}`);
+
+// ---------------------------------------------------------------- 1. syntax
+function syntaxCheck(html) {
+  console.log("\n1. Inline script syntax");
+  const re = /<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/gi;
+  let m, i = 0;
+  while ((m = re.exec(html))) {
+    i++;
+    try { new vm.Script(m[1], { filename: `script#${i}` }); ok(`script #${i} parses`); }
+    catch (e) { bad(`script #${i} parses`, e.message); }
+  }
+}
+
+// ------------------------------------------------ locate a Chromium binary
+function findBrowser() {
+  const envs = [process.env.PW_CHROMIUM, process.env.CHROMIUM_PATH].filter(Boolean);
+  for (const p of envs) if (fs.existsSync(p)) return p;
+  const base = process.env.PLAYWRIGHT_BROWSERS_PATH || "/opt/pw-browsers";
+  const candidates = [];
+  try {
+    for (const d of fs.readdirSync(base)) {
+      if (/^chromium/.test(d)) {
+        candidates.push(path.join(base, d, "chrome-linux", "headless_shell"));
+        candidates.push(path.join(base, d, "chrome-linux", "chrome"));
+      }
+    }
+  } catch { /* base dir absent */ }
+  return candidates.find((p) => fs.existsSync(p)) || null;
+}
+
+// -------------------------------------------- 2-4. browser-driven checks
+async function browserChecks(html) {
+  let chromium;
+  try { ({ chromium } = require("playwright-core")); }
+  catch { console.log("\n(skipping browser checks: playwright-core not installed)"); skip += 3; return; }
+  const exe = findBrowser();
+  if (!exe) { console.log("\n(skipping browser checks: no Chromium binary found)"); skip += 3; return; }
+
+  const browser = await chromium.launch({ executablePath: exe, headless: true });
+  try {
+    const page = await browser.newPage();
+    const errs = [];
+    page.on("pageerror", (e) => errs.push(String(e)));
+    await page.goto("file://" + INDEX);
+    await page.waitForTimeout(400);
+
+    // ---- 2. gram parsing --------------------------------------------------
+    console.log("\n2. Ingredient gram parsing");
+    const parse = await page.evaluate(() => ({
+      kg:     ingGrams("2 kg"),
+      kilo:   ingGrams("2 kilo"),
+      kilos:  ingGrams("2 kilos"),
+      grams:  ingGrams("500 g"),
+      bare:   ingGrams("50"),
+      big:    ingGrams("2000 g"),
+      litre:  ingGrams("1.5 l"),
+      ml:     ingGrams("250 ml"),
+      eggs:   ingGrams("2 eggs"),
+      a2kg:   amountToGrams("2 kg"),
+      a2kilo: amountToGrams("2 kilo"),
+    }));
+    eq("2 kg   -> 2000 g", parse.kg, 2000);
+    eq("2 kilo -> 2000 g", parse.kilo, 2000);
+    eq("2 kilos-> 2000 g", parse.kilos, 2000);
+    eq("500 g  -> 500 g",  parse.grams, 500);
+    eq("50     -> 50 g (bare number)", parse.bare, 50);
+    eq("2000 g -> 2000 g (big qty)",   parse.big, 2000);
+    eq("1.5 l  -> 1500 g", parse.litre, 1500);
+    eq("250 ml -> 250 g",  parse.ml, 250);
+    eq("2 eggs -> 0 (no weight unit)", parse.eggs, 0);
+    eq("amountToGrams 2 kg",   parse.a2kg, 2000);
+    eq("amountToGrams 2 kilo", parse.a2kilo, 2000);
+
+    // ---- 3. dish save survives AI spelling correction ---------------------
+    console.log("\n3. Cooked-dish save (with AI spelling correction)");
+    const save = await page.evaluate(async () => {
+      window.llmJsonCall = async (_sys, user) => {
+        const lines = String(user).split("\n").filter((l) => l.trim().startsWith("- "));
+        return JSON.stringify(lines.map((l) => {
+          const nm = l.trim().slice(2).split("—")[0].trim();
+          const fixed = nm.toLowerCase() === "parsely" ? "Parsley" : nm; // AI corrects the typo
+          return { name: fixed, amount: "100 g", kcal: 100, p: 5, c: 8, f: 5, yield: 1, note: "" };
+        }));
+      };
+      S.settings.apiKey = "test-key";
+      dishForm.open = true; dishForm.editId = null; dishForm.name = "Zucchini Stew";
+      dishForm.ings = [
+        { n: "Zucchini",  a: "2 kilo" },
+        { n: "Onion",     a: "200 g" },
+        { n: "Olive oil", a: "3 tbsp" },
+        { n: "Parsely",   a: "100 g" }, // deliberate typo
+      ];
+      dishForm.res = null;
+
+      await dishMacros();
+      const items = (dishForm.res && dishForm.res.items) || [];
+      const pendingAfter = dishPendingIngs().length;
+      const dupParsley = items.filter((x) => /parsley/i.test(x.name)).length;
+
+      const before = (S.recipes || []).length;
+      await dishSaveToRecipes();
+      const after = (S.recipes || []).length;
+
+      return { pendingAfter, dupParsley, added: after - before, name: (S.recipes[0] || {}).name };
+    });
+    eq("no ingredient left pending after pricing", save.pendingAfter, 0);
+    eq("corrected ingredient not duplicated", save.dupParsley, 1);
+    eq("recipe saved to the box", save.added, 1);
+    eq("saved recipe keeps its name", save.name, "Zucchini Stew");
+
+    // ---- 4. encrypted backup round-trip -----------------------------------
+    console.log("\n4. Encrypted backup round-trip (AES-GCM)");
+    const crypto = await page.evaluate(async () => {
+      const secret = JSON.stringify({ hello: "world", n: 42, arr: [1, 2, 3] });
+      // passphrase -> key -> encrypt -> decrypt (the cloud-backup path)
+      const dek = await SEC.genDEK();
+      const enc = await SEC.encData(dek, secret);
+      const dec = await SEC.decData(dek, enc);
+      // wrong-key must fail (data stays private without the passphrase)
+      let wrongFailed = false;
+      try { await SEC.decData(await SEC.genDEK(), enc); } catch { wrongFailed = true; }
+      return { roundTrips: dec === secret, hasCipher: !!(enc && enc.iv && enc.ct), wrongFailed };
+    });
+    eq("plaintext survives encrypt -> decrypt", crypto.roundTrips, true);
+    eq("ciphertext produced (iv + ct)", crypto.hasCipher, true);
+    eq("wrong key cannot decrypt", crypto.wrongFailed, true);
+
+    console.log("\n" + (errs.length ? "Console errors: " + JSON.stringify(errs) : "No console errors."));
+    if (errs.length) fail += errs.length;
+  } finally {
+    await browser.close();
+  }
+}
+
+// ------------------------------------------------------------------- run
+const html = fs.readFileSync(INDEX, "utf8");
+console.log("MIRA regression smoke test");
+console.log("Build:", (html.match(/const BUILD = "([^"]+)"/) || [])[1] || "?");
+syntaxCheck(html);
+await browserChecks(html);
+
+console.log(`\n${"=".repeat(40)}`);
+console.log(`PASS ${pass}   FAIL ${fail}   SKIP ${skip}`);
+process.exit(fail ? 1 : 0);
