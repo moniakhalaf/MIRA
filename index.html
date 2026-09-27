@@ -1941,7 +1941,7 @@ body.sheet-lock .content{overflow:hidden !important}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.274";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.275";   // bump on every deploy — shown in Settings
 
 /* ---------------- optional cloud backend (Supabase + Stripe) ----------------
    MIRA is fully on-device by default. To turn the Subscription screen and
@@ -2986,7 +2986,7 @@ const TR = {
     "From saved meals":"من الوجبات المحفوظة",
     "Save for later (meal prep)":"احفظ لوقت لاحق (تحضير الوجبات)","Prepared meals":"وجبات محضّرة مسبقًا","Log now":"سجّل الآن","Delete":"حذف",
     "Log all":"سجّل الكل","Unsorted":"غير مصنّف","item":"عنصر","items":"عناصر","Logged":"سُجّل",
-    "Total prepped":"إجمالي المُحضّر","Log all adds":"«سجّل الكل» يضيف",
+    "Total prepped":"إجمالي المُحضّر","Log all adds":"«سجّل الكل» يضيف","All meals total":"إجمالي كل الوجبات","total":"الإجمالي",
     "Servings prepared":"عدد الحصص المحضّرة","e.g. 5 — blank means one serving":"مثال 5 — اتركه فارغًا لحصّة واحدة","left":"متبقٍّ","One fewer":"واحد أقل","One more":"واحد أكثر",
     "Prefer a photo? Use “Snap a meal” at the top, then tap the bookmark on the result to save it here.":"تفضّل الصورة؟ استخدم «صوّر وجبة» بالأعلى، ثم اضغط الإشارة المرجعية على النتيجة لحفظها هنا.",
     "Snap a meal → macros":"صوّر وجبة ← ماكروز","Photo of your plate or a label — MIRA reads the macros. Include a fork, hand or the whole plate so it can size the portion.":"صورة لطبقك أو لملصق — تقرأ ميرا الماكروز. أدرِج شوكة أو يدًا أو الطبق كاملًا لتقدير حجم الحصّة.",
@@ -8252,22 +8252,22 @@ function prepHTML(){
         <span class="pg-name">${label}</span><span class="pg-n">${items.length}</span>
         <button class="btn sm" onclick="M.prepLogGroup('${g}')">${ic("plus", 13)} ${t("Log all")}</button>
       </div>
-      ${items.length > 1 ? `<div class="prep-sub">${t("Log all adds")} · <b>${prepMacroLine(gsum)}</b></div>` : ""}
+      <div class="prep-sub">${label} ${t("total")} · <b>${prepMacroLine(gsum)}</b></div>
       ${items.map(prepRowHTML).join("")}
     </div>`;
   }).join("") : `<div class="muted">${t("Nothing prepped yet. Fill in a food in Log food above, then tap “Save for later (meal prep)”.")}</div>`;
-  // Grand total across everything prepped (one portion of each) — the headline
-  // "what's on my shelf" number. Shown whenever there are 2+ items to sum.
+  // Overall total across every meal (one portion of each) — the headline
+  // "everything on my shelf" number, shown once there are 2+ meals to add up.
   const grand = prepMacroSum(list);
-  const totalRow = list.length > 1
-    ? `<div class="prep-total"><span>${ic("bookmark", 13)} ${t("Total prepped")}<span class="pg-n">${list.length}</span></span><b>${prepMacroLine(grand)}</b></div>`
+  const totalRow = groups.length > 1
+    ? `<div class="prep-total"><span>${ic("bookmark", 13)} ${t("All meals total")}<span class="pg-n">${list.length}</span></span><b>${prepMacroLine(grand)}</b></div>`
     : "";
   return `<div class="card fold ${R.prepOpen ? "open" : ""}" id="prepCard">
     <h3 onclick="M.fold('prepOpen', this)">${ic("bookmark", 16)} ${t("Prepared meals")}${list.length ? ` (${list.length})` : ""} <span class="chev">▶</span></h3>
     <div class="fold-body">
       <div class="tiny" style="margin:2px 2px 10px;color:var(--txt2)">${t("Cooked ahead? Register portions and give each a meal — then Log all of a meal in one tap, or Log now item by item.")}</div>
-      ${totalRow}
       ${body}
+      ${totalRow}
     </div>
   </div>`;
 }
