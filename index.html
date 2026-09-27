@@ -1553,6 +1553,11 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
 .prep-group-h .pg-name{font-weight:600;font-size:13.5px}
 .prep-group-h .pg-n{font-size:11.5px;color:var(--txt3);background:var(--bg2);border-radius:20px;padding:1px 8px}
 .prep-group-h .btn.sm{margin-inline-start:auto;padding:0 12px}
+.prep-total{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:2px 2px 12px;padding:9px 12px;background:var(--bg2);border-radius:10px;font-size:12.5px;color:var(--txt2)}
+.prep-total b{font-size:13px;color:var(--txt);font-weight:700}
+.prep-total .pg-n{font-size:11.5px;color:var(--txt3);background:var(--bg);border-radius:20px;padding:1px 8px;margin-inline-start:5px}
+.prep-sub{margin:2px 2px 4px;font-size:11.5px;color:var(--txt2)}
+.prep-sub b{color:var(--txt);font-weight:600}
 .prep-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:7px}
 .prep-meal-sel{width:auto;max-width:100%;min-height:32px;padding:5px 30px 5px 10px;margin:0;font-size:12px;border-radius:8px;color:var(--txt2);background-position:right 9px center}
 .prep-left{font-size:11px;font-weight:600;color:var(--acc);background:color-mix(in srgb,var(--acc) 15%,transparent);border-radius:20px;padding:1px 8px;margin-inline-start:4px;white-space:nowrap}
@@ -1936,7 +1941,7 @@ body.sheet-lock .content{overflow:hidden !important}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.273";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.274";   // bump on every deploy — shown in Settings
 
 /* ---------------- optional cloud backend (Supabase + Stripe) ----------------
    MIRA is fully on-device by default. To turn the Subscription screen and
@@ -2981,6 +2986,7 @@ const TR = {
     "From saved meals":"من الوجبات المحفوظة",
     "Save for later (meal prep)":"احفظ لوقت لاحق (تحضير الوجبات)","Prepared meals":"وجبات محضّرة مسبقًا","Log now":"سجّل الآن","Delete":"حذف",
     "Log all":"سجّل الكل","Unsorted":"غير مصنّف","item":"عنصر","items":"عناصر","Logged":"سُجّل",
+    "Total prepped":"إجمالي المُحضّر","Log all adds":"«سجّل الكل» يضيف",
     "Servings prepared":"عدد الحصص المحضّرة","e.g. 5 — blank means one serving":"مثال 5 — اتركه فارغًا لحصّة واحدة","left":"متبقٍّ","One fewer":"واحد أقل","One more":"واحد أكثر",
     "Prefer a photo? Use “Snap a meal” at the top, then tap the bookmark on the result to save it here.":"تفضّل الصورة؟ استخدم «صوّر وجبة» بالأعلى، ثم اضغط الإشارة المرجعية على النتيجة لحفظها هنا.",
     "Snap a meal → macros":"صوّر وجبة ← ماكروز","Photo of your plate or a label — MIRA reads the macros. Include a fork, hand or the whole plate so it can size the portion.":"صورة لطبقك أو لملصق — تقرأ ميرا الماكروز. أدرِج شوكة أو يدًا أو الطبق كاملًا لتقدير حجم الحصّة.",
@@ -8237,22 +8243,30 @@ function prepRowHTML(p){
 function prepHTML(){
   const list = S.prep || [];
   const order = [...FOOD_MEALS.map(m => m[0]), "unsorted"];
-  const body = list.length ? order.map(g => {
-    const items = list.filter(p => prepGroupOf(p) === g);
-    if (!items.length) return "";
+  const groups = order.map(g => ({g, items: list.filter(p => prepGroupOf(p) === g)})).filter(x => x.items.length);
+  const body = list.length ? groups.map(({g, items}) => {
     const label = g === "unsorted" ? t("Unsorted") : t((FOOD_MEALS.find(x => x[0] === g) || [, g])[1]);
+    const gsum = prepMacroSum(items);
     return `<div class="prep-group">
       <div class="prep-group-h">
         <span class="pg-name">${label}</span><span class="pg-n">${items.length}</span>
         <button class="btn sm" onclick="M.prepLogGroup('${g}')">${ic("plus", 13)} ${t("Log all")}</button>
       </div>
+      ${items.length > 1 ? `<div class="prep-sub">${t("Log all adds")} · <b>${prepMacroLine(gsum)}</b></div>` : ""}
       ${items.map(prepRowHTML).join("")}
     </div>`;
   }).join("") : `<div class="muted">${t("Nothing prepped yet. Fill in a food in Log food above, then tap “Save for later (meal prep)”.")}</div>`;
+  // Grand total across everything prepped (one portion of each) — the headline
+  // "what's on my shelf" number. Shown whenever there are 2+ items to sum.
+  const grand = prepMacroSum(list);
+  const totalRow = list.length > 1
+    ? `<div class="prep-total"><span>${ic("bookmark", 13)} ${t("Total prepped")}<span class="pg-n">${list.length}</span></span><b>${prepMacroLine(grand)}</b></div>`
+    : "";
   return `<div class="card fold ${R.prepOpen ? "open" : ""}" id="prepCard">
     <h3 onclick="M.fold('prepOpen', this)">${ic("bookmark", 16)} ${t("Prepared meals")}${list.length ? ` (${list.length})` : ""} <span class="chev">▶</span></h3>
     <div class="fold-body">
       <div class="tiny" style="margin:2px 2px 10px;color:var(--txt2)">${t("Cooked ahead? Register portions and give each a meal — then Log all of a meal in one tap, or Log now item by item.")}</div>
+      ${totalRow}
       ${body}
     </div>
   </div>`;
@@ -8773,6 +8787,13 @@ function prepDel(id){
   S.prep = (S.prep || []).filter(x => x.id !== id);
   save(); render();
 }
+// Sum the per-portion macros across prepped items — one portion each, so it
+// matches exactly what "Log all" (and a round of "Log now") adds to today.
+function prepMacroSum(items){
+  return (items || []).reduce((a, p) => ({kcal: a.kcal + num(p.kcal), p: a.p + num(p.p), c: a.c + num(p.c), f: a.f + num(p.f)}),
+    {kcal: 0, p: 0, c: 0, f: 0});
+}
+function prepMacroLine(s){ return `${n0(s.kcal)} kcal · ${n1(s.p)}P · ${n1(s.c)}C · ${n1(s.f)}F`; }
 // Which meal bucket a prepped portion belongs to (its own meal tag, or
 // "unsorted" when none is set / it's an unknown value).
 function prepGroupOf(p){ const m = (p.meal || "").toLowerCase(); return FOOD_MEALS.some(x => x[0] === m) ? m : "unsorted"; }

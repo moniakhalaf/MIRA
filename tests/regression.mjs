@@ -163,6 +163,25 @@ async function browserChecks(html) {
     eq("ciphertext produced (iv + ct)", crypto.hasCipher, true);
     eq("wrong key cannot decrypt", crypto.wrongFailed, true);
 
+    // ---- 5. meal-prep totals ---------------------------------------------
+    console.log("\n5. Prepared-meals totals");
+    const prep = await page.evaluate(() => {
+      S.prep = [
+        { id: "a", name: "Baladi bread", meal: "breakfast", kcal: 284, p: 9.8, c: 54.7, f: 2.2 },
+        { id: "b", name: "Makdous",      meal: "breakfast", kcal: 103, p: 1.7, c: 5.1,  f: 9.1 },
+        { id: "c", name: "Labneh",       meal: "breakfast", kcal: 197, p: 9,   c: 5.4,  f: 15.1 },
+        { id: "d", name: "Chicken",      meal: "lunch",     kcal: 300, p: 40,  c: 0,    f: 14 },
+      ];
+      const grand = prepMacroSum(S.prep);
+      const bfast = prepMacroSum(S.prep.filter((p) => p.meal === "breakfast"));
+      const html = prepHTML();
+      return { grand, bfast, hasTotalRow: /prep-total/.test(html), hasSub: /prep-sub/.test(html) };
+    });
+    eq("grand total sums every item", prep.grand, { kcal: 884, p: 60.5, c: 65.2, f: 40.4 });
+    eq("breakfast subtotal sums its 3 items", prep.bfast, { kcal: 584, p: 20.5, c: 65.2, f: 26.4 });
+    eq("grand-total row renders", prep.hasTotalRow, true);
+    eq("per-meal subtotal renders", prep.hasSub, true);
+
     console.log("\n" + (errs.length ? "Console errors: " + JSON.stringify(errs) : "No console errors."));
     if (errs.length) fail += errs.length;
   } finally {
