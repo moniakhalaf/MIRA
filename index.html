@@ -1941,7 +1941,7 @@ body.sheet-lock .content{overflow:hidden !important}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.275";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.276";   // bump on every deploy — shown in Settings
 
 /* ---------------- optional cloud backend (Supabase + Stripe) ----------------
    MIRA is fully on-device by default. To turn the Subscription screen and
@@ -3489,6 +3489,7 @@ const TR = {
     "Saved to meal prep": "حُفظ في تحضير الوجبات",
     "How many servings did you actually make? Each one logs in a tap later and ticks down as you eat it.": "كم حصة حضّرت فعلاً؟ كل واحدة تُسجَّل بضغطة لاحقًا وتنقص كلما تناولتها.",
     "recipe makes": "الوصفة تكفي",
+    "Serving size": "حجم الحصة",
     "Fewer": "أقل",
     "More": "أكثر",
     "serving": "حصة",
@@ -11910,6 +11911,23 @@ function recipePortionText(r, grams){
   const k = grams / cw;
   return `${n0(grams)} g — ${n0(t.kcal * k)} kcal · ${n1(t.p * k)}P · ${n1(t.c * k)}C · ${n1(t.f * k)}F`;
 }
+// What one meal-prep serving of this recipe should be. If the Log-by-weight
+// card has a cooked weight AND a grams-eaten value, the serving is THAT weighed
+// portion (so prep saves the amount you actually chose, not the whole dish);
+// otherwise it's one recipe serving.
+function recipePrepServing(r){
+  const cw = num(r.cookedWeight), g = num(R.recipeGrams);
+  if (cw > 0 && g > 0){
+    const t = recipeTotal(r), k = g / cw;
+    return {portion: true, grams: g, amount: `${n0(g)} g`,
+      kcal: t.kcal * k, p: t.p * k, c: t.c * k, f: t.f * k,
+      inDish: Math.max(1, Math.round(cw / g))};   // full portions of this size in the cooked dish
+  }
+  const per = r.per || {};
+  return {portion: false, grams: 0, amount: "1 serving",
+    kcal: num(per.kcal), p: num(per.p), c: num(per.c), f: num(per.f),
+    inDish: Math.max(1, num(r.servings) || 1)};
+}
 // Log a recipe by grams eaten: weigh the whole cooked dish once, then per-gram
 // macros come from the recipe total ÷ that cooked weight.
 function recipeGramCardHTML(r){
@@ -12000,7 +12018,7 @@ function recipeDetailHTML(){
 }
 function prepAskSheetHTML(r){
   const q = Math.max(1, Math.round(num(R.prepAsk.q)) || 1);
-  const per = r.per || {};
+  const s = recipePrepServing(r);   // portion-aware: your weighed portion, or one recipe serving
   return `<div class="sheet-mask show" onclick="M.prepAskClose()"></div>
     <div class="sheet show" onclick="event.stopPropagation()">
       <div class="grab"></div>
@@ -12011,7 +12029,7 @@ function prepAskSheetHTML(r){
         <input class="stp-in" type="number" inputmode="numeric" min="1" value="${q}" oninput="R.prepAsk.q=this.value" onchange="M.prepAskStep(0)">
         <button class="stp-b" aria-label="${tr("More")}" onclick="M.prepAskStep(1)">+</button>
       </div>
-      <div class="tiny" style="text-align:center;color:var(--txt3);margin:10px 0 16px">${n0(num(per.kcal))} kcal · ${n1(num(per.p))}g ${tr("protein")} ${tr("per serving")}${(r.servings || 1) > 1 ? ` · ${tr("recipe makes")} ${r.servings}` : ""}</div>
+      <div class="tiny" style="text-align:center;color:var(--txt3);margin:10px 0 16px">${s.portion ? `${tr("Serving size")} ${s.amount} — ` : ""}${n0(s.kcal)} kcal · ${n1(s.p)}g ${tr("protein")} ${tr("per serving")}</div>
       <button class="btn" style="width:100%" onclick="M.recipeToPrepConfirm()">${tr("Save")} ${q} ${q === 1 ? tr("serving") : tr("servings")}</button>
       <button class="btn sec" style="width:100%;margin-top:8px" onclick="M.prepAskClose()">${tr("Cancel")}</button>
     </div>`;
@@ -16592,7 +16610,9 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
     const r = S.recipes.find(x => x.id === id); if (!r) return;
     const per = r.per || {};
     if (!num(per.kcal) && !num(per.p) && !num(per.c) && !num(per.f)){ toast("Set this recipe's macros first (Recalculate), then save it to prep."); return; }
-    R.prepAsk = {id, q: Math.max(1, num(r.servings) || 1)};
+    // default the count to how many of your weighed portions the dish makes
+    // (falls back to the recipe's own serving count when no portion is set)
+    R.prepAsk = {id, q: recipePrepServing(r).inDish};
     render();
   },
   prepAskStep(d){
@@ -16615,11 +16635,14 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
     const r = S.recipes.find(x => x.id === id); if (!r) return;
     const per = r.per || {};
     if (!num(per.kcal) && !num(per.p) && !num(per.c) && !num(per.f)){ toast("Set this recipe's macros first (Recalculate), then save it to prep."); return; }
-    q = Math.max(1, Math.round(num(q)) || num(r.servings) || 1);
+    // save the serving you actually chose (your weighed portion) — not the whole
+    // dish — so each prepped serving logs the right amount later
+    const s = recipePrepServing(r);
+    q = Math.max(1, Math.round(num(q)) || s.inDish);
     const meal = FOOD_MEALS.some(([k]) => k === r.meal) ? r.meal : "";
     S.prep = S.prep || [];
-    S.prep.unshift({id: uid(), name: r.name, amount: "1 serving", meal,
-      kcal: num(per.kcal), p: num(per.p), c: num(per.c), f: num(per.f),
+    S.prep.unshift({id: uid(), name: r.name, amount: s.amount, meal,
+      kcal: Math.round(s.kcal), p: +s.p.toFixed(1), c: +s.c.toFixed(1), f: +s.f.toFixed(1),
       fiber: 0, sugar: 0, sodium: 0, conf: "estimate", ts: Date.now(), qty: q});
     if (S.prep.length > 200) S.prep.pop();
     R.prepOpen = true;

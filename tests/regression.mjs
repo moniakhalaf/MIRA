@@ -182,6 +182,25 @@ async function browserChecks(html) {
     eq("grand-total row renders", prep.hasTotalRow, true);
     eq("per-meal subtotal renders", prep.hasSub, true);
 
+    // ---- 6. Save-to-meal-prep uses your weighed portion, not the whole dish -
+    console.log("\n6. Recipe -> meal prep saves the chosen portion");
+    const portion = await page.evaluate(async () => {
+      S.recipes = [{ id: "r1", name: "High-protein bake", servings: 1,
+        per: { kcal: 2040, p: 155.5, c: 71, f: 124.3 }, cookedWeight: 1813 }];
+      S.prep = [];
+      R.recipeGrams = "300";                 // the portion typed in the Log-by-weight card
+      const s = recipePrepServing(S.recipes[0]);
+      await M.recipeToPrep("r1", s.inDish);  // save via the real path
+      const saved = S.prep[0] || {};
+      return { servingKcal: Math.round(s.kcal), amount: saved.amount, kcal: saved.kcal,
+        qty: saved.qty, inDish: s.inDish, isPortion: s.portion };
+    });
+    eq("serving = 300 g portion, not whole dish", portion.servingKcal, 338);
+    eq("saved amount is the portion", portion.amount, "300 g");
+    eq("saved kcal is the portion", portion.kcal, 338);
+    eq("count defaults to portions in the dish", portion.qty, 6);
+    eq("flagged as a weighed portion", portion.isPortion, true);
+
     console.log("\n" + (errs.length ? "Console errors: " + JSON.stringify(errs) : "No console errors."));
     if (errs.length) fail += errs.length;
   } finally {
