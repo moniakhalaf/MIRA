@@ -1941,7 +1941,7 @@ body.sheet-lock .content{overflow:hidden !important}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.276";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.277";   // bump on every deploy — shown in Settings
 
 /* ---------------- optional cloud backend (Supabase + Stripe) ----------------
    MIRA is fully on-device by default. To turn the Subscription screen and
@@ -3078,6 +3078,14 @@ const TR = {
     "Maintenance = BMR (Mifflin-St Jeor) × an activity multiplier — the standard TDEE method. Uses the same body stats as the target calculator.":"الصيانة = معدل الأيض الأساسي (مِفلِن-سانت جيور) × مُعامل النشاط — طريقة TDEE المعتمدة. تستخدم نفس بيانات جسمك المستخدمة في حاسبة الأهداف.",
     "Activity":"النشاط","You burn about":"تحرق نحو","at this activity level":"عند مستوى النشاط هذا","Eat under it for a deficit, over it for a surplus.":"كُل أقل منها لعجز، وأكثر منها لفائض.",
     "Use as my maintenance":"اعتمِدها كسعرات صيانتي","Fill in age, height and weight to see your maintenance.":"أدخِل العمر والطول والوزن لرؤية سعرات صيانتك.",
+    "Your set maintenance matches your data":"سعرات الصيانة المضبوطة تطابق بياناتك",
+    "Update maintenance to":"حدّث الصيانة إلى",
+    "Your set maintenance is":"سعرات صيانتك المضبوطة هي",
+    "your data says you burn more":"تقول بياناتك إنك تحرق أكثر",
+    "your data says you burn less":"تقول بياناتك إنك تحرق أقل",
+    "Keeping it current makes your deficit and forecasts accurate.":"إبقاؤها محدّثة يجعل عجزك وتوقّعاتك دقيقة.",
+    "Log a bit more food and weight first — MIRA needs a couple of weeks to measure this.":"سجّل مزيدًا من الطعام والوزن أولًا — تحتاج ميرا إلى أسبوعين لقياس هذا.",
+    "Your data now suggests":"بياناتك تقترح الآن","update":"تحديث",
     "Add your age, height and weight first.":"أضِف عمرك وطولك ووزنك أولاً.","Maintenance set":"تم ضبط الصيانة","The calories your body burns in a day. Each logged day then shows how far under (a deficit) or over you ate. Enter it yourself, or use the TDEE calculator above.":"السعرات التي يحرقها جسمك في اليوم. عندها يُظهر كل يوم مُسجّل كم أكلتَ أقل (عجز) أو أكثر منها. أدخِلها بنفسك أو استخدم حاسبة TDEE أعلاه.",
     "fiber":"ألياف","sugar":"سكر","sodium":"صوديوم","Fiber, sugar & sodium":"الألياف والسكر والصوديوم","Fiber g":"ألياف غ","Sugar g":"سكر غ","Sodium mg":"صوديوم ملغ","Fiber goal g (optional)":"هدف الألياف غ (اختياري)","e.g. 30":"مثال: 30","Sodium limit mg (optional)":"حد الصوديوم ملغ (اختياري)","e.g. 2300":"مثال: 2300",
     "Water goal ml":"هدف الماء مل","Goal weight kg":"الوزن المستهدف كغ","Saved foods":"الأطعمة المحفوظة","Forget":"نسيان",
@@ -5740,6 +5748,18 @@ function expenditureCardHTML(){
   if (!e) return "";
   const tg = S.settings.targets || {};
   const dir = e.perWk < -0.05 ? tr("losing") : e.perWk > 0.05 ? tr("gaining") : tr("holding steady at");
+  // Adaptive targets: compare the data-derived maintenance to the one the user
+  // has set, and offer a one-tap recalibration when it has drifted.
+  const set = num((S.settings || {}).maintenanceKcal);
+  const drift = set > 0 ? e.tdee - set : 0;
+  const matches = set > 0 && Math.abs(drift) <= 25;
+  const drifted = set > 0 && Math.abs(drift) >= 100 && Math.abs(drift) / set >= 0.04;
+  const action = matches
+    ? `<div class="tiny" style="text-align:center;margin-top:12px;color:var(--acc)">${ic("check", 13)} ${tr("Your set maintenance matches your data")}</div>`
+    : `<button class="btn" style="width:100%;margin-top:12px" onclick="M.adaptMaintApply()">${ic("flame", 15)} ${set > 0 ? `${tr("Update maintenance to")} ${n0(e.tdee)}` : `${tr("Use as my maintenance")} (${n0(e.tdee)})`}</button>`;
+  const driftNote = drifted
+    ? `<div class="rc-stale" style="margin-top:10px"><span>${ic("alert", 14)} ${tr("Your set maintenance is")} <b>${n0(set)}</b> — ${drift > 0 ? tr("your data says you burn more") : tr("your data says you burn less")}, about <b>${n0(e.tdee)}</b> (${drift > 0 ? "+" : ""}${n0(drift)}). ${tr("Keeping it current makes your deficit and forecasts accurate.")}</span></div>`
+    : "";
   return `<div class="card">
     <h3>${ic("flame", 16)} ${tr("Estimated maintenance")} <span class="badge estimate" style="margin-inline-start:auto">${tr("estimate")}</span></h3>
     <div class="rev-grid" style="margin-bottom:10px">
@@ -5749,6 +5769,8 @@ function expenditureCardHTML(){
       <div class="rev-stat"><div class="rv">${e.foodDays}</div><div class="rl">${tr("days logged")}</div></div>
     </div>
     <div class="muted" style="font-size:12.5px">${tr("Worked out from your own data: over ~")}${e.spanDays} ${tr("days you've been")} ${dir} ${Math.abs(e.perWk)} ${tr("kg/week while averaging")} <b>${n0(e.avgIntake)} kcal</b> ${tr("on logged days — so your body is burning about")} <b>${n0(e.tdee)} ${tr("kcal/day")}</b>.${tg.kcal ? ` ${tr("Your current target is")} ${n0(tg.kcal)} kcal.` : ""}</div>
+    ${driftNote}
+    ${action}
     <div class="tiny" style="margin-top:7px;color:var(--txt2)">${e.thin ? tr("Early estimate — it sharpens as you log more. ") : ""}${tr("Assumes your food logging is complete, and ~7,700 kcal per kg of weight change. It's an honest estimate from your own trend, not a lab measurement.")}</div>
   </div>`;
 }
@@ -14245,9 +14267,17 @@ function settingsHTML(){
       const auto = maintenanceKcal();
       const autoTxt = auto ? (auto.source === "data" ? tr("estimated from your data") : auto.source === "calc" ? tr("from the calculator above") : "") : "";
       const ph = auto && auto.source !== "set" ? `${n0(auto.val)}${autoTxt ? " · " + autoTxt : ""}` : tr("e.g. 2151");
+      // Adaptive hint: when a value is set but the data-derived maintenance has
+      // drifted, offer a one-tap recalibration right here in Settings.
+      const set = num(st.maintenanceKcal);
+      const data = (typeof expenditureEstimate === "function") ? expenditureEstimate() : null;
+      const drift = data && set > 0 ? data.tdee - set : 0;
+      const adaptHint = data && set > 0 && Math.abs(drift) >= 100 && Math.abs(drift) / set >= 0.04
+        ? `<div class="tiny" style="margin-top:8px"><a href="javascript:void 0" onclick="M.adaptMaintApply()" style="color:var(--acc)">${ic("flame", 12)} ${tr("Your data now suggests")} ${n0(data.tdee)} — ${tr("update")}</a></div>`
+        : "";
       return `<div class="field" style="margin-bottom:10px"><label>${tr("Maintenance calories (daily upkeep)")}</label>
       <input type="number" inputmode="numeric" value="${st.maintenanceKcal || ""}" placeholder="${esc(ph)}" oninput="S.settings.maintenanceKcal=num(this.value);save()">
-      <div class="tiny" style="margin-top:6px;color:var(--txt2)">${tr("The calories your body burns in a day. Each logged day then shows how far under (a deficit) or over you ate. Enter it yourself, or use the TDEE calculator above.")}</div></div>`;
+      <div class="tiny" style="margin-top:6px;color:var(--txt2)">${tr("The calories your body burns in a day. Each logged day then shows how far under (a deficit) or over you ate. Enter it yourself, or use the TDEE calculator above.")}</div>${adaptHint}</div>`;
     })()}
     <div class="grid2" style="margin-bottom:10px">
       <div class="field"><label>${tr("Carbs g (optional)")}</label><input type="number" inputmode="numeric" value="${st.targets.carbs || ""}" oninput="S.settings.targets.carbs=num(this.value);save()"></div>
@@ -17009,6 +17039,9 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
   set(k, v){ S.settings[k] = v; save(); render(); },
   calcWeight(v){ R.calcW = v; render(); },
   maintCalcApply(){ const c = maintenanceCalc(); if (!c){ toast(tr("Add your age, height and weight first.")); return; } S.settings.maintenanceKcal = c.tdee; buzz(); save(); render(); toast(`${tr("Maintenance set")}: ${n0(c.tdee)} kcal ✓`); },
+  // Adaptive targets: adopt the maintenance MIRA measured from the user's own
+  // intake + weight trend, so deficit tracking and forecasts stay accurate.
+  adaptMaintApply(){ const e = (typeof expenditureEstimate === "function") ? expenditureEstimate() : null; if (!e || !(e.tdee > 0)){ toast(tr("Log a bit more food and weight first — MIRA needs a couple of weeks to measure this.")); return; } S.settings.maintenanceKcal = e.tdee; buzz(); save(); render(); toast(`${tr("Maintenance set")}: ${n0(e.tdee)} kcal ✓`); },
   splitKcal(v){ R.splitKcal = v; render(); },
   splitPct(k, v){ macroSplitObj()[k] = Math.max(0, Math.min(100, num(v))); save(); render(); },
   splitPreset(p, c, f){ const s = macroSplitObj(); s.p = p; s.c = c; s.f = f; save(); render(); },

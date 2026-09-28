@@ -201,6 +201,22 @@ async function browserChecks(html) {
     eq("count defaults to portions in the dish", portion.qty, 6);
     eq("flagged as a weighed portion", portion.isPortion, true);
 
+    // ---- 7. Adaptive targets: measure & apply real maintenance ------------
+    console.log("\n7. Adaptive maintenance (measure from data + apply)");
+    const adapt = await page.evaluate(async () => {
+      const day = (back) => new Date(Date.now() - back * 864e5).toLocaleDateString("en-CA");
+      S.foods = [];
+      for (let i = 0; i < 14; i++) S.foods.push({ date: day(i), name: "meal", kcal: 1850, p: 120, c: 150, f: 60 });
+      S.inbody = [{ date: day(20), weight: 80.0 }, { date: day(0), weight: 79.0 }]; // losing ~1 kg / 20 d
+      S.settings.maintenanceKcal = 2400;   // a stale, drifted value
+      const e = expenditureEstimate();
+      await M.adaptMaintApply();
+      return { tdee: e && e.tdee, applied: num(S.settings.maintenanceKcal),
+        plausible: !!(e && e.tdee > 1900 && e.tdee < 2600) };
+    });
+    eq("maintenance measured from intake + weight trend", adapt.plausible, true);
+    eq("apply writes the measured value to settings", adapt.applied, adapt.tdee);
+
     console.log("\n" + (errs.length ? "Console errors: " + JSON.stringify(errs) : "No console errors."));
     if (errs.length) fail += errs.length;
   } finally {
