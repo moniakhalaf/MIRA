@@ -281,6 +281,26 @@ async function browserChecks(html) {
     eq("fmtBytes KB", stor.fmt, "1.5 KB");
     eq("fmtBytes MB", stor.fmtMb, "2.0 MB");
 
+    // ---- 11. Shareable weekly progress card ------------------------------
+    console.log("\n11. Weekly progress card (banked math + PNG)");
+    const week = await page.evaluate(async () => {
+      const day = (b) => new Date(Date.now() - b * 864e5).toLocaleDateString("en-CA");
+      S.settings.maintenanceKcal = 2150;
+      S.foods = [];
+      for (let i = 0; i < 5; i++) S.foods.push({ id: "w" + i, date: day(i), name: "meal", kcal: 1800, p: 140, c: 150, f: 55 });
+      const bk = weekBanked();
+      const blob = await weekReportImage();
+      const cap = weekShareCaption();
+      return { banked: bk && bk.banked, days: bk && bk.days, kgOk: !!(bk && Math.abs(bk.kg - 1750 / 7700) < 1e-6),
+        blobType: blob && blob.type, blobHasBytes: !!(blob && blob.size > 1000), capHasMira: /MIRA/.test(cap) };
+    });
+    eq("banked = sum of (maintenance - eaten)", week.banked, 1750);   // 5 * (2150-1800)
+    eq("counts only logged days", week.days, 5);
+    eq("kg conversion uses 7700 kcal/kg", week.kgOk, true);
+    eq("produces a PNG blob", week.blobType, "image/png");
+    eq("PNG has real bytes", week.blobHasBytes, true);
+    eq("share caption is branded", week.capHasMira, true);
+
     console.log("\n" + (errs.length ? "Console errors: " + JSON.stringify(errs) : "No console errors."));
     if (errs.length) fail += errs.length;
   } finally {
