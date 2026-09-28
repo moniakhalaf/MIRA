@@ -4,6 +4,49 @@ A professional pass over the whole app, focused on the highest-leverage
 improvements for user experience and for long-term health of the codebase.
 Each item is tagged **Impact** (to the user) and **Effort** (to build).
 
+---
+
+## ✅ Shipped this session (build .282)
+
+The top of the roadmap is done — each item tested and bilingual (EN/AR):
+
+1. **Adaptive targets** — MIRA measures your real maintenance from intake +
+   weight trend and offers a one-tap recalibration when it drifts (Insights +
+   Settings). *(Tier 1 #1)*
+2. **Faster logging — favorites** — pin any food with a star for one-tap
+   logging, alongside the existing frequent/copy-day tools. *(Tier 1 #3)*
+3. **Deficit Home widget** — a glanceable "Deficit today" ring, green under
+   maintenance / amber over. *(Tier 1 #4)*
+4. **Storage hardening** — a "what's using space" breakdown, one-tap photo
+   cleanup, and quota-aware save that never fails silently. *(Tier 2 #5)*
+5. **Shareable weekly progress card** — the weekly report as a polished PNG
+   (score, key numbers, deficit banked, a win) via the native share sheet.
+   *(Tier 2 #8)*
+6. **Daily reminders** — meal/water/weight/review notifications; real on-device
+   notifications in the native app (Capacitor Local Notifications, wired into
+   the scaffold), saved-and-ready on the web. *(Tier 1 #2 — the native path)*
+
+Plus earlier fixes this session: recipe-save name-drift, large-portion gram
+parsing, meal-prep servings/totals, and a **dev regression suite** (`tests/`)
+now at 66 checks, run before every deploy.
+
+## What still needs a platform MIRA doesn't have yet
+- **Background reminders / Apple Health / Google Fit** → the **native app**
+  (reminders code is already written and waiting).
+- **Weekly email summary, coach login, real payments** → the **hosted backend**
+  (the `backend/` scaffold is ready).
+
+## Launch checklist (what's left is shipping, not coding)
+1. **Google sign-in** — do Parts A & B in `docs/google-signin-setup.md`, then
+   tell me "Google is on" and I flip the flag.
+2. **Native app** — `cd native && npm install && npm run add:android`
+   (or `add:ios` on a Mac), open in Android Studio / Xcode, build. Reminders and
+   Health become available there.
+3. **Testers** — the web PWA at the GitHub Pages URL already works for testers
+   today (account + encrypted backup + everything above).
+
+---
+
 ## Where MIRA stands today
 
 This is a strong, mature app, not an early prototype. It already has:
