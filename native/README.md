@@ -43,6 +43,24 @@ Then rebuild in Android Studio / Xcode and submit the update.
 - App name: **MIRA**. Icons live at the repo root (`icon-512.png`,
   `icon-maskable-512.png`, `apple-touch-icon.png`).
 
+## Reminders (local notifications)
+The web app already contains the full reminders UI and scheduling logic
+(Settings → Nutrition → Reminders). It talks to Capacitor's Local Notifications
+plugin, which is listed in `package.json` and installs with `npm install`. No
+extra JavaScript is needed — the same `index.html` drives it.
+
+Platform setup before the reminders fire on a real device:
+- **Android:** `npm run add:android` then, in Android Studio, the plugin adds the
+  `POST_NOTIFICATIONS` permission automatically (Android 13+ shows the prompt the
+  first time reminders are turned on).
+- **iOS:** `npm run add:ios`; iOS shows the notification-permission prompt the
+  first time reminders are enabled. Nothing to add to `Info.plist` for local
+  notifications.
+
+On the web build (GitHub Pages) the same UI saves the user's choices and shows a
+note that reminders activate in the installed app — a browser tab can't fire
+notifications while it's closed, so this is expected.
+
 ## Notes / things to decide before store submission
 - **Payments:** if you charge for Pro/Team *inside the iOS app*, Apple requires
   In-App Purchase (15–30% fee) — you can't use Stripe there. Web/Android differ.

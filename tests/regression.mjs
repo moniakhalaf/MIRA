@@ -301,6 +301,37 @@ async function browserChecks(html) {
     eq("PNG has real bytes", week.blobHasBytes, true);
     eq("share caption is branded", week.capHasMira, true);
 
+    // ---- 12. Reminders: schedule logic + native bridge -------------------
+    console.log("\n12. Reminders (schedule payload + native sync)");
+    const rem = await page.evaluate(async () => {
+      S.settings.reminders = {enabled: true, items: {
+        breakfast: {on: true, time: "08:15"}, lunch: {on: false}, dinner: {on: false}, water: {on: true, time: "15:30"},
+      }};
+      const activeIds = Reminders.active().map(x => x.id).sort();
+      const payload = Reminders.payload();
+      const bf = payload.find(p => p.id === 101);
+      // web (no Capacitor) sync is a no-op that reports native:false
+      const webSync = await Reminders.sync();
+      // now mock the native plugin and confirm it schedules the active ones
+      const scheduled = [];
+      window.Capacitor = {Plugins: {LocalNotifications: {
+        checkPermissions: async () => ({display: "granted"}),
+        requestPermissions: async () => ({display: "granted"}),
+        cancel: async () => {},
+        schedule: async (o) => { o.notifications.forEach(n => scheduled.push(n.id)); },
+      }}};
+      const nativeSync = await Reminders.sync();
+      delete window.Capacitor;
+      return {activeIds, bfHour: bf && bf.schedule.on.hour, bfMin: bf && bf.schedule.on.minute,
+        bfRepeats: bf && bf.schedule.repeats, webNative: webSync.native, nativeScheduled: nativeSync.scheduled, scheduledIds: scheduled.sort()};
+    });
+    eq("only enabled reminders are active", rem.activeIds, ["breakfast", "water"]);
+    eq("breakfast scheduled at 08:15", [rem.bfHour, rem.bfMin], [8, 15]);
+    eq("reminders repeat daily", rem.bfRepeats, true);
+    eq("web sync is a graceful no-op", rem.webNative, false);
+    eq("native sync schedules the active reminders", rem.nativeScheduled, 2);
+    eq("native scheduled the right notification ids", rem.scheduledIds, [101, 104]);
+
     console.log("\n" + (errs.length ? "Console errors: " + JSON.stringify(errs) : "No console errors."));
     if (errs.length) fail += errs.length;
   } finally {

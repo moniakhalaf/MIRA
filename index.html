@@ -826,6 +826,23 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
 .stor-row .stor-bar{flex:1;height:6px;border-radius:99px;background:var(--key);overflow:hidden}
 .stor-row .stor-bar span{display:block;height:100%;background:var(--acc);border-radius:99px}
 .stor-row .stor-b{min-width:58px;text-align:end;color:var(--txt);font-weight:600}
+.rem-list{display:flex;flex-direction:column;gap:2px}
+.rem-row{display:flex;align-items:center;gap:9px;padding:8px 2px}
+.rem-row.dim{opacity:.55}
+.rem-row .rem-ic{color:var(--txt3);display:flex;flex:0 0 auto}
+.rem-row .rem-lb{flex:1;min-width:0;font-size:13.5px;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rem-time{width:96px;flex:0 0 96px;min-height:34px;padding:5px 6px;margin:0;font-size:12.5px;border-radius:8px;background:var(--bg2);color:var(--txt);border:1px solid var(--line2);-webkit-appearance:none;appearance:none}
+.rem-time:disabled{opacity:.5}
+.rem-tog{position:relative;width:44px;height:26px;border-radius:99px;background:var(--line2);border:none;flex:0 0 auto;padding:0;transition:background .2s}
+.rem-tog.on{background:var(--acc)}
+.rem-tog span{position:absolute;top:3px;inset-inline-start:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 2px rgba(0,0,0,.3)}
+.rem-tog.on span{transform:translateX(18px)}
+[dir="rtl"] .rem-tog.on span{transform:translateX(-18px)}
+.rem-tog:disabled{opacity:.45}
+.rem-tog.master{width:48px;height:28px}
+.rem-tog.master span{width:22px;height:22px}
+.rem-tog.master.on span{transform:translateX(20px)}
+[dir="rtl"] .rem-tog.master.on span{transform:translateX(-20px)}
 /* keyboard focus ring for accessibility (doesn't show on mouse/touch) */
 :focus-visible{outline:2px solid var(--acc);outline-offset:2px;border-radius:8px}
 /* in-app reminder nudges on Home */
@@ -1960,7 +1977,7 @@ body.sheet-lock .content{overflow:hidden !important}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.281";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.282";   // bump on every deploy — shown in Settings
 
 /* ---------------- optional cloud backend (Supabase + Stripe) ----------------
    MIRA is fully on-device by default. To turn the Subscription screen and
@@ -3123,6 +3140,11 @@ const TR = {
     "Security":"الأمان","PIN on":"الرمز مفعّل","No PIN":"لا يوجد رمز","Change PIN":"تغيير الرمز","Set PIN":"تعيين رمز","Remove PIN":"إزالة الرمز",
     "Encryption":"التشفير","Encrypted":"مشفّر","Encrypt my data":"تشفير بياناتي","Cancel":"إلغاء","Backup & data":"النسخ الاحتياطي والبيانات",
     "Export backup":"تصدير نسخة احتياطية","Restore backup":"استعادة نسخة احتياطية","Erase everything on this device":"محو كل شيء على هذا الجهاز",
+    "Reminders":"التذكيرات","Gentle daily nudges to log meals, water and weight, at times you choose.":"تذكيرات يومية لطيفة لتسجيل الوجبات والماء والوزن في أوقات تختارها.",
+    "Log breakfast":"سجّل الفطور","Log lunch":"سجّل الغداء","Log dinner":"سجّل العشاء","Drink water":"اشرب الماء","Log your weight":"سجّل وزنك","Review your day":"راجع يومك",
+    "Good morning — what did you have for breakfast?":"صباح الخير — ماذا تناولت على الفطور؟","Lunch time — log it to stay on track.":"وقت الغداء — سجّله لتبقى على المسار.","Dinner — add it to close out your day's macros.":"العشاء — أضِفه لإغلاق ماكروز يومك.","Hydration check — how's your water today?":"فحص الترطيب — كيف ماؤك اليوم؟","Morning weigh-in keeps your trend accurate.":"وزنك الصباحي يبقي اتجاهك دقيقًا.","How did today go? Check your deficit and protein.":"كيف كان يومك؟ راجع عجزك وبروتينك.",
+    "On this device, reminders fire as real notifications — even when MIRA is closed.":"على هذا الجهاز، تظهر التذكيرات كإشعارات حقيقية — حتى عندما تكون ميرا مغلقة.","Your choices are saved and ready. Reminders fire as notifications in the installed MIRA app; a browser tab can't alert you once it's closed.":"خياراتك محفوظة وجاهزة. تظهر التذكيرات كإشعارات في تطبيق ميرا المُثبَّت؛ لا يمكن لعلامة تبويب المتصفح تنبيهك بعد إغلاقها.",
+    "Send a test notification":"أرسل إشعارًا تجريبيًا","Reminders on":"التذكيرات مفعّلة","Reminders off":"التذكيرات متوقّفة","Test sent — you'll see it in ~5 seconds.":"أُرسِل الاختبار — ستراه خلال ~5 ثوانٍ.","Test notifications only work in the installed app.":"الإشعارات التجريبية تعمل فقط في التطبيق المُثبَّت.","Test reminder — notifications are working ✓":"تذكير تجريبي — الإشعارات تعمل ✓",
     "What's using space":"ما الذي يشغل المساحة","Clear progress photos":"امسح صور التقدّم","Photos":"الصور","Recipe images":"صور الوصفات","Chats":"المحادثات","Food log":"سجل الطعام","Everything else":"كل شيء آخر",
     "Photos and recipe images take the most room. Deleting a photo or a recipe's image frees space immediately.":"الصور وصور الوصفات تشغل أكبر مساحة. حذف صورة أو صورة وصفة يحرّر المساحة فورًا.",
     "Storage is full — recent changes may not be saved. Export a backup now, then free space below.":"المساحة ممتلئة — قد لا تُحفظ التغييرات الأخيرة. صدّر نسخة احتياطية الآن، ثم حرّر مساحة بالأسفل.",
@@ -4160,6 +4182,7 @@ const BLANK = () => ({
     widgets: ["cal", "deficit", "protein", "water", "task", "bill"],
     plan: "free",       // this device's subscription tier (free|pro|team) — prototype
     owner: false,       // unlocks the Admin console (prototype; a real backend gates this server-side)
+    reminders: {enabled: false, items: {}},   // daily local notifications (native app) — {id:{on,time}}
   },
   domains: JSON.parse(JSON.stringify(DEFAULT_DOMAINS)),
   admin: {members: [], seeded: false},   // prototype members store for the Admin console
@@ -4310,6 +4333,7 @@ function migrateChats(){
   if (S.settings.breakLen === undefined) S.settings.breakLen = 5;
   if (S.settings.profession === undefined) S.settings.profession = "";
   if (!Array.isArray(S.favs)) S.favs = [];   // foods pinned for one-tap logging
+  if (!S.settings.reminders || typeof S.settings.reminders !== "object") S.settings.reminders = {enabled: false, items: {}};
   if (S.settings.goal === undefined) S.settings.goal = "";
   if (!Array.isArray(S.settings.widgets)) S.settings.widgets = ["cal", "deficit", "protein", "water", "task", "bill"];
   if (S.settings.restLen === undefined) S.settings.restLen = 90;
@@ -4496,6 +4520,59 @@ function fmtBytes(n){
   if (n < 1024 * 1024) return (n / 1024).toFixed(n < 10240 ? 1 : 0) + " KB";
   return (n / 1048576).toFixed(1) + " MB";
 }
+
+/* ---------------- Reminders (native local notifications) ----------------
+   Daily nudges to log meals, water and weight. On the installed native app
+   (Capacitor) these schedule real on-device notifications that fire even when
+   the app is closed. On the web they can't fire in the background reliably, so
+   the choices are saved and clearly marked "ready for the app". */
+const REMINDER_DEFS = [
+  {id: "breakfast", nid: 101, icon: "flame",   label: "Log breakfast",  body: "Good morning — what did you have for breakfast?", time: "08:30", def: true},
+  {id: "lunch",     nid: 102, icon: "flame",   label: "Log lunch",      body: "Lunch time — log it to stay on track.",           time: "13:00", def: true},
+  {id: "dinner",    nid: 103, icon: "flame",   label: "Log dinner",     body: "Dinner — add it to close out your day's macros.",  time: "19:30", def: true},
+  {id: "water",     nid: 104, icon: "droplet", label: "Drink water",    body: "Hydration check — how's your water today?",         time: "15:00", def: false},
+  {id: "weight",    nid: 105, icon: "trend",   label: "Log your weight", body: "Morning weigh-in keeps your trend accurate.",      time: "07:30", def: false},
+  {id: "review",    nid: 106, icon: "check",   label: "Review your day", body: "How did today go? Check your deficit and protein.", time: "21:00", def: false},
+];
+const Reminders = {
+  plugin(){ try { return (window.Capacitor && Capacitor.Plugins && Capacitor.Plugins.LocalNotifications) || null; } catch (_) { return null; } },
+  native(){ return !!this.plugin(); },
+  cfg(){ return S.settings.reminders || (S.settings.reminders = {enabled: false, items: {}}); },
+  // Resolve every reminder to its current {on, time}, defaulting sensibly.
+  list(){
+    const items = this.cfg().items || {};
+    return REMINDER_DEFS.map(d => { const it = items[d.id] || {}; return Object.assign({}, d, {on: it.on != null ? !!it.on : d.def, time: it.time || d.time}); });
+  },
+  active(){ return this.cfg().enabled ? this.list().filter(x => x.on) : []; },
+  // Turn the active reminders into a Capacitor notification schedule payload.
+  payload(){
+    return this.active().map(x => {
+      const p = String(x.time).split(":"); const hour = Math.max(0, Math.min(23, parseInt(p[0], 10) || 0)); const minute = Math.max(0, Math.min(59, parseInt(p[1], 10) || 0));
+      return {id: x.nid, title: "MIRA", body: tr(x.body), schedule: {on: {hour, minute}, repeats: true, allowWhileIdle: true}};
+    });
+  },
+  // Reschedule on the native app: request permission, clear ours, schedule active.
+  async sync(){
+    const ln = this.plugin(); if (!ln) return {native: false};
+    try {
+      let perm = {display: "granted"};
+      try { perm = await ln.checkPermissions(); if (!perm || perm.display !== "granted") perm = await ln.requestPermissions(); } catch (_) {}
+      if (perm && perm.display && perm.display !== "granted") return {native: true, denied: true};
+      try { await ln.cancel({notifications: REMINDER_DEFS.map(d => ({id: d.nid}))}); } catch (_) {}
+      const notifs = this.payload();
+      if (notifs.length) await ln.schedule({notifications: notifs});
+      return {native: true, scheduled: notifs.length};
+    } catch (e) { return {native: true, error: String((e && e.message) || e)}; }
+  },
+  async test(){
+    const ln = this.plugin(); if (!ln) return false;
+    try {
+      try { const perm = await ln.checkPermissions(); if (!perm || perm.display !== "granted") await ln.requestPermissions(); } catch (_) {}
+      await ln.schedule({notifications: [{id: 199, title: "MIRA", body: tr("Test reminder — notifications are working ✓"), schedule: {at: new Date(Date.now() + 5000)}}]});
+      return true;
+    } catch (e) { return false; }
+  },
+};
 /* Turn on encryption: wrap a fresh data key with the passphrase, verify the
    round-trip, and only then keep it. Returns nothing; throws on failure. */
 async function encEnable(pass){
@@ -14372,6 +14449,28 @@ function cloudBackupCardHTML(){
     ${body}
   </div>`;
 }
+function remindersCardHTML(){
+  const r = Reminders.cfg();
+  const on = !!r.enabled;
+  const native = Reminders.native();
+  const rows = Reminders.list().map(x => `<div class="rem-row ${on && x.on ? "" : "dim"}">
+    <span class="rem-ic">${ic(x.icon, 15)}</span>
+    <span class="rem-lb">${tr(x.label)}</span>
+    <input type="time" class="rem-time" value="${x.time}" ${on && x.on ? "" : "disabled"} onchange="M.remTime('${x.id}',this.value)">
+    <button class="rem-tog ${x.on ? "on" : ""}" role="switch" aria-checked="${x.on}" aria-label="${tr(x.label)}" ${on ? "" : "disabled"} onclick="M.remItem('${x.id}')"><span></span></button>
+  </div>`).join("");
+  const note = native
+    ? tr("On this device, reminders fire as real notifications — even when MIRA is closed.")
+    : tr("Your choices are saved and ready. Reminders fire as notifications in the installed MIRA app; a browser tab can't alert you once it's closed.");
+  return `<div class="card">
+    <div class="card-h-row"><h3><span class="set-ic">${ic("bell", 16)}</span> ${tr("Reminders")}</h3>
+      <button class="rem-tog master ${on ? "on" : ""}" role="switch" aria-checked="${on}" aria-label="${tr("Reminders")}" onclick="M.remMaster()"><span></span></button></div>
+    <div class="muted" style="margin:8px 0 12px">${tr("Gentle daily nudges to log meals, water and weight, at times you choose.")}</div>
+    ${on ? `<div class="rem-list">${rows}</div>
+      ${native ? `<button class="btn sm sec" style="margin-top:12px" onclick="M.remTest()">${ic("bell", 14)} ${tr("Send a test notification")}</button>` : ""}` : ""}
+    <div class="tiny" style="margin-top:12px;color:var(--txt2)">${ic(native ? "check" : "bell", 13)} ${note}</div>
+  </div>`;
+}
 function settingsHTML(){
   const st = S.settings;
   const initial = (st.name || "M").trim().charAt(0).toUpperCase() || "M";
@@ -14459,6 +14558,7 @@ function settingsHTML(){
 
   </div>
   <div class="set-page" data-page="nutrition">
+  ${remindersCardHTML()}
   ${targetCalcHTML()}
   ${maintenanceCalcHTML()}
   ${macroSplitHTML()}
@@ -16353,6 +16453,22 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
     const yst = new Date(Date.now() - 864e5).toLocaleDateString("en-CA");
     this.copyDayToToday(yst);
   },
+  // --- Reminders (daily local notifications, native app) ---
+  remMaster(){ const r = Reminders.cfg(); r.enabled = !r.enabled; save(); Reminders.sync(); render(); toast(r.enabled ? tr("Reminders on") : tr("Reminders off")); },
+  remItem(id){
+    const r = Reminders.cfg(); r.items = r.items || {};
+    const cur = Reminders.list().find(x => x.id === id) || {};
+    r.items[id] = Object.assign({}, r.items[id], {on: !cur.on, time: (r.items[id] && r.items[id].time) || cur.time});
+    save(); Reminders.sync(); render();
+  },
+  remTime(id, val){
+    const r = Reminders.cfg(); r.items = r.items || {};
+    const cur = Reminders.list().find(x => x.id === id) || {};
+    r.items[id] = Object.assign({}, r.items[id], {time: val});
+    if (r.items[id].on == null) r.items[id].on = !!cur.on;
+    save(); Reminders.sync();   // no re-render: keep focus on the time field
+  },
+  async remTest(){ const ok = await Reminders.test(); toast(ok ? tr("Test sent — you'll see it in ~5 seconds.") : tr("Test notifications only work in the installed app.")); },
   // Pin/unpin a logged food to favorites for one-tap logging later.
   favToggleItem(id){
     const f = S.foods.find(x => x.id === id); if (!f) return;
@@ -17501,6 +17617,9 @@ if (location.protocol.startsWith("http")){
 /* start on a fresh chat each launch — previous conversations stay in the log */
 R.convId = null;
 render();
+/* Keep native local-notification schedules in sync with the user's settings on
+   every launch (no-op on the web, where Capacitor isn't present). */
+try { if (typeof Reminders !== "undefined") Reminders.sync(); } catch (_) {}
 /* iOS Safari can't fire beforeinstallprompt, so offer the "Add to Home Screen"
    hint once (dismissible). Android/desktop use the beforeinstallprompt handler. */
 if (location.protocol.startsWith("http") && isIOS() && !isStandalone()) setTimeout(showInstallBar, 4500);
