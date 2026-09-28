@@ -1951,7 +1951,7 @@ body.sheet-lock .content{overflow:hidden !important}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.278";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.279";   // bump on every deploy — shown in Settings
 
 /* ---------------- optional cloud backend (Supabase + Stripe) ----------------
    MIRA is fully on-device by default. To turn the Subscription screen and
@@ -3067,6 +3067,7 @@ const TR = {
     "Add ingredients by typing or snapping a label, tweak grams, then Update recipe — or Log my portion.":"أضف مكوّنات بالكتابة أو بتصوير ملصق، عدّل الغرامات، ثم حدّث الوصفة — أو سجّل حصّتي.",
     "Loaded — add or adjust ingredients, then Update recipe.":"تم التحميل — أضف أو عدّل المكوّنات، ثم حدّث الوصفة.",
     "Calories":"السعرات","Protein":"بروتين","Carbs":"كربوهيدرات","Fat":"دهون","Nutrition":"التغذية","Body composition":"تكوين الجسم",
+    "Deficit today":"عجز اليوم","Surplus today":"فائض اليوم","set maintenance":"حدّد الصيانة",
     "Finish your day":"أكمل يومك","last meal":"آخر وجبة","Log this":"سجّل هذا","Ideas to fill the gap":"أفكار لسدّ الفجوة",
     "Suggest what to eat":"اقترح ماذا آكل","Suggest again":"اقترح مجددًا",
     "You still have room today — here's what's left to hit your targets:":"ما زال لديك مجال اليوم — إليك ما تبقّى للوصول إلى أهدافك:",
@@ -4138,7 +4139,7 @@ const BLANK = () => ({
     restLen: 90,
     profession: "",
     goal: "",
-    widgets: ["cal", "protein", "water", "task", "bill"],
+    widgets: ["cal", "deficit", "protein", "water", "task", "bill"],
     plan: "free",       // this device's subscription tier (free|pro|team) — prototype
     owner: false,       // unlocks the Admin console (prototype; a real backend gates this server-side)
   },
@@ -4292,7 +4293,7 @@ function migrateChats(){
   if (S.settings.profession === undefined) S.settings.profession = "";
   if (!Array.isArray(S.favs)) S.favs = [];   // foods pinned for one-tap logging
   if (S.settings.goal === undefined) S.settings.goal = "";
-  if (!Array.isArray(S.settings.widgets)) S.settings.widgets = ["cal", "protein", "water", "task", "bill"];
+  if (!Array.isArray(S.settings.widgets)) S.settings.widgets = ["cal", "deficit", "protein", "water", "task", "bill"];
   if (S.settings.restLen === undefined) S.settings.restLen = 90;
   if (S.settings.coachPace === undefined) S.settings.coachPace = 0.5;
   if (S.settings.coachLastCheckin === undefined) S.settings.coachLastCheckin = "";
@@ -4940,6 +4941,7 @@ function ringCard(pct, color, center, label, sub, onclick){
 }
 const WIDGET_META = [
   {id: "cal", label: "Calories left", kind: "ring", cat: "Health"},
+  {id: "deficit", label: "Deficit today", kind: "ring", cat: "Health"},
   {id: "protein", label: "Protein left", kind: "ring", cat: "Health"},
   {id: "water", label: "Water", kind: "ring", cat: "Health"},
   {id: "carbs", label: "Carbs left", kind: "ring", cat: "Health"},
@@ -4961,6 +4963,14 @@ function widgetData(id){
   const t = todayStr(), tg = S.settings.targets || {};
   const scoreColor = s => s >= 66 ? "#3bb273" : s >= 40 ? "var(--amber)" : "#e06b6b";
   if (id === "cal"){ const tot = dayTotals(t); return {kind: "ring", pct: tg.kcal ? tot.kcal / tg.kcal * 100 : 0, color: "var(--acc)", center: tg.kcal ? n0(Math.max(0, tg.kcal - tot.kcal)) : n0(tot.kcal), label: tg.kcal ? "Calories left" : "Calories", sub: tg.kcal ? `${n0(tot.kcal)} / ${n0(tg.kcal)}` : "today", onclick: "M.homeSection('health')"}; }
+  if (id === "deficit"){
+    const def = (typeof dayDeficit === "function") ? dayDeficit(t) : null;
+    if (!def) return {kind: "ring", pct: 0, color: "var(--txt3)", center: "—", label: "Deficit today", sub: tr("set maintenance"), onclick: "M.goHealth('nutrition')"};
+    const inDeficit = def.diff >= 0;   // ate under upkeep
+    return {kind: "ring", pct: Math.min(100, def.eaten / def.maint * 100), color: inDeficit ? "#3bb273" : "var(--amber)",
+      center: n0(Math.abs(def.diff)), label: inDeficit ? "Deficit today" : "Surplus today",
+      sub: `${n0(def.eaten)} / ${n0(def.maint)}`, onclick: "M.homeSection('health')"};
+  }
   if (id === "protein"){ const tot = dayTotals(t); return {kind: "ring", pct: tg.protein ? tot.p / tg.protein * 100 : 0, color: "#4CC4E0", center: (tg.protein ? n0(Math.max(0, tg.protein - tot.p)) : n0(tot.p)) + "g", label: tg.protein ? "Protein left" : "Protein", sub: tg.protein ? `${n0(tot.p)} / ${n0(tg.protein)} g` : "today", onclick: "M.homeSection('health')"}; }
   if (id === "carbs"){ const tot = dayTotals(t); return {kind: "ring", pct: tg.carbs ? tot.c / tg.carbs * 100 : 0, color: "#F5B851", center: (tg.carbs ? n0(Math.max(0, tg.carbs - tot.c)) : n0(tot.c)) + "g", label: tg.carbs ? "Carbs left" : "Carbs", sub: tg.carbs ? `${n0(tot.c)} / ${n0(tg.carbs)} g` : "today", onclick: "M.homeSection('health')"}; }
   if (id === "fat"){ const tot = dayTotals(t); return {kind: "ring", pct: tg.fat ? tot.f / tg.fat * 100 : 0, color: "#A78BFA", center: (tg.fat ? n0(Math.max(0, tg.fat - tot.f)) : n0(tot.f)) + "g", label: tg.fat ? "Fat left" : "Fat", sub: tg.fat ? `${n0(tot.f)} / ${n0(tg.fat)} g` : "today", onclick: "M.homeSection('health')"}; }

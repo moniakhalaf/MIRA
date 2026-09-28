@@ -238,6 +238,25 @@ async function browserChecks(html) {
     eq("unpinning removes it", fav.pinnedAfterRemove, false);
     eq("favorites list empty after unpin", fav.favCount, 0);
 
+    // ---- 9. Deficit Home widget ------------------------------------------
+    console.log("\n9. Deficit widget");
+    const defw = await page.evaluate(() => {
+      const today = new Date().toLocaleDateString("en-CA");
+      S.settings.maintenanceKcal = 2150;
+      S.foods = [{ id: "d1", date: today, name: "day", kcal: 1800, p: 100, c: 180, f: 60 }];
+      const d = widgetData("deficit");
+      // now go over maintenance
+      S.foods.push({ id: "d2", date: today, name: "extra", kcal: 600, p: 0, c: 80, f: 20 });
+      const over = widgetData("deficit");
+      return { label: d.label, center: d.center, overLabel: over.label, overCenter: over.center,
+        inCatalog: WIDGET_META.some(w => w.id === "deficit") };
+    });
+    eq("deficit widget shows the deficit number", defw.center, "350");   // 2150 - 1800
+    eq("deficit widget labels a deficit", defw.label, "Deficit today");
+    eq("flips to surplus when over maintenance", defw.overLabel, "Surplus today");
+    eq("surplus number is correct", defw.overCenter, "250");             // 2400 - 2150
+    eq("deficit is in the widget catalog", defw.inCatalog, true);
+
     console.log("\n" + (errs.length ? "Console errors: " + JSON.stringify(errs) : "No console errors."));
     if (errs.length) fail += errs.length;
   } finally {
