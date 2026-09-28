@@ -817,6 +817,15 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
 /* storage meter (Settings › Backup) */
 .stor-meter{height:7px;border-radius:99px;background:var(--key);overflow:hidden}
 .stor-meter span{display:block;height:100%;background:var(--acc);border-radius:99px;transition:width .4s ease}
+.stor-toggle{display:flex;align-items:center;gap:7px;width:100%;text-align:start;background:none;border:none;color:var(--txt2);font-size:12.5px;font-weight:600;padding:4px 0}
+.stor-toggle .chev{margin-inline-start:auto;transition:transform .2s;font-size:10px;color:var(--txt3)}
+.fold.open>.stor-toggle .chev{transform:rotate(90deg)}
+.stor-list{display:flex;flex-direction:column;gap:7px;margin-top:8px}
+.stor-row{display:flex;align-items:center;gap:9px;font-size:12px}
+.stor-row .stor-nm{min-width:96px;color:var(--txt2)}
+.stor-row .stor-bar{flex:1;height:6px;border-radius:99px;background:var(--key);overflow:hidden}
+.stor-row .stor-bar span{display:block;height:100%;background:var(--acc);border-radius:99px}
+.stor-row .stor-b{min-width:58px;text-align:end;color:var(--txt);font-weight:600}
 /* keyboard focus ring for accessibility (doesn't show on mouse/touch) */
 :focus-visible{outline:2px solid var(--acc);outline-offset:2px;border-radius:8px}
 /* in-app reminder nudges on Home */
@@ -1951,7 +1960,7 @@ body.sheet-lock .content{overflow:hidden !important}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.279";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.280";   // bump on every deploy — shown in Settings
 
 /* ---------------- optional cloud backend (Supabase + Stripe) ----------------
    MIRA is fully on-device by default. To turn the Subscription screen and
@@ -3114,6 +3123,11 @@ const TR = {
     "Security":"الأمان","PIN on":"الرمز مفعّل","No PIN":"لا يوجد رمز","Change PIN":"تغيير الرمز","Set PIN":"تعيين رمز","Remove PIN":"إزالة الرمز",
     "Encryption":"التشفير","Encrypted":"مشفّر","Encrypt my data":"تشفير بياناتي","Cancel":"إلغاء","Backup & data":"النسخ الاحتياطي والبيانات",
     "Export backup":"تصدير نسخة احتياطية","Restore backup":"استعادة نسخة احتياطية","Erase everything on this device":"محو كل شيء على هذا الجهاز",
+    "What's using space":"ما الذي يشغل المساحة","Clear progress photos":"امسح صور التقدّم","Photos":"الصور","Recipe images":"صور الوصفات","Chats":"المحادثات","Food log":"سجل الطعام","Everything else":"كل شيء آخر",
+    "Photos and recipe images take the most room. Deleting a photo or a recipe's image frees space immediately.":"الصور وصور الوصفات تشغل أكبر مساحة. حذف صورة أو صورة وصفة يحرّر المساحة فورًا.",
+    "Storage is full — recent changes may not be saved. Export a backup now, then free space below.":"المساحة ممتلئة — قد لا تُحفظ التغييرات الأخيرة. صدّر نسخة احتياطية الآن، ثم حرّر مساحة بالأسفل.",
+    "This device's storage is full — your last change wasn't saved. Export a backup, then free space in Settings → Storage.":"مساحة هذا الجهاز ممتلئة — لم يُحفَظ تغييرك الأخير. صدّر نسخة احتياطية، ثم حرّر مساحة من الإعدادات ← التخزين.",
+    "No progress photos to clear.":"لا توجد صور تقدّم لمسحها.","Delete all":"احذف كل","progress photos? This frees space and can't be undone.":"صور تقدّم؟ هذا يحرّر المساحة ولا يمكن التراجع عنه.","Cleared":"مُسِح","photo":"صورة","photos":"صور",
     "Sign in to back up your data":"سجّل الدخول لنسخ بياناتك","Sign in with a one-time email code — no password. We'll email you a 6-digit code to type in here. Your data stays on this device until you turn on backup.":"سجّل الدخول برمز لمرة واحدة عبر البريد — دون كلمة مرور. سنرسل رمزًا من 6 أرقام لإدخاله هنا. تبقى بياناتك على هذا الجهاز حتى تُفعّل النسخ.",
     "Email me a code":"أرسل لي رمزًا","Email me a sign-in link":"أرسل لي رابط الدخول","Enter your code":"أدخِل رمزك","We emailed a 6-digit code to":"أرسلنا رمزًا من 6 أرقام إلى","Type it here to sign in — no browser needed.":"اكتبه هنا لتسجيل الدخول — دون متصفح.",
     "6-digit code":"رمز من 6 أرقام","Verify & sign in":"تحقّق وسجّل الدخول","Checking…":"جارٍ التحقّق…","Resend code":"إعادة إرسال الرمز","Resend email":"إعادة إرسال البريد","Use a different email":"استخدم بريدًا آخر",
@@ -4421,6 +4435,9 @@ function save(){
   clearTimeout(saveT);
   saveT = setTimeout(persist, 150);
 }
+function isQuotaError(e){
+  return e && (e.name === "QuotaExceededError" || e.name === "NS_ERROR_DOM_QUOTA_REACHED" || e.code === 22 || e.code === 1014);
+}
 async function persist(){
   try {
     if (R._dek && R._enc){
@@ -4431,8 +4448,49 @@ async function persist(){
     } else {
       localStorage.setItem("mira.data", JSON.stringify(S));
     }
+    R._storageFull = false;
     if (typeof Backup !== "undefined" && Backup.ready()) Backup.schedule();
-  } catch (e) { toast("Storage error — export a backup and clear old chats."); }
+  } catch (e) {
+    if (isQuotaError(e)){
+      // Storage is full: the change is NOT saved. Warn clearly and point the
+      // user at the biggest space users (photos/recipe images) so they can free
+      // room — never fail silently and lose data.
+      R._storageFull = true;
+      toast(tr("This device's storage is full — your last change wasn't saved. Export a backup, then free space in Settings → Storage."), 6500);
+    } else {
+      toast("Storage error — export a backup and clear old chats.");
+    }
+  }
+}
+// How much on-device storage MIRA is using, and what's taking the room — so the
+// user can see and manage it before hitting the browser's ~5 MB localStorage cap.
+function storageStats(){
+  const sz = o => { try { return o == null ? 0 : new Blob([JSON.stringify(o)]).size; } catch (_) { return 0; } };
+  const bsz = s => { try { return s ? new Blob([s]).size : 0; } catch (_) { return 0; } };
+  let used = 0; try { used = new Blob([localStorage.getItem("mira.data") || ""]).size; } catch (_) { used = sz(S); }
+  const photos = (S.photos || []).reduce((a, p) => a + bsz(p && p.data), 0);
+  const recipeImgs = (S.recipes || []).reduce((a, r) => a + bsz(r && r.image), 0);
+  const chats = sz(S.convs);
+  const foods = sz(S.foods) + sz(S.savedFoods) + sz(S.prep) + sz(S.mealPlan);
+  const training = sz(S.workouts) + sz(S.exercises) + sz(S.program) + sz(S.cardio) + sz(S.hyrox);
+  const raw = sz(S);
+  const other = Math.max(0, raw - photos - recipeImgs - chats - foods - training);
+  const CAP = 5 * 1024 * 1024;
+  const parts = [
+    {key: "Photos", bytes: photos},
+    {key: "Recipe images", bytes: recipeImgs},
+    {key: "Chats", bytes: chats},
+    {key: "Food log", bytes: foods},
+    {key: "Training", bytes: training},
+    {key: "Everything else", bytes: other},
+  ].filter(p => p.bytes > 1024).sort((a, b) => b.bytes - a.bytes);
+  return {used, cap: CAP, pct: Math.min(100, Math.round(used / CAP * 100)), photos, recipeImgs, parts};
+}
+function fmtBytes(n){
+  n = Math.max(0, +n || 0);
+  if (n < 1024) return n + " B";
+  if (n < 1024 * 1024) return (n / 1024).toFixed(n < 10240 ? 1 : 0) + " KB";
+  return (n / 1048576).toFixed(1) + " MB";
 }
 /* Turn on encryption: wrap a fresh data key with the passphrase, verify the
    round-trip, and only then keep it. Returns nothing; throws on failure. */
@@ -14441,8 +14499,21 @@ function settingsHTML(){
     <div class="card-h-row"><h3><span class="set-ic">${ic("database", 16)}</span> ${tr("Backup & data")}</h3>
       <span class="set-status ${overdue ? "" : "on"}"><span class="dot" ${overdue ? `style="background:var(--amber);box-shadow:0 0 0 3px color-mix(in srgb,var(--amber) 22%,transparent)"` : ""}></span>${esc(ageTxt)}</span></div>
     <div class="muted" style="margin:12px 0 10px">Logs, targets, saved foods, chats and settings live only in this browser${overdue ? " — and browsers can clear that storage. Export a backup so nothing is lost" : ""}. ${overdue ? "" : "Export a backup so nothing is lost across reinstalls or devices."}</div>
+    ${R._storageFull ? `<div class="rc-stale" style="margin-bottom:10px"><span>${ic("alert", 14)} ${tr("Storage is full — recent changes may not be saved. Export a backup now, then free space below.")}</span></div>` : ""}
     <div class="stor-meter"><span style="width:${si.pct}%;${si.pct >= 80 ? "background:var(--amber)" : ""}"></span></div>
-    <div class="tiny" style="margin:6px 0 12px;color:var(--txt2)">On-device data: <b>${si.kb < 1024 ? n0(si.kb) + " KB" : (si.kb / 1024).toFixed(1) + " MB"}</b> · about ${si.pct}% of the browser's ~5 MB budget${si.pct >= 80 ? " — consider clearing old chats" : ""}.</div>
+    <div class="tiny" style="margin:6px 0 12px;color:var(--txt2)">On-device data: <b>${si.kb < 1024 ? n0(si.kb) + " KB" : (si.kb / 1024).toFixed(1) + " MB"}</b> · about ${si.pct}% of the browser's ~5 MB budget${si.pct >= 80 ? " — free space below" : ""}.</div>
+    ${(() => {
+      const st = storageStats();
+      if (!st.parts.length) return "";
+      const top = st.parts[0].bytes || 1;
+      const rows = st.parts.map(p => `<div class="stor-row"><span class="stor-nm">${tr(p.key)}</span><span class="stor-bar"><span style="width:${Math.max(3, Math.round(p.bytes / top * 100))}%"></span></span><span class="stor-b">${fmtBytes(p.bytes)}</span></div>`).join("");
+      const clean = [];
+      if (st.photos > 20480) clean.push(`<button class="btn sm sec" onclick="M.clearPhotos()">${ic("trash", 14)} ${tr("Clear progress photos")} (${fmtBytes(st.photos)})</button>`);
+      return `<div class="fold ${R.storBreakdown ? "open" : ""}" style="margin-bottom:10px">
+        <button class="stor-toggle" onclick="M.fold('storBreakdown', this)">${ic("list", 13)} ${tr("What's using space")} <span class="chev">▶</span></button>
+        <div class="fold-body"><div class="stor-list">${rows}</div>${clean.length ? `<div class="row" style="margin-top:10px;flex-wrap:wrap">${clean.join("")}</div>` : ""}
+        <div class="tiny" style="margin-top:8px;color:var(--txt3)">${tr("Photos and recipe images take the most room. Deleting a photo or a recipe's image frees space immediately.")}</div></div></div>`;
+    })()}
     <div class="row" style="margin-bottom:10px">
       <button class="btn sm ${overdue ? "" : "sec"}" onclick="M.backup()">${ic("download", 15)} ${tr("Export backup")}</button>
       <button class="btn sm sec" onclick="M.restore()">${ic("upload", 15)} ${tr("Restore backup")}</button>
@@ -17072,6 +17143,13 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
   photoOpen(id){ R.photoView = id; render(); },
   photoClose(){ R.photoView = null; render(); },
   photoDel(id){ if (confirm("Delete this photo?")){ S.photos = S.photos.filter(p => p.id !== id); R.photoView = null; save(); render(); } },
+  clearPhotos(){
+    const n = (S.photos || []).length;
+    if (!n){ toast(tr("No progress photos to clear.")); return; }
+    if (!confirm(tr("Delete all") + " " + n + " " + tr("progress photos? This frees space and can't be undone."))) return;
+    S.photos = []; R.photoView = null; save(); render();
+    toast(`${tr("Cleared")} ${n} ${n === 1 ? tr("photo") : tr("photos")} ✓`);
+  },
   labSave(){
     const f = R.labForm;
     const marker = f.marker === "Custom…" ? f.custom.trim() : f.marker;

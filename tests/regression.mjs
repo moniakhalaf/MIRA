@@ -257,6 +257,30 @@ async function browserChecks(html) {
     eq("surplus number is correct", defw.overCenter, "250");             // 2400 - 2150
     eq("deficit is in the widget catalog", defw.inCatalog, true);
 
+    // ---- 10. Storage stats + photo cleanup -------------------------------
+    console.log("\n10. Storage meter, breakdown & cleanup");
+    const stor = await page.evaluate(() => {
+      const bigImg = "data:image/jpeg;base64," + "A".repeat(60000);
+      S.photos = [{ id: "p1", date: "2026-01-01", data: bigImg }, { id: "p2", date: "2026-02-01", data: bigImg }];
+      S.recipes = [{ id: "r1", name: "Bake", image: "data:image/jpeg;base64," + "B".repeat(40000), per: {} }];
+      const st = storageStats();
+      const photoBytesBefore = st.photos;
+      const topKey = st.parts[0] && st.parts[0].key;
+      M.clearPhotos = M.clearPhotos; // ensure present
+      // simulate the confirm() as accepted
+      const origConfirm = window.confirm; window.confirm = () => true;
+      M.clearPhotos();
+      window.confirm = origConfirm;
+      return { photoBytesBefore, topKey, photosAfter: (S.photos || []).length,
+        recipeImgBytes: storageStats().recipeImgs, fmt: fmtBytes(1536), fmtMb: fmtBytes(2 * 1048576) };
+    });
+    eq("photos measured as biggest space user", stor.topKey, "Photos");
+    eq("photo bytes counted (~120 KB)", stor.photoBytesBefore > 100000, true);
+    eq("clear photos empties the album", stor.photosAfter, 0);
+    eq("recipe image bytes still counted", stor.recipeImgBytes > 30000, true);
+    eq("fmtBytes KB", stor.fmt, "1.5 KB");
+    eq("fmtBytes MB", stor.fmtMb, "2.0 MB");
+
     console.log("\n" + (errs.length ? "Console errors: " + JSON.stringify(errs) : "No console errors."));
     if (errs.length) fail += errs.length;
   } finally {
