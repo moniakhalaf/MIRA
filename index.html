@@ -1258,6 +1258,16 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
 .ql-chip .ql-k{font-size:11.5px;font-weight:700;color:var(--acc);background:var(--acc-soft);padding:2px 7px;border-radius:8px;flex:0 0 auto}
 .ql-card .ql-yst{width:100%;margin-top:10px}
 .ql-card .ql-hint{margin-top:9px;color:var(--txt3)}
+.ql-card .ql-sub{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;letter-spacing:.02em;text-transform:uppercase;color:var(--txt3);margin:12px 2px 6px}
+.ql-card .ql-sub:first-child{margin-top:2px}
+.ql-card .ql-sub .svgi{width:12px;height:12px;color:#e8a93d;fill:#e8a93d}
+.ql-chip.fav{border-color:color-mix(in srgb,#e8a93d 40%,var(--line2))}
+.ql-chip.fav .svgi{width:12px;height:12px;color:#e8a93d;fill:#e8a93d;flex:0 0 auto}
+.ql-chip .ql-x{font-size:12px;color:var(--txt3);margin-inline-start:2px;padding:0 2px;flex:0 0 auto}
+.ql-chip .ql-x:active{color:var(--red,#e05656)}
+.fi-fav{color:var(--txt3);background:none;border:none;padding:4px}
+.fi-fav.faved{color:#e8a93d}
+.fi-fav.faved .svgi{fill:#e8a93d}
 .snap-hero-hint{margin:-4px 2px 14px;color:var(--txt3);line-height:1.4}
 .rv-micros b{color:var(--txt);font-weight:650}
 .glasses{display:flex;flex-wrap:wrap;gap:4px;margin:10px 0 10px}
@@ -1941,7 +1951,7 @@ body.sheet-lock .content{overflow:hidden !important}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.277";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.278";   // bump on every deploy — shown in Settings
 
 /* ---------------- optional cloud backend (Supabase + Stripe) ----------------
    MIRA is fully on-device by default. To turn the Subscription screen and
@@ -2419,6 +2429,7 @@ const I = {
   download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>',
   upload: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>',
   bookmark: '<path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>',
+  star: '<polygon points="12 2 15.1 8.6 22 9.3 17 14.1 18.2 21 12 17.6 5.8 21 7 14.1 2 9.3 8.9 8.6 12 2"/>',
   chart: '<line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/>',
   clock: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
   globe: '<circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>',
@@ -3489,6 +3500,12 @@ const TR = {
     "Quick log": "تسجيل سريع",
     "Same as yesterday": "نفس الأمس",
     "One tap logs it to the current meal — adjust it anytime.": "نقرة واحدة تسجّله في وجبة الوقت الحالي — عدّله متى شئت.",
+    "Favorites": "المفضّلة",
+    "Frequent": "المتكرّرة",
+    "Pin to favorites": "ثبّت في المفضّلة",
+    "Remove from favorites": "أزِل من المفضّلة",
+    "Pinned to favorites": "تم التثبيت في المفضّلة",
+    "Tap the star on any logged food to pin it here.": "اضغط النجمة على أي طعام مُسجّل لتثبيته هنا.",
     "Logged": "تم التسجيل",
     "Removed": "تم الحذف",
     "Log": "تسجيل",
@@ -4273,6 +4290,7 @@ function migrateChats(){
   if (S.settings.focusLen === undefined) S.settings.focusLen = 25;
   if (S.settings.breakLen === undefined) S.settings.breakLen = 5;
   if (S.settings.profession === undefined) S.settings.profession = "";
+  if (!Array.isArray(S.favs)) S.favs = [];   // foods pinned for one-tap logging
   if (S.settings.goal === undefined) S.settings.goal = "";
   if (!Array.isArray(S.settings.widgets)) S.settings.widgets = ["cal", "protein", "water", "task", "bill"];
   if (S.settings.restLen === undefined) S.settings.restLen = 90;
@@ -7369,6 +7387,7 @@ function foodItemHTML(f){
     <div><div class="nm" dir="auto">${esc(f.name)} ${f.conf && f.conf !== "user" ? `<span class="badge ${f.conf}">${f.conf}</span>` : ""}</div>
     <div class="meta">${entryTime(f) ? `<span class="fi-time">${esc(entryTime(f))}</span> · ` : ""}${f.amount ? esc(f.amount) + " · " : ""}${n0(f.kcal)} kcal · ${n1(f.p)}P · ${n1(f.c)}C · ${n1(f.f)}F</div></div>
     ${f.date && f.date !== todayStr() ? `<button class="fi-copy" aria-label="${t("Copy to today")}" title="${t("Copy to today")}" onclick="M.copyItemToToday('${f.id}')">${ic("copy", 13)}</button>` : ""}
+    <button class="fi-fav ${isFav(f.name) ? "faved" : ""}" aria-label="${isFav(f.name) ? t("Remove from favorites") : t("Pin to favorites")}" title="${isFav(f.name) ? t("Remove from favorites") : t("Pin to favorites")}" onclick="M.favToggleItem('${f.id}')">${ic("star", 13)}</button>
     <button class="mmove ${menu ? "on" : ""}" aria-label="Change meal for ${esc(f.name)}" onclick="M.mealMenu('${f.id}')">${ic("refresh", 13)}</button>
     <button class="edit" aria-label="Edit ${esc(f.name)}" onclick="M.foodEdit('${f.id}')">${ic("edit", 14)}</button>
     <button class="del" aria-label="Delete ${esc(f.name)}" onclick="M.foodDel('${f.id}')">✕</button>
@@ -7973,20 +7992,30 @@ function frequentFoods(limit){
   return [...map.values()].filter(e => e.count >= 2 && e.kcal > 0)
     .sort((a, b) => b.count - a.count || b.ts - a.ts).slice(0, limit || 6);
 }
-// One-tap logging: your regular foods as chips, plus "same as yesterday".
+// Favorites: foods the user pinned for one-tap logging (kept even if eaten once,
+// unlike the auto "frequent" list). Deduped by name.
+function favKey(name){ return String(name || "").trim().toLowerCase(); }
+function isFav(name){ const k = favKey(name); return (S.favs || []).some(x => favKey(x.name) === k); }
+// One-tap logging: your pinned favorites + regular foods as chips, plus "same as yesterday".
 function quickLogHTML(){
   const yst = new Date(Date.now() - 864e5).toLocaleDateString("en-CA");
-  const freq = frequentFoods(6);
+  const favs = S.favs || [];
+  // frequent list, minus anything already pinned (so a food shows once)
+  const freq = frequentFoods(8).filter(f => !isFav(f.name)).slice(0, 6);
   R._qlFreq = freq;   // stash so the chip handler can look up by index (names may contain quotes)
   const hasYst = (S.foods || []).some(f => f.date === yst);
-  if (!freq.length && !hasYst) return "";
+  if (!favs.length && !freq.length && !hasYst) return "";
+  const favChips = favs.map((f, i) => `<button class="ql-chip fav" onclick="M.favLog(${i})">
+      ${ic("star", 12)}<span class="ql-nm" dir="auto">${esc(f.name)}</span><span class="ql-k">${n0(f.kcal)}</span>
+      <span class="ql-x" role="button" tabindex="0" aria-label="${t("Remove from favorites")}" onclick="event.stopPropagation();M.favRemove(${i})">✕</span></button>`).join("");
   const chips = freq.map((f, i) => `<button class="ql-chip" onclick="M.quickLogFood(${i})">
       <span class="ql-nm" dir="auto">${esc(f.name)}</span><span class="ql-k">${n0(f.kcal)}</span></button>`).join("");
   return `<div class="card ql-card">
     <h3>${ic("plus", 16)} ${t("Quick log")}</h3>
-    ${freq.length ? `<div class="ql-chips">${chips}</div>` : ""}
+    ${favs.length ? `<div class="ql-sub">${ic("star", 12)} ${t("Favorites")}</div><div class="ql-chips">${favChips}</div>` : ""}
+    ${freq.length ? `${favs.length ? `<div class="ql-sub">${t("Frequent")}</div>` : ""}<div class="ql-chips">${chips}</div>` : ""}
     ${hasYst ? `<button class="btn sec ql-yst" onclick="M.sameAsYesterday()">${ic("copy", 15)} ${t("Same as yesterday")}</button>` : ""}
-    <div class="tiny ql-hint">${t("One tap logs it to the current meal — adjust it anytime.")}</div>
+    <div class="tiny ql-hint">${t("One tap logs it to the current meal — adjust it anytime.")}${favs.length || freq.length ? " " + t("Tap the star on any logged food to pin it here.") : ""}</div>
   </div>`;
 }
 // Today summary — macro bars + remaining. Self-contained so any food sub-tab can show it.
@@ -16134,6 +16163,35 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
   sameAsYesterday(){
     const yst = new Date(Date.now() - 864e5).toLocaleDateString("en-CA");
     this.copyDayToToday(yst);
+  },
+  // Pin/unpin a logged food to favorites for one-tap logging later.
+  favToggleItem(id){
+    const f = S.foods.find(x => x.id === id); if (!f) return;
+    S.favs = S.favs || [];
+    const k = favKey(f.name);
+    const at = S.favs.findIndex(x => favKey(x.name) === k);
+    if (at >= 0){ S.favs.splice(at, 1); save(); render(); toast(`${tr("Removed from favorites")} ✓`); return; }
+    S.favs.unshift({name: f.name, amount: f.amount || "", kcal: num(f.kcal), p: num(f.p), c: num(f.c), f: num(f.f)});
+    if (S.favs.length > 40) S.favs.pop();
+    buzz(); save(); render(); toast(`${tr("Pinned to favorites")} ✓`);
+  },
+  favRemove(i){
+    if (!S.favs || !S.favs[i]) return;
+    S.favs.splice(i, 1); save(); render(); toast(`${tr("Removed from favorites")} ✓`);
+  },
+  favLog(i){
+    const f = (S.favs || [])[i]; if (!f) return;
+    const today = todayStr();
+    const entry = {id: uid(), date: today, name: f.name, amount: f.amount || "",
+      kcal: num(f.kcal), p: num(f.p), c: num(f.c), f: num(f.f),
+      meal: mealFromTime(nowHM()), conf: "user", ts: Date.now()};
+    S.foods.push(entry);
+    if (R.openDays) R.openDays.add(today);
+    save(); render(); buzz();
+    undoBar(`${tr("Logged")} ${f.name}`, () => {
+      const ix = S.foods.findIndex(x => x.id === entry.id);
+      if (ix >= 0){ S.foods.splice(ix, 1); save(); render(); toast(`${tr("Removed")} ✓`); }
+    });
   },
   foodRangeMode(mode){
     const prev = foodHistRange();

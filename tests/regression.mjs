@@ -217,6 +217,27 @@ async function browserChecks(html) {
     eq("maintenance measured from intake + weight trend", adapt.plausible, true);
     eq("apply writes the measured value to settings", adapt.applied, adapt.tdee);
 
+    // ---- 8. Favorites: pin a food and one-tap log it ----------------------
+    console.log("\n8. Favorites (pin + one-tap log)");
+    const fav = await page.evaluate(async () => {
+      const today = new Date().toLocaleDateString("en-CA");
+      S.foods = [{ id: "f1", date: today, name: "Greek yogurt", amount: "170 g", kcal: 100, p: 17, c: 6, f: 0 }];
+      S.favs = [];
+      M.favToggleItem("f1");                 // pin it
+      const pinnedAfterAdd = isFav("Greek yogurt");
+      const before = S.foods.length;
+      M.favLog(0);                           // one-tap log from favorites
+      const loggedName = (S.foods[S.foods.length - 1] || {}).name;
+      const added = S.foods.length - before;
+      M.favToggleItem("f1");                 // unpin
+      return { pinnedAfterAdd, added, loggedName, pinnedAfterRemove: isFav("Greek yogurt"), favCount: S.favs.length };
+    });
+    eq("pinning a food adds it to favorites", fav.pinnedAfterAdd, true);
+    eq("favorite logs in one tap", fav.added, 1);
+    eq("logged the right food", fav.loggedName, "Greek yogurt");
+    eq("unpinning removes it", fav.pinnedAfterRemove, false);
+    eq("favorites list empty after unpin", fav.favCount, 0);
+
     console.log("\n" + (errs.length ? "Console errors: " + JSON.stringify(errs) : "No console errors."));
     if (errs.length) fail += errs.length;
   } finally {
