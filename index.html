@@ -154,6 +154,25 @@ body.kb .fab{display:none}
 .content.view-enter{animation:viewIn .24s cubic-bezier(.2,.7,.3,1)}
 @keyframes viewIn{from{opacity:0;transform:translateY(7px)}}
 @media(prefers-reduced-motion:reduce){.content.view-enter{animation:none}}
+/* ---------- Responsive: adapt to phone size & large/unfolded screens ----------
+   The app is already fluid + safe-area aware (handles iPhone notch, Samsung
+   punch-hole & Android gesture bar automatically). These rules add polish at the
+   extremes: a fluid side gutter, tighter spacing on small phones (SE / compact
+   Samsung), and a centered column on large/unfolded screens (foldables open,
+   tablets, desktop/side-panel) instead of stretching edge-to-edge. */
+.content{padding-left:clamp(11px,3.6vw,18px);padding-right:clamp(11px,3.6vw,18px)}
+@media(max-width:360px){
+  .content{padding-top:10px}
+  .card{padding:14px 13px}
+  .home-seg .seg-item{font-size:11px}
+  .home-seg .seg-item svg{width:16px;height:16px}
+}
+@media(min-width:600px){
+  .content{padding-inline:max(18px,calc((100% - 640px) / 2))}
+  .topbar{padding-inline:max(16px,calc((100% - 640px) / 2))}
+  .tabbar{padding-inline:max(8px,calc((100% - 560px) / 2))}
+  .fab{right:max(18px,calc((100% - 640px) / 2 + 6px))}
+}
 .empty-state{text-align:center;color:var(--txt2);font-size:13px;line-height:1.5;padding:22px 16px;background:var(--card);border:1px solid var(--line2);border-radius:14px}
 .empty-state b{display:block;color:var(--txt);font-size:14.5px;margin-bottom:3px}
 /* Conscious Spending Plan */
@@ -1977,7 +1996,7 @@ body.sheet-lock .content{overflow:hidden !important}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.282";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.283";   // bump on every deploy — shown in Settings
 
 /* ---------------- optional cloud backend (Supabase + Stripe) ----------------
    MIRA is fully on-device by default. To turn the Subscription screen and
