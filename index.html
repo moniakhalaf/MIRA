@@ -1996,7 +1996,7 @@ body.sheet-lock .content{overflow:hidden !important}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.284";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.285";   // bump on every deploy — shown in Settings
 
 /* ---------------- optional cloud backend (Supabase + Stripe) ----------------
    MIRA is fully on-device by default. To turn the Subscription screen and
@@ -3404,6 +3404,7 @@ const TR = {
     "hit target": "بلغت الهدف",
     "days": "أيام",
     "days met water goal": "أيام بلغت هدف الماء",
+    "on goal": "بلغت الهدف","average vs your water goal": "المتوسّط مقابل هدف الماء",
     "avg over": "متوسط على مدى",
     "energy": "طاقة",
     "Open tasks": "مهام مفتوحة",
@@ -5402,8 +5403,9 @@ function weekStats(){
   const nDaysFood = foodDates.length;
 
   // Hydration
-  let waterHitDays = 0, waterDaysLogged = 0;
-  days.forEach(d => { const g = S.water[d] || 0; if (g){ waterDaysLogged++; if (g * 250 >= S.settings.waterGoal) waterHitDays++; } });
+  let waterHitDays = 0, waterDaysLogged = 0, waterMlTotal = 0;
+  days.forEach(d => { const g = S.water[d] || 0; if (g){ waterDaysLogged++; waterMlTotal += g * 250; if (g * 250 >= S.settings.waterGoal) waterHitDays++; } });
+  const avgWaterMl = waterDaysLogged ? Math.round(waterMlTotal / waterDaysLogged) : 0;
 
   // Training
   const ws = (S.workouts || []).filter(w => inRange(w.date));
@@ -5441,7 +5443,7 @@ function weekStats(){
   const income = (S.budget || {}).income || 0;
 
   return {days, from, tg, nDaysFood, avgKcal: nDaysFood ? kcalSum / nDaysFood : null, avgP: nDaysFood ? pSum / nDaysFood : null, proteinHitDays,
-    waterHitDays, waterDaysLogged, ws: ws.length, trainDays, sets, sl: sl.length, avgSleep,
+    waterHitDays, waterDaysLogged, avgWaterMl, ws: ws.length, trainDays, sets, sl: sl.length, avgSleep,
     fasts: fasts.length, avgFast, openN, overdueN, doneN, totalTasks, habTotal, habDone, focusN,
     md: md.length, avgMood, avgEnergy, spent, income};
 }
@@ -5471,7 +5473,15 @@ function weekPerf(){
 
   // Hydration
   if (s.waterDaysLogged){
-    add("water", "droplet", tr("Hydration"), true, `${s.waterHitDays}/${s.waterDaysLogged} ${tr("days")}`, `${n0(S.settings.waterGoal)} ml/${tr("day")}`, s.waterHitDays / s.waterDaysLogged * 100, tr("days met water goal"));
+    // Show the water you actually drank (daily average) against your goal, so a
+    // day under the target still counts toward the bar instead of reading zero.
+    const goal = S.settings.waterGoal || 2500;
+    const avgL = (s.avgWaterMl / 1000).toFixed(1).replace(/\.0$/, "");
+    const goalL = (goal / 1000).toFixed(1).replace(/\.0$/, "");
+    add("water", "droplet", tr("Hydration"), true,
+      `${avgL} L ${tr("avg")} · ${s.waterHitDays}/${s.waterDaysLogged} ${tr("days")} ${tr("on goal")}`,
+      `${tr("goal")} ${goalL} L/${tr("day")}`,
+      Math.min(100, s.avgWaterMl / goal * 100), tr("average vs your water goal"));
   } else add("water", "droplet", tr("Hydration"), false, "", "", null);
 
   // Workouts — sessions vs a weekly target (program frequency, else 3)
@@ -6823,7 +6833,7 @@ function weekSummaryText(){
   const dp = (x, d = 1) => Math.round(x * Math.pow(10, d)) / Math.pow(10, d);
   L.push(`Window: ${s.from} to ${todayStr()} (7 days).`);
   L.push(s.nDaysFood ? `Nutrition: logged on ${s.nDaysFood}/7 days; avg ${n0(s.avgKcal)} kcal, ${n0(s.avgP)} g protein per logged day${s.tg.kcal ? ` (targets ${n0(s.tg.kcal)} kcal / ${n0(s.tg.protein)} g)` : ""}; protein target met on ${s.proteinHitDays}/${s.nDaysFood} logged days.` : `Nutrition: nothing logged this week.`);
-  L.push(s.waterDaysLogged ? `Hydration: water met on ${s.waterHitDays}/${s.waterDaysLogged} logged days.` : `Hydration: nothing logged this week.`);
+  L.push(s.waterDaysLogged ? `Hydration: averaged ${dp(s.avgWaterMl / 1000, 1)} L/day over ${s.waterDaysLogged} logged days (goal ${dp((S.settings.waterGoal || 2500) / 1000, 1)} L); hit the full goal on ${s.waterHitDays}/${s.waterDaysLogged} days.` : `Hydration: nothing logged this week.`);
   L.push(s.ws ? `Training: ${s.ws} workout(s) across ${s.trainDays} day(s), ${s.sets} total sets.` : `Training: no workouts logged this week.`);
   L.push(s.sl ? `Sleep: ${s.sl} night(s) logged, avg ${dp(s.avgSleep)} h.` : `Sleep: nothing logged this week.`);
   L.push(s.fasts ? `Fasting: ${s.fasts} session(s), avg ${dp(s.avgFast)} h.` : `Fasting: none logged this week.`);

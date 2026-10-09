@@ -332,6 +332,25 @@ async function browserChecks(html) {
     eq("native sync schedules the active reminders", rem.nativeScheduled, 2);
     eq("native scheduled the right notification ids", rem.scheduledIds, [101, 104]);
 
+    // ---- 13. Hydration shows actual amount, not zero ---------------------
+    console.log("\n13. Weekly hydration reflects actual intake");
+    const hyd = await page.evaluate(() => {
+      S.settings.waterGoal = 2500;
+      const day = (b) => new Date(Date.now() - b * 864e5).toLocaleDateString("en-CA");
+      S.water = {};
+      // drank 6 glasses (1.5 L) each of the last 7 days — under the 2.5 L goal
+      for (let i = 0; i < 7; i++) S.water[day(i)] = 6;
+      const s = weekStats();
+      const row = weekPerf().rows.find(r => r.key === "water");
+      return {avgMl: s.avgWaterMl, hitDays: s.waterHitDays, hasData: row.has,
+        adherence: row.adherence, valTxt: row.valTxt};
+    });
+    eq("average water measured (1500 ml)", hyd.avgMl, 1500);
+    eq("not counted as a goal hit (0 full days)", hyd.hitDays, 0);
+    eq("row shows data instead of blank", hyd.hasData, true);
+    eq("bar reflects 60% of goal, not 0", hyd.adherence, 60);
+    eq("value text shows the litres, not just 0/7", /1\.5 L/.test(hyd.valTxt), true);
+
     console.log("\n" + (errs.length ? "Console errors: " + JSON.stringify(errs) : "No console errors."));
     if (errs.length) fail += errs.length;
   } finally {
