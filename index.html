@@ -1500,6 +1500,8 @@ input[type="time"],input[type="date"],input[type="datetime-local"],input[type="m
 .dish-line.ing .dl-amt{order:2;flex:0 0 auto;font-style:normal;color:var(--txt3);font-size:11.5px}
 .dish-line.ing .dl-m{order:3;flex-basis:100%;text-align:end;white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--txt3);font-size:11.5px}
 [dir="rtl"] .dish-line.ing .dl-m{text-align:start}
+.dish-src-btns{display:flex;flex-wrap:wrap;gap:8px}
+.dish-src-btns .btn{flex:1 1 30%;min-width:96px;white-space:nowrap}
 .dish-rec-list{display:flex;flex-direction:column;gap:6px;max-height:min(46vh,320px);overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 .dish-rec{display:flex;align-items:center;gap:10px;width:100%;text-align:start;padding:10px 12px;border-radius:11px;background:var(--bg1);border:1px solid var(--line2)}
 .dish-rec:active{background:var(--acc-soft);border-color:var(--acc)}
@@ -1996,7 +1998,7 @@ body.sheet-lock .content{overflow:hidden !important}
    Flipping it to true enables the account screen before onboarding;
    until a backend exists the account is stored on-device only. */
 const FEATURES = { emailSignup: false };
-const BUILD = "2026-07-13.285";   // bump on every deploy — shown in Settings
+const BUILD = "2026-07-13.286";   // bump on every deploy — shown in Settings
 
 /* ---------------- optional cloud backend (Supabase + Stripe) ----------------
    MIRA is fully on-device by default. To turn the Subscription screen and
@@ -2661,6 +2663,7 @@ const TR = {
     "Snap the ingredients or their labels":"صوّر المكوّنات أو ملصقاتها","Read":"قرأتُ","ingredient":"مكوّن","ingredients":"مكوّنات","with macros":"مع الماكروز","now tap Get macros":"الآن اضغط «احسب الماكروز»",
     "Grams added":"الغرامات المُضافة","— set the grams you added":"— حدّد الغرامات التي أضفتها",
     "Snap a label":"صوّر ملصقاً","Add a recipe":"أضف وصفة","Add a saved recipe to this dish":"أضف وصفة محفوظة إلى هذا الطبق","from your recipe":"من وصفتك","Those are already priced — just set the grams you added.":"هذه محسوبة مسبقاً — فقط حدّد الغرامات التي أضفتها.",
+    "My foods":"أطعمتي","Add from foods you've logged":"أضف من الأطعمة التي سجّلتها","Nothing logged yet — log a few foods and they'll show up here.":"لا شيء مُسجّل بعد — سجّل بعض الأطعمة وستظهر هنا.",
     "Combine into a dish":"ادمج في طبق","Combine into a dish & save as recipe":"ادمج في طبق واحفظه كوصفة","Combined":"دُمج","— name it and Save as recipe":"— سمِّه واحفظه كوصفة","Loaded — adjust each ingredient's grams, then Save as recipe.":"تم التحميل — عدّل غرامات كل مكوّن ثم احفظه كوصفة.",
     "kcal":"سعرة","serving":"حصة",
     "Servings I ate":"الحصص التي أكلتُها","Get macros from ingredients":"احسب الماكروز من المكوّنات",
@@ -9824,6 +9827,36 @@ function dishRecipePickHTML(){
     <button class="btn sm sec" style="width:100%;margin-top:8px" onclick="M.dishPickRecipes()">${t("Done")}</button>
   </div>`;
 }
+// Foods the user has already logged (frequent + recent + saved), deduped by
+// name, so they can drop one into the dish builder instead of retyping it.
+function dishFoodNames(limit){
+  const map = new Map();
+  const put = (name, amount, kcal, ts, count) => {
+    const n = String(name || "").trim(), k = n.toLowerCase();
+    if (!n || map.has(k)) return;
+    map.set(k, {name: n, amount: amount || "", kcal: num(kcal), ts: ts || 0, count: count || 0});
+  };
+  (typeof frequentFoods === "function" ? frequentFoods(40) : []).forEach(f => put(f.name, f.amount, f.kcal, f.ts, f.count));
+  [...(S.foods || [])].filter(f => !f.cheat && f.meal !== "cheat").sort((a, b) => (b.ts || 0) - (a.ts || 0)).forEach(f => put(f.name, f.amount, f.kcal, f.ts, 0));
+  (S.savedFoods || []).forEach(f => put(f.name, f.amount, f.kcal, 0, 0));
+  return [...map.values()].sort((a, b) => (b.count - a.count) || (b.ts - a.ts)).slice(0, limit || 24);
+}
+function dishFoodPickHTML(){
+  const fs = dishFoodNames(24);
+  R._dishFoods = fs;   // stash so the handler can look up by index (names may contain quotes)
+  if (!fs.length) return `<div class="review-item dish-recpick" style="margin:0 0 8px"><div class="tiny" style="color:var(--txt2)">${t("Nothing logged yet — log a few foods and they'll show up here.")}</div>
+    <button class="btn sm sec" style="width:100%;margin-top:8px" onclick="M.dishPickFoods()">${t("Done")}</button></div>`;
+  return `<div class="review-item dish-recpick" style="margin:0 0 8px">
+    <b class="tiny" style="display:block;margin-bottom:7px">${ic("plus", 13)} ${t("Add from foods you've logged")}</b>
+    <div class="dish-rec-list">
+      ${fs.map((f, i) => `<button class="dish-rec" onclick="M.dishAddFood(${i})">
+        <span class="dr-nm" dir="auto">${esc(f.name)}</span>
+        ${f.kcal > 0 ? `<span class="dr-mac">${n0(f.kcal)} ${t("kcal")}${f.amount ? ` · ${esc(f.amount)}` : ""}</span>` : (f.amount ? `<span class="dr-mac">${esc(f.amount)}</span>` : "")}
+        <span class="dr-add">${ic("plus", 16)}</span></button>`).join("")}
+    </div>
+    <button class="btn sm sec" style="width:100%;margin-top:8px" onclick="M.dishPickFoods()">${t("Done")}</button>
+  </div>`;
+}
 
 // Normalized identity key for an ingredient name, so the SAME food is recognized
 // across typing, snapped labels and recipes even when the wording differs — brand
@@ -9884,14 +9917,17 @@ function dishHTML(){
     <div class="tiny" style="margin-bottom:8px">${t("List what went into the pot with the grams of each — MIRA prices every ingredient from standard food-composition data and sums the whole dish. Then log by grams.")}</div>
     <div class="field"><label>${t("Dish name")}</label><input value="${esc(dishForm.name)}" dir="auto" placeholder="e.g. Chicken machboos" oninput="dishForm.name=this.value"></div>
     <label class="tiny" style="display:block;margin-bottom:5px">${t("Ingredients & amounts, raw as they went in — include cooking oil, butter or ghee.")}</label>
-    <div class="grid2" style="gap:8px;margin-bottom:8px">
-      <button class="btn sm sec" style="width:100%" onclick="M.dishPhoto()" ${dishBusy ? "disabled" : ""}>${dishBusy ? "Reading…" : ic("camera", 14) + " " + t("Snap a label")}</button>
-      <button class="btn sm sec" style="width:100%" onclick="M.dishPickRecipes()" ${(S.recipes || []).length ? "" : "disabled"}>${ic("book", 14)} ${t("Add a recipe")}</button>
+    <div class="dish-src-btns" style="margin-bottom:8px">
+      <button class="btn sm sec" onclick="M.dishPhoto()" ${dishBusy ? "disabled" : ""}>${dishBusy ? "Reading…" : ic("camera", 14) + " " + t("Snap a label")}</button>
+      <button class="btn sm sec" onclick="M.dishPickFoods()">${ic("plus", 14)} ${t("My foods")}</button>
+      <button class="btn sm sec" onclick="M.dishPickRecipes()" ${(S.recipes || []).length ? "" : "disabled"}>${ic("book", 14)} ${t("Add a recipe")}</button>
     </div>
+    ${R.dishFoodList ? dishFoodPickHTML() : ""}
     ${R.dishRecipeList ? dishRecipePickHTML() : ""}
+    <datalist id="dishFoodDL">${dishFoodNames(60).map(f => `<option value="${esc(f.name)}"></option>`).join("")}</datalist>
     ${dishForm.ings.map((g, i) => `
     <div class="row" style="margin-bottom:6px">
-      <input value="${esc(g.n)}" dir="auto" placeholder="${t("Ingredient")} — e.g. basmati rice" oninput="dishForm.ings[${i}].n=this.value">
+      <input value="${esc(g.n)}" list="dishFoodDL" dir="auto" placeholder="${t("Ingredient")} — e.g. basmati rice" oninput="dishForm.ings[${i}].n=this.value">
       <input value="${esc(g.a)}" placeholder="200 g · 2 tbsp" style="flex:0 0 104px" oninput="dishForm.ings[${i}].a=this.value">
       <button class="btn sm sec" style="flex:0 0 auto" aria-label="Remove ingredient" onclick="M.dishRow(${i},-1)">✕</button>
     </div>`).join("")}
@@ -10057,6 +10093,7 @@ function dishCollapse(){
   dishForm.ings = [{n: "", a: ""}, {n: "", a: ""}, {n: "", a: ""}];
   dishForm.res = null;
   R.dishRecipeList = false;
+  R.dishFoodList = false;
 }
 
 // Make sure every ingredient you typed is priced into the totals before we log
@@ -16625,7 +16662,21 @@ Use trusted, current sources (airline sites, Google Flights, Skyscanner, Booking
     if (!dishForm.res.items.length) dishForm.res = null;
     render();
   },
-  dishPickRecipes(){ R.dishRecipeList = !R.dishRecipeList; render(); },
+  dishPickRecipes(){ R.dishRecipeList = !R.dishRecipeList; if (R.dishRecipeList) R.dishFoodList = false; render(); },
+  dishPickFoods(){ R.dishFoodList = !R.dishFoodList; if (R.dishFoodList) R.dishRecipeList = false; render(); },
+  // Drop a food you've already logged into the dish as an ingredient row (name +
+  // its usual amount) — you then tap "Get macros" and MIRA prices it like any
+  // raw ingredient. Avoids retyping foods you eat often.
+  dishAddFood(i){
+    const f = (R._dishFoods || [])[i]; if (!f) return;
+    const rows = dishForm.ings || (dishForm.ings = []);
+    if (rows.some(g => sameIng(g.n, f.name))){ toast(`${f.name} ${tr("is already in the dish")} ✓`); return; }
+    const empty = rows.find(g => !(g.n || "").trim() && !(g.a || "").trim());
+    if (empty){ empty.n = f.name; empty.a = f.amount || ""; }
+    else rows.push({n: f.name, a: f.amount || ""});
+    render();
+    toast(`${tr("Added")} ${f.name} ✓`);
+  },
   dishAddRecipe(id){
     const r = (S.recipes || []).find(x => x.id === id); if (!r) return;
     const per = r.per || {}, servings = Math.max(1, num(r.servings) || 1), cw = num(r.cookedWeight);

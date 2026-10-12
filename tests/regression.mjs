@@ -351,6 +351,30 @@ async function browserChecks(html) {
     eq("bar reflects 60% of goal, not 0", hyd.adherence, 60);
     eq("value text shows the litres, not just 0/7", /1\.5 L/.test(hyd.valTxt), true);
 
+    // ---- 14. "I cooked this" — pick an ingredient from logged foods -------
+    console.log("\n14. Dish builder: add ingredient from logged foods");
+    const dishpick = await page.evaluate(() => {
+      const today = new Date().toLocaleDateString("en-CA");
+      S.foods = [
+        { id: "a", date: today, name: "Basmati rice", amount: "200 g", kcal: 260, p: 5, c: 57, f: 1, ts: Date.now() },
+        { id: "b", date: today, name: "Olive oil", amount: "1 tbsp", kcal: 120, p: 0, c: 0, f: 14, ts: Date.now() - 1000 },
+      ];
+      dishForm.open = true; dishForm.ings = [{ n: "", a: "" }]; dishForm.res = null;
+      const names = dishFoodNames(10).map(f => f.name);
+      // render the picker to populate R._dishFoods, then add the first food
+      dishFoodPickHTML();
+      M.dishAddFood(0);
+      const first = dishForm.ings[0];
+      // adding the same food again should not duplicate
+      M.dishAddFood(0);
+      const count = dishForm.ings.filter(g => sameIng(g.n, first.n)).length;
+      return { names, firstName: first.n, firstAmount: first.a, noDup: count };
+    });
+    eq("logged foods appear in the picker", dishpick.names.includes("Basmati rice"), true);
+    eq("picked food fills the ingredient name", dishpick.firstName, "Basmati rice");
+    eq("picked food brings its usual amount", dishpick.firstAmount, "200 g");
+    eq("same food isn't added twice", dishpick.noDup, 1);
+
     console.log("\n" + (errs.length ? "Console errors: " + JSON.stringify(errs) : "No console errors."));
     if (errs.length) fail += errs.length;
   } finally {
